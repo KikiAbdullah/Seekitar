@@ -23,6 +23,14 @@ green, and the app served over HTTP (`/` and `/up` both return 200).
 | `./tools/dev/test [args]` | PHPUnit suite, e.g. `--filter=StoreTest`. |
 | `./tools/dev/composer <cmd>` | Composer, e.g. `dump-autoload --optimize`, `show`. |
 | `./tools/dev/php <file>` | Raw PHP 8.5 runtime. |
+| `node tools/dev/check-versions.mjs` | Guards doc version consistency (Laravel 13 / PHP 8.3 / Riverpod 3). |
+| `node tools/dev/check-structure.mjs` | Guards project-structure sections and Enum-vs-schema consistency. |
+
+Both checkers exit non-zero on failure, so they work as CI/pre-commit steps:
+
+```bash
+node tools/dev/check-versions.mjs && node tools/dev/check-structure.mjs
+```
 
 ## Why this exists
 

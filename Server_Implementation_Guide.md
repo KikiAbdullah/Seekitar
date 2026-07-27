@@ -14,6 +14,9 @@
 2. [Tech Stack & Versi](#2-tech-stack--versi)
 3. [Instalasi & Konfigurasi Library Tambahan](#3-instalasi--konfigurasi-library-tambahan)
 4. [Struktur Proyek](#4-struktur-proyek)
+   - 4.1 Kenapa `app/Services/` Diperlukan
+   - 4.2 Kenapa `app/Enums/` Diperlukan
+   - 4.3 Kenapa `app/Jobs/` & `app/Listeners/` Dipisah
 5. [Middleware & Pipeline](#5-middleware--pipeline)
 6. [Autentikasi & Otorisasi](#6-autentikasi--otorisasi)
    - 6.1 Sanctum & Token
@@ -159,11 +162,44 @@ Kita gunakan Laravel Breeze (opsional) atau langsung kompilasi Bootstrap 5.3.x v
 
 ---
 
-## 4. STRUKTUR PROYEK (Tambahan Admin)
+## 4. STRUKTUR PROYEK
+
+Struktur lengkap (bukan hanya bagian admin). Folder di luar bawaan Laravel
+ditandai dengan penjelasan singkat alasan keberadaannya.
 
 ```
 app/
-├── ...
+├── Console/
+│   └── Commands/
+│       └── CloseExpiredRequests.php   # Scheduler: tutup permintaan kadaluarsa
+├── DataTables/                        # Server-side processing Yajra (admin)
+│   ├── UsersDataTable.php
+│   ├── StoresDataTable.php
+│   ├── ListingsDataTable.php
+│   ├── RequestsDataTable.php
+│   ├── OffersDataTable.php
+│   ├── OrdersDataTable.php
+│   ├── DisputesDataTable.php
+│   └── ReviewsDataTable.php
+├── Enums/                             # Domain nilai tetap (backed enum)
+│   ├── OrderStatus.php
+│   ├── OrderType.php
+│   ├── RequestStatus.php
+│   ├── OfferStatus.php
+│   ├── ListingStatus.php
+│   ├── ListingType.php
+│   ├── StoreType.php
+│   ├── VerificationStatus.php
+│   ├── VerificationLevel.php
+│   ├── PaymentMethod.php
+│   └── DisputeStatus.php
+├── Events/
+│   ├── CustomerRequestCreated.php
+│   ├── OfferAccepted.php
+│   ├── OrderStatusChanged.php
+│   └── ReviewSubmitted.php
+├── Exceptions/
+│   └── InvalidOrderTransitionException.php
 ├── Http/
 │   ├── Controllers/
 │   │   ├── Admin/
@@ -179,23 +215,294 @@ app/
 │   │   │   ├── DisputeController.php
 │   │   │   └── SettingController.php
 │   │   └── Api/v1/...
-│   └── Requests/
-│       └── Admin/
-│           ├── CategoryRequest.php
-│           ├── UserRequest.php
-│           ├── StoreRequest.php
-│           ├── SettingRequest.php
-│           └── ...
-├── DataTables/
-│   ├── UsersDataTable.php
-│   ├── StoresDataTable.php
-│   ├── ListingsDataTable.php
-│   ├── RequestsDataTable.php
-│   ├── OffersDataTable.php
-│   ├── OrdersDataTable.php
-│   ├── DisputesDataTable.php
-│   └── ReviewsDataTable.php
+│   ├── Middleware/
+│   │   └── EnsureStoreOwner.php
+│   ├── Requests/
+│   │   ├── Admin/
+│   │   │   ├── CategoryRequest.php
+│   │   │   ├── UserRequest.php
+│   │   │   ├── StoreRequest.php
+│   │   │   ├── SettingRequest.php
+│   │   │   └── ...
+│   │   └── Api/
+│   │       ├── CreateStoreRequest.php
+│   │       ├── CreateListingRequest.php
+│   │       ├── CreateCustomerRequestRequest.php
+│   │       └── CreateOfferRequest.php
+│   └── Resources/                     # API Resource (transformer JSON)
+│       ├── StoreResource.php
+│       ├── ListingResource.php
+│       ├── OrderResource.php
+│       └── OfferResource.php
+├── Jobs/                              # Antrian Redis (asinkron)
+│   ├── BroadcastRequestJob.php        # Sebar permintaan ke penyedia dalam radius
+│   ├── SendPushNotificationJob.php
+│   ├── SendWhatsAppOtpJob.php
+│   └── RecalculateStoreRatingJob.php
+├── Listeners/
+│   ├── DispatchRequestBroadcast.php   # CustomerRequestCreated -> BroadcastRequestJob
+│   ├── SendOfferAcceptedNotification.php
+│   ├── SendOrderStatusNotification.php
+│   └── UpdateStoreRatingOnReview.php
+├── Models/
+│   ├── User.php
+│   ├── Store.php
+│   ├── Category.php
+│   ├── Listing.php
+│   ├── CustomerRequest.php
+│   ├── Offer.php
+│   ├── Order.php
+│   ├── Review.php
+│   └── Dispute.php
+├── Observers/                         # Side-effect otomatis pada model
+│   ├── ReviewObserver.php             # Perbarui rating_avg & total_reviews
+│   └── OrderObserver.php              # Catat completed_at saat status selesai
+├── Policies/
+│   ├── StorePolicy.php
+│   ├── ListingPolicy.php
+│   ├── OrderPolicy.php
+│   └── OfferPolicy.php
+├── Providers/
+│   ├── AppServiceProvider.php
+│   └── EventServiceProvider.php
+└── Services/                          # Logika bisnis lintas controller
+    ├── BroadcastService.php           # Pencocokan penyedia untuk sebuah permintaan
+    ├── GeolocationService.php         # Query radius ST_Distance_Sphere
+    ├── NotificationService.php        # Abstraksi FCM + WhatsApp
+    ├── OrderStateMachine.php          # Validasi transisi status pesanan
+    ├── OtpService.php                 # Generate, simpan (Redis), verifikasi OTP
+    └── WhatsAppService.php            # Klien Twilio / Kirim WA
+
+database/
+├── factories/
+│   ├── UserFactory.php
+│   ├── StoreFactory.php
+│   └── ListingFactory.php
+├── migrations/
+│   └── ...                            # Lihat DATABASE.md §10 untuk urutannya
+└── seeders/
+    ├── DatabaseSeeder.php
+    ├── CategorySeeder.php             # 24 kategori, wajib saat deploy awal
+    ├── RolesAndPermissionsSeeder.php   # Role & permission Spatie
+    └── DummyDataSeeder.php            # Data contoh, hanya untuk development
+
+routes/
+├── api.php                            # Endpoint mobile (guard sanctum)
+├── web.php                            # Web publik SEO
+├── admin.php                          # Panel admin (guard web + role)
+└── console.php                        # Jadwal scheduler
 ```
+
+### Kenapa `app/Services/` Diperlukan
+
+Controller sebaiknya tipis: validasi masuk, panggil service, kembalikan response.
+Tiga alur di Seekitar dipakai dari lebih dari satu tempat, jadi tidak layak
+ditaruh di controller:
+
+| Service               | Dipakai oleh                                            | Alasan                                                                 |
+| :-------------------- | :------------------------------------------------------ | :---------------------------------------------------------------------- |
+| `BroadcastService`    | API create request, admin re-broadcast, job antrian     | Aturan pencocokan penyedia cukup rumit dan harus konsisten             |
+| `GeolocationService`  | Pencarian toko, pencarian listing, pencocokan broadcast | Raw query spasial terpusat di satu tempat, mudah diuji & dioptimasi    |
+| `NotificationService` | Listener, job, controller admin                         | Satu pintu ke FCM & WhatsApp, memudahkan mock saat testing             |
+
+Contoh kerangka:
+
+```php
+// app/Services/GeolocationService.php
+namespace App\Services;
+
+use App\Models\Store;
+use Illuminate\Database\Eloquent\Builder;
+
+class GeolocationService
+{
+    /** Batasi query ke radius tertentu (meter) dari sebuah titik. */
+    public function withinRadius(Builder $query, float $lat, float $lng, float $radiusKm): Builder
+    {
+        return $query->whereRaw(
+            'ST_Distance_Sphere(location, ST_GeomFromText(?, 4326)) <= ?',
+            ["POINT($lng $lat)", $radiusKm * 1000]
+        );
+    }
+
+    /** Tambahkan kolom jarak (km) agar bisa diurutkan & ditampilkan. */
+    public function selectDistance(Builder $query, float $lat, float $lng): Builder
+    {
+        return $query->selectRaw(
+            '*, ST_Distance_Sphere(location, ST_GeomFromText(?, 4326)) / 1000 AS distance_km',
+            ["POINT($lng $lat)"]
+        );
+    }
+}
+```
+
+> ⚠️ Perhatikan urutan `POINT(longitude latitude)` — terbalik dari kebiasaan
+> menulis `lat, lng`. Ini sumber bug geospasial yang paling sering terjadi.
+> Memusatkannya di `GeolocationService` mencegah kesalahan berulang.
+
+### Kenapa `app/Enums/` Diperlukan
+
+`DATABASE.md` memakai ENUM di level MySQL agar nilai tidak liar. Enum PHP
+membuat jaminan yang sama berlaku di level aplikasi, sekaligus memberi
+autocomplete dan mencegah salah ketik string.
+
+```php
+// app/Enums/OrderStatus.php
+namespace App\Enums;
+
+enum OrderStatus: string
+{
+    case MenungguKonfirmasi = 'menunggu_konfirmasi';
+    case Diproses           = 'diproses';
+    case Dikirim            = 'dikirim';
+    case Selesai            = 'selesai';
+    case Dibatalkan         = 'dibatalkan';
+    case Dispute            = 'dispute';
+
+    /** Label untuk UI admin & mobile. */
+    public function label(): string
+    {
+        return match ($this) {
+            self::MenungguKonfirmasi => 'Menunggu Konfirmasi',
+            self::Diproses           => 'Diproses',
+            self::Dikirim            => 'Dikirim / Siap Diambil',
+            self::Selesai            => 'Selesai',
+            self::Dibatalkan         => 'Dibatalkan',
+            self::Dispute            => 'Dispute',
+        };
+    }
+
+    /** Status akhir tidak boleh berubah lagi. */
+    public function isFinal(): bool
+    {
+        return in_array($this, [self::Selesai, self::Dibatalkan], true);
+    }
+}
+```
+
+Nilai enum **wajib** sama persis dengan ENUM di `DATABASE.md`:
+
+| Enum                 | Nilai                                                                        | Sumber                        |
+| :------------------- | :--------------------------------------------------------------------------- | :---------------------------- |
+| `OrderStatus`        | `menunggu_konfirmasi`, `diproses`, `dikirim`, `selesai`, `dibatalkan`, `dispute` | `orders.status`           |
+| `OrderType`          | `goods`, `service`, `rental`                                                 | `orders.order_type`           |
+| `RequestStatus`      | `open`, `closed`, `expired`                                                  | `customer_requests.status`    |
+| `OfferStatus`        | `pending`, `accepted`, `rejected`                                            | `offers.status`               |
+| `ListingStatus`      | `active`, `sold`, `hidden`                                                   | `listings.status`             |
+| `ListingType`        | `product`, `service`, `rental`                                               | `listings.listing_type`       |
+| `StoreType`          | `goods`, `services`, `rental`                                                | `stores.store_type` (SET)     |
+| `VerificationStatus` | `pending`, `verified`, `rejected`                                            | `stores.verification_status`  |
+| `PaymentMethod`      | `cod`, `transfer`                                                            | `orders.payment_method`       |
+| `DisputeStatus`      | `open`, `resolved`                                                           | `disputes.status`             |
+| `VerificationLevel`  | `1`, `2`, `3` (int)                                                          | `users.verification_level`    |
+
+> ⚠️ **Perhatikan bedanya:** `StoreType` memakai `services` (jamak), sedangkan
+> `ListingType` dan `OrderType` memakai `service` (tunggal). Ini memang berbeda
+> di skema database — jangan "dirapikan" tanpa mengubah migrasi.
+
+`VerificationLevel` bertipe integer, bukan string:
+
+```php
+// app/Enums/VerificationLevel.php
+namespace App\Enums;
+
+enum VerificationLevel: int
+{
+    case Basic    = 1;  // Nomor HP terverifikasi
+    case Verified = 2;  // KTP diverifikasi — syarat membuka toko
+    case Pro      = 3;  // Usaha tervalidasi, prioritas broadcast lebih tinggi
+
+    public function canOpenStore(): bool
+    {
+        return $this->value >= self::Verified->value;
+    }
+}
+```
+
+Pakai di model lewat casting agar konversi otomatis:
+
+```php
+// app/Models/Order.php
+protected function casts(): array
+{
+    return [
+        'status'         => OrderStatus::class,
+        'order_type'     => OrderType::class,
+        'payment_method' => PaymentMethod::class,
+    ];
+}
+```
+
+### ⚠️ Catatan: Status Alur Jasa Belum Ada di ENUM
+
+`PRD.md` §5.4 menjelaskan alur pesanan **jasa** dengan status `Dijadwalkan`,
+`Dalam Pengerjaan`, dan `Menunggu Konfirmasi Pembeli`. Ketiganya **tidak ada**
+di ENUM `orders.status` pada `DATABASE.md`, yang hanya punya enam nilai.
+
+Ini perlu diputuskan sebelum modul pesanan dibangun. Dua opsi:
+
+1. **Petakan ke status yang ada** — `Dijadwalkan` dan `Dalam Pengerjaan`
+   keduanya jadi `diproses`, detail waktunya disimpan di kolom terpisah.
+   MVP lebih sederhana, tapi UI kehilangan sebagian informasi.
+2. **Tambahkan nilai ENUM baru** — perlu migrasi `ALTER TABLE` dan
+   memperluas `OrderStatus`. Lebih sesuai PRD, tapi state machine jadi
+   bercabang per `order_type`.
+
+Selama belum diputuskan, `OrderStatus` di atas mengikuti `DATABASE.md`
+(sumber kebenaran skema).
+
+### Kenapa `app/Jobs/` & `app/Listeners/` Dipisah
+
+Alur broadcast sengaja dipecah agar request API tetap cepat:
+
+```
+POST /requests
+  └─> simpan customer_requests
+  └─> event CustomerRequestCreated        (sinkron, ringan)
+        └─> listener DispatchRequestBroadcast
+              └─> dispatch BroadcastRequestJob   (masuk antrian Redis)
+                    └─> BroadcastService cari penyedia dalam radius
+                    └─> dispatch SendPushNotificationJob per penyedia
+```
+
+Response ke pembeli langsung kembali setelah data tersimpan; pencarian penyedia
+dan pengiriman notifikasi berjalan di worker. Konsekuensinya notifikasi
+**tidak instan** — ini sudah dicatat juga di Mobile Guide.
+
+```php
+// app/Jobs/BroadcastRequestJob.php
+namespace App\Jobs;
+
+use App\Models\CustomerRequest;
+use App\Services\BroadcastService;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Queue\Queueable;
+
+class BroadcastRequestJob implements ShouldQueue
+{
+    use Queueable;
+
+    public int $tries = 3;
+    public int $backoff = 30;
+
+    public function __construct(public string $customerRequestId) {}
+
+    public function handle(BroadcastService $broadcast): void
+    {
+        $request = CustomerRequest::find($this->customerRequestId);
+
+        // Permintaan bisa saja sudah ditutup sebelum job sempat jalan.
+        if (! $request || $request->status !== \App\Enums\RequestStatus::Open) {
+            return;
+        }
+
+        $broadcast->notifyMatchingStores($request);
+    }
+}
+```
+
+> Kirim **ID**, bukan objek model, ke constructor job. Model yang di-serialize
+> bisa basi saat job akhirnya dieksekusi.
 
 ---
 
@@ -594,13 +901,54 @@ Tambahkan accessor: `getRoleNamesAttribute()` atau langsung gunakan `$user->role
 
 ---
 
-## 13. OBSERVERS & EVENTS (Sama seperti sebelumnya)
+## 13. OBSERVERS & EVENTS
 
-Tidak ada perubahan.
+Pemetaan event → listener didaftarkan di `EventServiceProvider`. Semua listener
+yang memicu notifikasi berjalan lewat antrian.
+
+| Event                    | Listener                          | Efek                                                        |
+| :----------------------- | :-------------------------------- | :----------------------------------------------------------- |
+| `CustomerRequestCreated` | `DispatchRequestBroadcast`        | Dispatch `BroadcastRequestJob` ke antrian                   |
+| `OfferAccepted`          | `SendOfferAcceptedNotification`   | Notifikasi penyedia pemenang + tolak offer lain             |
+| `OrderStatusChanged`     | `SendOrderStatusNotification`     | Notifikasi pihak terkait sesuai status baru                 |
+| `ReviewSubmitted`        | `UpdateStoreRatingOnReview`       | Dispatch `RecalculateStoreRatingJob`                        |
+
+**Observers** dipakai untuk side-effect yang selalu terjadi apa pun jalur
+masuknya (API, admin panel, atau seeder):
+
+| Observer         | Hook              | Efek                                                      |
+| :--------------- | :---------------- | :--------------------------------------------------------- |
+| `ReviewObserver` | `created`         | Perbarui `stores.rating_avg` & `stores.total_reviews`     |
+| `OrderObserver`  | `updating`        | Isi `completed_at` saat status berubah jadi `selesai`     |
+
+> Observer cocok untuk konsistensi data, bukan untuk pekerjaan berat.
+> Pengiriman notifikasi tetap lewat event → job antrian.
 
 ---
 
-## 14. JOBS & QUEUE (Tetap)
+## 14. JOBS & QUEUE
+
+Semua job berjalan di Redis. Jalankan worker dengan:
+
+```bash
+php artisan queue:work redis --queue=high,default --tries=3
+```
+
+| Job                          | Antrian   | Fungsi                                                  |
+| :--------------------------- | :-------- | :-------------------------------------------------------- |
+| `BroadcastRequestJob`        | `high`    | Cari penyedia dalam radius, kirim notifikasi ke mereka  |
+| `SendPushNotificationJob`    | `high`    | Satu pesan FCM ke satu perangkat                        |
+| `SendWhatsAppOtpJob`         | `high`    | Kirim OTP via Twilio / Kirim WA                         |
+| `RecalculateStoreRatingJob`  | `default` | Hitung ulang `rating_avg` dari seluruh ulasan toko      |
+
+**Scheduler** (`routes/console.php`) — menutup permintaan yang kadaluarsa:
+
+```php
+Schedule::command('requests:close-expired')->everyFifteenMinutes();
+```
+
+Perintah ini memakai indeks `cr_status_expires_idx` seperti dijelaskan di
+`DATABASE.md` §11.
 
 ---
 

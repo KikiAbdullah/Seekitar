@@ -39,6 +39,9 @@ polling ringan sebagai pelengkap push.
 1. [Arsitektur & Prinsip](#1-arsitektur--prinsip)
 2. [Library Utama (pub.dev)](#2-library-utama-pubdev)
 3. [Struktur Proyek](#3-struktur-proyek)
+   - 3.1 Tiga Lokasi Widget — Kapan Pakai yang Mana
+   - 3.2 `core/services/` vs `data/repositories/`
+   - 3.3 `core/constants/route_constants.dart`
 4. [State Management & Dependency Injection (Riverpod)](#4-state-management--dependency-injection-riverpod)
 5. [Layer Data: API, Repositories, Models](#5-layer-data-api-repositories-models)
 6. [Layer Domain: UseCases & Entities](#6-layer-domain-usecases--entities)
@@ -135,20 +138,32 @@ lib/
 ├── main.dart                   # Entry point (initialize)
 ├── core/
 │   ├── constants/
-│   │   ├── api_constants.dart  # Base URL, endpoints
-│   │   └── app_colors.dart    # Warna sesuai brand guideline
+│   │   ├── api_constants.dart      # Base URL, endpoints
+│   │   ├── app_colors.dart         # Warna sesuai brand guideline
+│   │   └── route_constants.dart    # Nama & path rute GoRouter (anti hardcode)
+│   ├── enums/                      # Cerminan Enum backend
+│   │   ├── order_status.dart
+│   │   ├── request_status.dart
+│   │   ├── offer_status.dart
+│   │   └── store_type.dart
 │   ├── errors/
 │   │   ├── exceptions.dart
 │   │   └── failure.dart
 │   ├── network/
-│   │   ├── dio_client.dart     # Dio instance + interceptors
-│   │   └── api_response.dart  # Wrapper response
+│   │   ├── dio_client.dart         # Dio instance + interceptors
+│   │   └── api_response.dart       # Wrapper response
+│   ├── services/                   # Pembungkus SDK/platform (bukan REST API)
+│   │   ├── location_service.dart      # GPS, izin lokasi, reverse geocoding
+│   │   ├── notification_service.dart  # FCM: token, izin, handler pesan
+│   │   ├── analytics_service.dart     # Firebase Analytics & Crashlytics
+│   │   ├── storage_service.dart       # Secure storage token, prefs
+│   │   └── deep_link_service.dart     # app_links / universal link
 │   ├── theme/
-│   │   └── app_theme.dart     # ThemeData, TextTheme
+│   │   └── app_theme.dart          # ThemeData, TextTheme
 │   ├── utils/
 │   │   ├── validators.dart
 │   │   └── formatters.dart
-│   └── widgets/               # Widget reusable global
+│   └── widgets/                    # Widget global, TIDAK terikat fitur apa pun
 │       ├── custom_button.dart
 │       ├── loading_indicator.dart
 │       └── error_widget.dart
@@ -188,11 +203,14 @@ lib/
 │       │   └── create_store.dart
 │       └── ...
 ├── presentation/
-│   ├── providers/              # Riverpod AsyncNotifier
+│   ├── providers/              # Riverpod AsyncNotifier (state per fitur)
 │   │   ├── auth_provider.dart
 │   │   ├── store_provider.dart
 │   │   ├── listing_provider.dart
-│   │   └── ...
+│   │   ├── request_provider.dart
+│   │   ├── offer_provider.dart
+│   │   ├── order_provider.dart
+│   │   └── location_provider.dart
 │   ├── pages/
 │   │   ├── splash/
 │   │   ├── auth/
@@ -204,7 +222,9 @@ lib/
 │   │   ├── explore/            # Tab Jelajahi
 │   │   │   ├── explore_page.dart
 │   │   │   ├── listing_detail_page.dart
-│   │   │   └── widgets/
+│   │   │   └── widgets/        # Widget khusus halaman explore saja
+│   │   │       ├── explore_filter_sheet.dart
+│   │   │       └── explore_map_view.dart
 │   │   ├── requests/           # Tab Kebutuhan
 │   │   │   ├── requests_page.dart
 │   │   │   ├── create_request_page.dart
@@ -221,12 +241,109 @@ lib/
 │   │       ├── profile_page.dart
 │   │       ├── edit_profile_page.dart
 │   │       └── verification_page.dart
-│   └── widgets/               # Widget spesifik fitur
+│   └── widgets/               # Widget lintas fitur yang terikat domain
 │       ├── listing_card.dart
 │       ├── store_card.dart
 │       ├── request_card.dart
 │       └── offer_card.dart
 └── l10n/                       # Opsional
+```
+
+### Tiga Lokasi Widget — Kapan Pakai yang Mana
+
+Ini sumber kebingungan yang paling sering. Aturannya berdasarkan **seberapa
+luas widget itu dipakai** dan **apakah ia tahu soal domain Seekitar**:
+
+| Lokasi                             | Tahu domain? | Contoh                                          | Aturan                                                        |
+| :--------------------------------- | :----------- | :---------------------------------------------- | :-------------------------------------------------------------- |
+| `core/widgets/`                    | ❌ Tidak     | `CustomButton`, `LoadingIndicator`              | Bisa disalin ke proyek Flutter lain tanpa diubah              |
+| `presentation/widgets/`            | ✅ Ya        | `ListingCard`, `StoreCard`, `OfferCard`         | Menerima entity domain, dipakai **lebih dari satu** halaman    |
+| `presentation/pages/<fitur>/widgets/` | ✅ Ya     | `ExploreFilterSheet`, `OfferComparisonRow`      | Hanya dipakai **satu** halaman                                 |
+
+**Tes cepat saat ragu:**
+
+1. Apakah widget ini menyebut tipe domain (`Store`, `Listing`, `Offer`)?
+   Jika **tidak** → `core/widgets/`.
+2. Jika ya, apakah dipakai di lebih dari satu halaman?
+   Ya → `presentation/widgets/`. Tidak → folder `widgets/` di dalam halaman itu.
+
+**Aturan promosi:** mulai dari yang paling sempit. Begitu sebuah widget dipakai
+halaman kedua, pindahkan ke `presentation/widgets/`. Jangan langsung menaruh
+semua widget di folder global "untuk berjaga-jaga".
+
+> `core/widgets/` **tidak boleh** meng-import apa pun dari `domain/` atau
+> `data/`. Kalau sampai perlu, berarti widget itu salah tempat.
+
+### `core/services/` vs `data/repositories/`
+
+Keduanya sama-sama "layanan", tapi tanggung jawabnya berbeda:
+
+| | `core/services/` | `data/repositories/` |
+| :-- | :-- | :-- |
+| Bicara dengan | SDK perangkat (GPS, FCM, storage) | REST API backend |
+| Contoh | `LocationService.getCurrentPosition()` | `StoreRepository.getNearbyStores()` |
+| Bergantung pada | Plugin Flutter | `Dio` + datasource |
+
+Alur khasnya menggabungkan keduanya: `LocationService` mengambil koordinat GPS,
+lalu koordinat itu dikirim ke `StoreRepository` untuk mencari toko sekitar.
+
+```dart
+// core/services/location_service.dart
+class LocationService {
+  Future<Position> getCurrentPosition() async {
+    final permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      final requested = await Geolocator.requestPermission();
+      if (requested == LocationPermission.denied) {
+        throw const LocationPermissionDeniedException();
+      }
+    }
+    if (permission == LocationPermission.deniedForever) {
+      throw const LocationPermissionDeniedException();
+    }
+    return Geolocator.getCurrentPosition();
+  }
+}
+
+// Diekspos sebagai provider agar mudah di-mock saat testing.
+@riverpod
+LocationService locationService(Ref ref) => LocationService();
+```
+
+### `core/constants/route_constants.dart`
+
+Path rute ditulis di dua tempat — saat mendaftarkan `GoRoute` dan saat navigasi.
+Kalau di-hardcode, salah ketik baru ketahuan waktu runtime. Pusatkan:
+
+```dart
+// core/constants/route_constants.dart
+abstract final class Routes {
+  static const splash        = '/splash';
+  static const login         = '/login';
+  static const otp           = '/otp';
+  static const explore       = '/';
+  static const requests      = '/requests';
+  static const createRequest = '/create-request';
+  static const orders        = '/orders';
+  static const profile       = '/profile';
+  static const myStore       = '/store';
+
+  // Rute berparameter: sediakan pola sekaligus pembangunnya.
+  static const listingDetail = '/listing/:id';
+  static String listingDetailOf(String id) => '/listing/$id';
+
+  static const requestDetail = '/requests/:id';
+  static String requestDetailOf(String id) => '/requests/$id';
+}
+```
+
+Pemakaian:
+
+```dart
+GoRoute(path: Routes.login, builder: (_, __) => const LoginPage()),
+
+// Navigasi — tidak ada string mentah:
+context.go(Routes.listingDetailOf(listing.id));
 ```
 
 ---
@@ -485,28 +602,35 @@ Menampilkan slider foto (dengan `PageView` atau `cached_network_image`), deskrip
 
 ## 8. NAVIGASI & ROUTING (GOROUTER)
 
+Path diambil dari `Routes` (lihat §3), bukan ditulis manual:
+
 ```dart
+import 'package:seekitar_mobile/core/constants/route_constants.dart';
+
 final goRouter = GoRouter(
-  initialLocation: '/',
+  initialLocation: Routes.explore,
   redirect: (context, state) {
     final user = ref.read(authNotifierProvider).value;
     final loggedIn = user != null;
-    if (!loggedIn && state.matchedLocation != '/login') return '/login';
-    if (loggedIn && state.matchedLocation == '/login') return '/';
+    if (!loggedIn && state.matchedLocation != Routes.login) return Routes.login;
+    if (loggedIn && state.matchedLocation == Routes.login) return Routes.explore;
     return null;
   },
   routes: [
-    GoRoute(path: '/login', builder: (_, __) => LoginPage()),
-    GoRoute(path: '/otp', builder: (_, state) => OtpPage(phone: state.extra as String)),
+    GoRoute(path: Routes.login, builder: (_, __) => LoginPage()),
+    GoRoute(path: Routes.otp, builder: (_, state) => OtpPage(phone: state.extra as String)),
     ShellRoute(
       builder: (_, __, child) => MainShell(child: child),
       routes: [
-        GoRoute(path: '/', builder: (_, __) => ExplorePage()),
-        GoRoute(path: '/requests', builder: (_, __) => RequestsPage()),
-        GoRoute(path: '/orders', builder: (_, __) => OrdersPage()),
-        GoRoute(path: '/profile', builder: (_, __) => ProfilePage()),
-        GoRoute(path: '/create-request', builder: (_, __) => CreateRequestPage()),
-        GoRoute(path: '/listing/:id', builder: (_, state) => ListingDetailPage(id: state.pathParameters['id']!)),
+        GoRoute(path: Routes.explore, builder: (_, __) => ExplorePage()),
+        GoRoute(path: Routes.requests, builder: (_, __) => RequestsPage()),
+        GoRoute(path: Routes.orders, builder: (_, __) => OrdersPage()),
+        GoRoute(path: Routes.profile, builder: (_, __) => ProfilePage()),
+        GoRoute(path: Routes.createRequest, builder: (_, __) => CreateRequestPage()),
+        GoRoute(
+          path: Routes.listingDetail,
+          builder: (_, state) => ListingDetailPage(id: state.pathParameters['id']!),
+        ),
       ],
     ),
   ],
