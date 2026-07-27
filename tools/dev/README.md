@@ -25,11 +25,15 @@ green, and the app served over HTTP (`/` and `/up` both return 200).
 | `./tools/dev/php <file>` | Raw PHP 8.5 runtime. |
 | `node tools/dev/check-versions.mjs` | Guards doc version consistency (Laravel 13 / PHP 8.3 / Riverpod 3). |
 | `node tools/dev/check-structure.mjs` | Guards project-structure sections and Enum-vs-schema consistency. |
+| `node tools/dev/check-datamodel.mjs` | Guards schema columns, design decisions, and DB↔API alignment. |
+| `node tools/dev/check-api.mjs` | Guards API endpoint coverage, contract details, and cross-doc drift. |
 
-Both checkers exit non-zero on failure, so they work as CI/pre-commit steps:
+All checkers exit non-zero on failure, so they work as CI/pre-commit steps:
 
 ```bash
-node tools/dev/check-versions.mjs && node tools/dev/check-structure.mjs
+for c in versions structure datamodel api; do
+  node tools/dev/check-$c.mjs || exit 1
+done
 ```
 
 ## Why this exists
