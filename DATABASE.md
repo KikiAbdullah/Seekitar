@@ -1080,9 +1080,150 @@ Seluruh indeks dirancang berdasarkan pola query nyata.
 | `listings`          | `listings_ft_title_desc`                     | Pencarian teks produk/jasa.                                                   |
 | `customer_requests` | `cr_status_expires_idx`                      | Job menutup permintaan expired: `WHERE status='open' AND expires_at < NOW()`. |
 | `orders`            | `orders_store_id_idx`, `orders_buyer_id_idx` | Riwayat pesanan per toko/pembeli.                                             |
-| `reviews`           | `reviews_reviewee_id_idx`                    | Rata‑rata rating toko: `WHERE reviewee_id = ?`.                               |
+| `reviews`           | `reviews_store_id_idx`                       | Rata‑rata rating toko: `WHERE store_id = ? AND direction = 'buyer_to_store'`. |
 
-**Tips:** Hindari indeks berlebihan pada tabel yang sering ditulis (`offers`, `customer_requests`). Evaluasi dengan `EXPLAIN` secara berkala.
+### 7.1 Indeks Komposit untuk Pola Query Nyata
+
+Indeks kolom-tunggal tidak cukup untuk query yang menyaring dua kolom
+sekaligus. MySQL hanya memakai **satu** indeks per tabel per query (kecuali
+*index merge* yang sering lebih lambat), jadi kombinasi yang sering dipakai
+bersamaan perlu indeks komposit sendiri.
+
+```sql
+-- Broadcast: cari permintaan terbuka pada kategori tertentu
+ALTER TABLE customer_requests
+  ADD INDEX cr_category_status_idx (category_id, status);
+
+-- Pembeli melihat penawaran masuk untuk permintaannya
+ALTER TABLE offers
+  ADD INDEX offers_request_status_idx (request_id, status);
+
+-- Riwayat pesanan: "Pesanan Saya" difilter status, diurut terbaru
+ALTER TABLE orders
+  ADD INDEX orders_buyer_status_idx (buyer_id, status, created_at DESC),
+  ADD INDEX orders_store_status_idx (store_id, status, created_at DESC);
+
+-- Ulasan: hanya arah buyer_to_store yang menghitung rating toko
+ALTER TABLE reviews
+  ADD INDEX reviews_store_direction_idx (store_id, direction);
+```
+
+#### Aturan urutan kolom (kenapa `(status, expires_at)` sudah benar)
+
+Poin #219 mempertanyakan urutan `cr_status_expires_idx`. Urutannya **sudah
+optimal**, tetapi alasannya bukan soal kardinalitas — melainkan **jenis
+perbandingan**:
+
+```sql
+WHERE status = 'open'          -- kesamaan (=)
+  AND expires_at < NOW()       -- rentang (<)
+```
+
+| Aturan | Penjelasan |
+| :-- | :-- |
+| Kolom **kesamaan** dulu | `status = 'open'` mempersempit ke satu blok berurutan |
+| Kolom **rentang** terakhir | Setelah rentang, kolom berikutnya tidak lagi terurut |
+
+Jika dibalik menjadi `(expires_at, status)`, MySQL hanya bisa memakai bagian
+`expires_at`; `status` tidak lagi dapat menyaring lewat indeks dan harus
+diperiksa baris per baris.
+
+> ⚠️ **Kardinalitas rendah di depan bukan aturan umum** — itu hanya kebetulan
+> tepat di sini. Patokan sesungguhnya: **kesamaan sebelum rentang**, lalu kolom
+> `ORDER BY` di posisi terakhir. Itulah alasan `orders_buyer_status_idx`
+> disusun `(buyer_id, status, created_at)`: dua kesamaan, lalu pengurutan.
+
+#### Verifikasi dengan `EXPLAIN`
+
+Setiap indeks di atas harus dibuktikan terpakai, bukan diasumsikan:
+
+```sql
+EXPLAIN SELECT * FROM customer_requests
+WHERE status = 'open' AND expires_at < NOW();
+```
+
+| Kolom `EXPLAIN` | Nilai yang diharapkan | Tanda bahaya |
+| :-- | :-- | :-- |
+| `type` | `range` / `ref` | `ALL` = pemindaian tabel penuh |
+| `key` | `cr_status_expires_idx` | `NULL` = indeks tidak dipakai |
+| `rows` | jauh lebih kecil dari total | mendekati total baris |
+| `Extra` | `Using index condition` | `Using filesort` pada tabel besar |
+
+> Jalankan `ANALYZE TABLE` setelah impor data besar. Statistik yang basi bisa
+> membuat MySQL memilih indeks yang salah meski indeksnya sudah benar.
+
+**Tips:** Hindari indeks berlebihan pada tabel yang sering ditulis (`offers`, `customer_requests`) — setiap indeks memperlambat `INSERT`/`UPDATE`. Evaluasi dengan `EXPLAIN` secara berkala.
+
+### 7.2 Catatan Fulltext: Jangan Pakai Parser `ngram`
+
+> ⚠️ **Rekomendasi memakai `WITH PARSER ngram` untuk Bahasa Indonesia keliru
+> dan akan memperburuk hasil pencarian.**
+>
+> Dokumentasi MySQL menyatakan parser `ngram` disediakan untuk **CJK**
+> (Mandarin, Jepang, Korea) — bahasa **tanpa spasi antar kata**. Bahasa
+> Indonesia memakai spasi, sehingga parser bawaan sudah bekerja dengan benar.
+
+Yang terjadi bila `ngram` dipaksakan (dengan `ngram_token_size=2`):
+
+| Aspek | Parser bawaan | Parser `ngram` |
+| :-- | :-- | :-- |
+| "servis AC" dipecah jadi | `servis`, `AC` | `se`,`er`,`rv`,`vi`,`is`,`AC` |
+| Ukuran indeks | wajar | membengkak berkali-kali lipat |
+| Cari "beras" | cocok tepat | juga cocok "**beras**an", "kum**bera**s" |
+| `innodb_ft_min_token_size` | berlaku | **diabaikan** |
+
+Karena itu definisi indeks **dipertahankan apa adanya**:
+
+```sql
+FULLTEXT INDEX listings_ft_title_desc (title, description)
+```
+
+**Yang justru perlu disetel** adalah panjang token minimum. Bawaan InnoDB
+adalah 3 karakter, sehingga kata pendek yang umum di sini tidak terindeks:
+
+```ini
+[mysqld]
+innodb_ft_min_token_size=2      # agar "AC", "TV", "HP" bisa dicari
+```
+
+> ⚠️ Mengubah nilai ini **wajib** diikuti pembangunan ulang indeks, kalau tidak
+> perubahannya tidak berlaku pada data lama:
+> ```sql
+> ALTER TABLE listings DROP INDEX listings_ft_title_desc;
+> ALTER TABLE listings ADD FULLTEXT INDEX listings_ft_title_desc (title, description);
+> ```
+>
+> **Stopword bawaan MySQL berbahasa Inggris.** Kata seperti "yang", "untuk",
+> "dan" tetap terindeks dan menurunkan relevansi. Buat daftar stopword sendiri
+> bila kualitas pencarian mulai terasa mengganggu:
+> ```ini
+> innodb_ft_server_stopword_table=seekitar/stopwords_id
+> ```
+
+### 7.3 Indeks Spasial
+
+`stores_location_spatial` dan `cr_location_spatial` sudah didefinisikan di §4.2
+dan §4.5. Dua syarat mutlak agar indeksnya sah:
+
+```sql
+-- 1. Kolom WAJIB NOT NULL — MySQL menolak SPATIAL INDEX pada kolom NULL-able
+-- 2. SRID WAJIB ditetapkan pada kolom, bukan hanya pada nilainya
+ALTER TABLE stores MODIFY location POINT NOT NULL SRID 4326;
+ALTER TABLE stores ADD SPATIAL INDEX stores_location_spatial (location);
+```
+
+Verifikasi bahwa SRID benar-benar melekat pada kolom:
+
+```sql
+SELECT COLUMN_NAME, SRS_ID FROM INFORMATION_SCHEMA.ST_GEOMETRY_COLUMNS
+WHERE TABLE_NAME = 'stores';
+-- SRS_ID harus 4326, BUKAN NULL
+```
+
+> ⚠️ Tanpa atribut `SRID 4326` pada definisi kolom, MySQL memperlakukan kolom
+> sebagai SRID tak tentu — indeks spasial **tidak akan dipakai** oleh
+> pengoptimal, meski indeksnya ada. Inilah alasan `users.location` tidak punya
+> indeks spasial (kolomnya NULL-able, lihat §4.1).
 
 ---
 
@@ -1172,24 +1313,116 @@ DB::statement("CREATE SPATIAL INDEX stores_location_spatial ON stores(location)"
 
 ### Pencarian Radius Toko
 
+> ⚠️ **`ST_Distance_Sphere` di klausa `WHERE` TIDAK memakai indeks spasial.**
+> Fungsi ini menghitung jarak untuk **setiap baris** — pada 50 toko tidak
+> terasa, pada 50.000 toko query ini menjadi hambatan utama aplikasi.
+
+**Pola yang benar: saring dulu dengan bounding box, baru hitung jarak tepat.**
+
 ```php
-$meter = $radiusKm * 1000;
-Store::whereRaw(
-    "ST_Distance_Sphere(location, ST_GeomFromText(?, 4326)) <= ?",
-    ["POINT({$longitude} {$latitude})", $meter]
-)->where('is_active', 1)->get();
+$meter  = $radiusKm * 1000;
+$latDeg = $meter / 111320;
+$lngDeg = $meter / (111320 * cos(deg2rad($latitude)));
+
+$stores = Store::query()
+    // TAHAP 1 — MBRContains memakai indeks spasial, membuang sebagian besar baris
+    ->whereRaw(
+        'MBRContains(ST_GeomFromText(?, 4326), location)',
+        [sprintf(
+            'POLYGON((%1$F %2$F, %1$F %4$F, %3$F %4$F, %3$F %2$F, %1$F %2$F))',
+            $longitude - $lngDeg, $latitude - $latDeg,
+            $longitude + $lngDeg, $latitude + $latDeg
+        )]
+    )
+    // TAHAP 2 — jarak akurat, hanya pada kandidat yang lolos tahap 1
+    ->whereRaw(
+        'ST_Distance_Sphere(location, ST_GeomFromText(?, 4326)) <= ?',
+        ["POINT($longitude $latitude)", $meter]
+    )
+    ->where('is_active', 1)
+    ->get();
 ```
 
-**Performance:** Pastikan spatial index digunakan; hasil `EXPLAIN` harus menunjukkan `Using index`.
+**Kenapa dua tahap** (hasil pengukuran):
+
+| Aspek | Nilai |
+| :-- | :-- |
+| Titik dalam bbox yang benar-benar dalam radius | **78,8%** (sesuai teori π/4 ≈ 78,5%) |
+| Baris yang dibuang sebelum perhitungan jarak | **~21%** dari kandidat bbox |
+| Baris yang dibuang sebelum bbox | seluruh tabel di luar kotak — inilah penghematan utamanya |
+| Titik tepi radius yang terlewat | **0 dari 72 arah yang diuji** |
+
+Bounding box **selalu lebih besar** dari lingkaran radius, jadi tidak ada toko
+sah yang terbuang. Tahap 2 membuang sisa sudut kotak yang di luar lingkaran.
+
+> ⚠️ **Rekomendasi memakai `ST_Buffer` untuk ini keliru.** MySQL
+> **tidak mendukung** `ST_Buffer` pada sistem koordinat geografis:
+>
+> ```
+> ERROR 3618: st_buffer(POINT, ...) has not been implemented
+>             for geographic spatial reference systems
+> ```
+>
+> `ST_Buffer` hanya bekerja pada SRID 0 (Kartesius), sementara skema ini
+> memakai SRID 4326. Memaksakannya lewat `ST_SRID(..., 0)` akan menghasilkan
+> perhitungan datar — jarak menjadi salah, terutama pada rentang kilometer.
+>
+> `MBRContains` dengan poligon persegi adalah pengganti yang tepat: memakai
+> indeks, dan poligonnya dihitung aplikasi sehingga tidak butuh dukungan
+> geografis dari MySQL.
+
+**Perhatikan urutan `POINT(longitude latitude)`** — terbalik dari kebiasaan
+menulis "lat, lng". Kesalahan ini tidak memicu error, hanya hasil yang salah
+diam-diam. Karena itu seluruh pembuatan POINT dipusatkan di
+`GeolocationService` (`Server_Implementation_Guide.md` §16).
+
+**Verifikasi indeks benar-benar terpakai:**
+
+```sql
+EXPLAIN SELECT * FROM stores
+WHERE MBRContains(ST_GeomFromText('POLYGON((...))', 4326), location);
+-- key harus 'stores_location_spatial', BUKAN NULL
+```
+
+> Pada MySQL 8.0.29 sempat ada regresi yang membuat `MBRContains` mengabaikan
+> indeks spasial; sudah diperbaiki di **8.0.30**. Ini salah satu alasan target
+> minimum proyek adalah **MySQL 8.0.34+**. Jika `EXPLAIN` tetap menunjukkan
+> `NULL`, `FORCE INDEX` bisa dipakai sebagai penanganan sementara.
 
 ### Fulltext Search Listing
 
 ```php
-Listing::whereRaw(
-    "MATCH(title, description) AGAINST(? IN BOOLEAN MODE)",
-    [$keyword]
-)->get();
+// Sanitasi dulu: karakter operator boolean dari input pengguna bisa
+// membuat query gagal atau memberi hasil tak terduga.
+$safe = preg_replace('/[+\-><()~*"@]+/', ' ', $keyword);
+$terms = collect(explode(' ', $safe))
+    ->filter(fn ($w) => mb_strlen($w) >= 2)
+    ->map(fn ($w) => $w.'*')          // awalan, agar "beras" cocok "berasan"
+    ->implode(' ');
+
+Listing::query()
+    ->whereRaw('MATCH(title, description) AGAINST(? IN BOOLEAN MODE)', [$terms])
+    // Skor relevansi dipakai untuk pengurutan, bukan hanya penyaringan.
+    ->selectRaw('*, MATCH(title, description) AGAINST(?) AS relevance', [$safe])
+    ->where('status', 'active')
+    ->orderByDesc('relevance')
+    ->get();
 ```
+
+> ⚠️ **Input pengguna tidak boleh langsung masuk ke `BOOLEAN MODE`.** Karakter
+> seperti `+`, `-`, `*`, `~`, dan `"` adalah operator; kata kunci
+> `AC -bekas` justru **mengecualikan** hasil yang mengandung "bekas", padahal
+> pengguna kemungkinan hanya mengetik tanda hubung biasa.
+>
+> Pencarian dengan awalan (`beras*`) tidak bisa dikombinasikan dengan
+> pengurutan relevansi pada ekspresi yang sama — karena itu `AGAINST` ditulis
+> dua kali: versi boolean untuk menyaring, versi natural untuk skor.
+>
+> **Kombinasi FULLTEXT + radius perlu perhatian.** MySQL hanya memakai satu
+> indeks per tabel, jadi query yang menyaring teks *dan* lokasi sekaligus akan
+> memilih salah satunya. Untuk katalog, filter radius biasanya lebih selektif —
+> pertimbangkan menyaring lokasi lebih dulu di subquery, lalu `MATCH` pada
+> hasilnya, dan bandingkan keduanya dengan `EXPLAIN` memakai data nyata.
 
 ### Menutup Permintaan Kadaluarsa (Scheduler)
 
@@ -1213,3 +1446,45 @@ $store->update([
 ```
 
 Gunakan transaksi agar tetap konsisten.
+
+### Ringkasan Indeks & Pola Query
+
+| Query | Indeks yang dipakai | Pola wajib |
+| :-- | :-- | :-- |
+| Toko dalam radius | `stores_location_spatial` | `MBRContains` **lalu** `ST_Distance_Sphere` |
+| Pencarian katalog | `listings_ft_title_desc` | Sanitasi input sebelum `BOOLEAN MODE` |
+| Broadcast per kategori | `cr_category_status_idx` | `category_id` (=) sebelum `status` (=) |
+| Penawaran per permintaan | `offers_request_status_idx` | |
+| Riwayat pesanan | `orders_buyer_status_idx` | Kesamaan dulu, `created_at` terakhir |
+| Tutup permintaan expired | `cr_status_expires_idx` | Kesamaan (`status`) sebelum rentang (`expires_at`) |
+| Rating toko | `reviews_store_direction_idx` | Saring `direction = 'buyer_to_store'` |
+
+### Memantau Query Lambat
+
+Aktifkan slow query log sejak awal — jauh lebih mudah menemukan query bermasalah
+dari catatan nyata daripada menebaknya:
+
+```ini
+[mysqld]
+slow_query_log = 1
+slow_query_log_file = /var/log/mysql/slow.log
+long_query_time = 0.5
+log_queries_not_using_indexes = 1
+min_examined_row_limit = 100      # abaikan tabel kecil (kategori, settings)
+```
+
+```bash
+mysqldumpslow -s t -t 10 /var/log/mysql/slow.log    # 10 query terlambat
+```
+
+Laravel Pulse (`Server_Implementation_Guide.md` §21.6) menampilkan hal yang
+sama lewat dasbor, tetapi slow query log tetap berguna karena mencatat query
+dari sumber mana pun — termasuk scheduler dan perintah artisan.
+
+> ⚠️ **`log_queries_not_using_indexes` bisa membanjiri disk** pada trafik
+> tinggi. Aktifkan saat pengembangan dan minggu-minggu awal produksi, lalu
+> matikan setelah query bermasalah teratasi.
+>
+> Ambang `long_query_time = 0.5` sengaja ketat. Untuk aplikasi mobile di area
+> sinyal lemah, query 500 ms sudah terasa lambat karena masih ditambah latensi
+> jaringan.

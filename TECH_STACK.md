@@ -255,9 +255,9 @@ Definisi lengkap istilah menghadap-pengguna ada di
    `pubspec.lock`.
 4. Cek dokumen turunan masih konsisten:
    ```bash
-   for c in versions structure datamodel api backend mobile brand prd terms security deploy; do
+   for c in versions structure datamodel api backend mobile brand prd terms security deploy dbperf; do
      node tools/dev/check-$c.mjs || exit 1
    done
    ```
-   Sebelas pemeriksa ini menggantikan pencarian `grep` manual dan keluar
+   Dua belas pemeriksa ini menggantikan pencarian `grep` manual dan keluar
    dengan status bukan-nol bila ada yang meleset.

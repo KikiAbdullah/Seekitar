@@ -2197,13 +2197,34 @@ Semua query radius memakai `GeolocationService` (§4) yang dipanggil lewat
 // app/Models/Concerns/HasLocation.php
 trait HasLocation
 {
-    /** Batasi hasil pada radius (km) dari sebuah titik. */
+    /**
+     * Batasi hasil pada radius (km) dari sebuah titik.
+     *
+     * DUA TAHAP dan urutannya penting:
+     *   1. MBRContains  -> memakai SPATIAL INDEX, membuang mayoritas baris
+     *   2. ST_Distance_Sphere -> jarak akurat, hanya pada kandidat tersisa
+     *
+     * ST_Distance_Sphere sendirian TIDAK memakai indeks: ia dihitung untuk
+     * setiap baris tabel. Lihat DATABASE.md §11.
+     */
     public function scopeNearby(Builder $q, float $lat, float $lng, float $radiusKm): Builder
     {
-        return $q->whereRaw(
-            'ST_Distance_Sphere(location, ST_GeomFromText(?, 4326)) <= ?',
-            ["POINT($lng $lat)", $radiusKm * 1000]
+        $meter  = $radiusKm * 1000;
+        $latDeg = $meter / 111320;
+        $lngDeg = $meter / (111320 * cos(deg2rad($lat)));
+
+        $bbox = sprintf(
+            'POLYGON((%1$F %2$F, %1$F %4$F, %3$F %4$F, %3$F %2$F, %1$F %2$F))',
+            $lng - $lngDeg, $lat - $latDeg,
+            $lng + $lngDeg, $lat + $latDeg
         );
+
+        return $q
+            ->whereRaw('MBRContains(ST_GeomFromText(?, 4326), location)', [$bbox])
+            ->whereRaw(
+                'ST_Distance_Sphere(location, ST_GeomFromText(?, 4326)) <= ?',
+                ["POINT($lng $lat)", $meter]
+            );
     }
 
     /** Tambahkan kolom distance_km agar bisa diurutkan & ditampilkan. */
@@ -2245,6 +2266,24 @@ $stores = Store::query()
 >
 > ⚠️ `withDistance()` harus dipanggil **sebelum** `orderByDistance()`, karena
 > alias `distance_km` belum ada sebelum kolomnya dipilih.
+>
+> ⚠️ **Jangan menghapus tahap `MBRContains` dari `scopeNearby()`** dengan alasan
+> "menyederhanakan query". Tanpa tahap itu, indeks spasial tidak terpakai sama
+> sekali dan pencarian melambat sebanding dengan jumlah baris. Verifikasi
+> dengan `EXPLAIN`: kolom `key` harus berisi `stores_location_spatial`.
+
+**Memastikan indeks terpakai:**
+
+```php
+// Jalankan sekali di tinker/test setelah data uji dimuat.
+DB::enableQueryLog();
+Store::nearby(-7.2575, 112.7521, 5)->get();
+$sql = DB::getQueryLog()[0]['query'];
+
+dd(DB::select("EXPLAIN $sql", DB::getQueryLog()[0]['bindings']));
+// key => 'stores_location_spatial'  ✅
+// key => null                        ❌ indeks tidak terpakai
+```
 
 **Menyimpan koordinat** (kolom POINT tidak bisa diisi string biasa):
 
