@@ -12,6 +12,13 @@ class Review extends Model
 {
     use HasFactory, HasUuids;
 
+    /**
+     * Ulasan tidak bisa disunting setelah dikirim (API_DOCUMENTATION.md §8),
+     * jadi tabelnya sengaja tanpa kolom `updated_at`. Tanpa baris ini Eloquent
+     * akan mencoba mengisinya dan query gagal.
+     */
+    public const UPDATED_AT = null;
+
     protected $fillable = [
         'order_id', 'reviewer_id', 'reviewee_id', 'store_id',
         'direction', 'rating', 'comment',

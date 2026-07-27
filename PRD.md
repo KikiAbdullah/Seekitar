@@ -392,7 +392,11 @@ Definisinya di sini agar tidak ditafsirkan berbeda-beda saat perencanaan Fase 2:
 
 ### 5.4 Manajemen Pesanan & State Machine
 
-Setiap pesanan memiliki tipe `order_type`: `goods`, `service`, `rental`. Alur status disesuaikan.
+Setiap pesanan memiliki tipe `order_type`: `product`, `service`, `rental`. Alur status disesuaikan.
+
+> Nilainya **sama persis** dengan `listings.listing_type` agar bisa disalin
+> langsung saat pesanan dibuat. Jangan tulis `goods` di sini — bentuk jamak
+> `goods` hanya dipakai `stores.store_type` yang bertipe `SET`.
 
 > ⚠️ **Diagram di bawah adalah alur pengalaman pengguna, bukan nilai kolom.**
 > `orders.status` hanya punya **enam** nilai (`DATABASE.md` §4.7):
@@ -564,6 +568,11 @@ pesanan ke `selesai`. Tidak ada nilai ENUM `dikembalikan`.
 
 ## 8. MODEL DATA & SKEMA DATABASE
 
+> 📌 **Sumber kebenaran skema adalah [`DATABASE.md`](DATABASE.md) §4.**
+> Bab ini ringkasan untuk pembaca non-teknis: hanya kolom utama, tanpa indeks,
+> CHECK constraint, dan kolom operasional. Bila keduanya berbeda, DATABASE.md
+> yang berlaku — dan perbedaan itu adalah bug yang harus diperbaiki di sini.
+
 ### 8.1 Skema Tabel Utama (MVP)
 
 **`users`**
@@ -663,10 +672,12 @@ pesanan ke `selesai`. Tidak ada nilai ENUM `dikembalikan`.
 | store_id | CHAR(36) FK | |
 | offer_id | CHAR(36) NULL | |
 | listing_id | CHAR(36) NULL | |
-| order_type | VARCHAR(20) | `goods`, `service`, `rental` |
+| order_type | VARCHAR(20) | `product`, `service`, `rental` — sama persis dengan `listings.listing_type` |
+| quantity | INT UNSIGNED | Default 1; selalu 1 untuk `service` |
 | total_amount | DECIMAL(12,2) | |
 | status | VARCHAR(30) | |
 | payment_method | VARCHAR(30) | `cod`, `transfer` |
+| notes | TEXT NULL | Catatan pembeli saat memesan |
 | completed_at | TIMESTAMP NULL | |
 | created_at | TIMESTAMP | |
 | updated_at | TIMESTAMP | |
@@ -675,12 +686,18 @@ pesanan ke `selesai`. Tidak ada nilai ENUM `dikembalikan`.
 | Kolom | Tipe | Keterangan |
 | :--- | :--- | :--- |
 | id | CHAR(36) PK | |
-| order_id | CHAR(36) UNIQUE FK | |
-| reviewer_id | CHAR(36) FK | |
-| reviewee_id | CHAR(36) FK | |
+| order_id | CHAR(36) FK | **Tidak UNIQUE** — satu pesanan punya maks 2 ulasan (§5.5) |
+| reviewer_id | CHAR(36) FK | Penulis ulasan |
+| reviewee_id | CHAR(36) FK | Pihak yang diulas |
+| store_id | CHAR(36) NULL FK | Diisi hanya saat arah `buyer_to_store` |
+| direction | VARCHAR(20) | `buyer_to_store`, `store_to_buyer` |
 | rating | TINYINT CHECK(1-5) | |
 | comment | TEXT | |
-| created_at | TIMESTAMP | |
+| created_at | TIMESTAMP | Tanpa `updated_at` — ulasan tidak bisa disunting |
+
+> ⚠️ `UNIQUE` dipasang pada **(`order_id`, `direction`)**, bukan `order_id`
+> saja. Menguncinya ke satu ulasan per pesanan akan mematahkan penilaian dua
+> arah yang diwajibkan §5.5.
 
 **`disputes`**
 | Kolom | Tipe | Keterangan |

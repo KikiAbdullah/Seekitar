@@ -36,11 +36,12 @@ green, and the app served over HTTP (`/` and `/up` both return 200).
 | `node tools/dev/check-deploy.mjs` | Guards deployment guides: Redis, S3, TLS, backup, signing, monitoring. |
 | `node tools/dev/check-dbperf.mjs` | Guards composite indexes, fulltext parser choice, and spatial query pattern. |
 | `node tools/dev/check-docs.mjs` | Guards UI/UX, queue, testing, notification, geospatial, and doc-version sections. |
+| `node tools/dev/check-schema-drift.mjs` | Compares migrations ⇄ `DATABASE.md` ⇄ Eloquent `$fillable`; catches columns that exist in one layer but not the others. |
 
 All checkers exit non-zero on failure, so they work as CI/pre-commit steps:
 
 ```bash
-for c in versions structure datamodel api backend mobile brand prd terms security deploy dbperf docs; do
+for c in versions structure datamodel api backend mobile brand prd terms security deploy dbperf docs schema-drift; do
   node tools/dev/check-$c.mjs || exit 1
 done
 ```

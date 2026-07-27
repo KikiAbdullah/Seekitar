@@ -24,33 +24,55 @@ final class SpatialSchema
         return DB::connection()->getDriverName() === 'mysql';
     }
 
-    /** Tambahkan kolom lokasi ke tabel yang sudah ada. */
-    public static function addLocationColumn(string $table, bool $nullable = false, ?string $after = null): void
-    {
+    /**
+     * Tambahkan kolom lokasi ke tabel yang sudah ada.
+     *
+     * `$column` bisa diganti (mis. `shipping_location` di `orders`), sehingga
+     * satu tabel boleh punya lebih dari satu titik. Di SQLite kolom POINT
+     * dipecah jadi `<column>_latitude` / `<column>_longitude`; khusus nama
+     * baku `location` dipakai `latitude`/`longitude` tanpa awalan agar
+     * kompatibel dengan HasLocation dan migrasi yang sudah ada.
+     */
+    public static function addLocationColumn(
+        string $table,
+        bool $nullable = false,
+        ?string $after = null,
+        string $column = 'location',
+    ): void {
         if (self::isMySql()) {
             $null  = $nullable ? 'NULL' : 'NOT NULL';
             $pos   = $after ? "AFTER `$after`" : '';
             // SRID WAJIB melekat di kolom, kalau tidak SPATIAL INDEX ditolak.
-            DB::statement("ALTER TABLE `$table` ADD COLUMN `location` POINT $null SRID 4326 $pos");
+            DB::statement("ALTER TABLE `$table` ADD COLUMN `$column` POINT $null SRID 4326 $pos");
             return;
         }
 
-        Schema::table($table, function ($t) use ($nullable, $after) {
-            $lat = $t->decimal('latitude', 10, 7);
-            $lng = $t->decimal('longitude', 10, 7);
+        [$latCol, $lngCol] = self::sqliteColumns($column);
+
+        Schema::table($table, function ($t) use ($nullable, $after, $latCol, $lngCol) {
+            $lat = $t->decimal($latCol, 10, 7);
+            $lng = $t->decimal($lngCol, 10, 7);
             if ($nullable) { $lat->nullable(); $lng->nullable(); }
             if ($after)    { $lat->after($after); }
         });
     }
 
+    /** Nama sepasang kolom pengganti POINT di SQLite. */
+    public static function sqliteColumns(string $column = 'location'): array
+    {
+        return $column === 'location'
+            ? ['latitude', 'longitude']
+            : ["{$column}_latitude", "{$column}_longitude"];
+    }
+
     /** Indeks spasial hanya bisa dibuat di MySQL dan pada kolom NOT NULL. */
-    public static function addSpatialIndex(string $table, string $indexName): void
+    public static function addSpatialIndex(string $table, string $indexName, string $column = 'location'): void
     {
         if (! self::isMySql()) {
             return;   // SQLite: dilewati, tidak ada padanannya
         }
 
-        DB::statement("ALTER TABLE `$table` ADD SPATIAL INDEX `$indexName` (`location`)");
+        DB::statement("ALTER TABLE `$table` ADD SPATIAL INDEX `$indexName` (`$column`)");
     }
 
     /** Ekspresi SQL untuk menyimpan koordinat. */

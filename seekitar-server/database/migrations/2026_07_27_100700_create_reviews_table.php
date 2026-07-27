@@ -21,7 +21,11 @@ return new class extends Migration
             $table->string('direction', 20);   // buyer_to_store | store_to_buyer
             $table->unsignedTinyInteger('rating');
             $table->text('comment')->nullable();
-            $table->timestamps();
+
+            // HANYA created_at. API_DOCUMENTATION.md §8 menyatakan ulasan
+            // tidak bisa diubah setelah dikirim; menyediakan updated_at
+            // menyiratkan sebaliknya. Model memakai `const UPDATED_AT = null`.
+            $table->timestamp('created_at')->nullable();
 
             // Satu ulasan per ARAH per pesanan — bukan satu per pesanan,
             // karena PRD §5.5 mewajibkan penilaian dua arah.

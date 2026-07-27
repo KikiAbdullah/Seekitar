@@ -21,7 +21,9 @@ use App\Models\Order;
 use App\Models\Review;
 use App\Models\Store;
 use App\Models\User;
+use App\Support\SpatialSchema;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\Schema;
 use Tests\RefreshesDatabase;
 use Tests\TestCase;
 
@@ -212,5 +214,78 @@ class ModelSchemaTest extends TestCase
 
         $order->completed_at = now()->subDays(9);
         $this->assertFalse($order->acceptsReview(), 'lewat 7 hari harus ditolak');
+    }
+
+    /**
+     * `shipping_location` terdokumentasi di DATABASE.md §4.7 tetapi sempat
+     * tidak pernah dimigrasikan sama sekali. Tanpa test ini, kolomnya bisa
+     * hilang lagi tanpa ada yang sadar sampai fitur navigasi penjual dibuat.
+     */
+    public function test_orders_punya_kolom_koordinat_tujuan_antar(): void
+    {
+        // Nama kolom diambil dari sumber kebenarannya, bukan ditulis ulang:
+        // di MySQL satu kolom POINT `shipping_location`, di SQLite sepasang
+        // kolom desimal. Menuliskannya manual di test pernah membuat test ini
+        // gagal padahal migrasinya benar.
+        $expected = SpatialSchema::isMySql()
+            ? ['shipping_location']
+            : SpatialSchema::sqliteColumns('shipping_location');
+
+        $this->assertTrue(
+            Schema::hasColumns('orders', $expected),
+            'orders wajib menyimpan koordinat tujuan: ' . implode(', ', $expected)
+        );
+
+        $cat = Category::create(['name' => 'Beras', 'slug' => 'beras']);
+        $store = $this->store($this->seller(), $cat);
+
+        $order = Order::create([
+            'order_number' => 'SKT-20260727-0003',
+            'buyer_id' => $this->buyer()->id, 'store_id' => $store->id,
+            'order_type' => OrderType::Product, 'quantity' => 3,
+            'total_amount' => 45000, 'payment_method' => Pay::Transfer,
+            'delivery_method' => DeliveryMethod::Delivery,
+            'shipping_address' => 'Jl. Melati 12, Bangil',
+            'notes' => 'Titip di pos satpam',
+        ]);
+
+        // quantity & notes juga sempat ada di migrasi tanpa terdokumentasi.
+        $this->assertSame(3, $order->fresh()->quantity);
+        $this->assertSame('Titip di pos satpam', $order->fresh()->notes);
+    }
+
+    /**
+     * API_DOCUMENTATION.md §8: ulasan tidak bisa diubah setelah dikirim.
+     * Karena itu tabelnya tanpa `updated_at`; kalau model lupa menyetel
+     * UPDATED_AT = null, Eloquent menulis kolom yang tidak ada dan gagal.
+     */
+    public function test_ulasan_tidak_punya_kolom_updated_at(): void
+    {
+        $this->assertFalse(
+            Schema::hasColumn('reviews', 'updated_at'),
+            'ulasan bersifat permanen, updated_at menyiratkan bisa disunting'
+        );
+
+        $cat = Category::create(['name' => 'AC', 'slug' => 'ac']);
+        $buyer = $this->buyer();
+        $seller = $this->seller();
+        $store = $this->store($seller, $cat);
+
+        $order = Order::create([
+            'order_number' => 'SKT-20260727-0004',
+            'buyer_id' => $buyer->id, 'store_id' => $store->id,
+            'order_type' => OrderType::Service, 'total_amount' => 100000,
+            'payment_method' => Pay::Cod, 'status' => OrderStatus::Selesai,
+            'completed_at' => now(),
+        ]);
+
+        // Pembuatan harus lolos tanpa error "no such column: updated_at".
+        $review = Review::create([
+            'order_id' => $order->id, 'reviewer_id' => $buyer->id,
+            'reviewee_id' => $seller->id, 'store_id' => $store->id,
+            'direction' => ReviewDirection::BuyerToStore, 'rating' => 5,
+        ]);
+
+        $this->assertNotNull($review->created_at);
     }
 }

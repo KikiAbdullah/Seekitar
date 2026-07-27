@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\SpatialSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -48,6 +49,12 @@ return new class extends Migration
             $table->index(['buyer_id', 'status', 'created_at'], 'orders_buyer_status_idx');
             $table->index(['store_id', 'status', 'created_at'], 'orders_store_status_idx');
         });
+
+        // Koordinat tujuan antar (DATABASE.md §4.7). NULL-able karena hanya
+        // terisi saat delivery_method = 'delivery'; pesanan pickup tidak punya
+        // titik tujuan. Tanpa kolom ini penjual tak bisa dinavigasikan ke
+        // alamat pembeli — shipping_address hanyalah teks bebas.
+        SpatialSchema::addLocationColumn('orders', nullable: true, column: 'shipping_location');
     }
 
     public function down(): void

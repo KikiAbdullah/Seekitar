@@ -127,6 +127,10 @@ Setiap tabel dilengkapi penjelasan tiap kolom, alasan pemilihan tipe, dan constr
 | `ktp_rejected_reason`| TEXT NULL            | Alasan penolakan agar pengguna tahu apa yang harus diperbaiki.                       |
 | `nik`                | VARCHAR(255) NULL    | NIK hasil pembacaan admin. **Terenkripsi** (cast `encrypted`), bukan plaintext.      |
 | `nik_hash`           | CHAR(64) NULL        | SHA-256 dari NIK. Untuk mendeteksi NIK ganda, karena kolom terenkripsi tak bisa di-`WHERE`. |
+| `is_blocked`         | TINYINT(1) DEFAULT 0 | Diblokir admin. Dipakai filter `GET /admin/users` & respons `423`.                   |
+| `blocked_reason`     | VARCHAR(255) NULL    | Alasan pemblokiran, ditampilkan ke pengguna saat login ditolak.                      |
+| `blocked_at`         | TIMESTAMP NULL       | Kapan diblokir — untuk audit dan pencabutan token.                                   |
+| `remember_token`     | VARCHAR(100) NULL    | Bawaan Laravel. Tidak dipakai alur OTP, tetap ada agar `Authenticatable` utuh.       |
 | `deleted_at`         | TIMESTAMP NULL       | Soft delete untuk pengguna yang menonaktifkan akun.                                  |
 | `created_at`         | TIMESTAMP            | Otomatis diisi Laravel.                                                              |
 | `updated_at`         | TIMESTAMP            | Otomatis diisi Laravel.                                                              |
@@ -184,6 +188,7 @@ kebijakan retensi.
 | `regency`             | VARCHAR(100)                                            | Kabupaten/kota tempat toko berada. Diisi dari reverse geocoding saat pinpoint. |
 | `regency_code`        | CHAR(4) NULL                                            | Kode wilayah BPS (mis. `3578`). Sumber kebenaran untuk geofencing.             |
 | `npwp`                | VARCHAR(20) NULL                                        | NPWP usaha (opsional). Syarat pendukung verifikasi Level 3 (PRD §5.3.2).       |
+| `bank_account`        | VARCHAR(100) NULL                                       | Rekening tujuan transfer, mis. `BCA 1234567890 a/n Yanto`. Ditampilkan ke pembeli saat `payment_method = 'transfer'` (§4.7). |
 | `store_type`          | SET('goods','services','rental')                        | Kombinasi jenis usaha. SET lebih efisien dari VARCHAR untuk pilihan tetap.     |
 | `category_ids`        | JSON                                                    | Array ID dari `categories`. Contoh: `[1, 3, 7]`.                               |
 | `location`            | POINT SRID 4326                                         | Titik koordinat toko (longitude, latitude). Wajib.                             |
@@ -692,6 +697,7 @@ Offer::where('status', OfferStatus::Pending)
 | `offer_id`       | CHAR(36) NULL                                                                                                   | FK ke `offers` (jika dari penawaran).  |
 | `listing_id`     | CHAR(36) NULL                                                                                                   | FK ke `listings` (jika langsung beli). |
 | `order_type`     | ENUM('product','service','rental')                                                                              | Menentukan alur status. Nilainya **sama persis** dengan `listings.listing_type`. |
+| `quantity`       | INT UNSIGNED DEFAULT 1                                                                                          | Jumlah unit. Selalu 1 untuk `service`. |
 | `total_amount`   | DECIMAL(12,2)                                                                                                   | Total transaksi.                       |
 | `status`         | ENUM('menunggu_konfirmasi','diproses','dikirim','selesai','dibatalkan','dispute') DEFAULT 'menunggu_konfirmasi' |                                        |
 | `payment_method` | ENUM('cod','transfer')                                                                                          |                                        |
@@ -700,6 +706,7 @@ Offer::where('status', OfferStatus::Pending)
 | `shipping_location` | POINT SRID 4326 NULL                                                                                         | Koordinat tujuan untuk navigasi penjual. |
 | `payment_proof_url` | VARCHAR(500) NULL                                                                                            | Bukti transfer dari pembeli.           |
 | `payment_confirmed_at` | TIMESTAMP NULL                                                                                            | Kapan penjual mengonfirmasi dana masuk. |
+| `notes`          | TEXT NULL                                                                                                       | Catatan pembeli saat memesan (PRD §8). |
 | `completed_at`   | TIMESTAMP NULL                                                                                                  | Waktu transaksi dianggap selesai.      |
 | `cancelled_at`   | TIMESTAMP NULL                                                                                                  | Kapan dibatalkan.                      |
 | `cancelled_by`   | CHAR(36) NULL                                                                                                   | FK ke `users`. Siapa yang membatalkan. |
@@ -989,6 +996,33 @@ CREATE TABLE user_devices (
 > dari tabel ini — lihat `Server_Implementation_Guide.md` §15.1. Tanpa
 > pembersihan, antrian terus mencoba mengirim ke perangkat yang aplikasinya
 > sudah dihapus.
+
+### 4.9b `settings`
+
+Angka yang sering diubah operasional (radius maksimum, masa berlaku
+permintaan, SLA) **tidak boleh** ditanam di kode — mengubahnya berarti deploy
+ulang. Tabel ini membuatnya bisa disunting admin lewat `PUT /admin/settings`.
+
+```sql
+CREATE TABLE settings (
+  key        VARCHAR(100) PRIMARY KEY,   -- mis. max_search_radius_km
+  value      TEXT NULL,
+  type       VARCHAR(20) NOT NULL DEFAULT 'string',  -- string|integer|boolean|json
+  `group`    VARCHAR(50) NOT NULL DEFAULT 'general', -- pengelompokan di form admin
+  label      VARCHAR(255) NOT NULL,      -- teks yang tampil ke admin
+  created_at TIMESTAMP,
+  updated_at TIMESTAMP
+);
+```
+
+> Kunci baku beserta nilai default dan tempat pemakaiannya didaftar di
+> [`Server_Implementation_Guide.md`](Server_Implementation_Guide.md) §9.12,
+> bersama `SettingService` yang meng-cache-nya. `key` dipakai sebagai PK
+> (bukan `id` auto-increment) karena akses selalu berdasarkan nama kunci.
+>
+> ⚠️ Perubahan pengaturan hanya berlaku untuk data **baru**. Menurunkan
+> `request_expiry_hours` tidak memperpendek permintaan yang sudah berjalan —
+> `expires_at` sudah dihitung saat baris dibuat.
 
 ### 4.10 `service_slots` (Fase 2)
 
