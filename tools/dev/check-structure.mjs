@@ -109,11 +109,16 @@ for (const [col, values] of Object.entries(ENUMS)) {
   else ok(col);
 }
 
-// Jebakan klasik: services (jamak) vs service (tunggal)
-if (!sig.includes('`services` (jamak)')) {
-  fail('Peringatan beda `services` vs `service` hilang dari Server Guide');
+// Jebakan klasik: store_type jamak vs listing_type/order_type tunggal.
+// Dicek berdasarkan MAKNA, bukan kalimat persis, supaya penulisan ulang
+// tidak dianggap regresi selama peringatannya tetap ada.
+const warnsPlural =
+  /StoreType.*(jamak|plural)/s.test(sig) &&
+  /(ListingType|OrderType).*(tunggal|singular)/s.test(sig);
+if (!warnsPlural) {
+  fail('Peringatan beda bentuk jamak/tunggal (StoreType vs ListingType/OrderType) hilang dari Server Guide');
 } else {
-  ok('catatan `services` vs `service` masih ada');
+  ok('catatan jamak vs tunggal masih ada');
 }
 
 console.log(

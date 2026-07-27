@@ -435,10 +435,18 @@ protected function storeType(): Attribute
 }
 ```
 
-> ⚠️ **Hati-hati `services` vs `service`.** `store_type` memakai bentuk
-> **jamak** (`services`), sedangkan `listing_type` dan `order_type` memakai
-> **tunggal** (`service`). Perbedaan ini nyata di skema database dan
-> dipertahankan — lihat `DATABASE.md`. Jangan menyamakan salah satunya.
+> ⚠️ **Hati-hati `services` vs `service`.**
+>
+> | Field | Bentuk | Nilai | Alasan |
+> | :-- | :-- | :-- | :-- |
+> | `store_type` | **jamak** | `goods`, `services`, `rental` | Array — satu toko bisa beberapa jenis |
+> | `listing_type` | tunggal | `product`, `service`, `rental` | Satu nilai per listing |
+> | `order_type` | tunggal | `product`, `service`, `rental` | Disalin dari `listing_type` |
+>
+> Perbedaan ini **disengaja**, bukan kelalaian: `store_type` menggambarkan
+> kumpulan, dua lainnya menggambarkan satu benda. `listing_type` dan
+> `order_type` sengaja **identik** supaya nilainya bisa disalin langsung saat
+> pesanan dibuat. Lihat `DATABASE.md` §4.2.
 
 #### Aturan `operating_hours`
 

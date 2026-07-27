@@ -51,6 +51,9 @@ Database Seekitar dirancang sebagai **Single Source of Truth** untuk seluruh dat
 
 ## 2. STANDAR & KONVENSI PENAMAAN
 
+> 📌 Padanan nama tabel dengan istilah UI dan API ada di
+> [`TECH_STACK.md`](TECH_STACK.md) §6 (Glosarium Lintas Lapisan).
+
 | Objek           | Aturan                                   | Contoh                       |
 | --------------- | ---------------------------------------- | ---------------------------- |
 | Tabel           | jamak, snake_case                        | `users`, `customer_requests` |
@@ -321,6 +324,31 @@ Karena tipe toko terbatas (3 pilihan), SET lebih hemat ruang dan memungkinkan pe
 > per tipe). Selama belum ada kebutuhan itu, pivot hanya menambah `JOIN` pada
 > query terpanas — pencarian toko dalam radius. **Ubah hanya jika `store_type`
 > berkembang melampaui 3 nilai atau butuh atribut turunan.**
+
+**Kenapa `store_type` jamak, sedangkan `listing_type` tunggal?**
+
+Sempat diusulkan menyeragamkan semuanya menjadi tunggal atau semuanya jamak.
+Yang benar adalah **membedakannya secara sengaja**, karena ketiganya menjawab
+pertanyaan tata bahasa yang berbeda:
+
+| Kolom | Tipe SQL | Pertanyaan | Nilai |
+| :-- | :-- | :-- | :-- |
+| `stores.store_type` | **SET** (banyak nilai) | Toko ini menjual *apa saja*? | `goods`, `services`, `rental` |
+| `listings.listing_type` | ENUM (satu nilai) | Listing ini *sebuah* apa? | `product`, `service`, `rental` |
+| `orders.order_type` | ENUM (satu nilai) | Pesanan ini *sebuah* apa? | `product`, `service`, `rental` |
+
+`store_type` bersifat **SET** — satu toko bisa `'goods,services'` sekaligus.
+Bentuk jamak wajar karena menggambarkan kumpulan: “toko ini menjual barang dan
+jasa”. Sementara `listing_type` selalu satu nilai: sebuah listing adalah
+*sebuah* produk, bukan “produk-produk”.
+
+> ⚠️ `rental` tetap tunggal di ketiganya. `rentals` sebagai kata benda jamak
+> terasa janggal dalam konteks ini, dan mengubahnya berarti migrasi tanpa
+> manfaat nyata.
+>
+> Yang **wajib** identik adalah `listing_type` dan `order_type`, karena nilainya
+> disalin langsung saat pesanan dibuat (§4.7). Perbedaan `store_type` tidak
+> menimbulkan masalah karena nilainya tidak pernah disalin ke kolom lain.
 
 **Kenapa `category_ids` JSON, bukan comma-separated?**  
 `PRD.md` §8 menulis `VARCHAR(255)` dengan keterangan "JSON array atau
@@ -651,7 +679,7 @@ Offer::where('status', OfferStatus::Pending)
 | `store_id`       | CHAR(36)                                                                                                        | FK ke `stores` (penyedia).             |
 | `offer_id`       | CHAR(36) NULL                                                                                                   | FK ke `offers` (jika dari penawaran).  |
 | `listing_id`     | CHAR(36) NULL                                                                                                   | FK ke `listings` (jika langsung beli). |
-| `order_type`     | ENUM('goods','service','rental')                                                                                | Menentukan alur status.                |
+| `order_type`     | ENUM('product','service','rental')                                                                              | Menentukan alur status. Nilainya **sama persis** dengan `listings.listing_type`. |
 | `total_amount`   | DECIMAL(12,2)                                                                                                   | Total transaksi.                       |
 | `status`         | ENUM('menunggu_konfirmasi','diproses','dikirim','selesai','dibatalkan','dispute') DEFAULT 'menunggu_konfirmasi' |                                        |
 | `payment_method` | ENUM('cod','transfer')                                                                                          |                                        |
@@ -689,6 +717,34 @@ ALTER TABLE orders
 ```
 
 **Catatan:** Status menggunakan ENUM agar tidak ada nilai tak terduga. Daftar status sudah mencakup seluruh alur (termasuk `dispute`).
+
+> ### ⚠️ Perubahan: `order_type` `'goods'` → `'product'`
+>
+> Sebelumnya `order_type` memakai `ENUM('goods','service','rental')` sementara
+> `listings.listing_type` memakai `ENUM('product','service','rental')`.
+>
+> Pesanan langsung **lahir dari listing** (`orders.listing_id`), jadi nilainya
+> harus disalin. Dengan ejaan yang berbeda, penyalinan itu mustahil dilakukan
+> apa adanya:
+>
+> ```php
+> // Sebelum perbaikan — GAGAL, 'product' bukan nilai sah di order_type:
+> $order->order_type = $listing->listing_type;   // 'product' -> ditolak ENUM
+> ```
+>
+> Akibatnya kode terpaksa memetakan diam-diam (`'product' => 'goods'`), dan
+> pemetaan itu **tidak terdokumentasi di dokumen mana pun**. Setiap laporan
+> yang mengelompokkan pesanan per tipe akan salah bila pemetaannya terlewat di
+> satu tempat saja.
+>
+> Sekarang keduanya identik, sehingga penyalinan menjadi langsung dan aman:
+>
+> ```php
+> $order->order_type = $listing->listing_type;   // selalu valid
+> ```
+>
+> `stores.store_type` **tetap** memakai bentuk jamak (`goods`, `services`) —
+> lihat §4.2 untuk alasannya.
 
 ### Nomor Pesanan (`order_number`)
 

@@ -395,7 +395,7 @@ Nilai enum **wajib** sama persis dengan ENUM di `DATABASE.md`:
 | Enum                 | Nilai                                                                        | Sumber                        |
 | :------------------- | :--------------------------------------------------------------------------- | :---------------------------- |
 | `OrderStatus`        | `menunggu_konfirmasi`, `diproses`, `dikirim`, `selesai`, `dibatalkan`, `dispute` | `orders.status`           |
-| `OrderType`          | `goods`, `service`, `rental`                                                 | `orders.order_type`           |
+| `OrderType`          | `product`, `service`, `rental`                                                | `orders.order_type`           |
 | `RequestStatus`      | `open`, `closed`, `expired`                                                  | `customer_requests.status`    |
 | `OfferStatus`        | `pending`, `accepted`, `rejected`                                            | `offers.status`               |
 | `ListingStatus`      | `active`, `sold`, `hidden`                                                   | `listings.status`             |
@@ -406,9 +406,15 @@ Nilai enum **wajib** sama persis dengan ENUM di `DATABASE.md`:
 | `DisputeStatus`      | `open`, `resolved`                                                           | `disputes.status`             |
 | `VerificationLevel`  | `1`, `2`, `3` (int)                                                          | `users.verification_level`    |
 
-> ⚠️ **Perhatikan bedanya:** `StoreType` memakai `services` (jamak), sedangkan
-> `ListingType` dan `OrderType` memakai `service` (tunggal). Ini memang berbeda
-> di skema database — jangan "dirapikan" tanpa mengubah migrasi.
+> ⚠️ **Perhatikan bedanya:** `StoreType` memakai bentuk **jamak**
+> (`goods`, `services`) karena kolomnya bertipe SET dan menampung kombinasi —
+> "toko ini menjual barang dan jasa". Sementara `ListingType` dan `OrderType`
+> memakai bentuk **tunggal** (`product`, `service`) karena masing-masing hanya
+> satu nilai.
+>
+> `ListingType` dan `OrderType` **wajib identik** — nilainya disalin langsung
+> saat pesanan dibuat dari listing. Jangan "merapikan" salah satunya tanpa
+> mengubah yang lain beserta migrasinya. Lihat `DATABASE.md` §4.2 dan §4.7.
 
 `VerificationLevel` bertipe integer, bukan string:
 

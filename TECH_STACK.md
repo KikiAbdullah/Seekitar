@@ -181,7 +181,72 @@ SESSION_DRIVER=redis
 
 ---
 
-## 6. CARA MENAIKKAN VERSI
+## 6. GLOSARIUM LINTAS LAPISAN
+
+Satu konsep memakai **nama berbeda di tiap lapisan**, dan itu disengaja: UI
+berbahasa Indonesia agar akrab bagi pengguna, sedangkan kode berbahasa Inggris
+mengikuti konvensi framework. Yang berbahaya adalah ketika satu lapisan
+memakai dua nama berbeda untuk hal yang sama.
+
+Tabel ini adalah sumber kebenarannya. Kolom **Jangan pakai** memuat istilah
+yang pernah muncul di dokumen dan sudah dihentikan.
+
+| Konsep | UI (Indonesia) | Database | API / Kode | Jangan pakai |
+| :-- | :-- | :-- | :-- | :-- |
+| Permintaan pembeli | **Permintaan** · *Pasang Kebutuhan* (aksi) | `customer_requests` | `Request`, `/requests` | ~~Kebutuhan~~ sebagai kata benda tunggal |
+| Penawaran penyedia | **Penawaran** | `offers` | `Offer`, `/offers` | ~~Bid~~, ~~Tawaran~~ |
+| Produk/jasa yang dijual | **Jelajahi** (halaman) · *Produk/Jasa* (item) | `listings` | `Listing`, `/listings` | ~~Katalog~~ sebagai nama entitas |
+| Profil usaha | **Toko** (umum) · *Lapak* (materi merek) | `stores` | `Store`, `/stores` | ~~Merchant~~, ~~Seller~~ |
+| Akun | **Pengguna** (UI) · *Warga Seekitar* (merek) | `users` | `User`, `/auth` | ~~Customer~~, ~~Member~~ |
+| Pesanan | **Pesanan** | `orders` | `Order`, `/orders` | ~~Transaksi~~ sebagai nama entitas |
+| Ulasan | **Ulasan** | `reviews` | `Review` | ~~Rating~~ (itu nama kolom, bukan entitas) |
+| Laporan masalah | **Laporan** | `disputes` | `Dispute` | ~~Komplain~~, ~~Sengketa~~ |
+
+### Kenapa nama tabel tetap `customer_requests`
+
+Sempat diusulkan mengganti menjadi `user_requests` dengan alasan “semua
+pengguna adalah customer”. **Tidak diubah**, karena:
+
+- Seekitar memakai **akun terpadu** (`PRD.md` §3): satu pengguna bisa sekaligus
+  pembeli dan penjual. Prefiks `customer_` justru menegaskan **peran** pengguna
+  saat membuat permintaan — ia bertindak sebagai pembeli, bukan penjual.
+- `user_requests` malah ambigu: bisa terbaca sebagai “permintaan pendaftaran
+  pengguna” atau “permintaan bantuan”.
+- Nama ini sudah dipakai di 33 tempat pada 4 dokumen. Mengganti nama tabel
+  tanpa manfaat nyata hanya menambah risiko.
+
+Yang penting: **konsisten di semua dokumen**, dan saat ini sudah demikian —
+nama alternatif itu tidak dipakai di satu tempat pun.
+
+### Sufiks `_level` vs `_status`
+
+Keduanya sudah tepat dan **tidak perlu diseragamkan**:
+
+| Kolom | Tipe | Kenapa sufiksnya begitu |
+| :-- | :-- | :-- |
+| `users.verification_level` | TINYINT 1–3 | **Bertingkat** — level 3 lebih tinggi dari level 2 |
+| `stores.verification_status` | ENUM | **Kategori** — `verified` bukan “lebih tinggi” dari `rejected`, sekadar berbeda |
+
+Aturannya: pakai `_level` bila nilainya berurutan dan bisa dibandingkan,
+`_status` bila nilainya sekadar keadaan yang setara.
+
+### Istilah UI di aplikasi penyedia
+
+`Pasang Kebutuhan` dan `Kebutuhan Sekitar` **bukan duplikasi** — keduanya
+merujuk data yang sama (`customer_requests`) dari dua sudut pandang:
+
+| Istilah | Untuk siapa | Artinya |
+| :-- | :-- | :-- |
+| **Pasang Kebutuhan** | Pembeli | Aksi membuat permintaan |
+| **Kebutuhan Sekitar** | Penyedia | Menu berisi permintaan terdekat |
+| **Permintaan Saya** | Pembeli | Daftar permintaan miliknya sendiri |
+
+Definisi lengkap istilah menghadap-pengguna ada di
+[`BRANDING-GUIDELINE.md`](BRANDING-GUIDELINE.md) §2.6.
+
+---
+
+## 7. CARA MENAIKKAN VERSI
 
 1. Ubah tabel di dokumen ini lebih dulu.
 2. Untuk backend: perbarui `composer.json`, jalankan `composer update`, commit
@@ -190,6 +255,9 @@ SESSION_DRIVER=redis
    `pubspec.lock`.
 4. Cek dokumen turunan masih konsisten:
    ```bash
-   grep -rniE 'laravel 1[0-2]|php 8\.[0-2]|riverpod 2|go_?router \^?1[0-6]' *.md
+   for c in versions structure datamodel api backend mobile brand prd terms; do
+     node tools/dev/check-$c.mjs || exit 1
+   done
    ```
-   Perintah di atas seharusnya tidak menghasilkan apa-apa.
+   Kedelapan pemeriksa ini menggantikan pencarian `grep` manual dan keluar
+   dengan status bukan-nol bila ada yang meleset.

@@ -238,6 +238,11 @@ Persona merek Seekitar berbicara seperti **“tetangga yang selalu tahu solusi�
 | **Terverifikasi**     | Status akun yang telah melewati pemeriksaan KTP/usaha.                |
 | **Jelajahi**          | Halaman utama pencarian katalog barang, jasa, dan sewa.               |
 
+> 📌 Tabel di atas mendefinisikan istilah **menghadap-pengguna**. Pemetaannya
+> ke nama tabel database dan endpoint API ada di
+> [`TECH_STACK.md`](TECH_STACK.md) §6 — rujuk ke sana saat menamai kolom,
+> kelas, atau route.
+
 ---
 
 ## 3. IDENTITAS VISUAL
