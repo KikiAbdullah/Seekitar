@@ -12,10 +12,12 @@ set -euo pipefail
 DEV_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVER_DIR="$(cd "$DEV_DIR/../../seekitar-server" && pwd)"
 
+# `--` memisahkan argumen skrip dari opsi Node; tanpa itu, argumen seperti
+# `--filter=Foo` ditelan Node sebagai opsinya sendiri dan gagal.
 ARGS_JSON=$(node -e '
   const a = process.argv.slice(1);
   process.stdout.write(JSON.stringify(["phpunit", "--configuration", "phpunit.xml", ...a]));
-' "$@")
+' -- "$@")
 
 RUNNER=$(mktemp /tmp/seekitar-phpunit-XXXXXX.php)
 trap 'rm -f "$RUNNER"' EXIT
