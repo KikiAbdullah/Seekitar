@@ -338,12 +338,19 @@ use Illuminate\Database\Eloquent\Builder;
 
 class GeolocationService
 {
+    /**
+     * WKT SRID 4326 dibaca MySQL sebagai (latitude longitude) sesuai EPSG.
+     * Seluruh bujur Indonesia (95°-141° BT) di luar rentang lintang ±90,
+     * jadi tanpa opsi ini setiap titik ditolak: ERROR 3617.
+     */
+    private const AXIS = 'axis-order=long-lat';
+
     /** Batasi query ke radius tertentu (meter) dari sebuah titik. */
     public function withinRadius(Builder $query, float $lat, float $lng, float $radiusKm): Builder
     {
         return $query->whereRaw(
-            'ST_Distance_Sphere(location, ST_GeomFromText(?, 4326)) <= ?',
-            ["POINT($lng $lat)", $radiusKm * 1000]
+            'ST_Distance_Sphere(location, ST_GeomFromText(?, 4326, ?)) <= ?',
+            ["POINT($lng $lat)", self::AXIS, $radiusKm * 1000]
         );
     }
 
@@ -351,8 +358,8 @@ class GeolocationService
     public function selectDistance(Builder $query, float $lat, float $lng): Builder
     {
         return $query->selectRaw(
-            '*, ST_Distance_Sphere(location, ST_GeomFromText(?, 4326)) / 1000 AS distance_km',
-            ["POINT($lng $lat)"]
+            '*, ST_Distance_Sphere(location, ST_GeomFromText(?, 4326, ?)) / 1000 AS distance_km',
+            ["POINT($lng $lat)", self::AXIS]
         );
     }
 }
@@ -2094,8 +2101,8 @@ public function matchingStores(CustomerRequest $request): Collection
         // Dua arah: toko dalam radius pembeli, DAN pembeli dalam radius layanan toko.
         ->nearby($lat, $lng, $request->radius_km)
         ->whereRaw(
-            'ST_Distance_Sphere(location, ST_GeomFromText(?, 4326)) <= service_radius_km * 1000',
-            ["POINT($lng $lat)"]
+            'ST_Distance_Sphere(location, ST_GeomFromText(?, 4326, ?)) <= service_radius_km * 1000',
+            ["POINT($lng $lat)", 'axis-order=long-lat']
         )
         // Prioritas: rating tertinggi, lalu terdekat.
         ->orderByDesc('rating_avg')
@@ -2341,6 +2348,13 @@ Semua query radius memakai `GeolocationService` (§4) yang dipanggil lewat
 trait HasLocation
 {
     /**
+     * WKT SRID 4326 dibaca MySQL sebagai (latitude longitude) sesuai EPSG.
+     * Seluruh bujur Indonesia (95°-141° BT) di luar rentang lintang ±90,
+     * jadi tanpa opsi ini setiap titik ditolak: ERROR 3617.
+     */
+    private const AXIS = 'axis-order=long-lat';
+
+    /**
      * Batasi hasil pada radius (km) dari sebuah titik.
      *
      * DUA TAHAP dan urutannya penting:
@@ -2363,10 +2377,13 @@ trait HasLocation
         );
 
         return $q
-            ->whereRaw('MBRContains(ST_GeomFromText(?, 4326), location)', [$bbox])
             ->whereRaw(
-                'ST_Distance_Sphere(location, ST_GeomFromText(?, 4326)) <= ?',
-                ["POINT($lng $lat)", $meter]
+                'MBRContains(ST_GeomFromText(?, 4326, ?), location)',
+                [$bbox, self::AXIS]
+            )
+            ->whereRaw(
+                'ST_Distance_Sphere(location, ST_GeomFromText(?, 4326, ?)) <= ?',
+                ["POINT($lng $lat)", self::AXIS, $meter]
             );
     }
 
@@ -2374,8 +2391,8 @@ trait HasLocation
     public function scopeWithDistance(Builder $q, float $lat, float $lng): Builder
     {
         return $q->select('*')->selectRaw(
-            'ST_Distance_Sphere(location, ST_GeomFromText(?, 4326)) / 1000 AS distance_km',
-            ["POINT($lng $lat)"]
+            'ST_Distance_Sphere(location, ST_GeomFromText(?, 4326, ?)) / 1000 AS distance_km',
+            ["POINT($lng $lat)", self::AXIS]
         );
     }
 
@@ -2431,7 +2448,7 @@ dd(DB::select("EXPLAIN $sql", DB::getQueryLog()[0]['bindings']));
 **Menyimpan koordinat** (kolom POINT tidak bisa diisi string biasa):
 
 ```php
-$store->location = DB::raw("ST_GeomFromText('POINT($lng $lat)', 4326)");
+$store->location = DB::raw("ST_GeomFromText('POINT($lng $lat)', 4326, 'axis-order=long-lat')");
 ```
 
 ### 16.1 Reverse Geocoding (Koordinat → Alamat)
@@ -3080,16 +3097,45 @@ it('hanya menghasilkan satu order meski accept dipanggil dua kali', function () 
 
 ```xml
 <!-- phpunit.xml -->
-<env name="DB_CONNECTION" value="sqlite"/>
-<env name="DB_DATABASE" value=":memory:"/>
+<env name="DB_CONNECTION" value="mysql"/>
+<env name="DB_DATABASE" value="seekitar_testing"/>
+<env name="DB_HOST" value="127.0.0.1"/>
+<env name="DB_PORT" value="3306"/>
 <env name="QUEUE_CONNECTION" value="sync"/>
 <env name="CACHE_STORE" value="array"/>
 ```
 
-> ⚠️ **SQLite tidak punya fungsi spasial** (`ST_Distance_Sphere`). Test yang
-> menyentuh query radius harus dijalankan terhadap MySQL 8, atau `nearby()`
-> di-mock. Jangan sampai lolos karena "tidak diuji" — inilah alasan
-> `GeolocationServiceTest` memakai koneksi MySQL terpisah di CI.
+> ⚠️ **Test dijalankan terhadap MySQL sungguhan, bukan SQLite.** Seluruh
+> skema bergantung pada fitur yang tidak ada di engine lain: `POINT SRID
+> 4326`, `SPATIAL INDEX`, tipe `SET`, dan `CHECK` constraint. Menguji di
+> SQLite berarti menguji skema yang berbeda dari yang dijalankan produksi —
+> `nearby()` bisa hijau padahal `ST_Distance_Sphere` tidak pernah dieksekusi.
+>
+> Nama basis data test **wajib mengandung `test`**. `Tests\RefreshesDatabase`
+> menolak berjalan jika tidak, karena `migrate:fresh` men-DROP semua tabel dan
+> salah konfigurasi akan menghapus data pengembangan tanpa peringatan.
+
+**Menyiapkan basis data test:**
+
+```sql
+CREATE DATABASE seekitar_testing
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+Di GitHub Actions, pakai service container agar tidak perlu memasang MySQL:
+
+```yaml
+services:
+  mysql:
+    image: mysql:8.0
+    env:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: seekitar_testing
+    ports: ['3306:3306']
+    options: >-
+      --health-cmd="mysqladmin ping -h 127.0.0.1"
+      --health-interval=10s --health-timeout=5s --health-retries=5
+```
 
 ---
 

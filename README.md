@@ -59,12 +59,21 @@ Versi lengkap & matriks kompatibilitas: [`TECH_STACK.md`](TECH_STACK.md).
 Kebutuhan: PHP 8.3+, Composer, MySQL 8.0.34+, Redis 7, Node 20+.
 
 ```bash
+# 1. Basis data harus ada lebih dulu — Laravel tidak membuatnya sendiri.
+mysql -u root -p -e "CREATE DATABASE seekitar
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+# 2. Aplikasi
 cd seekitar-server
 composer install
 cp .env.example .env && php artisan key:generate
 php artisan migrate --seed
 php artisan serve
 ```
+
+> ⚠️ **MySQL 8.0.34+ wajib, tidak ada alternatif.** Skema memakai `POINT SRID
+> 4326`, `SPATIAL INDEX`, tipe `SET`, dan `CHECK` constraint — `config/database.php`
+> sengaja hanya mendaftarkan koneksi `mysql`. Alasannya di [`DATABASE.md`](DATABASE.md) §1.
 
 Jalankan worker antrian di terminal terpisah — tanpa ini, OTP dan broadcast
 permintaan tidak akan terkirim:
@@ -78,10 +87,14 @@ php artisan queue:work redis --queue=high,default
 Repositori menyertakan runtime PHP mandiri untuk lingkungan terbatas:
 
 ```bash
-./tools/dev/setup      # runtime + dependensi + migrasi
-./tools/dev/serve      # http://127.0.0.1:8080
-./tools/dev/test       # PHPUnit
+./tools/dev/setup      # runtime PHP + dependensi Composer
+./tools/dev/ddl        # DDL MySQL dari migrasi, tanpa perlu server
 ```
+
+> ⚠️ `./tools/dev/serve`, `./tools/dev/test`, dan `artisan migrate` tetap
+> **membutuhkan server MySQL 8.0.34+**. Runtime mandiri ini hanya
+> menggantikan PHP, bukan basis datanya. Untuk memeriksa skema tanpa MySQL,
+> pakai `./tools/dev/ddl` + `node tools/dev/check-mysql.mjs`.
 
 Detailnya di [`tools/dev/README.md`](tools/dev/README.md).
 
@@ -106,11 +119,11 @@ flutter run --dart-define-from-file=config/dev.json
 
 ## Menjaga Konsistensi Dokumen
 
-Dokumen saling merujuk secara ketat. Empat belas pemeriksa otomatis menjaga agar
+Dokumen saling merujuk secara ketat. Lima belas pemeriksa otomatis menjaga agar
 perubahan di satu berkas tidak diam-diam membuat berkas lain keliru:
 
 ```bash
-for c in versions structure datamodel api backend mobile brand prd terms security deploy dbperf docs schema-drift; do
+for c in versions structure datamodel api backend mobile brand prd terms security deploy dbperf docs schema-drift mysql; do
   node tools/dev/check-$c.mjs || exit 1
 done
 ```

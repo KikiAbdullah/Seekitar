@@ -39,7 +39,11 @@ console.log('\nSpasial');
 check('syarat SRID & NOT NULL (#224)', ['SRID 4326', 'ST_GEOMETRY_COLUMNS', 'SRS_ID']);
 check('pola dua tahap (#225)', ['MBRContains', 'ST_Distance_Sphere']);
 check('penolakan ST_Buffer (#225)', ['ST_Buffer', 'geographic spatial reference systems']);
-check('scopeNearby dua tahap', ['MBRContains(ST_GeomFromText(?, 4326), location)'], sig);
+// Argumen ketiga (axis-order) wajib ada — tanpa itu query gagal di MySQL
+// dengan ERROR 3617 untuk setiap koordinat Indonesia (DATABASE.md §11).
+// Nilainya diikat sebagai parameter, jadi yang dicek bentuk placeholder-nya;
+// check-mysql.mjs yang memastikan nilai binding-nya benar.
+check('scopeNearby dua tahap', ['MBRContains(ST_GeomFromText(?, 4326, ?), location)'], sig);
 
 console.log('\nPemantauan');
 check('slow query log', ['slow_query_log', 'long_query_time']);

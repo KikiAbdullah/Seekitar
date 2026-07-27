@@ -2,8 +2,12 @@
 
 namespace App\Enums;
 
+use App\Enums\Concerns\HasValues;
+
 enum RequestStatus: string
 {
+    use HasValues;
+
     case Open    = 'open';
     case Closed  = 'closed';
     case Expired = 'expired';

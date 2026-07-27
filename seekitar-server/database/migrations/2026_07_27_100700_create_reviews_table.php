@@ -1,7 +1,9 @@
 <?php
 
+use App\Enums\ReviewDirection;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -18,7 +20,7 @@ return new class extends Migration
             // memperbaiki bug rating lintas-toko (DATABASE.md §4.8).
             $table->foreignUuid('store_id')->nullable()->constrained()->cascadeOnDelete();
 
-            $table->string('direction', 20);   // buyer_to_store | store_to_buyer
+            $table->enum('direction', ReviewDirection::values());
             $table->unsignedTinyInteger('rating');
             $table->text('comment')->nullable();
 
@@ -34,6 +36,17 @@ return new class extends Migration
             $table->index('reviewee_id', 'reviews_reviewee_id_idx');
             $table->index(['store_id', 'direction'], 'reviews_store_direction_idx');
         });
+
+        // store_id HANYA untuk arah buyer_to_store. Inilah yang mencegah
+        // ulasan pembeli ikut menaikkan rating toko (DATABASE.md §4.8).
+        DB::statement(<<<'SQL'
+            ALTER TABLE reviews ADD CONSTRAINT reviews_store_direction_chk
+            CHECK (
+                (direction = 'buyer_to_store' AND store_id IS NOT NULL)
+                OR
+                (direction = 'store_to_buyer' AND store_id IS NULL)
+            )
+        SQL);
     }
 
     public function down(): void

@@ -2,9 +2,13 @@
 
 namespace App\Enums;
 
+use App\Enums\Concerns\HasValues;
+
 /** Alasan laporan — nilainya dari API_DOCUMENTATION.md §9.1. */
 enum DisputeReason: string
 {
+    use HasValues;
+
     case BarangTidakSesuai      = 'barang_tidak_sesuai';
     case JasaTidakProfesional   = 'jasa_tidak_profesional';
     case PenyediaTidakResponsif = 'penyedia_tidak_responsif';

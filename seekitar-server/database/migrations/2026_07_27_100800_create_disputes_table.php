@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\DisputeReason;
+use App\Enums\DisputeStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -12,9 +14,9 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('order_id')->constrained()->cascadeOnDelete();
             $table->foreignUuid('reported_by')->constrained('users')->cascadeOnDelete();
-            $table->string('reason', 40);
+            $table->enum('reason', DisputeReason::values());
             $table->text('description')->nullable();
-            $table->string('status', 20)->default('open');
+            $table->enum('status', DisputeStatus::values())->default(DisputeStatus::Open->value);
 
             // Tanpa kolom ini, SLA 1x24 jam di PRD §5.5 tidak bisa diukur.
             $table->timestamp('response_deadline');

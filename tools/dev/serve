@@ -14,5 +14,15 @@ SERVER_DIR="$(cd "$DEV_DIR/../../seekitar-server" && pwd)"
 PORT="${1:-8080}"
 HOST="${HOST:-127.0.0.1}"
 
+# Peringatan dini: halaman apa pun yang menyentuh basis data akan error 500
+# tanpa MySQL. Server tetap dijalankan supaya rute statis bisa diperiksa.
+DB_HOST="${DB_HOST:-127.0.0.1}"
+DB_PORT="${DB_PORT:-3306}"
+if ! (exec 3<>"/dev/tcp/$DB_HOST/$DB_PORT") 2>/dev/null; then
+  echo "⚠️  Tidak ada MySQL di $DB_HOST:$DB_PORT — rute yang memakai basis data akan gagal."
+  echo "    Seekitar MySQL-only; lihat CONTRIBUTING.md untuk menyiapkannya."
+  echo
+fi
+
 echo "Seekitar server: http://$HOST:$PORT  (Ctrl+C to stop)"
 exec "$DEV_DIR/php" -S "$HOST:$PORT" -t "$SERVER_DIR/public" "$SERVER_DIR/public/index.php"

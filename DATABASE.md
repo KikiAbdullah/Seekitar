@@ -26,6 +26,10 @@
    - 4.7 `orders`
    - 4.8 `reviews`
    - 4.9 `disputes`
+   - 4.9a `user_devices`
+   - 4.9b `settings`
+   - 4.10 `service_slots` (Fase 2)
+   - 4.11 `subscriptions` (Fase 2)
 5. [Strategi Foreign Key & Cascading](#5-strategi-foreign-key--cascading)
 6. [Soft Delete: Implementasi & Cleanup](#6-soft-delete-implementasi--cleanup)
 7. [Indeks Komprehensif & Query Patterns](#7-indeks-komprehensif--query-patterns)
@@ -46,6 +50,25 @@ Database Seekitar dirancang sebagai **Single Source of Truth** untuk seluruh dat
 - **UUID mencegah prediksi** – Semua ID adalah UUID v4, menghilangkan risiko enumerasi dan memperkuat keamanan.
 - **Soft delete wajib untuk data penting** – `users`, `stores`, `listings` tidak pernah dihapus permanen; hanya disembunyikan.
 - **Siap dioperasikan oleh manusia** – Nama kolom deskriptif, constraint mencegah kesalahan input, dan default value masuk akal.
+
+### MySQL 8.0.34+ adalah satu-satunya engine yang didukung
+
+Bukan sekadar preferensi — skema ini memakai fitur yang **tidak punya padanan**
+di engine lain, dan tanpa itu jaminan integritas di atas ikut gugur:
+
+| Fitur | Dipakai untuk | Tidak ada di |
+| :-- | :-- | :-- |
+| `POINT` + `SRID 4326` | Semua titik lokasi (§7.3) | SQLite, tanpa ekstensi |
+| `SPATIAL INDEX` (R-tree) | Pencarian radius (§11) | SQLite |
+| Tipe `SET` | `stores.store_type` kombinasi (§4.2) | SQLite, PostgreSQL |
+| `CHECK` constraint | 6 aturan lintas kolom (§4.4, §4.7, §4.8) | SQLite (diabaikan diam-diam) |
+| Kolom `GENERATED ... STORED` | Uniqueness nama toko per kabupaten (§4.2) | SQLite lama |
+| `ST_Distance_Sphere` | Jarak dalam meter | SQLite |
+
+`config/database.php` karena itu **hanya** mendaftarkan koneksi `mysql`;
+koneksi SQLite/PostgreSQL/SQL Server sengaja dihapus agar tidak ada yang
+tanpa sengaja menjalankan aplikasi di engine yang diam-diam melonggarkan
+aturan. Pengujian pun berjalan di MySQL sungguhan — lihat `CONTRIBUTING.md`.
 
 ---
 
@@ -308,9 +331,9 @@ CREATE TABLE service_areas (
 ```php
 // Verifikasi presisi saat poligon tersedia.
 $inside = DB::selectOne(
-    'SELECT ST_Contains(boundary, ST_GeomFromText(?, 4326)) AS ok
+    'SELECT ST_Contains(boundary, ST_GeomFromText(?, 4326, ?)) AS ok
      FROM service_areas WHERE regency_code = ? AND is_active = 1',
-    ["POINT($lng $lat)", $regencyCode]
+    ["POINT($lng $lat)", 'axis-order=long-lat', $regencyCode]
 )?->ok;
 ```
 
@@ -1350,7 +1373,7 @@ deskripsi kolom, agar tidak ada yang mengarang level 4.
 - **Laravel Eloquent / Query Builder** melindungi dari SQL injection. Untuk raw query (geospasial), gunakan binding parameter:
 
 ```php
-->whereRaw("ST_Distance_Sphere(location, ST_GeomFromText(?, 4326)) <= ?", [$point, $radius])
+->whereRaw("ST_Distance_Sphere(location, ST_GeomFromText(?, 4326, 'axis-order=long-lat')) <= ?", [$point, $radius])
 ```
 
 - **User input tidak pernah langsung masuk raw query**.
@@ -1403,17 +1426,17 @@ $lngDeg = $meter / (111320 * cos(deg2rad($latitude)));
 $stores = Store::query()
     // TAHAP 1 — MBRContains memakai indeks spasial, membuang sebagian besar baris
     ->whereRaw(
-        'MBRContains(ST_GeomFromText(?, 4326), location)',
+        'MBRContains(ST_GeomFromText(?, 4326, ?), location)',
         [sprintf(
             'POLYGON((%1$F %2$F, %1$F %4$F, %3$F %4$F, %3$F %2$F, %1$F %2$F))',
             $longitude - $lngDeg, $latitude - $latDeg,
             $longitude + $lngDeg, $latitude + $latDeg
-        )]
+        ), 'axis-order=long-lat']
     )
     // TAHAP 2 — jarak akurat, hanya pada kandidat yang lolos tahap 1
     ->whereRaw(
-        'ST_Distance_Sphere(location, ST_GeomFromText(?, 4326)) <= ?',
-        ["POINT($longitude $latitude)", $meter]
+        'ST_Distance_Sphere(location, ST_GeomFromText(?, 4326, ?)) <= ?',
+        ["POINT($longitude $latitude)", 'axis-order=long-lat', $meter]
     )
     ->where('is_active', 1)
     ->get();
@@ -1447,16 +1470,41 @@ sah yang terbuang. Tahap 2 membuang sisa sudut kotak yang di luar lingkaran.
 > indeks, dan poligonnya dihitung aplikasi sehingga tidak butuh dukungan
 > geografis dari MySQL.
 
-**Perhatikan urutan `POINT(longitude latitude)`** — terbalik dari kebiasaan
-menulis "lat, lng". Kesalahan ini tidak memicu error, hanya hasil yang salah
-diam-diam. Karena itu seluruh pembuatan POINT dipusatkan di
-`GeolocationService` (`Server_Implementation_Guide.md` §16).
+#### ⚠️ `'axis-order=long-lat'` wajib pada SETIAP WKT bersistem SRID 4326
+
+Untuk SRID 4326 MySQL mengikuti definisi EPSG — `AXIS["Lat",NORTH],
+AXIS["Lon",EAST]` — sehingga **sumbu pertama adalah latitude**, bukan
+longitude. Menulis `POINT(107.6 -6.9)` tanpa opsi apa pun membuat MySQL
+membaca 107,6 sebagai lintang dan langsung menolaknya:
+
+```
+ERROR 3617 (22S03): Latitude 107.600000 is out of range in function
+st_geomfromtext. It must be within [-90.000000, 90.000000].
+```
+
+Ini bukan kasus tepi: **seluruh Indonesia berada di bujur 95°–141° BT**, semua
+di luar rentang ±90. Tanpa opsi ini, setiap penulisan titik gagal.
+
+Karena itu semua WKT di proyek ini memakai urutan `POINT(longitude latitude)`
+— sesuai konvensi GeoJSON di API — dan **selalu** menyertakan argumen ketiga:
+
+```php
+ST_GeomFromText('POINT(112.7521 -7.2575)', 4326, 'axis-order=long-lat')
+```
+
+Alternatifnya menulis `POINT(lat lng)` tanpa opsi. Itu ditolak karena membuat
+urutan di SQL berbeda dari payload API, dan **kesalahan seperti itu tidak
+memicu error** — hanya lokasi yang salah diam-diam.
+
+Seluruh pembuatan POINT dipusatkan di `HasLocation::setLocation()` dan
+`SpatialSchema::pointExpression()` supaya opsi ini tidak mungkin terlupakan;
+`tools/dev/check-mysql.mjs` menggagalkan build bila ada yang menghapusnya.
 
 **Verifikasi indeks benar-benar terpakai:**
 
 ```sql
 EXPLAIN SELECT * FROM stores
-WHERE MBRContains(ST_GeomFromText('POLYGON((...))', 4326), location);
+WHERE MBRContains(ST_GeomFromText('POLYGON((...))', 4326, 'axis-order=long-lat'), location);
 -- key harus 'stores_location_spatial', BUKAN NULL
 ```
 

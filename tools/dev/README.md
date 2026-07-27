@@ -37,11 +37,12 @@ green, and the app served over HTTP (`/` and `/up` both return 200).
 | `node tools/dev/check-dbperf.mjs` | Guards composite indexes, fulltext parser choice, and spatial query pattern. |
 | `node tools/dev/check-docs.mjs` | Guards UI/UX, queue, testing, notification, geospatial, and doc-version sections. |
 | `node tools/dev/check-schema-drift.mjs` | Compares migrations ⇄ `DATABASE.md` ⇄ Eloquent `$fillable`; catches columns that exist in one layer but not the others. |
+| `node tools/dev/check-mysql.mjs` | Asserts the project stays MySQL-only: no SQLite path, SRID 4326 + `axis-order=long-lat`, spatial indexes on NOT NULL, native ENUM/SET, CHECK constraints, InnoDB. |
 
 All checkers exit non-zero on failure, so they work as CI/pre-commit steps:
 
 ```bash
-for c in versions structure datamodel api backend mobile brand prd terms security deploy dbperf docs schema-drift; do
+for c in versions structure datamodel api backend mobile brand prd terms security deploy dbperf docs schema-drift mysql; do
   node tools/dev/check-$c.mjs || exit 1
 done
 ```
@@ -56,7 +57,7 @@ Two workarounds make the backend run anyway:
 
 1. **PHP runtime** — [`@php-wasm/cli`](https://www.npmjs.com/package/@php-wasm/cli)
    from npm provides a WebAssembly PHP 8.5.8 with the extensions Laravel needs
-   (`pdo_sqlite`, `mbstring`, `openssl`, `tokenizer`, `zip`, `gd`, `curl`,
+   (`pdo_mysql`, `mbstring`, `openssl`, `tokenizer`, `zip`, `gd`, `curl`,
    `bcmath`, `fileinfo`, `dom`, ...).
 2. **Composer packages** — every `dist.url` in `composer.lock` points at
    `api.github.com`, which *is* reachable. `install-vendor.mjs` downloads those
@@ -78,21 +79,31 @@ Two workarounds make the backend run anyway:
 - **Flutter/Dart cannot be installed here.** `seekitar_mobile` can be edited and
   reviewed, but not compiled or run in this sandbox — build it on a local
   machine with the Flutter SDK.
-- **Database is SQLite.** The PRD targets MySQL 8.0 with spatial types
-  (`POINT`, `ST_Distance_Sphere`, `SPATIAL INDEX`), which SQLite does not
-  support. Plan geospatial work accordingly — see the note below.
+- **No database server.** Seekitar is MySQL-only, and MySQL cannot be installed
+  here (`dev.mysql.com` is blocked). So `artisan migrate`, `./tools/dev/test`
+  and `./tools/dev/serve` all fail at the point they open a connection. See
+  below for what *can* be verified offline.
 
-## Note on the MySQL spatial requirement
+## Verifying the MySQL schema without MySQL
 
-`PRD.md` §7.3 and `DATABASE.md` rely on MySQL spatial functions. MySQL is not
-installable in this sandbox, so for local work either:
+The schema depends on `POINT SRID 4326`, `SPATIAL INDEX`, `SET`, and `CHECK`
+constraints. None of that can be exercised here, but the **generated DDL** can:
 
-- keep spatial columns/queries behind a small repository/service class so the
-  SQLite path can use a bounding-box or Haversine fallback, or
-- treat spatial features as "write here, verify on a MySQL environment".
+```bash
+./tools/dev/ddl                  # every CREATE TABLE / ALTER TABLE, in order
+node tools/dev/check-mysql.mjs   # asserts SRID, spatial indexes, ENUM/SET, CHECK, InnoDB
+```
 
-Worth deciding before the store/listing radius search gets built, since it
-affects how migrations and queries are written.
+`dump-ddl.php` uses Laravel's `pretend()`, which runs the migrations through
+the MySQL grammar and captures the SQL **without ever opening a connection**.
+That catches the class of bug that matters most here — DDL that is silently
+wrong — while still requiring a real MySQL 8.0.34+ server for behaviour tests.
+
+> ⚠️ MySQL reads `SRID 4326` WKT as **(latitude longitude)**, per EPSG. Every
+> Indonesian longitude (95°–141°E) is outside latitude's ±90 range, so
+> `ST_GeomFromText('POINT(lng lat)', 4326)` fails with
+> `ERROR 3617: Latitude ... is out of range`. All spatial SQL therefore passes
+> `'axis-order=long-lat'`; `check-mysql.mjs` fails the build if it is dropped.
 
 ## Files
 
@@ -100,6 +111,7 @@ affects how migrations and queries are written.
 | :-- | :-- |
 | `install-vendor.mjs` | Fetches `composer.lock` packages from GitHub. |
 | `boot-autoload.php` | Minimal PSR-4/classmap loader used only to start Composer itself. |
+| `ddl` / `dump-ddl.php` | Prints the MySQL DDL the migrations would emit, without a server. |
 | `package.json` | Pins `@php-wasm/cli`. |
 
 `node_modules/`, `.composer-src/` and `.composer-home/` are generated and

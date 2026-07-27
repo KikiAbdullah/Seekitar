@@ -1,8 +1,13 @@
 <?php
 
+use App\Enums\DeliveryMethod;
+use App\Enums\OrderStatus;
+use App\Enums\OrderType;
+use App\Enums\PaymentMethod;
 use App\Support\SpatialSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -23,13 +28,13 @@ return new class extends Migration
             $table->foreignUuid('listing_id')->nullable()->constrained()->nullOnDelete();
 
             // Nilainya SAMA dengan listing_type agar bisa disalin langsung.
-            $table->string('order_type', 20);
+            $table->enum('order_type', OrderType::values());
             $table->unsignedInteger('quantity')->default(1);
             $table->decimal('total_amount', 12, 2);
-            $table->string('status', 30)->default('menunggu_konfirmasi');
+            $table->enum('status', OrderStatus::values())->default(OrderStatus::MenungguKonfirmasi->value);
 
-            $table->string('payment_method', 20);
-            $table->string('delivery_method', 20)->default('pickup');
+            $table->enum('payment_method', PaymentMethod::values());
+            $table->enum('delivery_method', DeliveryMethod::values())->default(DeliveryMethod::Pickup->value);
             $table->text('shipping_address')->nullable();
             $table->string('payment_proof_url', 500)->nullable();
             $table->timestamp('payment_confirmed_at')->nullable();
@@ -55,6 +60,12 @@ return new class extends Migration
         // titik tujuan. Tanpa kolom ini penjual tak bisa dinavigasikan ke
         // alamat pembeli — shipping_address hanyalah teks bebas.
         SpatialSchema::addLocationColumn('orders', nullable: true, column: 'shipping_location');
+
+        // Diantar tanpa alamat = paket tanpa tujuan (DATABASE.md §4.7).
+        DB::statement(<<<'SQL'
+            ALTER TABLE orders ADD CONSTRAINT orders_shipping_chk
+            CHECK (delivery_method = 'pickup' OR shipping_address IS NOT NULL)
+        SQL);
     }
 
     public function down(): void

@@ -2,8 +2,12 @@
 
 namespace App\Enums;
 
+use App\Enums\Concerns\HasValues;
+
 enum DeliveryMethod: string
 {
+    use HasValues;
+
     case Pickup   = 'pickup';
     case Delivery = 'delivery';
 

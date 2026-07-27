@@ -2,8 +2,12 @@
 
 namespace App\Enums;
 
+use App\Enums\Concerns\HasValues;
+
 enum ListingType: string
 {
+    use HasValues;
+
     case Product = 'product';
     case Service = 'service';
     case Rental  = 'rental';

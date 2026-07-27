@@ -557,7 +557,7 @@ pesanan ke `selesai`. Tidak ada nilai ENUM `dikembalikan`.
 - Query utama pencarian dalam radius (menggunakan Laravel Query Builder dengan raw query):
   ```php
   Store::whereRaw(
-      "ST_Distance_Sphere(location, ST_GeomFromText(?, 4326)) <= ?",
+      "ST_Distance_Sphere(location, ST_GeomFromText(?, 4326, 'axis-order=long-lat')) <= ?",
       ["POINT({$longitude} {$latitude})", $radius_meter]
   )->where('is_active', true)->get();
   ```

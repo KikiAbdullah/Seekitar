@@ -2,12 +2,16 @@
 
 namespace App\Enums;
 
+use App\Enums\Concerns\HasValues;
+
 /**
  * Level verifikasi pengguna (DATABASE.md §4.1). Hanya 1-3.
  * TIDAK ADA level 0 dan tidak ada level 4 di MVP.
  */
 enum VerificationLevel: int
 {
+    use HasValues;
+
     case Basic    = 1;  // Nomor HP terverifikasi
     case Verified = 2;  // KTP diverifikasi — syarat membuka toko
     case Pro      = 3;  // Usaha tervalidasi, prioritas broadcast lebih tinggi

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Cetak DDL MySQL dari seluruh migrasi TANPA server MySQL.
+#
+#   ./tools/dev/ddl              # ke stdout
+#   ./tools/dev/ddl > skema.sql
+#
+# Memakai Laravel pretend(): query dirakit grammar MySQL lalu ditangkap,
+# tidak pernah dieksekusi. Inilah cara memverifikasi skema di sandbox yang
+# tidak bisa memasang MySQL.
+set -euo pipefail
+DEV_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec "$DEV_DIR/php" "$DEV_DIR/dump-ddl.php"

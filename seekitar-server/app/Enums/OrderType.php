@@ -2,12 +2,16 @@
 
 namespace App\Enums;
 
+use App\Enums\Concerns\HasValues;
+
 /**
  * Tipe pesanan. Nilainya IDENTIK dengan ListingType karena disalin
  * langsung saat pesanan dibuat dari listing (DATABASE.md §4.7).
  */
 enum OrderType: string
 {
+    use HasValues;
+
     case Product = 'product';
     case Service = 'service';
     case Rental  = 'rental';

@@ -21,8 +21,8 @@ use App\Models\Order;
 use App\Models\Review;
 use App\Models\Store;
 use App\Models\User;
-use App\Support\SpatialSchema;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\RefreshesDatabase;
 use Tests\TestCase;
@@ -49,12 +49,16 @@ class ModelSchemaTest extends TestCase
 
     private function store(User $owner, Category $cat): Store
     {
-        return Store::create([
+        // Koordinat POINT tidak bisa mass-assign — harus lewat setLocation()
+        // supaya opsi axis-order tidak terlewat (HasLocation).
+        $store = Store::make([
             'user_id' => $owner->id, 'name' => 'Bengkel AC Yanto', 'regency' => 'Sidoarjo',
             'store_type' => [StoreType::Services], 'category_ids' => [$cat->id],
             'verification_status' => VerificationStatus::Verified,
-            'latitude' => -7.2575, 'longitude' => 112.7521,
         ]);
+        $store->setLocation(lat: -7.2575, lng: 112.7521)->save();
+
+        return $store;
     }
 
     public function test_store_type_bulak_balik_antara_array_dan_set(): void
@@ -104,12 +108,13 @@ class ModelSchemaTest extends TestCase
     {
         $cat = Category::create(['name' => 'AC', 'slug' => 'ac']);
         $store = $this->store($this->seller(), $cat);
-        $req = CustomerRequest::create([
+        $req = CustomerRequest::make([
             'user_id' => $this->buyer()->id, 'title' => 'Servis AC',
             'description' => 'AC tidak dingin', 'category_id' => $cat->id,
             'budget_min' => 100000, 'budget_max' => 200000,
-            'expires_at' => now()->addDay(), 'latitude' => -7.26, 'longitude' => 112.755,
+            'expires_at' => now()->addDay(),
         ]);
+        $req->setLocation(lat: -7.26, lng: 112.755)->save();
 
         $offer = Offer::create([
             'request_id' => $req->id, 'store_id' => $store->id,
@@ -223,18 +228,20 @@ class ModelSchemaTest extends TestCase
      */
     public function test_orders_punya_kolom_koordinat_tujuan_antar(): void
     {
-        // Nama kolom diambil dari sumber kebenarannya, bukan ditulis ulang:
-        // di MySQL satu kolom POINT `shipping_location`, di SQLite sepasang
-        // kolom desimal. Menuliskannya manual di test pernah membuat test ini
-        // gagal padahal migrasinya benar.
-        $expected = SpatialSchema::isMySql()
-            ? ['shipping_location']
-            : SpatialSchema::sqliteColumns('shipping_location');
-
         $this->assertTrue(
-            Schema::hasColumns('orders', $expected),
-            'orders wajib menyimpan koordinat tujuan: ' . implode(', ', $expected)
+            Schema::hasColumn('orders', 'shipping_location'),
+            'orders wajib menyimpan koordinat tujuan sebagai POINT'
         );
+
+        // Tipe & SRID ikut diperiksa: kolom POINT tanpa SRID 4326 diterima
+        // MySQL tetapi menolak SPATIAL INDEX dan merusak ST_Distance_Sphere.
+        $meta = DB::selectOne(
+            'SELECT DATA_TYPE, SRS_ID FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?',
+            ['orders', 'shipping_location']
+        );
+        $this->assertSame('point', strtolower($meta->DATA_TYPE));
+        $this->assertSame(4326, (int) $meta->SRS_ID);
 
         $cat = Category::create(['name' => 'Beras', 'slug' => 'beras']);
         $store = $this->store($this->seller(), $cat);

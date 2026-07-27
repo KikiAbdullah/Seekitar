@@ -2,6 +2,8 @@
 
 namespace App\Enums;
 
+use App\Enums\Concerns\HasValues;
+
 /**
  * Status pesanan — nilainya sama persis dengan ENUM orders.status
  * (DATABASE.md §4.7). Label alur jasa/sewa seperti "Dijadwalkan" atau
@@ -9,6 +11,8 @@ namespace App\Enums;
  */
 enum OrderStatus: string
 {
+    use HasValues;
+
     case MenungguKonfirmasi = 'menunggu_konfirmasi';
     case Diproses           = 'diproses';
     case Dikirim            = 'dikirim';

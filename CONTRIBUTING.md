@@ -27,7 +27,7 @@ cd seekitar-server && php artisan test
 cd seekitar_mobile && flutter analyze && flutter test
 
 # 2. Periksa konsistensi dokumen (bila menyentuh berkas .md)
-for c in versions structure datamodel api backend mobile brand prd terms security deploy dbperf docs schema-drift; do
+for c in versions structure datamodel api backend mobile brand prd terms security deploy dbperf docs schema-drift mysql; do
   node tools/dev/check-$c.mjs || exit 1
 done
 ```
@@ -82,9 +82,28 @@ dicari orang enam bulan kemudian.
 | Widget | `flutter test` | Halaman dengan state |
 | Integration | `flutter test integration_test` | Alur utama |
 
-> ⚠️ **SQLite tidak punya fungsi spasial.** Pengujian yang menyentuh query
-> radius harus dijalankan terhadap MySQL 8, atau `nearby()` di-mock. Jangan
-> menganggapnya lolos hanya karena tidak diuji.
+### Menyiapkan MySQL untuk test
+
+Seekitar **hanya mendukung MySQL 8.0.34+** — tidak ada jalur SQLite. Skema
+memakai `POINT SRID 4326`, `SPATIAL INDEX`, tipe `SET`, dan `CHECK`
+constraint, yang semuanya tidak ada di engine lain. Menguji di SQLite berarti
+menguji skema yang berbeda dari produksi.
+
+```sql
+CREATE DATABASE seekitar_testing
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+> ⚠️ Nama basis data test **wajib mengandung `test`**. `Tests\RefreshesDatabase`
+> menolak berjalan jika tidak — `migrate:fresh` men-DROP semua tabel, dan salah
+> konfigurasi akan menghapus data pengembangan tanpa peringatan.
+
+Untuk memeriksa DDL yang dihasilkan migrasi **tanpa** server MySQL:
+
+```bash
+./tools/dev/ddl              # cetak seluruh CREATE TABLE / ALTER TABLE
+node tools/dev/check-mysql.mjs
+```
 
 ## Melaporkan Masalah
 

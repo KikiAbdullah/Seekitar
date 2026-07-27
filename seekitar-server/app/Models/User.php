@@ -61,10 +61,16 @@ class User extends Authenticatable
         return $this->verification_level->canOpenStore();
     }
 
-    /** Profil lengkap = syarat bertransaksi (middleware EnsureProfileComplete). */
+    /**
+     * Profil lengkap = syarat bertransaksi (middleware EnsureProfileComplete).
+     *
+     * `location` bertipe POINT, jadi kelengkapannya diperiksa dari kolom itu
+     * sendiri — bukan dari `latitude`, yang sudah tidak ada sejak skema
+     * memakai POINT MySQL sepenuhnya.
+     */
     public function isProfileComplete(): bool
     {
-        return filled($this->name) && filled($this->latitude ?? null);
+        return filled($this->name) && $this->location !== null;
     }
 
     /**

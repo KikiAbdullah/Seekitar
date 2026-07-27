@@ -1,7 +1,9 @@
 <?php
 
+use App\Enums\OfferStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -22,7 +24,7 @@ return new class extends Migration
             $table->string('estimation_time', 100);              // teks untuk pembeli
             $table->unsignedSmallInteger('estimated_hours')->nullable(); // untuk sorting
             $table->text('notes')->nullable();
-            $table->string('status', 20)->default('pending');
+            $table->enum('status', OfferStatus::values())->default(OfferStatus::Pending->value);
             $table->timestamp('expires_at');
             $table->timestamps();
 
@@ -38,6 +40,12 @@ return new class extends Migration
         Schema::table('customer_requests', function (Blueprint $table) {
             $table->foreign('accepted_offer_id')->references('id')->on('offers')->nullOnDelete();
         });
+
+        // Penawaran tidak boleh kedaluwarsa sebelum dibuat (DATABASE.md §4.6).
+        DB::statement(<<<'SQL'
+            ALTER TABLE offers ADD CONSTRAINT offers_expiry_chk
+            CHECK (expires_at > created_at)
+        SQL);
     }
 
     public function down(): void

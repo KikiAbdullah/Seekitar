@@ -2,8 +2,12 @@
 
 namespace App\Enums;
 
+use App\Enums\Concerns\HasValues;
+
 enum PaymentMethod: string
 {
+    use HasValues;
+
     case Cod      = 'cod';
     case Transfer = 'transfer';
 

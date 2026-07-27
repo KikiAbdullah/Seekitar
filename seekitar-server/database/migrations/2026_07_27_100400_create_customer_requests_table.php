@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\RequestStatus;
 use App\Support\SpatialSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -27,7 +28,7 @@ return new class extends Migration
             $table->timestamp('expires_at');
             $table->timestamp('extended_at')->nullable();
             $table->unsignedTinyInteger('extension_count')->default(0);
-            $table->string('status', 20)->default('open');
+            $table->enum('status', RequestStatus::values())->default(RequestStatus::Open->value);
             $table->uuid('accepted_offer_id')->nullable();
             $table->timestamps();
 

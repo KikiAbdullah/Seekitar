@@ -2,6 +2,8 @@
 
 namespace App\Enums;
 
+use App\Enums\Concerns\HasValues;
+
 /**
  * Tipe toko — bentuk JAMAK karena kolomnya SET (menampung kombinasi):
  * satu toko bisa 'goods,services'. Berbeda dari ListingType yang tunggal.
@@ -9,6 +11,8 @@ namespace App\Enums;
  */
 enum StoreType: string
 {
+    use HasValues;
+
     case Goods    = 'goods';
     case Services = 'services';
     case Rental   = 'rental';

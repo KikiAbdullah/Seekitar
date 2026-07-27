@@ -2,8 +2,12 @@
 
 namespace App\Enums;
 
+use App\Enums\Concerns\HasValues;
+
 enum ListingStatus: string
 {
+    use HasValues;
+
     case Active = 'active';
     case Sold   = 'sold';
     case Hidden = 'hidden';

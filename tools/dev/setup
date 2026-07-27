@@ -4,7 +4,12 @@
 #   ./tools/dev/setup
 #
 # Installs the PHP runtime, fetches Composer packages from GitHub, generates
-# the autoloader, creates .env + the SQLite database, and runs migrations.
+# the autoloader, and creates .env.
+#
+# NOTE: migrations are NOT run here. Seekitar is MySQL-only (POINT SRID 4326,
+# SPATIAL INDEX, SET, CHECK), and MySQL cannot be installed in this sandbox.
+# Use ./tools/dev/ddl to inspect the schema Laravel would emit, and run the
+# real migrations against MySQL 8.0.34+ elsewhere.
 set -euo pipefail
 
 DEV_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -12,36 +17,34 @@ SERVER_DIR="$(cd "$DEV_DIR/../../seekitar-server" && pwd)"
 
 export NODE_EXTRA_CA_CERTS="${NODE_EXTRA_CA_CERTS:-/etc/ssl/certs/ca-certificates.crt}"
 
-echo "==> 1/5 PHP runtime"
+echo "==> 1/4 PHP runtime"
 if [ ! -x "$DEV_DIR/node_modules/.bin/php-wasm-cli" ]; then
   (cd "$DEV_DIR" && npm install --no-audit --no-fund)
 else
   echo "    already installed"
 fi
 
-echo "==> 2/5 Composer packages (from GitHub, packagist is unreachable here)"
+echo "==> 2/4 Composer packages (from GitHub, packagist is unreachable here)"
 node "$DEV_DIR/install-vendor.mjs" "$SERVER_DIR"
 
-echo "==> 3/5 Autoloader"
+echo "==> 3/4 Autoloader"
 "$DEV_DIR/composer" dump-autoload --optimize 2>&1 | grep -Ei 'autoload files|error' || true
 
-echo "==> 4/5 Environment"
+echo "==> 4/4 Environment"
 if [ ! -f "$SERVER_DIR/.env" ]; then
   cp "$SERVER_DIR/.env.example" "$SERVER_DIR/.env"
   echo "    created .env"
 fi
-touch "$SERVER_DIR/database/database.sqlite"
 if ! grep -qE '^APP_KEY=base64:' "$SERVER_DIR/.env"; then
   "$DEV_DIR/artisan" key:generate
 else
   echo "    APP_KEY already set"
 fi
 
-echo "==> 5/5 Migrations"
-"$DEV_DIR/artisan" migrate --force
-
 echo
 echo "Ready. Try:"
-echo "  ./tools/dev/serve            # http://127.0.0.1:8080"
-echo "  ./tools/dev/test             # PHPUnit"
+echo "  ./tools/dev/ddl              # MySQL DDL from the migrations (no server needed)"
 echo "  ./tools/dev/artisan route:list"
+echo
+echo "Migrations, ./tools/dev/test, and ./tools/dev/serve need a real MySQL"
+echo "8.0.34+ server, which this sandbox cannot provide. See CONTRIBUTING.md."

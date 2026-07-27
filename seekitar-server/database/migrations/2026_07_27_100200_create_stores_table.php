@@ -1,8 +1,11 @@
 <?php
 
+use App\Enums\StoreType;
+use App\Enums\VerificationStatus;
 use App\Support\SpatialSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -18,8 +21,10 @@ return new class extends Migration
             $table->string('regency', 100);
             $table->char('regency_code', 4)->nullable();
 
-            // SET di MySQL; string dipisah koma di SQLite.
-            $table->string('store_type', 40);
+            // SET asli MySQL: satu toko boleh menjual barang + jasa + sewa
+            // sekaligus, dan engine menolak nilai di luar daftar.
+            // DATABASE.md §4.2 menjelaskan kenapa SET, bukan JSON/pivot.
+            $table->set('store_type', StoreType::values());
             $table->json('category_ids');
             $table->string('address', 255)->nullable();
             $table->decimal('service_radius_km', 5, 2)->default(5.00);
@@ -37,7 +42,7 @@ return new class extends Migration
             $table->unsignedInteger('total_reviews')->default(0);
             $table->boolean('is_active')->default(true);
 
-            $table->string('verification_status', 20)->default('pending');
+            $table->enum('verification_status', VerificationStatus::values())->default(VerificationStatus::Pending->value);
             $table->text('rejected_reason')->nullable();
             $table->timestamp('verified_at')->nullable();
 
@@ -52,6 +57,12 @@ return new class extends Migration
 
         SpatialSchema::addLocationColumn('stores', nullable: false);
         SpatialSchema::addSpatialIndex('stores', 'stores_location_spatial');
+
+        // Toko wajib bisa dijangkau lewat minimal satu cara (DATABASE.md §4.2).
+        DB::statement(<<<'SQL'
+            ALTER TABLE stores ADD CONSTRAINT stores_fulfilment_chk
+            CHECK (offers_delivery = 1 OR allows_pickup = 1)
+        SQL);
     }
 
     public function down(): void
