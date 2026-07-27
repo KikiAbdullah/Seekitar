@@ -9,7 +9,7 @@ _“Yang kamu butuhkan, ada di sekitar.”_
 | **Informasi Dokumen** |                                                                           |
 | :-------------------- | :------------------------------------------------------------------------ |
 | **Nama Produk**       | Seekitar                                                                  |
-| **Platform**          | Mobile App (Flutter) & Web App (Laravel 11 + Bootstrap) + Admin Dashboard |
+| **Platform**          | Mobile App (Flutter) & Web App (Laravel 13 + Bootstrap 5.3.x) + Admin Dashboard |
 | **Versi Dokumen**     | 3.0 (Production Ready – MySQL)                                            |
 | **Tanggal**           | 27 Juli 2026                                                              |
 | **Penulis**           | Tim Pengembang Seekitar                                                   |
@@ -328,10 +328,10 @@ Setiap pesanan memiliki tipe `order_type`: `goods`, `service`, `rental`. Alur st
 ### 7.1 Diagram Komponen Tingkat Tinggi
 
 ```
-[Flutter App] ↔ [REST API] ↔ [Laravel 11 Backend (API + Web + Admin)]
+[Flutter App] ↔ [REST API] ↔ [Laravel 13 Backend (API + Web + Admin)]
                                     ↕
-                         [MySQL 8.0 (Spatial)]
-                         [Redis (Cache, Job Queue)]
+                         [MySQL 8.0.34+ (Spatial)]
+                         [Redis 7 (Cache, Job Queue)]
                          [Cloud Storage (S3/MinIO)]
                          [Push Notification (Firebase FCM)]
                          [WhatsApp API (Twilio/Kirim WA)]
@@ -339,13 +339,15 @@ Setiap pesanan memiliki tipe `order_type`: `goods`, `service`, `rental`. Alur st
 
 ### 7.2 Tech Stack Rinci
 
+> 📌 Versi lengkap & matriks kompatibilitas paket ada di [`TECH_STACK.md`](TECH_STACK.md) (sumber kebenaran tunggal).
+
 | Layer                          | Teknologi                                         | Keterangan                                                                        |
 | :----------------------------- | :------------------------------------------------ | :-------------------------------------------------------------------------------- |
-| **Mobile App**                 | Flutter 3.19+, Riverpod, Dio, Google Maps Flutter | Satu kode untuk Android & iOS, performa native                                    |
-| **Web Public (SEO)**           | Laravel 11 + Bootstrap 5 (Blade), tanpa Vite/Vue  | Halaman katalog & landing page SEO-friendly, server-side rendering                |
-| **Admin Dashboard**            | Laravel 11 + Bootstrap 5 (Blade)                  | Panel admin di subdomain/admin, otentikasi Laravel session & gate                 |
-| **Backend API**                | Laravel 11 (REST API dengan Sanctum)              | Semua API untuk mobile app, rate limiting, validasi, queue job broadcast          |
-| **Database**                   | MySQL 8.0 (dengan dukungan Spatial)               | Menyimpan semua data transaksional dan geospasial                                 |
+| **Mobile App**                 | Flutter 3.44+, Riverpod 3, Dio 5, Google Maps Flutter | Satu kode untuk Android & iOS, performa native                                    |
+| **Web Public (SEO)**           | Laravel 13 + Bootstrap 5.3.x (Blade), tanpa Vite/Vue  | Halaman katalog & landing page SEO-friendly, server-side rendering                |
+| **Admin Dashboard**            | Laravel 13 + Bootstrap 5.3.x (Blade)                | Panel admin di subdomain/admin, otentikasi Laravel session & gate                 |
+| **Backend API**                | Laravel 13 (REST API dengan Sanctum 4)              | Semua API untuk mobile app, rate limiting, validasi, queue job broadcast          |
+| **Database**                   | MySQL 8.0.34+ (dengan dukungan Spatial)               | Menyimpan semua data transaksional dan geospasial                                 |
 | **Cache & Queue**              | Redis 7                                           | Menyimpan sesi, cache data kategori, antrian notifikasi broadcast (Laravel Queue) |
 | **Storage**                    | AWS S3 (atau MinIO self-hosted)                   | Foto produk, KTP, bukti kerja (terenkripsi)                                       |
 | **Push Notification**          | Firebase Cloud Messaging (FCM)                    | Notifikasi ke perangkat mobile                                                    |
@@ -665,7 +667,7 @@ Perkiraan dengan tim kecil (2-3 orang full-stack Laravel + Flutter, 1 UI/UX). Fa
 
 | Minggu    | Deliverable                         | Detail                                                                                                                                                                  |
 | :-------- | :---------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **1-2**   | Setup Infrastruktur & Database      | Provisioning server, MySQL 8.0, Redis, Firebase project, CI/CD pipeline, inisialisasi proyek Laravel 11 dan Flutter                                                     |
+| **1-2**   | Setup Infrastruktur & Database      | Provisioning server, MySQL 8.0.34+, Redis 7, Firebase project, CI/CD pipeline, inisialisasi proyek Laravel 13 dan Flutter                                                     |
 | **3-4**   | Backend Core: Auth, Profil, Toko    | API registrasi, OTP, CRUD profil, buka toko + endpoint geospasial toko, admin verifikasi toko                                                                           |
 | **5-6**   | Frontend: Auth & Profil UI, Peta    | Flutter screen register, home skeleton, integrasi Google Maps, komponen pilih lokasi. Web Laravel landing & halaman katalog SSR (Blade)                                 |
 | **7-8**   | Engine 1: Marketplace Katalog       | Backend listing, pencarian full-text, filter radius, frontend feed katalog, detail listing, pemesanan langsung                                                          |

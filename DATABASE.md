@@ -4,7 +4,10 @@
 **Versi:** 3.0 (Production‑Hardened)  
 **Tanggal:** 27 Juli 2026  
 **Target Deployment:** MySQL 8.0.34+ InnoDB  
-**Charset:** utf8mb4 – Collation: utf8mb4_unicode_ci
+**Charset:** utf8mb4 – Collation: utf8mb4_unicode_ci  
+**ORM:** Laravel 13 (Eloquent) · PHP 8.3+
+
+> 📌 Versi mengacu pada [`TECH_STACK.md`](TECH_STACK.md) sebagai sumber kebenaran tunggal.
 
 ---
 
@@ -28,7 +31,7 @@
 7. [Indeks Komprehensif & Query Patterns](#7-indeks-komprehensif--query-patterns)
 8. [Data Integrity Guard (Anti Human‑Error)](#8-data-integrity-guard-anti-human-error)
 9. [Keamanan & Pencegahan SQL Injection](#9-keamanan--pencegahan-sql-injection)
-10. [Migrasi, Seeder & Deployment di Laravel 11](#10-migrasi-seeder--deployment-di-laravel-11)
+10. [Migrasi, Seeder & Deployment di Laravel 13](#10-migrasi-seeder--deployment-di-laravel-13)
 11. [Lampiran: Raw Query & Performance Tips](#11-lampiran-raw-query--performance-tips)
 
 ---
@@ -418,7 +421,7 @@ Seluruh indeks dirancang berdasarkan pola query nyata.
 
 ---
 
-## 10. MIGRASI, SEEDER & DEPLOYMENT DI LARAVEL 11
+## 10. MIGRASI, SEEDER & DEPLOYMENT DI LARAVEL 13
 
 Urutan migrasi sesuai dependensi:
 
@@ -441,7 +444,7 @@ DB::statement("ALTER TABLE stores ADD COLUMN location POINT SRID 4326 AFTER cate
 DB::statement("CREATE SPATIAL INDEX stores_location_spatial ON stores(location)");
 ```
 
-**UUID di Laravel 11** – Gunakan `Str::orderedUuid()` saat creating model, atau trait `HasUuids` jika diinginkan.
+**UUID di Laravel 13** – Gunakan `Str::orderedUuid()` saat creating model, atau trait `HasUuids` jika diinginkan.
 
 ---
 

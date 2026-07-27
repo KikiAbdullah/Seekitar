@@ -2,9 +2,9 @@
 
 **Versi:** 1.0 (Production‑Ready)  
 **Tanggal:** 27 Juli 2026  
-**Target:** Flutter 3.19+ (Dart 3.3+) · Android & iOS  
+**Target:** Flutter 3.44+ (Dart 3.12+) · Android & iOS  
 **Arsitektur:** Clean Architecture + Riverpod · Dependency Injection dengan Riverpod  
-**State Management:** Riverpod 2.x dengan AsyncNotifier  
+**State Management:** Riverpod 3.x dengan AsyncNotifier  
 **HTTP Client:** Dio 5.x  
 **Database Lokal:** Isar (opsional, untuk cache)  
 **Maps & Geolokasi:** Google Maps Flutter, Geolocator, Geocoding  
@@ -12,6 +12,25 @@
 **WhatsApp Redirection:** url_launcher  
 **Analytics:** Firebase Analytics, Firebase Crashlytics  
 **CI/CD:** GitHub Actions (build APK/IPA)
+
+> 📌 Versi lengkap & matriks kompatibilitas paket ada di [`TECH_STACK.md`](TECH_STACK.md) (sumber kebenaran tunggal).
+
+### Backend yang Dikonsumsi Aplikasi Ini
+
+Aplikasi mobile tidak berdiri sendiri. Konteks singkat arsitektur server yang
+memengaruhi cara app berperilaku:
+
+| Komponen backend       | Versi         | Relevansi untuk mobile                                                                 |
+| :--------------------- | :------------ | :-------------------------------------------------------------------------------------- |
+| Laravel + Sanctum      | 13 · Sanctum 4 | Sumber REST API; token Bearer disimpan di `flutter_secure_storage`                     |
+| MySQL 8.0.34+ (Spatial) | 8.0.34+       | Pencarian radius toko dihitung di server — app hanya mengirim `lat`, `lng`, `radius`   |
+| **Redis 7**            | 7.x           | Cache & **queue**: broadcast penawaran dan notifikasi FCM diproses asinkron            |
+| Firebase FCM           | —             | Push notification masuk lewat queue Redis, bukan langsung dari request                 |
+
+**Implikasi praktis dari Redis queue:** notifikasi (mis. penawaran baru masuk)
+dikirim lewat antrian, jadi **tidak instan**. Jangan rancang UI yang
+mengasumsikan respons real-time setelah aksi — gunakan pull-to-refresh atau
+polling ringan sebagai pelengkap push.
 
 ---
 
@@ -58,29 +77,53 @@ Aplikasi Flutter Seekitar mengadopsi **Clean Architecture** dengan 3 lapis:
 
 ## 2. LIBRARY UTAMA (pub.dev)
 
-| Kategori             | Library                                 | Versi   | Keterangan                             |
-| -------------------- | --------------------------------------- | ------- | -------------------------------------- |
-| State Management     | `flutter_riverpod`                      | ^2.5.0  | Riverpod untuk state, DI, caching      |
-| HTTP Client          | `dio`                                   | ^5.4.0  | REST API calls dengan interceptors     |
-| Routing              | `go_router`                             | ^14.0.0 | Navigasi deklaratif, deep link         |
-| Maps                 | `google_maps_flutter`                   | ^2.6.0  | Menampilkan peta, pin lokasi           |
-| Geolokasi            | `geolocator`                            | ^12.0.0 | Mendapatkan posisi GPS                 |
-| Geocoding            | `geocoding`                             | ^3.0.0  | Reverse geocoding (koordinat → alamat) |
-| Push Notification    | `firebase_messaging`                    | ^15.0.0 | FCM untuk notifikasi                   |
-| Firebase Core        | `firebase_core`                         | ^3.0.0  | Inisialisasi Firebase                  |
-| Deep Link            | `app_links`                             | ^6.0.0  | Menangani universal link               |
-| WhatsApp             | `url_launcher`                          | ^6.2.0  | Membuka WhatsApp                       |
-| Image Picker         | `image_picker`                          | ^1.1.0  | Ambil foto produk, KTP                 |
-| Cached Network Image | `cached_network_image`                  | ^3.3.0  | Cache gambar                           |
-| Pull to Refresh      | `pull_to_refresh_flutter3`              | ^2.0.0  | Pull-to-refresh modern                 |
-| Local Storage        | `shared_preferences`                    | ^2.2.0  | Token, preferensi                      |
-| Secure Storage       | `flutter_secure_storage`                | ^9.2.0  | Token akses disimpan aman              |
-| JSON Serialization   | `json_annotation` + `json_serializable` | ^4.9.0  | Generate kode model                    |
-| Freezed              | `freezed_annotation` + `freezed`        | ^2.5.0  | Immutable state, sealed classes        |
-| Build Runner         | `build_runner`                          | ^2.4.0  | Menjalankan generator                  |
-| l10n                 | `flutter_localizations`                 | SDK     | Multi bahasa (opsional)                |
+Versi di bawah ini selaras dengan **Flutter 3.44 / Dart 3.12**.
 
-**Dev dependencies:** `flutter_test`, `mocktail`, `riverpod_lint`.
+| Kategori             | Library                                 | Versi    | Keterangan                             |
+| -------------------- | --------------------------------------- | -------- | -------------------------------------- |
+| State Management     | `flutter_riverpod`                      | ^3.4.0   | Riverpod untuk state, DI, caching      |
+| HTTP Client          | `dio`                                   | ^5.11.0  | REST API calls dengan interceptors     |
+| Routing              | `go_router`                             | ^17.3.0  | Navigasi deklaratif, deep link         |
+| Maps                 | `google_maps_flutter`                   | ^2.18.0  | Menampilkan peta, pin lokasi           |
+| Geolokasi            | `geolocator`                            | ^14.0.0  | Mendapatkan posisi GPS                 |
+| Geocoding            | `geocoding`                             | ^5.0.0   | Reverse geocoding (koordinat → alamat) |
+| Push Notification    | `firebase_messaging`                    | ^16.4.0  | FCM untuk notifikasi                   |
+| Firebase Core        | `firebase_core`                         | ^4.12.0  | Inisialisasi Firebase                  |
+| Deep Link            | `app_links`                             | ^6.0.0   | Menangani universal link               |
+| WhatsApp             | `url_launcher`                          | ^6.3.0   | Membuka WhatsApp                       |
+| Image Picker         | `image_picker`                          | ^1.2.0   | Ambil foto produk, KTP                 |
+| Cached Network Image | `cached_network_image`                  | ^3.4.0   | Cache gambar                           |
+| Local Storage        | `shared_preferences`                    | ^2.5.0   | Token, preferensi                      |
+| Secure Storage       | `flutter_secure_storage`                | ^10.3.0  | Token akses disimpan aman              |
+| JSON Serialization   | `json_annotation` + `json_serializable` | ^4.12.0  | Generate kode model                    |
+| Build Runner         | `build_runner`                          | ^2.4.0   | Menjalankan generator                  |
+| l10n                 | `flutter_localizations`                 | SDK      | Multi bahasa (opsional)                |
+
+**Dev dependencies:** `flutter_test`, `mocktail`, `riverpod_lint`, `custom_lint`.
+
+### Catatan Kompatibilitas
+
+**GoRouter ↔ Riverpod tidak saling bergantung.** Anggapan bahwa "GoRouter
+membutuhkan Riverpod versi tertentu" itu keliru: `go_router` hanya bergantung
+pada `collection`, `logging`, dan `meta`, dan Riverpod tidak menyebut GoRouter
+sama sekali. Yang benar-benar mengikat keduanya adalah **versi Dart SDK** —
+`go_router` 17 butuh Dart `^3.10`, `flutter_riverpod` 3 butuh Dart `^3.12`.
+Keduanya aman di Dart 3.12.
+
+**Riverpod 3 wajib, bukan opsional.** Riverpod 2.x tidak dites untuk Dart 3.12
+dan sudah tidak dirawat. Konsekuensinya ada breaking change pada pola penulisan
+provider — lihat §4.4.
+
+**Firebase harus sekeluarga.** `firebase_core` dan `firebase_messaging` dirilis
+berpasangan; menaikkan salah satu saja sering memicu konflik di build Android.
+
+**Dihapus dari daftar:**
+
+- `freezed` / `freezed_annotation` — versi stabilnya belum menjangkau Dart 3.12.
+  Untuk sementara pakai `json_serializable` + kelas immutable manual
+  (`final` field + `copyWith`). Tambahkan kembali setelah Freezed 4 stabil.
+- `pull_to_refresh_flutter3` — tidak lagi dirawat. Pakai `RefreshIndicator`
+  bawaan Flutter yang sudah memadai.
 
 ---
 
@@ -245,13 +288,54 @@ class AuthNotifier extends _$AuthNotifier {
 
 ```dart
 @riverpod
-Future<List<Store>> nearbyStores(NearbyStoresRef ref, {
+Future<List<Store>> nearbyStores(Ref ref, {
   required double lat, required double lng, double radius = 10,
 }) async {
   final repository = ref.read(storeRepositoryProvider);
   return repository.getNearbyStores(lat, lng, radius);
 }
 ```
+
+### 4.4 Perubahan Riverpod 3 yang Wajib Diketahui
+
+Proyek ini memakai **Riverpod 3**, yang membawa beberapa breaking change dari
+pola Riverpod 2 yang banyak beredar di tutorial lama.
+
+**1. Subclass `Ref` hasil codegen dihapus.** Tidak ada lagi `NearbyStoresRef`,
+`DioRef`, dan sejenisnya — pakai `Ref` langsung:
+
+```dart
+// ❌ Riverpod 2 (tidak lagi berlaku)
+@riverpod
+Future<List<Store>> nearbyStores(NearbyStoresRef ref) async { ... }
+
+// ✅ Riverpod 3
+@riverpod
+Future<List<Store>> nearbyStores(Ref ref) async { ... }
+```
+
+**2. `AsyncValue.valueOrNull` dihapus.** Gunakan `.value`, yang kini
+mengembalikan `null` saat error (dulu melempar exception):
+
+```dart
+final user = ref.watch(authNotifierProvider).value; // bisa null
+```
+
+**3. Provider gagal kini auto-retry.** Secara default Riverpod mengulang dengan
+backoff (mulai 200 ms, hingga 10 kali). Untuk request yang tidak layak diulang
+— misalnya verifikasi OTP yang salah — matikan retry-nya agar user tidak
+menunggu percobaan sia-sia:
+
+```dart
+ProviderScope(
+  retry: (retryCount, error) => null, // nonaktifkan retry global
+  child: SeekitarApp(),
+)
+```
+
+**4. `StateProvider` & `StateNotifierProvider` dipindah** ke
+`package:flutter_riverpod/legacy.dart`. Untuk kode baru, pakai `Notifier` /
+`AsyncNotifier` saja.
 
 ---
 
@@ -261,7 +345,7 @@ Future<List<Store>> nearbyStores(NearbyStoresRef ref, {
 
 ```dart
 @riverpod
-Dio dio(DioRef ref) {
+Dio dio(Ref ref) {
   final dio = Dio(BaseOptions(
     baseUrl: ApiConstants.baseUrl,
     connectTimeout: const Duration(seconds: 10),
@@ -405,7 +489,7 @@ Menampilkan slider foto (dengan `PageView` atau `cached_network_image`), deskrip
 final goRouter = GoRouter(
   initialLocation: '/',
   redirect: (context, state) {
-    final user = ref.read(authNotifierProvider).valueOrNull;
+    final user = ref.read(authNotifierProvider).value;
     final loggedIn = user != null;
     if (!loggedIn && state.matchedLocation != '/login') return '/login';
     if (loggedIn && state.matchedLocation == '/login') return '/';
@@ -595,5 +679,5 @@ class NearbyStoresPaginated extends _$NearbyStoresPaginated {
 
 ```dart
 @riverpod
-FlutterSecureStorage secureStorage(SecureStorageRef ref) => FlutterSecureStorage();
+FlutterSecureStorage secureStorage(Ref ref) => FlutterSecureStorage();
 ```

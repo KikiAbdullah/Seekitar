@@ -2,7 +2,9 @@
 
 **Versi:** 2.0 (Ultra‑Detailed · Production‑Ready)  
 **Tanggal:** 27 Juli 2026  
-**Target:** Laravel 13 + PHP 8.3.30 + MySQL 8.0 + Bootstrap 5 + Yajra Datatables + Spatie Permission
+**Target:** Laravel 13 + PHP 8.3+ + MySQL 8.0.34+ + Bootstrap 5.3.x + Yajra Datatables 13 + Spatie Permission 8
+
+> 📌 Versi mengacu pada [`TECH_STACK.md`](TECH_STACK.md) sebagai sumber kebenaran tunggal.
 
 ---
 
@@ -53,7 +55,7 @@
 Server Seekitar menyediakan:
 
 - **REST API** untuk aplikasi Flutter.
-- **Web Admin Panel** menggunakan Laravel Blade + Bootstrap 5 + Yajra Datatables untuk pengelolaan internal (verifikasi, manajemen data, dispute).
+- **Web Admin Panel** menggunakan Laravel Blade + Bootstrap 5.3.x + Yajra Datatables untuk pengelolaan internal (verifikasi, manajemen data, dispute).
 - **Web Public** halaman katalog, landing page (SEO-friendly).
 
 Prinsip desain:
@@ -65,24 +67,39 @@ Prinsip desain:
 - **Observers** untuk side‑effect (rating, notifikasi).
 - **Job antrian** untuk broadcast permintaan ke penyedia.
 - **Soft delete** untuk users, stores, listings.
-- **Responsive UI** – Bootstrap 5 dengan komponen siap pakai.
+- **Responsive UI** – Bootstrap 5.3.x dengan komponen siap pakai.
 
 ---
 
 ## 2. TECH STACK & VERSI
 
-| Komponen          | Teknologi                          |
-| ----------------- | ---------------------------------- |
-| Bahasa            | PHP 8.3.30                         |
-| Framework         | Laravel 13                         |
-| Database          | MySQL 8.0                          |
-| Cache & Queue     | Redis 7                            |
-| Storage           | AWS S3 / MinIO                     |
-| Push Notification | Firebase Cloud Messaging           |
-| WhatsApp          | Twilio / Kirim WA API              |
-| Admin UI          | Bootstrap 5, Yajra Datatables 11.x |
-| Permission        | Spatie Laravel Permission 6.x      |
-| CI/CD             | GitHub Actions                     |
+| Komponen          | Teknologi                              | Constraint          |
+| ----------------- | -------------------------------------- | ------------------- |
+| Bahasa            | PHP 8.3+                               | `^8.3`              |
+| Framework         | Laravel 13                             | `^13.8`             |
+| Database          | MySQL 8.0.34+ (InnoDB, Spatial)        | —                   |
+| Cache & Queue     | Redis 7                                | —                   |
+| Storage           | AWS S3 / MinIO                         | —                   |
+| Push Notification | Firebase Cloud Messaging               | —                   |
+| WhatsApp          | Twilio / Kirim WA API                  | —                   |
+| Admin UI          | Bootstrap 5.3.x, Yajra Datatables 13.x | `^13.0`             |
+| Permission        | Spatie Laravel Permission 8.x          | `^8.0`              |
+| API Auth          | Laravel Sanctum 4.x                    | `^4.0`              |
+| CI/CD             | GitHub Actions                         | —                   |
+
+### Catatan Kompatibilitas (penting)
+
+Constraint di atas **wajib** dipakai persis. Kombinasi yang salah akan langsung
+gagal saat `composer require`:
+
+- **Yajra Datatables** — versi mayornya mengikuti versi mayor Laravel. Laravel 13
+  → `^13.0`. Memakai `^11.0` akan ditolak Composer karena paket itu mengunci
+  `illuminate/support: ^11`.
+- **Spatie Permission** — `^8.0` adalah versi pertama yang mendukung
+  `illuminate/auth: ^12.0|^13.0`. Versi `^6.0` mentok di Laravel 11/12 dan
+  **tidak akan ter-install** di Laravel 13.
+- **PHP 8.3+** — batas atasnya `< 9.0` (dari `^8.3`). Jangan mengunci ke versi
+  patch tertentu seperti `8.3.30`.
 
 ---
 
@@ -91,7 +108,17 @@ Prinsip desain:
 ### 3.1 Yajra Datatables
 
 ```bash
-composer require yajra/laravel-datatables:^11.0
+composer require yajra/laravel-datatables-oracle:^13.0
+```
+
+> ⚠️ Nama paketnya **`yajra/laravel-datatables-oracle`**, bukan
+> `yajra/laravel-datatables` (itu nama repo GitHub-nya, bukan nama paket
+> Composer). Versi `^13.0` wajib untuk Laravel 13.
+
+Opsional, jika butuh tombol export/print:
+
+```bash
+composer require yajra/laravel-datatables-buttons:^13.0
 ```
 
 **Konfigurasi:** Tidak ada file konfig khusus. Langsung gunakan facade `DataTables`.
@@ -99,8 +126,11 @@ composer require yajra/laravel-datatables:^11.0
 ### 3.2 Spatie Laravel Permission
 
 ```bash
-composer require spatie/laravel-permission:^6.0
+composer require spatie/laravel-permission:^8.0
 ```
+
+> ⚠️ Harus `^8.0`. Versi `^6.0` hanya mendukung sampai Laravel 11/12 dan akan
+> gagal resolusi dependensi di Laravel 13.
 
 Publish migration dan config:
 
@@ -122,10 +152,10 @@ class User extends Authenticatable {
 
 ### 3.3 Bootstrap 5 & Asset
 
-Kita gunakan Laravel Breeze (opsional) atau langsung kompilasi Bootstrap 5 via Vite (tidak dianjurkan karena Anda minta tanpa Vite).  
-**Alternatif:** Gunakan Bootstrap 5 CDN di layout Blade utama.
+Kita gunakan Laravel Breeze (opsional) atau langsung kompilasi Bootstrap 5.3.x via Vite (tidak dianjurkan karena Anda minta tanpa Vite).  
+**Alternatif:** Gunakan Bootstrap 5.3.x CDN di layout Blade utama.
 
-**Layout Admin (`resources/views/layouts/admin.blade.php`)** akan menyertakan CSS & JS Bootstrap 5, Datatables, dan Font Awesome.
+**Layout Admin (`resources/views/layouts/admin.blade.php`)** akan menyertakan CSS & JS Bootstrap 5.3.x, Datatables, dan Font Awesome.
 
 ---
 
@@ -182,7 +212,79 @@ app/
 
 ### 6.1 Sanctum & Token (API)
 
-Seperti sebelumnya.
+Seekitar memakai Sanctum dalam **dua mode sekaligus**. Membedakan keduanya itu
+penting, karena salah konfigurasi di sini adalah penyebab paling umum error
+`419 CSRF token mismatch` di aplikasi mobile.
+
+| Kanal                     | Mode          | Mekanisme                                  |
+| :------------------------ | :------------ | :------------------------------------------ |
+| **Mobile app** (`/api/*`) | **Stateless** | Bearer personal access token, tanpa cookie  |
+| **Admin panel** (web)     | **Stateful**  | Session cookie Laravel biasa                |
+
+**Instalasi:**
+
+```bash
+composer require laravel/sanctum:^4.0
+php artisan install:api
+```
+
+**Konfigurasi `.env`:**
+
+```env
+# Domain yang boleh memakai autentikasi berbasis cookie (web admin).
+# Mobile app TIDAK dimasukkan ke sini — ia memakai Bearer token.
+SANCTUM_STATEFUL_DOMAINS=localhost,localhost:8000,127.0.0.1,127.0.0.1:8000,admin.seekitar.id
+
+SESSION_DOMAIN=.seekitar.id
+SESSION_DRIVER=redis
+```
+
+> ⚠️ **Jangan** memasukkan `api.seekitar.id` ke `SANCTUM_STATEFUL_DOMAINS`.
+> Jika dimasukkan, Sanctum memperlakukan request mobile sebagai stateful dan
+> mulai menuntut CSRF token, sehingga request dari aplikasi gagal dengan 419.
+
+**Middleware stateful hanya untuk web admin** (`bootstrap/app.php`):
+
+```php
+->withMiddleware(function (Middleware $middleware) {
+    // Hanya grup 'web'/admin yang perlu cookie-based auth.
+    $middleware->statefulApi();
+
+    $middleware->alias([
+        'role'       => \Spatie\Permission\Middleware\RoleMiddleware::class,
+        'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+    ]);
+})
+```
+
+**Membuat token dengan ability terbatas:**
+
+```php
+// Batasi cakupan token sesuai peran, jangan beri akses penuh.
+$token = $user->createToken('mobile-app', ['user'])->plainTextToken;
+
+// Untuk pemilik toko:
+$token = $user->createToken('mobile-app', ['user', 'store-owner'])->plainTextToken;
+```
+
+Melindungi route dengan ability:
+
+```php
+Route::middleware(['auth:sanctum', 'ability:store-owner'])->group(function () {
+    Route::post('/listings', [ListingController::class, 'store']);
+});
+```
+
+**Guard untuk Spatie Permission** — karena ada dua kanal, `config/permission.php`
+harus mengenali keduanya. Model `User` perlu tahu guard mana yang dipakai:
+
+```php
+// config/auth.php — pastikan kedua guard ada
+'guards' => [
+    'web'     => ['driver' => 'session', 'provider' => 'users'],
+    'sanctum' => ['driver' => 'sanctum', 'provider' => 'users'],
+],
+```
 
 ### 6.2 Spatie Permission (Roles & Abilities)
 
@@ -278,7 +380,7 @@ Sesuai dokumen API sebelumnya.
 
 ## 8. ADMIN PANEL – MENU & NAVIGASI
 
-Layout admin menggunakan sidebar Bootstrap 5.  
+Layout admin menggunakan sidebar Bootstrap 5.3.x.  
 **Sidebar Menu:**
 
 - Dashboard (icon: home)

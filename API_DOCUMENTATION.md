@@ -1,8 +1,31 @@
 # 📘 API DOCUMENTATION – SEEKITAR
 
 **Versi:** 1.0 (Production‑Ready)  
-**Base URL:** `https://api.seekitar.id/api/v1`  
-**Tanggal Publikasi:** 27 Juli 2026
+**Tanggal Publikasi:** 27 Juli 2026  
+**Backend:** Laravel 13 · PHP 8.3+ · Sanctum 4
+
+## BASE URL PER ENVIRONMENT
+
+| Environment                | Base URL                                 | Keterangan                                   |
+| :------------------------- | :--------------------------------------- | :-------------------------------------------- |
+| **Production**             | `https://api.seekitar.id/api/v1`         | Rilis publik                                  |
+| **Staging**                | `https://staging-api.seekitar.id/api/v1` | UAT & closed beta                             |
+| **Development**            | `http://localhost:8000/api/v1`           | `php artisan serve` di mesin lokal            |
+| **Dev (emulator Android)** | `http://10.0.2.2:8000/api/v1`            | `localhost` tidak terjangkau dari emulator    |
+| **Dev (perangkat fisik)**  | `http://<IP-LAN>:8000/api/v1`            | Jalankan `artisan serve --host=0.0.0.0`       |
+
+> ⚠️ Emulator Android memetakan mesin host ke `10.0.2.2`; simulator iOS bisa
+> memakai `localhost` langsung. Simpan base URL lewat `--dart-define` atau file
+> konfigurasi environment — **jangan di-hardcode** di dalam kode.
+
+```bash
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1
+```
+
+Semua environment memakai skema versi yang sama (`/api/v1`), jadi perpindahan
+environment cukup dengan mengganti host.
+
+> 📌 Versi backend & matriks kompatibilitas paket ada di [`TECH_STACK.md`](TECH_STACK.md) (sumber kebenaran tunggal).
 
 ## DAFTAR ISI
 
