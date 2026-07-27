@@ -78,7 +78,7 @@ Database Seekitar dirancang sebagai **Single Source of Truth** untuk seluruh dat
 | `customer_requests` | Permintaan dari pembeli (Reverse)  | ❌ (status) | Dibuat `users`, dijawab `offers` dari `stores`                         |
 | `offers`            | Penawaran harga dari penyedia      | ❌ (status) | Terkait `customer_requests` & `stores`; pemenang menghasilkan `orders` |
 | `orders`            | Transaksi yang terjadi             | ❌          | Pembeli (`users`), penjual (`stores`), sumber (`offers`/`listings`)    |
-| `reviews`           | Ulasan pasca‑transaksi             | ❌          | Satu per `orders`, dari/ke `users`                                     |
+| `reviews`           | Ulasan pasca‑transaksi (dua arah)  | ❌          | Maks 2 per `orders`; ke `stores` (rating toko) atau ke `users`         |
 | `disputes`          | Laporan masalah                    | ❌          | Terkait `orders`, dilaporkan `users`                                   |
 
 **Diagram Relasi (High Level)**
@@ -96,7 +96,8 @@ categories 1──N customer_requests
 customer_requests 1──N offers
 offers 0..1──1 orders (via offer_id)
 listings 0..1──1 orders (via listing_id)
-orders 1──1 reviews
+orders 1──2 reviews (maks satu per arah: buyer_to_store, store_to_buyer)
+stores 1──N reviews (hanya arah buyer_to_store, sumber rating_avg)
 orders 1──N disputes
 ```
 
@@ -114,8 +115,12 @@ Setiap tabel dilengkapi penjelasan tiap kolom, alasan pemilihan tipe, dan constr
 | `phone`              | VARCHAR(15)          | Nomor HP Indonesia (diawali 62), unik. Menghindari duplikasi akun.                   |
 | `name`               | VARCHAR(100)         | Nama asli pengguna, wajib diisi.                                                     |
 | `avatar_url`         | VARCHAR(500) NULL    | URL foto profil, disimpan di cloud storage. Panjang 500 cukup untuk URL pre‑signed.  |
-| `location`           | POINT SRID 4326 NULL | Lokasi default pengguna (misal rumah). NULL jika belum diisi.                        |
-| `verification_level` | TINYINT DEFAULT 1    | 1 = nomor HP, 2 = KTP diverifikasi, 3 = Pro (usaha tervalidasi).                     |
+| `location`           | POINT SRID 4326 NULL | Lokasi default pengguna (misal rumah). NULL hanya saat onboarding belum selesai.     |
+| `verification_level` | TINYINT DEFAULT 1    | 1 = nomor HP, 2 = KTP diverifikasi, 3 = Pro (usaha tervalidasi). Hanya 1–3.          |
+| `ktp_image`          | VARCHAR(500) NULL    | URL foto KTP (terenkripsi at-rest). Diisi saat pengajuan verifikasi Level 2.         |
+| `selfie_image`       | VARCHAR(500) NULL    | URL selfie memegang KTP. Wajib bersama `ktp_image`.                                  |
+| `ktp_submitted_at`   | TIMESTAMP NULL       | Kapan berkas diajukan — dipakai SLA peninjauan admin 1×24 jam.                       |
+| `ktp_rejected_reason`| TEXT NULL            | Alasan penolakan agar pengguna tahu apa yang harus diperbaiki.                       |
 | `deleted_at`         | TIMESTAMP NULL       | Soft delete untuk pengguna yang menonaktifkan akun.                                  |
 | `created_at`         | TIMESTAMP            | Otomatis diisi Laravel.                                                              |
 | `updated_at`         | TIMESTAMP            | Otomatis diisi Laravel.                                                              |
@@ -127,6 +132,34 @@ Setiap tabel dilengkapi penjelasan tiap kolom, alasan pemilihan tipe, dan constr
 - SPATIAL INDEX `users_location_spatial` (`location`)
 - INDEX `users_deleted_at_idx` (`deleted_at`) — untuk filter global scope soft delete.
 
+> ⚠️ **Kenapa `location` tetap NULL-able (bukan NOT NULL).**
+> PRD §5.3.1 memang mewajibkan pengguna mengisi lokasi, tetapi kewajiban itu
+> berlaku **setelah** OTP terverifikasi. Barisnya sudah harus ada lebih dulu
+> untuk menyimpan `phone` saat OTP dikirim, sehingga `NOT NULL` akan membuat
+> registrasi mustahil diselesaikan (ayam-dan-telur).
+>
+> MySQL juga **tidak mendukung SPATIAL INDEX pada kolom NULL-able** — jadi
+> pilih salah satu:
+>
+> 1. **Dua tahap (dipakai di sini):** kolom NULL-able, `location` diisi saat
+>    onboarding, dan kewajibannya ditegakkan oleh middleware
+>    `EnsureProfileComplete` — bukan oleh constraint. Konsekuensinya
+>    `users_location_spatial` **tidak bisa dibuat**; pencarian berbasis lokasi
+>    pengguna memakai koordinat yang dikirim aplikasi, bukan kolom ini.
+> 2. **NOT NULL + default:** isi `POINT(0 0)` sebagai penanda "belum diisi".
+>    SPATIAL INDEX bisa dibuat, tapi setiap query wajib menyaring titik nol —
+>    mudah terlupa dan berisiko menampilkan hasil ngawur.
+>
+> Opsi 1 dipilih karena kolom ini hanya dipakai sebagai *default* saat
+> pengguna membuka aplikasi; query radius yang sesungguhnya selalu memakai
+> `stores.location` dan `customer_requests.location` yang keduanya NOT NULL.
+
+**Verifikasi KTP (Level 2):** `ktp_image` dan `selfie_image` adalah data pribadi
+sensitif menurut UU PDP. Simpan di bucket privat, akses hanya lewat URL
+pre-signed berumur pendek, dan **jangan** pernah dikembalikan di response API
+publik. Setelah `verification_level` naik ke 2, berkas boleh dihapus sesuai
+kebijakan retensi.
+
 ### 4.2 `stores`
 
 | Kolom                 | Tipe                                                    | Keterangan                                                                     |
@@ -137,12 +170,14 @@ Setiap tabel dilengkapi penjelasan tiap kolom, alasan pemilihan tipe, dan constr
 | `store_type`          | SET('goods','services','rental')                        | Kombinasi jenis usaha. SET lebih efisien dari VARCHAR untuk pilihan tetap.     |
 | `category_ids`        | JSON                                                    | Array ID dari `categories`. Contoh: `[1, 3, 7]`.                               |
 | `location`            | POINT SRID 4326                                         | Titik koordinat toko (longitude, latitude). Wajib.                             |
-| `service_radius_km`   | DECIMAL(5,2) DEFAULT 5.00                               | Radius layanan dalam km. Presisi 2 desimal.                                    |
+| `service_radius_km`   | DECIMAL(5,2) DEFAULT 5.00                               | Radius layanan toko dalam km. Presisi 2 desimal. Lihat catatan di bawah.       |
 | `operating_hours`     | JSON                                                    | Jam operasional per hari. Contoh: `{"senin":{"open":"08:00","close":"17:00"}}` |
 | `rating_avg`          | DECIMAL(3,2) DEFAULT 0.00                               | Rata‑rata rating, dihitung ulang setiap ada ulasan baru.                       |
 | `total_reviews`       | INT UNSIGNED DEFAULT 0                                  | Jumlah total ulasan, counter untuk kalkulasi cepat.                            |
 | `is_active`           | TINYINT(1) DEFAULT 1                                    | Toko nonaktif tidak muncul di pencarian.                                       |
 | `verification_status` | ENUM('pending','verified','rejected') DEFAULT 'pending' | Status verifikasi admin.                                                       |
+| `rejected_reason`     | TEXT NULL                                               | Alasan penolakan admin. Wajib diisi saat status `rejected`.                    |
+| `verified_at`         | TIMESTAMP NULL                                          | Kapan toko disetujui — untuk audit & SLA.                                      |
 | `deleted_at`          | TIMESTAMP NULL                                          | Soft delete.                                                                   |
 | `created_at`          | TIMESTAMP                                               | –                                                                              |
 | `updated_at`          | TIMESTAMP                                               | –                                                                              |
@@ -156,8 +191,64 @@ Setiap tabel dilengkapi penjelasan tiap kolom, alasan pemilihan tipe, dan constr
 - SPATIAL INDEX `stores_location_spatial` (`location`)
 - INDEX `stores_is_active_idx` (`is_active`) — mempercepat query toko aktif.
 
+> **Catatan: `service_radius_km` DEFAULT 5.00 sudah benar — jangan diubah ke 15.**
+> Ada dua radius berbeda di sistem ini dan keduanya sering tertukar:
+>
+> | Kolom | Default | Milik | Arti |
+> | :-- | :-- | :-- | :-- |
+> | `stores.service_radius_km` | **5 km** | Penjual | Seberapa jauh toko bersedia melayani |
+> | `customer_requests.radius_km` | **15 km** | Pembeli | Seberapa jauh pembeli mencari penyedia |
+>
+> Angka 15 km di `PRD.md` baris 168 adalah "radius maksimal penyedia" pada form
+> **pasang kebutuhan** — itu milik pembeli, bukan toko. Untuk toko, PRD baris 230
+> justru mencontohkan "5 km untuk toko kelontong, 20 km untuk tukang bangunan",
+> yang konsisten dengan default 5 km.
+>
+> Menyamakan keduanya jadi 15 km akan membuat toko kelontong muncul di
+> pencarian sejauh 15 km — bertentangan dengan premis *hyperlocal* produk ini.
+
 **Kenapa SET untuk store_type?**  
 Karena tipe toko terbatas (3 pilihan), SET lebih hemat ruang dan memungkinkan pencarian dengan `FIND_IN_SET` atau `LIKE` jika perlu.
+
+> **Catatan: SET tetap dipertahankan, JSON/pivot ditolak.**
+> Sempat diusulkan mengganti `SET` menjadi `JSON` atau tabel pivot
+> `store_types` dengan alasan "SET kurang fleksibel untuk kombinasi". Premis itu
+> tidak tepat — **SET justru memang tipe MySQL untuk menyimpan kombinasi**, dan
+> satu kolom bisa memuat `'goods,services'` sekaligus.
+>
+> Perbandingan untuk kasus 3 nilai tetap:
+>
+> | Aspek | `SET` (dipilih) | `JSON` | Pivot `store_types` |
+> | :-- | :-- | :-- | :-- |
+> | Ukuran | 1 byte | ~20 byte | 1 baris/tipe + indeks |
+> | Nilai tak dikenal | Ditolak engine | Bisa lolos | Dijaga FK |
+> | Query kombinasi | `FIND_IN_SET` | `JSON_CONTAINS` | perlu `JOIN` |
+> | Cocok saat | pilihan tetap & sedikit | skema berubah-ubah | butuh atribut per tipe |
+>
+> Pivot baru sepadan jika tiap tipe perlu atribut sendiri (mis. radius berbeda
+> per tipe). Selama belum ada kebutuhan itu, pivot hanya menambah `JOIN` pada
+> query terpanas — pencarian toko dalam radius. **Ubah hanya jika `store_type`
+> berkembang melampaui 3 nilai atau butuh atribut turunan.**
+
+**Kenapa `category_ids` JSON, bukan comma-separated?**  
+`PRD.md` §8 menulis `VARCHAR(255)` dengan keterangan "JSON array atau
+comma-separated" — ambigu. Yang berlaku adalah **JSON**, karena:
+
+- MySQL memvalidasi struktur JSON; string comma-separated bisa berisi apa saja.
+- Bisa diindeks lewat multi-valued index:
+  `ALTER TABLE stores ADD INDEX idx_categories ((CAST(category_ids AS UNSIGNED ARRAY)));`
+- Laravel meng-cast otomatis ke array PHP (`'category_ids' => 'array'`).
+
+Pencarian toko per kategori memakai `JSON_CONTAINS`:
+
+```sql
+SELECT * FROM stores WHERE JSON_CONTAINS(category_ids, '7');
+```
+
+> ⚠️ `category_ids` **tidak punya foreign key** — JSON tidak mendukungnya.
+> Validasi keberadaan kategori wajib dilakukan di Form Request
+> (`exists:categories,id`), dan penghapusan kategori harus memeriksa
+> pemakaiannya di JSON ini secara manual.
 
 ### 4.3 `categories`
 
@@ -175,8 +266,28 @@ Karena tipe toko terbatas (3 pilihan), SET lebih hemat ruang dan memungkinkan pe
 **Constraint & Indeks:**
 
 - PRIMARY KEY (`id`)
-- FOREIGN KEY (`parent_id`) REFERENCES `categories`(`id`) ON DELETE SET NULL
+- FOREIGN KEY (`parent_id`) REFERENCES `categories`(`id`) ON DELETE RESTRICT
 - INDEX `categories_parent_id_idx` (`parent_id`)
+
+> **`parent_id` diubah dari `SET NULL` ke `RESTRICT`.**
+> Dengan `SET NULL`, menghapus kategori induk membuat seluruh subkategorinya
+> **naik menjadi kategori induk** secara diam-diam. Menghapus "Elektronik"
+> mendadak memunculkan "AC", "Kulkas", dan "TV" di level teratas — hierarki
+> rusak tanpa peringatan apa pun.
+>
+> `RESTRICT` memaksa admin memindahkan atau menghapus anaknya lebih dulu. Ini
+> juga konsisten dengan `customer_requests.category_id` yang sudah memakai
+> `RESTRICT`, sehingga aturan penghapusan kategori seragam di seluruh skema.
+>
+> Perlu diingat `stores.category_ids` (JSON) **tidak** terlindungi FK. Sebelum
+> menghapus kategori, aplikasi wajib memeriksa pemakaiannya:
+>
+> ```php
+> $used = Store::whereRaw('JSON_CONTAINS(category_ids, ?)', [(string) $category->id])->exists();
+> if ($used) {
+>     throw new CategoryInUseException();
+> }
+> ```
 
 ### 4.4 `listings`
 
@@ -204,8 +315,51 @@ Karena tipe toko terbatas (3 pilihan), SET lebih hemat ruang dan memungkinkan pe
 - INDEX `listings_deleted_at_idx` (`deleted_at`)
 - FULLTEXT INDEX `listings_ft_title_desc` (`title`, `description`)
 - INDEX `listings_status_idx` (`status`) — untuk filter aktif/tidak.
+- CHECK `listings_price_required_chk` — harga wajib untuk product & rental.
+- CHECK `listings_qty_slot_chk` — stok/slot sesuai tipe listing.
 
 **Keterangan tambahan:** `price` NULL memungkinkan listing tanpa harga (misal jasa yang memerlukan survey). Validasi di level aplikasi: jika `listing_type` = ‘service’, price boleh NULL; untuk product/rental wajib diisi.
+
+**CHECK constraint (ditegakkan di level engine):**
+
+```sql
+ALTER TABLE listings
+  ADD CONSTRAINT listings_price_required_chk
+  CHECK (listing_type = 'service' OR price IS NOT NULL);
+
+ALTER TABLE listings
+  ADD CONSTRAINT listings_qty_slot_chk
+  CHECK (
+    (listing_type IN ('product','rental') AND stock_qty IS NOT NULL AND slot IS NULL)
+    OR
+    (listing_type = 'service' AND slot IS NOT NULL AND stock_qty IS NULL)
+  );
+```
+
+Constraint kedua sekaligus mencegah kombinasi tak masuk akal — misalnya sebuah
+jasa yang punya `stock_qty`. Aturan yang sama diulang di Form Request agar
+pengguna mendapat pesan error yang ramah, bukan error SQL:
+
+```php
+'price'     => ['nullable', 'decimal:0,2', 'min:0', Rule::requiredIf(
+                   fn () => in_array($this->listing_type, ['product', 'rental'], true))],
+'stock_qty' => ['prohibited_unless:listing_type,product,rental', 'required_if:listing_type,product,rental', 'integer', 'min:0'],
+'slot'      => ['prohibited_unless:listing_type,service', 'required_if:listing_type,service', 'integer', 'min:1'],
+```
+
+> ⚠️ MySQL baru benar-benar menegakkan CHECK sejak **8.0.16**. Ini salah satu
+> alasan target minimum proyek adalah MySQL 8.0.34+. Di versi lebih lama,
+> constraint diterima tapi diam-diam diabaikan.
+
+**Validasi `images` (min 1, maks 5):** JSON tidak bisa membatasi panjang array
+lewat CHECK secara praktis, jadi aturan ini **hanya** ditegakkan aplikasi:
+
+```php
+'images'   => ['required', 'array', 'min:1', 'max:5'],
+'images.*' => ['url', 'max:500'],
+```
+
+Batas maks 5 foto berasal dari `PRD.md` §4 ("foto maks 5").
 
 ### 4.5 `customer_requests`
 
@@ -218,10 +372,13 @@ Karena tipe toko terbatas (3 pilihan), SET lebih hemat ruang dan memungkinkan pe
 | `category_id`       | INT UNSIGNED                                   | FK ke `categories`. Wajib, karena broadcast berdasarkan kategori. |
 | `budget_min`        | DECIMAL(12,2) NULL                             |                                                                   |
 | `budget_max`        | DECIMAL(12,2) NULL                             |                                                                   |
+| `images`            | JSON NULL                                      | Foto pendukung, maks 3 (PRD §5.2.1). NULL jika tidak ada.         |
 | `location`          | POINT SRID 4326                                | Titik lokasi pembeli, wajib.                                      |
-| `radius_km`         | DECIMAL(5,2) DEFAULT 15.00                     | Radius pencarian penyedia.                                        |
+| `radius_km`         | DECIMAL(5,2) DEFAULT 15.00                     | Radius pencarian penyedia (default PRD: 15 km).                   |
 | `required_date`     | TIMESTAMP NULL                                 | Kapan kebutuhan harus dipenuhi.                                   |
-| `expires_at`        | TIMESTAMP NOT NULL                             | Waktu kedaluwarsa (default 24 jam).                               |
+| `expires_at`        | TIMESTAMP NOT NULL                             | Waktu kedaluwarsa (default 24 jam sejak dibuat).                  |
+| `extended_at`       | TIMESTAMP NULL                                 | Kapan terakhir diperpanjang. NULL = belum pernah.                 |
+| `extension_count`   | TINYINT UNSIGNED DEFAULT 0                     | Berapa kali diperpanjang. Dibatasi agar tidak abadi.              |
 | `status`            | ENUM('open','closed','expired') DEFAULT 'open' |                                                                   |
 | `accepted_offer_id` | CHAR(36) NULL                                  | FK ke `offers`, penawaran pemenang. Diisi saat pembeli memilih.   |
 | `created_at`        | TIMESTAMP                                      | –                                                                 |
@@ -238,6 +395,64 @@ Karena tipe toko terbatas (3 pilihan), SET lebih hemat ruang dan memungkinkan pe
 - INDEX `cr_status_expires_idx` (`status`, `expires_at`) — untuk scheduler menutup permintaan kadaluarsa.
 - INDEX `cr_accepted_offer_id_idx` (`accepted_offer_id`)
 - SPATIAL INDEX `cr_location_spatial` (`location`)
+- CHECK `cr_budget_range_chk` — `budget_max` tidak boleh lebih kecil dari `budget_min`:
+
+```sql
+ALTER TABLE customer_requests
+  ADD CONSTRAINT cr_budget_range_chk
+  CHECK (budget_min IS NULL OR budget_max IS NULL OR budget_max >= budget_min);
+```
+
+**Perpanjangan masa aktif:** saat pembeli memperpanjang, `expires_at` didorong
+maju, `extended_at` diisi waktu sekarang, dan `extension_count` bertambah.
+Batasi maksimal 2 kali perpanjangan agar papan kebutuhan tidak dipenuhi
+permintaan basi:
+
+```php
+if ($request->extension_count >= 2) {
+    throw new TooManyExtensionsException();
+}
+$request->update([
+    'expires_at'      => now()->addHours(24),
+    'extended_at'     => now(),
+    'extension_count' => $request->extension_count + 1,
+]);
+```
+
+**Validasi `images`:** maks 3 foto, ditegakkan aplikasi (`'images' => 'nullable|array|max:3'`).
+
+> ⚠️ **Menerima penawaran wajib atomik.** Saat satu offer diterima, tiga hal
+> harus berubah bersamaan: request jadi `closed`, offer pemenang jadi
+> `accepted`, dan **semua offer lain jadi `rejected`**. Tidak ada trigger
+> database untuk ini — tanggung jawab aplikasi, di dalam satu transaksi:
+
+```php
+DB::transaction(function () use ($request, $winningOffer) {
+    // Kunci baris agar tidak ada dua pemenang saat request bersamaan.
+    $request = CustomerRequest::whereKey($request->id)->lockForUpdate()->first();
+
+    if ($request->status !== RequestStatus::Open) {
+        throw new RequestAlreadyClosedException();
+    }
+
+    Offer::where('request_id', $request->id)
+        ->whereKeyNot($winningOffer->id)
+        ->update(['status' => OfferStatus::Rejected]);
+
+    $winningOffer->update(['status' => OfferStatus::Accepted]);
+
+    $request->update([
+        'status'            => RequestStatus::Closed,
+        'accepted_offer_id' => $winningOffer->id,
+    ]);
+
+    $order = Order::create([...]);   // order terbentuk dari offer pemenang
+    event(new OfferAccepted($winningOffer, $order));
+});
+```
+
+`lockForUpdate()` penting: tanpa itu, dua pembeli yang menekan "Terima" nyaris
+bersamaan bisa menghasilkan dua order dari satu permintaan.
 
 ### 4.6 `offers`
 
@@ -247,9 +462,11 @@ Karena tipe toko terbatas (3 pilihan), SET lebih hemat ruang dan memungkinkan pe
 | `request_id`      | CHAR(36)                                                | FK ke `customer_requests`.      |
 | `store_id`        | CHAR(36)                                                | FK ke `stores`.                 |
 | `price`           | DECIMAL(12,2)                                           | Harga penawaran.                |
-| `estimation_time` | VARCHAR(100)                                            | Estimasi pengerjaan/pengiriman. |
+| `estimation_time` | VARCHAR(100)                                            | Teks bebas yang ditampilkan ke pembeli, mis. "2–3 hari kerja". |
+| `estimated_hours` | SMALLINT UNSIGNED NULL                                  | Bentuk numerik untuk sorting & analitik. Lihat catatan.        |
 | `notes`           | TEXT NULL                                               | Catatan tambahan.               |
 | `status`          | ENUM('pending','accepted','rejected') DEFAULT 'pending' |                                 |
+| `expires_at`      | TIMESTAMP NOT NULL                                      | Kedaluwarsa penawaran (default 48 jam). Lihat catatan.         |
 | `created_at`      | TIMESTAMP                                               | –                               |
 | `updated_at`      | TIMESTAMP                                               | –                               |
 
@@ -263,11 +480,57 @@ Karena tipe toko terbatas (3 pilihan), SET lebih hemat ruang dan memungkinkan pe
 
 **Mengapa CASCADE pada store_id?** Jika toko dihapus (soft delete), penawaran menjadi tidak valid. Daripada memperumit, kita hapus cascade; data penawaran sudah tidak relevan. Order yang sudah terjadi tetap utuh karena `offer_id` di orders menggunakan `SET NULL`.
 
+**Kenapa `estimation_time` DIPERTAHANKAN dan `estimated_hours` DITAMBAHKAN.**  
+Sempat diusulkan mengganti `estimation_time` menjadi kolom numerik. Mengganti
+akan menghilangkan kemampuan penyedia menulis estimasi bernuansa yang justru
+membangun kepercayaan — "2–3 hari kerja, tergantung stok". Karena itu keduanya
+disimpan berdampingan:
+
+- `estimation_time` — **yang dilihat pembeli**, teks apa adanya dari penyedia.
+- `estimated_hours` — **yang dipakai sistem** untuk mengurutkan "tercepat" dan
+  menghitung rata-rata waktu respons.
+
+Aplikasi mengisi `estimated_hours` dari input terstruktur (angka + satuan
+hari/jam) lalu merangkainya menjadi `estimation_time`. Kolom numerik dibuat
+NULL-able karena penawaran lama belum memilikinya.
+
+- INDEX `offers_estimated_hours_idx` (`estimated_hours`) — untuk sortir tercepat.
+
+**Kedaluwarsa penawaran.** Tanpa `expires_at`, penawaran menggantung selamanya
+dan pembeli bisa menerima harga yang sudah tidak relevan. Aturannya:
+
+```sql
+-- Default 48 jam, tapi tidak boleh melebihi masa aktif permintaannya.
+ALTER TABLE offers ADD CONSTRAINT offers_expiry_chk CHECK (expires_at > created_at);
+```
+
+- INDEX `offers_status_expires_idx` (`status`, `expires_at`) — untuk scheduler.
+
+> ⚠️ Penawaran **tidak boleh** hidup lebih lama dari permintaannya. Saat
+> membuat offer, ambil nilai terkecil antara 48 jam dan `expires_at` milik
+> request:
+> ```php
+> 'expires_at' => min(now()->addHours(48), $customerRequest->expires_at),
+> ```
+
+Scheduler menutup penawaran kedaluwarsa berbarengan dengan permintaan:
+
+```php
+Offer::where('status', OfferStatus::Pending)
+    ->where('expires_at', '<', now())
+    ->update(['status' => OfferStatus::Rejected]);
+```
+
+> Catatan: ENUM `offers.status` tidak punya nilai `expired`. Penawaran lewat
+> waktu ditandai `rejected` agar tidak menambah nilai ENUM baru. Bedakan di UI
+> lewat `expires_at < now()` jika perlu menampilkan alasannya.
+
 ### 4.7 `orders`
 
 | Kolom            | Tipe                                                                                                            | Keterangan                             |
 | ---------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
 | `id`             | CHAR(36)                                                                                                        | PK, UUID.                              |
+| `order_number`   | VARCHAR(20) UNIQUE                                                                                              | Nomor referensi manusiawi, mis. `SKT-20260727-0001`. |
 | `buyer_id`       | CHAR(36)                                                                                                        | FK ke `users` (pembeli).               |
 | `store_id`       | CHAR(36)                                                                                                        | FK ke `stores` (penyedia).             |
 | `offer_id`       | CHAR(36) NULL                                                                                                   | FK ke `offers` (jika dari penawaran).  |
@@ -276,7 +539,15 @@ Karena tipe toko terbatas (3 pilihan), SET lebih hemat ruang dan memungkinkan pe
 | `total_amount`   | DECIMAL(12,2)                                                                                                   | Total transaksi.                       |
 | `status`         | ENUM('menunggu_konfirmasi','diproses','dikirim','selesai','dibatalkan','dispute') DEFAULT 'menunggu_konfirmasi' |                                        |
 | `payment_method` | ENUM('cod','transfer')                                                                                          |                                        |
+| `delivery_method`| ENUM('pickup','delivery') DEFAULT 'pickup'                                                                      | Ambil di tempat atau diantar penjual.  |
+| `shipping_address` | TEXT NULL                                                                                                     | Alamat tujuan. Wajib jika `delivery`.  |
+| `shipping_location` | POINT SRID 4326 NULL                                                                                         | Koordinat tujuan untuk navigasi penjual. |
+| `payment_proof_url` | VARCHAR(500) NULL                                                                                            | Bukti transfer dari pembeli.           |
+| `payment_confirmed_at` | TIMESTAMP NULL                                                                                            | Kapan penjual mengonfirmasi dana masuk. |
 | `completed_at`   | TIMESTAMP NULL                                                                                                  | Waktu transaksi dianggap selesai.      |
+| `cancelled_at`   | TIMESTAMP NULL                                                                                                  | Kapan dibatalkan.                      |
+| `cancelled_by`   | CHAR(36) NULL                                                                                                   | FK ke `users`. Siapa yang membatalkan. |
+| `cancel_reason`  | VARCHAR(255) NULL                                                                                               | Alasan pembatalan, untuk audit.        |
 | `created_at`     | TIMESTAMP                                                                                                       | –                                      |
 | `updated_at`     | TIMESTAMP                                                                                                       | –                                      |
 
@@ -289,19 +560,70 @@ Karena tipe toko terbatas (3 pilihan), SET lebih hemat ruang dan memungkinkan pe
 - FOREIGN KEY (`listing_id`) REFERENCES `listings`(`id`) ON DELETE SET NULL
 - INDEX `orders_buyer_id_idx` (`buyer_id`)
 - INDEX `orders_store_id_idx` (`store_id`)
+- FOREIGN KEY (`cancelled_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
+- UNIQUE KEY `orders_order_number_unique` (`order_number`)
 - INDEX `orders_status_idx` (`status`)
 - INDEX `orders_created_at_idx` (`created_at`) — untuk laporan tanggal.
+- CHECK `orders_shipping_chk` — alamat wajib saat metode `delivery`:
+
+```sql
+ALTER TABLE orders
+  ADD CONSTRAINT orders_shipping_chk
+  CHECK (delivery_method = 'pickup' OR shipping_address IS NOT NULL);
+```
 
 **Catatan:** Status menggunakan ENUM agar tidak ada nilai tak terduga. Daftar status sudah mencakup seluruh alur (termasuk `dispute`).
+
+### Nomor Pesanan (`order_number`)
+
+UUID aman untuk API tapi tidak mungkin dibacakan lewat telepon atau WhatsApp.
+`order_number` adalah identitas yang dipakai manusia; UUID tetap menjadi PK.
+
+Format: `SKT-YYYYMMDD-NNNN` (`SKT-20260727-0001`), dengan urutan direset harian.
+
+> ⚠️ **Jangan** membuat nomor ini dengan `COUNT(*) + 1` — dua pesanan bersamaan
+> akan menghasilkan nomor kembar meski ada UNIQUE (yang satu gagal simpan).
+> Pakai penghitung atomik di Redis, dengan verifikasi UNIQUE sebagai jaring
+> pengaman terakhir:
+
+```php
+$date = now()->format('Ymd');
+$seq  = Redis::incr("order_seq:$date");
+Redis::expire("order_seq:$date", 172800);   // bersihkan setelah 2 hari
+$orderNumber = sprintf('SKT-%s-%04d', $date, $seq);
+```
+
+### Pembayaran Transfer
+
+MVP memakai transfer langsung — dana tidak melewati platform. Alurnya:
+
+1. Pembeli memilih `payment_method = 'transfer'`.
+2. Aplikasi menampilkan rekening penjual (dari `stores`).
+3. Pembeli mengunggah bukti → `payment_proof_url`.
+4. Penjual memverifikasi → `payment_confirmed_at` terisi, status lanjut ke `diproses`.
+
+> ⚠️ `payment_proof_url` adalah **klaim sepihak**, bukan bukti terverifikasi.
+> Platform tidak memvalidasi mutasi bank, jadi jangan pernah meloloskan status
+> otomatis hanya karena berkas terunggah. Konfirmasi penjual bersifat wajib —
+> ini juga alasan `disputes` tetap diperlukan di MVP.
+
+### Audit Pembatalan
+
+`cancelled_by` memungkinkan membedakan pembatalan oleh pembeli, penjual, atau
+admin — informasi yang hilang jika hanya mengandalkan `status = 'dibatalkan'`.
+Ketiganya diisi bersamaan saat transisi ke `dibatalkan`, dan dipakai untuk
+menghitung tingkat pembatalan per pihak (KPI di PRD §13).
 
 ### 4.8 `reviews`
 
 | Kolom         | Tipe      | Keterangan                                                |
 | ------------- | --------- | --------------------------------------------------------- |
 | `id`          | CHAR(36)  | PK, UUID.                                                 |
-| `order_id`    | CHAR(36)  | FK ke `orders`, UNIK. Satu order hanya boleh satu ulasan. |
+| `order_id`    | CHAR(36)  | FK ke `orders`. Satu order punya maks 2 ulasan (dua arah).|
 | `reviewer_id` | CHAR(36)  | FK ke `users`, yang menulis ulasan.                       |
-| `reviewee_id` | CHAR(36)  | FK ke `users`, yang diulas.                               |
+| `reviewee_id` | CHAR(36)  | FK ke `users`, yang diulas (pemilik toko / pembeli).      |
+| `store_id`    | CHAR(36) NULL | FK ke `stores`. Diisi **hanya** saat pembeli menilai toko. |
+| `direction`   | ENUM('buyer_to_store','store_to_buyer') | Arah penilaian. Menentukan apakah ulasan memengaruhi rating toko. |
 | `rating`      | TINYINT   | 1 – 5. CHECK (rating BETWEEN 1 AND 5)                     |
 | `comment`     | TEXT NULL |                                                           |
 | `created_at`  | TIMESTAMP |                                                           |
@@ -312,8 +634,60 @@ Karena tipe toko terbatas (3 pilihan), SET lebih hemat ruang dan memungkinkan pe
 - FOREIGN KEY (`order_id`) REFERENCES `orders`(`id`) ON DELETE CASCADE
 - FOREIGN KEY (`reviewer_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 - FOREIGN KEY (`reviewee_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
-- UNIQUE KEY `reviews_order_id_unique` (`order_id`)
-- INDEX `reviews_reviewee_id_idx` (`reviewee_id`) — untuk menghitung rating toko.
+- FOREIGN KEY (`store_id`) REFERENCES `stores`(`id`) ON DELETE CASCADE
+- UNIQUE KEY `reviews_order_direction_unique` (`order_id`, `direction`) — satu ulasan per arah per pesanan.
+- INDEX `reviews_store_id_idx` (`store_id`) — **untuk menghitung rating toko.**
+- INDEX `reviews_reviewee_id_idx` (`reviewee_id`) — untuk reputasi pengguna.
+- CHECK `reviews_store_direction_chk`:
+
+```sql
+ALTER TABLE reviews
+  ADD CONSTRAINT reviews_store_direction_chk
+  CHECK (
+    (direction = 'buyer_to_store' AND store_id IS NOT NULL)
+    OR
+    (direction = 'store_to_buyer' AND store_id IS NULL)
+  );
+```
+
+> ### ⚠️ Perubahan penting: `store_id` ditambahkan, `reviewee_id` **tetap ada**
+>
+> **Bug yang diperbaiki.** Rating toko sebelumnya dihitung dari `reviewee_id`
+> yang menunjuk ke `users`. Padahal `DATABASE.md` §3 menyatakan
+> `users 1──N stores` — **satu pengguna boleh punya banyak toko**. Akibatnya
+> ulasan untuk Toko A ikut menaikkan rating Toko B milik orang yang sama.
+> Query `$store->reviews()` bahkan tidak punya jalur relasi yang benar.
+>
+> **Kenapa `reviewee_id` tidak diganti (seperti usulan awal).** Mengganti
+> `reviewee_id` menjadi `store_id` akan **mematahkan ulasan dua arah** yang
+> diwajibkan `PRD.md` §5.5: *"pembeli dan penjual bisa saling menilai"*.
+> Saat penjual menilai pembeli, tidak ada toko yang dinilai — kolom `store_id`
+> akan kosong dan reputasi pembeli kehilangan tempat penyimpanan.
+>
+> **Solusi:** simpan keduanya, dibedakan oleh `direction`.
+>
+> | `direction` | `reviewee_id` | `store_id` | Memengaruhi `stores.rating_avg`? |
+> | :-- | :-- | :-- | :-- |
+> | `buyer_to_store` | pemilik toko | **terisi** | ✅ Ya |
+> | `store_to_buyer` | pembeli | NULL | ❌ Tidak |
+>
+> `UNIQUE(order_id, direction)` menggantikan `UNIQUE(order_id)` — kalau tidak,
+> hanya satu pihak yang bisa memberi ulasan dan fitur dua arah tetap mustahil.
+
+**Perhitungan rating toko yang benar** — memakai `store_id`, bukan `reviewee_id`:
+
+```php
+// Hanya ulasan berarah buyer_to_store yang dihitung.
+$stats = Review::where('store_id', $store->id)
+    ->where('direction', 'buyer_to_store')
+    ->selectRaw('AVG(rating) AS avg_rating, COUNT(*) AS total')
+    ->first();
+
+$store->update([
+    'rating_avg'    => round($stats->avg_rating ?? 0, 2),
+    'total_reviews' => $stats->total,
+]);
+```
 
 ### 4.9 `disputes`
 
@@ -322,7 +696,7 @@ Karena tipe toko terbatas (3 pilihan), SET lebih hemat ruang dan memungkinkan pe
 | `id`              | CHAR(36)                               | PK, UUID.                             |
 | `order_id`        | CHAR(36)                               | FK ke `orders`.                       |
 | `reported_by`     | CHAR(36)                               | FK ke `users`, pelapor.               |
-| `reason`          | VARCHAR(100)                           | Alasan dipilih dari enum di aplikasi. |
+| `reason`          | ENUM('barang_tidak_sesuai','jasa_tidak_profesional','penyedia_tidak_responsif','pembeli_fiktif','lainnya') | Alasan baku. Lihat catatan. |
 | `description`     | TEXT NULL                              | Penjelasan tambahan.                  |
 | `status`          | ENUM('open','resolved') DEFAULT 'open' |                                       |
 | `resolution_note` | TEXT NULL                              | Catatan dari admin.                   |
@@ -337,6 +711,33 @@ Karena tipe toko terbatas (3 pilihan), SET lebih hemat ruang dan memungkinkan pe
 - FOREIGN KEY (`reported_by`) REFERENCES `users`(`id`) ON DELETE CASCADE
 - INDEX `disputes_order_id_idx` (`order_id`)
 - INDEX `disputes_status_idx` (`status`)
+- CHECK `disputes_reason_desc_chk` — alasan `lainnya` wajib disertai penjelasan:
+
+```sql
+ALTER TABLE disputes
+  ADD CONSTRAINT disputes_reason_desc_chk
+  CHECK (reason <> 'lainnya' OR description IS NOT NULL);
+```
+
+**Kenapa `reason` diubah dari VARCHAR ke ENUM.** Kolom lama menyebut "dipilih
+dari enum di aplikasi", tapi tanpa penegakan di database nilai apa pun bisa
+masuk lewat SQL langsung, seeder, atau bug. Karena laporan ini dipakai untuk
+statistik penyalahgunaan, satu salah ketik saja merusak agregasi.
+
+Nilainya diambil persis dari `API_DOCUMENTATION.md` §9.1, yang merupakan
+padanan resmi dari daftar berbahasa Indonesia di `PRD.md` §5.5:
+
+| Nilai ENUM                  | Label di aplikasi (PRD §5.5)      |
+| :-------------------------- | :--------------------------------- |
+| `barang_tidak_sesuai`       | Barang tidak sesuai                |
+| `jasa_tidak_profesional`    | Jasa tidak selesai / tidak profesional |
+| `penyedia_tidak_responsif`  | Penyedia tidak responsif           |
+| `pembeli_fiktif`            | Pembeli fiktif / tidak bayar       |
+| `lainnya`                   | Lainnya (isi teks)                 |
+
+> ⚠️ Menambah alasan baru berarti `ALTER TABLE`. Kalau daftar ini diperkirakan
+> sering berubah, pindahkan ke tabel `dispute_reasons` dengan FK. Untuk MVP
+> dengan 5 nilai yang stabil, ENUM lebih sederhana dan lebih cepat.
 
 ---
 
@@ -402,9 +803,38 @@ Seluruh indeks dirancang berdasarkan pola query nyata.
 3. **UNIQUE constraint** pada offers (`request_id`, `store_id`) – mencegah toko mengirim dua penawaran pada permintaan yang sama, baik dari aplikasi maupun langsung dari SQL.
 4. **ENUM + CHECK** – Status pesanan, tipe listing, rating, semua memiliki domain terbatas yang terverifikasi di level engine.
 5. **Default value** – `verification_level` = 1, `status` = ‘active’, dll.
-6. **Aplikasi wajib gunakan transaksi** – setiap aksi multi‑tabel (contoh: menerima penawaran → update request, update offer, insert order) HARUS dalam `DB::transaction()`.
+6. **Aplikasi wajib gunakan transaksi** – setiap aksi multi‑tabel (contoh: menerima penawaran → update request, update offer, insert order) HARUS dalam `DB::transaction()` **dengan `lockForUpdate()`** pada baris yang jadi rebutan.
 7. **Validasi data JSON** – Di Laravel, gunakan `$casts` dan Form Request untuk memastikan `category_ids` adalah array integer, `images` adalah array URL, dll.
-8. **Mekanisme update rating toko** – rating_avg diperbarui dalam transaksi bersama penulisan ulasan, menghindari inkonsistensi.
+8. **Mekanisme update rating toko** – `rating_avg` dihitung dari `reviews.store_id` (bukan `reviewee_id`) dan hanya arah `buyer_to_store`, diperbarui dalam transaksi bersama penulisan ulasan.
+9. **CHECK constraint lintas kolom** – aturan yang tidak bisa diwakili ENUM ditegakkan engine: harga wajib untuk product/rental, stok vs slot sesuai tipe, alamat wajib saat `delivery`, `budget_max ≥ budget_min`, dan dispute `lainnya` wajib berdeskripsi. Semua butuh **MySQL 8.0.16+**.
+10. **Batas yang hanya bisa dijaga aplikasi** – panjang array JSON (`images` maks 5 untuk listing, maks 3 untuk request) dan keberadaan ID di `category_ids`. Tidak ada FK/CHECK untuk ini, jadi Form Request adalah satu-satunya penjaga.
+
+---
+
+## 8A. KEPUTUSAN DESAIN: USULAN YANG DITOLAK & DIKOREKSI
+
+Beberapa usulan perubahan skema sengaja **tidak** diterapkan setelah
+diverifikasi ke PRD dan skema yang ada. Dicatat di sini agar tidak diusulkan
+ulang tanpa konteks.
+
+| Usulan                                                   | Keputusan       | Alasan                                                                                                       |
+| :------------------------------------------------------- | :-------------- | :------------------------------------------------------------------------------------------------------------ |
+| `store_type`: `SET` → `JSON` / pivot                     | ❌ Ditolak      | Premisnya keliru — SET memang mendukung kombinasi. Untuk 3 nilai tetap, SET lebih hemat & divalidasi engine. |
+| `reviewee_id` → diganti `store_id`                       | ⚠️ Dikoreksi    | Mengganti akan mematahkan ulasan dua arah (PRD §5.5). `store_id` **ditambahkan**, `reviewee_id` tetap.       |
+| `users.location` → `NOT NULL`                            | ❌ Ditolak      | Baris user harus ada sebelum lokasi diisi (alur OTP). Ditegakkan middleware, bukan constraint.               |
+| `service_radius_km` default → 15 km                      | ❌ Ditolak      | Tertukar dengan `customer_requests.radius_km`. Default toko 5 km sudah sesuai PRD §5.3.2.                    |
+| `estimation_time` → diganti kolom numerik                | ⚠️ Dikoreksi    | Teks bernuansa tetap berguna bagi pembeli. `estimated_hours` **ditambahkan** berdampingan.                    |
+| `rating_count` sebagai alias `total_reviews`             | ❌ Ditolak      | Dua kolom untuk satu makna justru sumber inkonsistensi. `total_reviews` sudah cukup.                          |
+| `verification_level` tambah level 4                      | ❌ Ditolak      | PRD §5.3.2 hanya mendefinisikan Level 1–3 untuk MVP. Tidak ada level 4 di dokumen mana pun.                  |
+
+**Catatan #36 (`rating_avg` vs `total_reviews`).** Tidak ada masalah tipe di
+sini: `DECIMAL(3,2)` memuat 0.00–9.99 (cukup untuk maks 5.00) dan
+`INT UNSIGNED` tepat untuk pencacah. Menambah `rating_count` sebagai alias
+hanya menciptakan dua sumber kebenaran yang bisa berbeda.
+
+**Catatan #21 (`verification_level`).** PRD, DATABASE, dan API sudah konsisten
+di rentang 1–3. Yang ditambahkan hanyalah penegasan eksplisit "Hanya 1–3" di
+deskripsi kolom, agar tidak ada yang mengarang level 4.
 
 ---
 

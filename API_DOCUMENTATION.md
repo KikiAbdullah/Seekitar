@@ -412,9 +412,13 @@ POST /requests
   "latitude": -6.21,
   "longitude": 106.84,
   "radius_km": 10,
+  "images": ["https://cdn.seekitar.id/req/a.jpg"], // opsional, maks 3
   "required_date": "2026-07-28T10:00:00+07:00" // opsional
 }
 ```
+
+`radius_km` default **15** jika tidak dikirim. `budget_max` tidak boleh lebih
+kecil dari `budget_min`.
 
 **Response 201:**
 
@@ -425,11 +429,23 @@ POST /requests
     "request": {
       "id": "uuid",
       "status": "open",
-      "expires_at": "2026-07-28T10:00:00+07:00"
+      "expires_at": "2026-07-28T10:00:00+07:00",
+      "extension_count": 0
     }
   }
 }
 ```
+
+### 5.1a Perpanjang Masa Aktif Permintaan
+
+```http
+POST /requests/{request_id}/extend
+```
+
+**Auth required** (pemilik permintaan) – Memperpanjang `expires_at` 24 jam.
+
+**Error 422** – Sudah mencapai batas 2 kali perpanjangan, atau permintaan
+sudah `closed`/`expired`.
 
 ### 5.2 Get Open Requests (Penyedia)
 
@@ -475,15 +491,36 @@ POST /requests/{request_id}/offers
 {
   "price": 150000,
   "estimation_time": "Bisa datang siang ini jam 2",
+  "estimated_hours": 4,
   "notes": "Garansi 1 minggu"
 }
 ```
 
-**Response 201:** (data offer)  
+`estimation_time` adalah teks yang dibaca pembeli; `estimated_hours` adalah
+bentuk numeriknya untuk pengurutan "tercepat". Keduanya sebaiknya dikirim
+bersamaan agar hasil sortir konsisten dengan yang ditampilkan.
+
+**Response 201:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "status": "pending",
+    "expires_at": "2026-07-29T10:00:00+07:00"
+  }
+}
+```
+
+`expires_at` diisi server: 48 jam, atau mengikuti `expires_at` permintaan jika
+permintaan tersebut berakhir lebih dulu.
+
 **Error:**
 
 - `409` – Sudah mengirim penawaran untuk permintaan ini
 - `403` – Tidak sesuai kategori/toko tidak aktif
+- `422` – Permintaan sudah `closed`/`expired`
 
 ### 6.2 Get Offers for a Request
 
@@ -563,11 +600,52 @@ POST /orders
   "listing_id": "uuid",
   "quantity": 1, // untuk product
   "payment_method": "cod",
+  "delivery_method": "delivery",
+  "shipping_address": "Jl. Melati No. 12, RT 03/RW 05, Sukolilo",
   "notes": "Pesan tambahan"
 }
 ```
 
-**Response 201:** (data order)
+`shipping_address` **wajib** jika `delivery_method` = `delivery`, dan diabaikan
+jika `pickup`.
+
+**Response 201:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "order_number": "SKT-20260727-0001",
+    "status": "menunggu_konfirmasi",
+    "delivery_method": "delivery",
+    "total_amount": 150000
+  },
+  "message": "Pesanan dibuat."
+}
+```
+
+> `order_number` adalah referensi yang ditampilkan ke pengguna dan dipakai saat
+> menghubungi penjual via WhatsApp. `id` (UUID) tetap dipakai untuk semua
+> pemanggilan API berikutnya.
+
+### 7.1a Upload Bukti Transfer
+
+```http
+POST /orders/{order_id}/payment-proof
+```
+
+**Auth required** (pembeli) – Hanya untuk `payment_method` = `transfer`.
+
+**Body (multipart/form-data):**
+
+| Field | Tipe | Keterangan |
+|-------|------|------------|
+| `payment_proof` | file | Foto bukti transfer (jpg/png, maks 5 MB) |
+
+Setelah diunggah, penjual harus mengonfirmasi penerimaan dana secara manual.
+Platform **tidak** memverifikasi mutasi bank, sehingga status pesanan tidak
+berubah otomatis.
 
 ### 7.2 Update Order Status
 
@@ -622,7 +700,16 @@ GET /orders?as=buyer&status=selesai
 POST /orders/{order_id}/review
 ```
 
-**Auth required** – Hanya setelah order `selesai` dan belum pernah diulas.
+**Auth required** – Hanya setelah order `selesai`.
+
+Ulasan bersifat **dua arah** (PRD §5.5): pembeli menilai toko, penjual menilai
+pembeli. `direction` **tidak dikirim klien** — server menyimpulkannya dari
+identitas pemanggil:
+
+| Pemanggil        | `direction` tersimpan | Memengaruhi rating toko? |
+| :--------------- | :-------------------- | :------------------------ |
+| Pembeli order    | `buyer_to_store`      | ✅ Ya                     |
+| Pemilik toko     | `store_to_buyer`      | ❌ Tidak                  |
 
 **Body:**
 
@@ -633,7 +720,26 @@ POST /orders/{order_id}/review
 }
 ```
 
-**Response 201:** (data review)
+**Response 201:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "order_id": "uuid",
+    "direction": "buyer_to_store",
+    "store_id": "uuid",
+    "rating": 5,
+    "comment": "Bagus banget, cepat dan rapi.",
+    "created_at": "2026-07-27T10:00:00Z"
+  },
+  "message": "Ulasan tersimpan."
+}
+```
+
+**Error 409** – Pihak yang sama sudah pernah mengulas pesanan ini. Setiap pihak
+hanya boleh satu kali; ulasan tidak bisa diubah setelah dikirim.
 
 ### 8.2 Get Reviews for Store
 
@@ -642,6 +748,9 @@ GET /stores/{store_id}/reviews
 ```
 
 **Public** – Ulasan terbaru untuk toko tertentu.
+
+Hanya mengembalikan ulasan `buyer_to_store`. Penilaian penjual terhadap pembeli
+tidak pernah tampil di profil publik toko.
 
 ---
 
