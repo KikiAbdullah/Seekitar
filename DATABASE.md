@@ -171,6 +171,9 @@ kebijakan retensi.
 | `category_ids`        | JSON                                                    | Array ID dari `categories`. Contoh: `[1, 3, 7]`.                               |
 | `location`            | POINT SRID 4326                                         | Titik koordinat toko (longitude, latitude). Wajib.                             |
 | `service_radius_km`   | DECIMAL(5,2) DEFAULT 5.00                               | Radius layanan toko dalam km. Presisi 2 desimal. Lihat catatan di bawah.       |
+| `accepts_cod`         | TINYINT(1) DEFAULT 1                                    | Menerima bayar di tempat. Sumber badge “Bisa COD”.                             |
+| `offers_delivery`     | TINYINT(1) DEFAULT 0                                    | Mengantar sendiri. Sumber badge “Bisa Diantar”.                                |
+| `allows_pickup`       | TINYINT(1) DEFAULT 1                                    | Punya lokasi fisik yang bisa didatangi. Sumber badge “Ambil di Tempat”.        |
 | `operating_hours`     | JSON                                                    | Jam operasional per hari. Contoh: `{"senin":{"open":"08:00","close":"17:00"}}` |
 | `rating_avg`          | DECIMAL(3,2) DEFAULT 0.00                               | Rata‑rata rating, dihitung ulang setiap ada ulasan baru.                       |
 | `total_reviews`       | INT UNSIGNED DEFAULT 0                                  | Jumlah total ulasan, counter untuk kalkulasi cepat.                            |
@@ -206,6 +209,22 @@ kebijakan retensi.
 >
 > Menyamakan keduanya jadi 15 km akan membuat toko kelontong muncul di
 > pencarian sejauh 15 km — bertentangan dengan premis *hyperlocal* produk ini.
+
+**Kapabilitas layanan (`accepts_cod`, `offers_delivery`, `allows_pickup`).**
+Ketiganya menggambarkan **kemampuan toko**, berbeda dari
+`orders.payment_method` / `orders.delivery_method` yang mencatat **pilihan pada
+satu pesanan**. Kolom di sini yang menjadi sumber badge di
+`BRANDING-GUIDELINE.md` §4.2 dan filter pencarian.
+
+- CHECK: minimal satu cara penyerahan harus aktif —
+  ```sql
+  ALTER TABLE stores ADD CONSTRAINT stores_fulfilment_chk
+    CHECK (offers_delivery = 1 OR allows_pickup = 1);
+  ```
+- Validasi silang saat membuat pesanan: `delivery_method = 'delivery'` pada toko
+  ber-`offers_delivery = 0` ditolak `422`; begitu pula `payment_method = 'cod'`
+  pada toko ber-`accepts_cod = 0`.
+- INDEX `stores_delivery_idx` (`offers_delivery`) — untuk filter “bisa diantar”.
 
 **Kenapa SET untuk store_type?**  
 Karena tipe toko terbatas (3 pilihan), SET lebih hemat ruang dan memungkinkan pencarian dengan `FIND_IN_SET` atau `LIKE` jika perlu.
