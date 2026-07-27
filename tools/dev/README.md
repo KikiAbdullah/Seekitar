@@ -27,11 +27,12 @@ green, and the app served over HTTP (`/` and `/up` both return 200).
 | `node tools/dev/check-structure.mjs` | Guards project-structure sections and Enum-vs-schema consistency. |
 | `node tools/dev/check-datamodel.mjs` | Guards schema columns, design decisions, and DB↔API alignment. |
 | `node tools/dev/check-api.mjs` | Guards API endpoint coverage, contract details, and cross-doc drift. |
+| `node tools/dev/check-backend.mjs` | Guards Laravel implementation guide: middleware, policies, jobs, deployment. |
 
 All checkers exit non-zero on failure, so they work as CI/pre-commit steps:
 
 ```bash
-for c in versions structure datamodel api; do
+for c in versions structure datamodel api backend; do
   node tools/dev/check-$c.mjs || exit 1
 done
 ```

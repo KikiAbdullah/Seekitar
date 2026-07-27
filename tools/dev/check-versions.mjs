@@ -29,7 +29,11 @@ const RULES = [
     id: 'laravel-version',
     re: /Laravel\s+1[0-2]\b/i,
     msg: 'Menyebut Laravel 10-12; proyek ini memakai Laravel 13.',
-    allow: ['mentok', 'tidak akan ter-install', 'dokumen lama', 'sudah **tidak berlaku**', 'mengunci Laravel 11', 'diseragamkan', 'hanya mendukung sampai'],
+    allow: ['mentok', 'tidak akan ter-install', 'dokumen lama', 'sudah **tidak berlaku**',
+            'mengunci Laravel 11', 'diseragamkan', 'hanya mendukung sampai',
+            // Rujukan historis: menjelaskan SEJAK KAPAN sebuah perilaku berubah,
+            // bukan menyatakan proyek ini memakai versi tersebut.
+            'sudah tidak ada sejak', 'Laravel 11+', 'seperti Laravel 10'],
   },
   {
     id: 'php-patch-pin',
