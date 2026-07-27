@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Run Laravel artisan commands against seekitar-server.
+#
+#   ./tools/dev/artisan migrate
+#   ./tools/dev/artisan make:model Store -m
+#   ./tools/dev/artisan route:list
+#
+# Caveat: the WASM runtime cannot spawn subprocesses, so wrapper commands that
+# shell out (`artisan test`, `artisan serve`, `artisan pail`) do not work.
+# Use ./tools/dev/test and ./tools/dev/serve instead.
+set -euo pipefail
+
+DEV_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SERVER_DIR="$(cd "$DEV_DIR/../../seekitar-server" && pwd)"
+
+exec "$DEV_DIR/php" "$SERVER_DIR/artisan" "$@"

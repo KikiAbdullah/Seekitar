@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# One-shot setup for the Seekitar backend in this sandbox.
+#
+#   ./tools/dev/setup
+#
+# Installs the PHP runtime, fetches Composer packages from GitHub, generates
+# the autoloader, creates .env + the SQLite database, and runs migrations.
+set -euo pipefail
+
+DEV_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SERVER_DIR="$(cd "$DEV_DIR/../../seekitar-server" && pwd)"
+
+export NODE_EXTRA_CA_CERTS="${NODE_EXTRA_CA_CERTS:-/etc/ssl/certs/ca-certificates.crt}"
+
+echo "==> 1/5 PHP runtime"
+if [ ! -x "$DEV_DIR/node_modules/.bin/php-wasm-cli" ]; then
+  (cd "$DEV_DIR" && npm install --no-audit --no-fund)
+else
+  echo "    already installed"
+fi
+
+echo "==> 2/5 Composer packages (from GitHub, packagist is unreachable here)"
+node "$DEV_DIR/install-vendor.mjs" "$SERVER_DIR"
+
+echo "==> 3/5 Autoloader"
+"$DEV_DIR/composer" dump-autoload --optimize 2>&1 | grep -Ei 'autoload files|error' || true
+
+echo "==> 4/5 Environment"
+if [ ! -f "$SERVER_DIR/.env" ]; then
+  cp "$SERVER_DIR/.env.example" "$SERVER_DIR/.env"
+  echo "    created .env"
+fi
+touch "$SERVER_DIR/database/database.sqlite"
+if ! grep -qE '^APP_KEY=base64:' "$SERVER_DIR/.env"; then
+  "$DEV_DIR/artisan" key:generate
+else
+  echo "    APP_KEY already set"
+fi
+
+echo "==> 5/5 Migrations"
+"$DEV_DIR/artisan" migrate --force
+
+echo
+echo "Ready. Try:"
+echo "  ./tools/dev/serve            # http://127.0.0.1:8080"
+echo "  ./tools/dev/test             # PHPUnit"
+echo "  ./tools/dev/artisan route:list"

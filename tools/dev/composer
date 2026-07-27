@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Composer 2.8 for this workspace, running on the bundled PHP-WASM runtime.
+#
+# Network note: packagist.org is unreachable here, so commands that resolve new
+# versions (`composer require`, `composer update`) will NOT work. Commands that
+# operate on what is already present do work, and are what you normally need:
+#
+#   ./tools/dev/composer dump-autoload --optimize
+#   ./tools/dev/composer validate
+#   ./tools/dev/composer show
+#
+# To add or change a dependency, edit composer.json + composer.lock, then run
+# ./tools/dev/install-vendor.mjs to fetch the packages from GitHub.
+set -euo pipefail
+
+DEV_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Default to the Laravel app; override with COMPOSER_PROJECT_DIR=... if needed.
+PROJECT_DIR="${COMPOSER_PROJECT_DIR:-$(cd "$DEV_DIR/../../seekitar-server" && pwd)}"
+COMPOSER_SRC="$DEV_DIR/.composer-src"
+COMPOSER_VERSION="2.8.12"
+
+export NODE_EXTRA_CA_CERTS="${NODE_EXTRA_CA_CERTS:-/etc/ssl/certs/ca-certificates.crt}"
+
+if [ ! -d "$COMPOSER_SRC" ]; then
+  echo "Bootstrapping Composer $COMPOSER_VERSION from GitHub..." >&2
+  git clone --quiet --depth 1 --branch "$COMPOSER_VERSION" \
+    https://github.com/composer/composer.git "$COMPOSER_SRC"
+fi
+
+if [ ! -d "$COMPOSER_SRC/vendor/symfony" ]; then
+  echo "Installing Composer's own dependencies..." >&2
+  node "$DEV_DIR/install-vendor.mjs" "$COMPOSER_SRC" >&2
+fi
+
+ARGS_JSON=$(node -e '
+  const a = process.argv.slice(1);
+  process.stdout.write(JSON.stringify(["composer", ...a]));
+' "$@")
+
+RUNNER=$(mktemp /tmp/seekitar-composer-XXXXXX.php)
+trap 'rm -f "$RUNNER"' EXIT
+
+cat > "$RUNNER" <<PHPEOF
+<?php
+require '$DEV_DIR/boot-autoload.php';
+seekitar_boot_autoload('$COMPOSER_SRC');
+
+if (!class_exists('Composer\InstalledVersions', false)) {
+    require '$COMPOSER_SRC/src/Composer/InstalledVersions.php';
+}
+
+putenv('COMPOSER_HOME=$DEV_DIR/.composer-home');
+putenv('COMPOSER_ALLOW_SUPERUSER=1');
+chdir('$PROJECT_DIR');
+
+\$_SERVER['argv'] = json_decode(<<<'JSON'
+$ARGS_JSON
+JSON, true);
+\$_SERVER['argc'] = count(\$_SERVER['argv']);
+
+\$app = new Composer\Console\Application();
+\$app->setAutoExit(false);
+exit(\$app->run(new Symfony\Component\Console\Input\ArgvInput(\$_SERVER['argv'])));
+PHPEOF
+
+mkdir -p "$DEV_DIR/.composer-home"
+exec "$DEV_DIR/php" "$RUNNER"

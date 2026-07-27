@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# PHP 8.5 runtime for this workspace, provided by @php-wasm/cli.
+#
+# The sandbox has no system PHP and cannot reach the Debian mirrors, so we run
+# a WebAssembly build of PHP through Node instead. It supports everything
+# Laravel needs here: pdo_sqlite, mbstring, openssl, tokenizer, zip, gd, curl...
+#
+# Usage:  ./tools/dev/php script.php [args...]
+#         ./tools/dev/php -r 'echo PHP_VERSION;'
+set -euo pipefail
+
+DEV_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CLI="$DEV_DIR/node_modules/.bin/php-wasm-cli"
+
+if [ ! -x "$CLI" ]; then
+  echo "PHP runtime missing. Run: (cd tools/dev && npm install)" >&2
+  exit 1
+fi
+
+# Node needs the system CA bundle explicitly behind this network's TLS proxy.
+export NODE_EXTRA_CA_CERTS="${NODE_EXTRA_CA_CERTS:-/etc/ssl/certs/ca-certificates.crt}"
+
+exec "$CLI" "$@"

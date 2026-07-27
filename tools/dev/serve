@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Start the Laravel dev server (web pages + REST API) on the WASM PHP runtime.
+#
+#   ./tools/dev/serve            # http://127.0.0.1:8080
+#   ./tools/dev/serve 9000       # custom port
+#
+# `artisan serve` itself cannot be used because it spawns a subprocess, so we
+# invoke PHP's built-in server against public/ directly. Note it is
+# single-threaded: one request at a time.
+set -euo pipefail
+
+DEV_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SERVER_DIR="$(cd "$DEV_DIR/../../seekitar-server" && pwd)"
+PORT="${1:-8080}"
+HOST="${HOST:-127.0.0.1}"
+
+echo "Seekitar server: http://$HOST:$PORT  (Ctrl+C to stop)"
+exec "$DEV_DIR/php" -S "$HOST:$PORT" -t "$SERVER_DIR/public" "$SERVER_DIR/public/index.php"
