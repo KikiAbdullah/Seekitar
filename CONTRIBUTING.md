@@ -27,7 +27,7 @@ cd seekitar-server && php artisan test
 cd seekitar_mobile && flutter analyze && flutter test
 
 # 2. Periksa konsistensi dokumen (bila menyentuh berkas .md)
-for c in versions structure datamodel api backend mobile brand prd terms security deploy dbperf docs schema-drift mysql; do
+for c in versions structure datamodel api backend mobile brand prd terms security deploy dbperf docs schema-drift mysql seeders; do
   node tools/dev/check-$c.mjs || exit 1
 done
 ```

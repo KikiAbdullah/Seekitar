@@ -2967,34 +2967,96 @@ private function normalizePhone(?string $input): ?string
 
 ### 19.1 Migration: Tidak berubah dari dokumen database.
 
+#### ⚠️ Tabel permission Spatie butuh kolom morph UUID
+
+Migrasi bawaan Spatie (`create_permission_tables.php.stub`) mendeklarasikan
+kolom penghubung sebagai `unsignedBigInteger`. `users.id` di Seekitar adalah
+**UUID `CHAR(36)`**, sehingga stub itu menghasilkan tipe yang tidak cocok dan
+`assignRole()` gagal.
+
+Dua penyesuaian yang wajib dilakukan:
+
+```php
+// config/permission.php
+'model_morph_key' => 'model_uuid',   // bukan 'model_id'
+```
+
+```php
+// database/migrations/..._create_permission_tables.php
+$table->uuid($morphKey);             // bukan unsignedBigInteger()
+```
+
+Karena itu migrasi permission **ditulis sendiri** di repo ini, tidak memakai
+`vendor:publish` mentah. `name` dan `guard_name` juga dipangkas ke
+`VARCHAR(125)`: dengan utf8mb4 (4 byte/karakter), `UNIQUE(name, guard_name)`
+pada dua kolom `VARCHAR(255)` melewati batas 3072 byte indeks InnoDB dan
+memicu `ERROR 1071: Specified key was too long`.
+
+Model `User` juga harus memakai trait `Spatie\Permission\Traits\HasRoles`,
+kalau tidak `assignRole()`/`hasRole()` tidak tersedia sama sekali.
+
 ### 19.2 Seeder
 
-**CategorySeeder:** masukkan 24 kategori dengan hirarki.
+**CategorySeeder:** 24 kategori dua level — 8 induk dari
+`BRANDING-GUIDELINE.md` §3.7 (Makanan & Harian, Jasa Rumah, Servis & Bengkel,
+Material Bangunan, Pertanian & Ternak, Sewa Acara, Barang Bekas, UMKM &
+Kerajinan), masing-masing dengan 2 subkategori. Kedalaman dibatasi dua level
+sesuai PRD §5.1.
+
+> Seeder ini **wajib** jalan saat deploy awal: `customer_requests.category_id`
+> NOT NULL dengan FK `RESTRICT`, jadi tanpa kategori tidak ada permintaan yang
+> bisa dibuat sama sekali.
 
 **RolesAndPermissionsSeeder:**
 
 ```php
-public function run() {
-    $permissions = [
-        'manage-users', 'verify-users', 'manage-stores', 'verify-stores',
-        'manage-categories', 'manage-listings', 'manage-requests', 'manage-offers',
-        'manage-orders', 'manage-disputes', 'manage-reviews', 'manage-settings'
-    ];
-    foreach ($permissions as $perm) {
-        Permission::create(['name' => $perm, 'guard_name' => 'web']);
-    }
+public function run(): void
+{
+    app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-    $superAdmin = Role::create(['name' => 'super-admin', 'guard_name' => 'web']);
-    $superAdmin->givePermissionTo(Permission::all());
+    DB::transaction(function () {
+        $permissions = [];
+        foreach (self::PERMISSIONS as $name) {          // 12 permission, §6.2
+            $permissions[$name] = Permission::firstOrCreate(
+                ['name' => $name, 'guard_name' => 'web']
+            );
+        }
 
-    $admin = Role::create(['name' => 'admin', 'guard_name' => 'web']);
-    $admin->givePermissionTo(['manage-categories', 'verify-users', 'verify-stores', ...]);
+        $superAdmin = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
+        $superAdmin->syncPermissions(array_values($permissions));
 
-    // Buat user super-admin
-    $user = User::firstOrCreate(['phone' => '6280000000000'], ['name' => 'Super Admin', 'verification_level' => 3]);
-    $user->assignRole('super-admin');
+        $admin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        $admin->syncPermissions(array_values(array_diff_key(
+            $permissions,
+            array_flip(['manage-users', 'manage-settings']),
+        )));
+
+        Role::firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
+
+        // Nomor dari config, BUKAN ditanam di kode — kalau tidak, nomor
+        // contoh yang sama menjadi super-admin di produksi.
+        $user = User::firstOrCreate(
+            ['phone' => config('seekitar.super_admin_phone')],
+            ['name' => 'Super Admin', 'verification_level' => VerificationLevel::Pro],
+        );
+        $user->assignRole($superAdmin);
+    });
+
+    app(PermissionRegistrar::class)->forgetCachedPermissions();
 }
 ```
+
+> ⚠️ Tiga hal yang mudah salah di seeder ini:
+>
+> 1. **`firstOrCreate`, bukan `create`.** Seeder produksi ikut jalan setiap
+>    deploy; `Permission::create()` akan melempar unique violation pada deploy
+>    kedua — bertentangan dengan syarat idempoten di bawah.
+> 2. **Oper objek Permission ke `syncPermissions()`, bukan namanya.** Dengan
+>    string, Spatie memanggil `findByName()` yang membaca cache permission, dan
+>    cache itu bisa belum memuat baris yang baru dibuat pada transaksi sama.
+> 3. **`manage-users` dan `manage-settings` ditahan dari role `admin`** —
+>    supaya admin biasa tidak bisa mengubah sesama admin, dan halaman
+>    pengaturan tetap khusus super-admin (`API_DOCUMENTATION.md` §10.5).
 
 > Daftar permission di atas **sudah** memuat `manage-settings` (12 permission,
 > sesuai §6.2). Pastikan keduanya tetap sinkron saat menambah permission baru.

@@ -38,11 +38,12 @@ green, and the app served over HTTP (`/` and `/up` both return 200).
 | `node tools/dev/check-docs.mjs` | Guards UI/UX, queue, testing, notification, geospatial, and doc-version sections. |
 | `node tools/dev/check-schema-drift.mjs` | Compares migrations ⇄ `DATABASE.md` ⇄ Eloquent `$fillable`; catches columns that exist in one layer but not the others. |
 | `node tools/dev/check-mysql.mjs` | Asserts the project stays MySQL-only: no SQLite path, SRID 4326 + `axis-order=long-lat`, spatial indexes on NOT NULL, native ENUM/SET, CHECK constraints, InnoDB. |
+| `node tools/dev/check-seeders.mjs` | Asserts seeders match the docs: 24 categories, 12 permissions, 8 settings keys, idempotency, UUID morph key for Spatie. |
 
 All checkers exit non-zero on failure, so they work as CI/pre-commit steps:
 
 ```bash
-for c in versions structure datamodel api backend mobile brand prd terms security deploy dbperf docs schema-drift mysql; do
+for c in versions structure datamodel api backend mobile brand prd terms security deploy dbperf docs schema-drift mysql seeders; do
   node tools/dev/check-$c.mjs || exit 1
 done
 ```
@@ -99,6 +100,24 @@ the MySQL grammar and captures the SQL **without ever opening a connection**.
 That catches the class of bug that matters most here — DDL that is silently
 wrong — while still requiring a real MySQL 8.0.34+ server for behaviour tests.
 
+Seeders can be inspected the same way:
+
+```bash
+./tools/dev/php tools/dev/dump-seed.php 'Database\Seeders\CategorySeeder'
+node tools/dev/check-seeders.mjs
+```
+
+`pretend()` alone is not enough for seeders: idempotent seeders run a `SELECT`
+first (`firstOrCreate`), which `pretend()` never executes — Laravel then still
+reaches for PDO and the script dies. So `dump-seed.php` swaps in a connection
+subclass that answers every read with an empty set and records every write.
+
+> What that proves: the seeder runs to completion, targets columns that exist,
+> and its SQL is assembled by the MySQL grammar. What it does **not** prove:
+> constraint and uniqueness behaviour, or anything depending on auto-increment
+> ids — foreign keys come back `NULL` because nothing is really inserted.
+> Those still need a real MySQL server.
+
 > ⚠️ MySQL reads `SRID 4326` WKT as **(latitude longitude)**, per EPSG. Every
 > Indonesian longitude (95°–141°E) is outside latitude's ±90 range, so
 > `ST_GeomFromText('POINT(lng lat)', 4326)` fails with
@@ -112,6 +131,7 @@ wrong — while still requiring a real MySQL 8.0.34+ server for behaviour tests.
 | `install-vendor.mjs` | Fetches `composer.lock` packages from GitHub. |
 | `boot-autoload.php` | Minimal PSR-4/classmap loader used only to start Composer itself. |
 | `ddl` / `dump-ddl.php` | Prints the MySQL DDL the migrations would emit, without a server. |
+| `dump-seed.php` | Runs a seeder against a recording stub connection and prints the writes it would perform. |
 | `package.json` | Pins `@php-wasm/cli`. |
 
 `node_modules/`, `.composer-src/` and `.composer-home/` are generated and

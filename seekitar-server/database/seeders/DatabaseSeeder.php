@@ -2,24 +2,32 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
+/**
+ * Satu pintu untuk seluruh seeder.
+ *
+ * Urutan TIDAK boleh diubah: `RolesAndPermissionsSeeder` membuat akun
+ * super-admin yang langsung diberi role, jadi role & permission harus ada
+ * lebih dulu (`Server_Implementation_Guide.md` §19.2).
+ *
+ * Seeder bawaan Laravel di berkas ini sebelumnya membuat user dengan kolom
+ * `email` — kolom itu tidak ada di Seekitar, yang memakai nomor telepon
+ * sebagai identitas (DATABASE.md §4.1), sehingga `db:seed` selalu gagal.
+ */
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        $this->call([
+            RolesAndPermissionsSeeder::class,  // 1. role, permission, super-admin
+            CategorySeeder::class,             // 2. 24 kategori (wajib produksi)
+            SettingSeeder::class,              // 3. nilai default tabel settings
         ]);
+
+        // Data contoh HANYA untuk pengembangan — jangan pernah di produksi.
+        if (app()->environment('local', 'testing')) {
+            $this->call(DummyDataSeeder::class);
+        }
     }
 }

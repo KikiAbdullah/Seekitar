@@ -12,12 +12,20 @@ set -euo pipefail
 DEV_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVER_DIR="$(cd "$DEV_DIR/../../seekitar-server" && pwd)"
 
-# Seekitar hanya mendukung MySQL, dan test butuh server yang benar-benar
-# berjalan. Tanpa pemeriksaan ini, kegagalan muncul sebagai stack trace WASM
-# ("RuntimeError: unreachable") yang sama sekali tidak menjelaskan sebabnya.
+# Suite Unit murni tidak menyentuh basis data, jadi boleh jalan tanpa MySQL.
+# Suite Feature butuh server sungguhan — tanpa pemeriksaan ini kegagalannya
+# muncul sebagai stack trace WASM ("RuntimeError: unreachable") yang sama
+# sekali tidak menjelaskan sebabnya.
+NEEDS_DB=1
+for arg in "$@"; do
+  case "$arg" in
+    --testsuite=Unit|--testsuite=unit) NEEDS_DB=0 ;;
+  esac
+done
+
 DB_HOST="${DB_HOST:-127.0.0.1}"
 DB_PORT="${DB_PORT:-3306}"
-if ! (exec 3<>"/dev/tcp/$DB_HOST/$DB_PORT") 2>/dev/null; then
+if [ "$NEEDS_DB" -eq 1 ] && ! (exec 3<>"/dev/tcp/$DB_HOST/$DB_PORT") 2>/dev/null; then
   cat >&2 <<MSG
 Tidak ada server MySQL di $DB_HOST:$DB_PORT.
 
@@ -30,8 +38,9 @@ SQLite. Siapkan basis datanya:
 
 Tanpa server MySQL, yang masih bisa dijalankan di sini:
 
-  ./tools/dev/ddl                  # DDL MySQL dari migrasi
-  node tools/dev/check-mysql.mjs   # periksa SRID, ENUM/SET, CHECK, InnoDB
+  ./tools/dev/test --testsuite=Unit   # test unit murni, tanpa basis data
+  ./tools/dev/ddl                     # DDL MySQL dari migrasi
+  node tools/dev/check-mysql.mjs      # periksa SRID, ENUM/SET, CHECK, InnoDB
 MSG
   exit 1
 fi

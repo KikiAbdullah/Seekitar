@@ -94,6 +94,79 @@ function writeInstalledJson() {
   );
 }
 
+/**
+ * Composer's *runtime* API — `Composer\InstalledVersions`.
+ *
+ * Separate from installed.json, which only the Composer CLI reads. Packages
+ * call InstalledVersions at runtime to report their own version; Spatie's
+ * PermissionServiceProvider does this in its `about` command hook. Without
+ * these two files the whole application fails to boot with:
+ *
+ *   include(.../composer/InstalledVersions.php): Failed to open stream
+ *
+ * `InstalledVersions.php` is copied verbatim from the Composer source we
+ * already vendor, and `installed.php` is the data file it expects.
+ */
+function writeInstalledPhp() {
+  const composerDir = path.join(VENDOR, 'composer');
+
+  const src = path.join(import.meta.dirname, '.composer-src/src/Composer/InstalledVersions.php');
+  if (fs.existsSync(src)) {
+    fs.copyFileSync(src, path.join(composerDir, 'InstalledVersions.php'));
+  }
+
+  const versions = {};
+  for (const p of all) {
+    // Composer menyimpan versi tanpa awalan "v" di pretty_version-nya apa
+    // adanya, tetapi version_normalized butuh bentuk x.y.z.p.
+    const pretty = p.version;
+    const numeric = pretty.replace(/^v/, '').split('-')[0];
+    const parts = numeric.split('.').map(n => parseInt(n, 10) || 0);
+    while (parts.length < 4) parts.push(0);
+    versions[p.name] = {
+      pretty_version: pretty,
+      version: parts.join('.'),
+      reference: p.dist?.reference ?? p.source?.reference ?? null,
+      type: p.type ?? 'library',
+      install_path: path.join('__DIR__ . \'/..\'', p.name),
+      aliases: [],
+      dev_requirement: !!p.__dev,
+    };
+  }
+
+  const rootName = 'seekitar/server';
+  const entries = Object.entries(versions).map(([name, v]) =>
+    `        ${JSON.stringify(name)} => array(\n` +
+    `            'pretty_version' => ${JSON.stringify(v.pretty_version)},\n` +
+    `            'version' => ${JSON.stringify(v.version)},\n` +
+    `            'reference' => ${v.reference ? JSON.stringify(v.reference) : 'NULL'},\n` +
+    `            'type' => ${JSON.stringify(v.type)},\n` +
+    `            'install_path' => __DIR__ . '/../${name}',\n` +
+    `            'aliases' => array(),\n` +
+    `            'dev_requirement' => ${v.dev_requirement ? 'true' : 'false'},\n` +
+    `        ),`
+  ).join('\n');
+
+  const php = `<?php return array(
+    'root' => array(
+        'name' => ${JSON.stringify(rootName)},
+        'pretty_version' => 'dev-main',
+        'version' => 'dev-main',
+        'reference' => null,
+        'type' => 'project',
+        'install_path' => __DIR__ . '/../../',
+        'aliases' => array(),
+        'dev' => true,
+    ),
+    'versions' => array(
+${entries}
+    ),
+);
+`;
+  fs.writeFileSync(path.join(composerDir, 'installed.php'), php);
+}
+
+
 console.log(`Installing ${all.length} packages into ${path.relative(process.cwd(), VENDOR) || VENDOR}`);
 const queue = [...all];
 let done = 0;
@@ -125,5 +198,6 @@ await Promise.all(
 );
 
 writeInstalledJson();
+writeInstalledPhp();
 console.log(`Done: ${done} packages present (${fetched} newly extracted).`);
 console.log('Next: ./tools/dev/composer dump-autoload --optimize');
