@@ -1,6 +1,6 @@
 # 📄 Seekitar – Server Implementation Guide
 
-**Versi:** 2.0 (Ultra‑Detailed · Production‑Ready)  
+**Versi:** 2.1 (Ultra‑Detailed · Production‑Ready)  
 **Tanggal:** 27 Juli 2026  
 **Target:** Laravel 13 + PHP 8.3+ + MySQL 8.0.34+ + Bootstrap 5.3.x + Yajra Datatables 13 + Spatie Permission 8
 
@@ -1014,6 +1014,66 @@ Layout admin menggunakan sidebar Bootstrap 5.3.x.
 **Top Navbar:** Brand “Seekitar Admin”, profil admin, tombol logout.
 
 **Breadcrumb:** Setiap halaman menampilkan breadcrumb dinamis (misal: Dashboard > Manajemen Data > Kategori).
+
+```blade
+{{-- resources/views/layouts/admin.blade.php --}}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <a href="{{ route('admin.dashboard') }}">Dashboard</a>
+    </li>
+    @yield('breadcrumb')
+  </ol>
+</nav>
+```
+
+```blade
+{{-- resources/views/admin/categories/index.blade.php --}}
+@section('breadcrumb')
+  <li class="breadcrumb-item">Manajemen Data</li>
+  <li class="breadcrumb-item active" aria-current="page">Kategori</li>
+@endsection
+```
+
+> `aria-label` dan `aria-current` bukan hiasan — tanpa keduanya, pembaca layar
+> membacakan breadcrumb sebagai deretan tautan tanpa konteks.
+
+**Menu sidebar mengikuti permission.** Menu yang tidak bisa diakses **tidak
+ditampilkan**, bukan ditampilkan lalu ditolak saat diklik:
+
+```blade
+@can('manage-categories')
+  <li class="nav-item">
+    <a href="{{ route('admin.categories.index') }}"
+       class="nav-link text-white {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}">
+      <i class="fa-solid fa-tags me-2"></i> Kategori
+    </a>
+  </li>
+@endcan
+
+@canany(['verify-users', 'verify-stores'])
+  <li class="nav-item">
+    <a href="#verifyMenu" data-bs-toggle="collapse" class="nav-link text-white">
+      <i class="fa-solid fa-circle-check me-2"></i> Verifikasi
+    </a>
+    <ul class="collapse list-unstyled ps-3" id="verifyMenu">
+      @can('verify-users')
+        <li><a href="{{ route('admin.verifications.users') }}" class="nav-link text-white">Pengguna</a></li>
+      @endcan
+      @can('verify-stores')
+        <li><a href="{{ route('admin.verifications.stores') }}" class="nav-link text-white">Toko</a></li>
+      @endcan
+    </ul>
+  </li>
+@endcanany
+```
+
+> ⚠️ **`@can` di menu hanya menyembunyikan tautan, bukan mengamankan halaman.**
+> Otorisasi sesungguhnya tetap di middleware route dan `$this->authorize()` pada
+> controller (§6.3) — pengguna bisa saja mengetik URL-nya langsung.
+>
+> `@canany` dipakai untuk induk dropdown: menu "Verifikasi" harus tetap muncul
+> bila admin punya **salah satu** dari dua izin tersebut.
 
 ---
 
@@ -2123,16 +2183,99 @@ class RequestBroadcastNotification extends Notification implements ShouldQueue
 }
 ```
 
-**Token tidak valid harus dibersihkan.** Jika diabaikan, antrian terus mencoba
-mengirim ke perangkat yang sudah menghapus aplikasi:
+#### Mengirim ke Semua Perangkat Pengguna
+
+Satu pengguna bisa punya beberapa perangkat (`DATABASE.md` §4.9a). Notifikasi
+harus sampai ke semuanya, karena tidak ada cara mengetahui perangkat mana yang
+sedang dipegang.
 
 ```php
-try {
-    $messaging->send($message->withChangedTarget('token', $device->fcm_token));
-} catch (NotFound|InvalidMessage $e) {
-    $device->delete();      // token kedaluwarsa/dicabut
+class SendPushNotificationJob implements ShouldQueue
+{
+    use Queueable;
+
+    public int $tries = 3;
+    public array $backoff = [30, 60, 120];
+
+    public function __construct(
+        public string $userId,
+        public array $payload,          // title, body, data
+    ) {}
+
+    public function handle(Messaging $messaging): void
+    {
+        $devices = UserDevice::where('user_id', $this->userId)->get();
+
+        if ($devices->isEmpty()) {
+            Log::info('Tidak ada perangkat terdaftar', ['user' => $this->userId]);
+            return;
+        }
+
+        $message = CloudMessage::new()
+            ->withNotification($this->payload['notification'])
+            ->withData($this->payload['data']);
+
+        // sendMulticast: satu panggilan API untuk semua token, bukan satu per token.
+        $report = $messaging->sendMulticast(
+            $message,
+            $devices->pluck('fcm_token')->all()
+        );
+
+        // Token yang ditolak WAJIB dihapus. Jika diabaikan, antrian terus
+        // mencoba mengirim ke perangkat yang aplikasinya sudah dihapus.
+        foreach ($report->invalidTokens() as $token) {
+            UserDevice::where('fcm_token', $token)->delete();
+        }
+        foreach ($report->unknownTokens() as $token) {
+            UserDevice::where('fcm_token', $token)->delete();
+        }
+
+        $this->logDelivery($report, $devices->count());
+    }
 }
 ```
+
+> ⚠️ **Jangan mengulang seluruh job saat sebagian token gagal.** `sendMulticast`
+> mengembalikan laporan per-token; token tidak valid adalah kondisi permanen,
+> bukan galat sementara. Mengulang job hanya akan mengirim ulang ke perangkat
+> yang sudah berhasil menerima.
+>
+> Batas `sendMulticast` adalah **500 token per panggilan**. Untuk broadcast ke
+> banyak penyedia, `BroadcastRequestJob` sudah memecahnya menjadi satu job per
+> toko (§14.1), jadi batas ini tidak akan tersentuh.
+
+#### Melacak Keberhasilan Pengiriman
+
+Firebase melaporkan apakah pesan **diterima server FCM**, bukan apakah
+**dibaca pengguna**. Keduanya sering tertukar.
+
+| Yang bisa diukur | Sumbernya |
+| :-- | :-- |
+| Terkirim ke FCM | `$report->successes()->count()` |
+| Token tidak valid | `$report->invalidTokens()` |
+| Notifikasi **dibuka** | Event `notification_opened` dari aplikasi (Mobile Guide §22) |
+
+```php
+private function logDelivery(MulticastSendReport $report, int $total): void
+{
+    Log::channel('notifications')->info('Pengiriman push', [
+        'user'    => $this->userId,
+        'type'    => $this->payload['data']['type'] ?? null,
+        'devices' => $total,
+        'sukses'  => $report->successes()->count(),
+        'gagal'   => $report->failures()->count(),
+    ]);
+}
+```
+
+> ⚠️ **Tingkat keterbacaan sesungguhnya hanya bisa diukur dari sisi aplikasi.**
+> Server tidak akan pernah tahu apakah notifikasi ditampilkan — pengguna bisa
+> mematikan izin notifikasi, atau OS menundanya demi hemat baterai. Karena itu
+> event `notification_opened` dikirim aplikasi ke Firebase Analytics, lalu
+> dibandingkan dengan jumlah `sukses` di log ini.
+>
+> Jangan menyimpan log pengiriman di tabel database: volumenya besar dan
+> nilainya rendah. Cukup log terstruktur yang dibersihkan berkala.
 
 ### 15.2 WhatsApp OTP
 
@@ -2290,6 +2433,79 @@ dd(DB::select("EXPLAIN $sql", DB::getQueryLog()[0]['bindings']));
 ```php
 $store->location = DB::raw("ST_GeomFromText('POINT($lng $lat)', 4326)");
 ```
+
+### 16.1 Reverse Geocoding (Koordinat → Alamat)
+
+Koordinat dipakai untuk query; **alamat teks** dipakai untuk ditampilkan.
+Keduanya disimpan (`stores.address`, `users.address`) — bukan dihitung ulang
+tiap kali, karena panggilan geocoding berbayar dan lambat.
+
+Reverse geocoding juga menghasilkan `regency_code` yang dipakai geofencing
+kabupaten (`DATABASE.md` §4.2).
+
+```php
+class GeocodingService
+{
+    public function __construct(private CacheRepository $cache) {}
+
+    /** Koordinat -> alamat + kode wilayah. Null jika layanan gagal. */
+    public function reverse(float $lat, float $lng): ?ResolvedAddress
+    {
+        // Bulatkan ke ~11 meter: dua pin berdekatan berbagi hasil cache,
+        // dan kuota API tidak habis untuk titik yang praktis sama.
+        $key = sprintf('geocode:%.4F,%.4F', $lat, $lng);
+
+        return $this->cache->remember($key, now()->addDays(30), function () use ($lat, $lng) {
+            $res = Http::timeout(5)->retry(2, 300)->get(
+                'https://maps.googleapis.com/maps/api/geocode/json',
+                [
+                    'latlng'      => "$lat,$lng",
+                    'key'         => config('services.google_maps.key'),
+                    'language'    => 'id',
+                    'result_type' => 'street_address|administrative_area_level_2',
+                ]
+            );
+
+            if ($res->failed() || ($res->json('status') !== 'OK')) {
+                Log::warning('Reverse geocoding gagal', ['status' => $res->json('status')]);
+                return null;
+            }
+
+            $first = $res->json('results.0');
+
+            return new ResolvedAddress(
+                address: $first['formatted_address'],
+                regency: $this->component($first, 'administrative_area_level_2'),
+            );
+        });
+    }
+
+    private function component(array $result, string $type): ?string
+    {
+        return collect($result['address_components'] ?? [])
+            ->firstWhere(fn ($c) => in_array($type, $c['types'], true))['long_name'] ?? null;
+    }
+}
+```
+
+> ⚠️ **Kegagalan geocoding tidak boleh menggagalkan pembuatan toko.** Layanan
+> pihak ketiga bisa mati atau kuotanya habis; koordinat sudah cukup untuk
+> seluruh fungsi pencarian. Simpan `address` sebagai `null` dan isi belakangan
+> lewat job, alih-alih menolak permintaan pengguna:
+>
+> ```php
+> $store = Store::create([...]);              // koordinat sudah cukup
+> ResolveStoreAddressJob::dispatch($store->id)->afterCommit();
+> ```
+>
+> **Cache wajib.** Google Maps Geocoding ditagih per panggilan, dan pemilih
+> lokasi di aplikasi memanggilnya setiap kali peta berhenti digeser (Mobile
+> Guide §12.1 sudah men-*debounce*-nya di sisi klien). Pembulatan 4 desimal
+> membuat pergeseran kecil memakai hasil yang sama.
+>
+> Alternatif gratis: **Nominatim (OpenStreetMap)**. Kualitas datanya untuk
+> kabupaten di Indonesia lebih bervariasi, dan kebijakan pemakaiannya membatasi
+> 1 request/detik — cukup untuk pengembangan, berisiko untuk produksi.
 
 ---
 

@@ -1,7 +1,7 @@
 # 🗄️ DATABASE DESIGN — SEEKITAR
 
 **Dokumen Lengkap, Optimal, & Production‑Ready**  
-**Versi:** 3.0 (Production‑Hardened)  
+**Versi:** 2.1 (Production‑Hardened)  
 **Tanggal:** 27 Juli 2026  
 **Target Deployment:** MySQL 8.0.34+ InnoDB  
 **Charset:** utf8mb4 – Collation: utf8mb4_unicode_ci  
@@ -119,6 +119,7 @@ Setiap tabel dilengkapi penjelasan tiap kolom, alasan pemilihan tipe, dan constr
 | `name`               | VARCHAR(100)         | Nama asli pengguna, wajib diisi.                                                     |
 | `avatar_url`         | VARCHAR(500) NULL    | URL foto profil, disimpan di cloud storage. Panjang 500 cukup untuk URL pre‑signed.  |
 | `location`           | POINT SRID 4326 NULL | Lokasi default pengguna (misal rumah). NULL hanya saat onboarding belum selesai.     |
+| `address`            | VARCHAR(255) NULL    | Alamat teks hasil reverse geocoding. Untuk ditampilkan, bukan untuk query.           |
 | `verification_level` | TINYINT DEFAULT 1    | 1 = nomor HP, 2 = KTP diverifikasi, 3 = Pro (usaha tervalidasi). Hanya 1–3.          |
 | `ktp_image`          | VARCHAR(500) NULL    | URL foto KTP (terenkripsi at-rest). Diisi saat pengajuan verifikasi Level 2.         |
 | `selfie_image`       | VARCHAR(500) NULL    | URL selfie memegang KTP. Wajib bersama `ktp_image`.                                  |
@@ -186,6 +187,7 @@ kebijakan retensi.
 | `store_type`          | SET('goods','services','rental')                        | Kombinasi jenis usaha. SET lebih efisien dari VARCHAR untuk pilihan tetap.     |
 | `category_ids`        | JSON                                                    | Array ID dari `categories`. Contoh: `[1, 3, 7]`.                               |
 | `location`            | POINT SRID 4326                                         | Titik koordinat toko (longitude, latitude). Wajib.                             |
+| `address`             | VARCHAR(255) NULL                                       | Alamat teks toko. Diisi reverse geocoding, bisa disunting pemilik.             |
 | `service_radius_km`   | DECIMAL(5,2) DEFAULT 5.00                               | Radius layanan toko dalam km. Presisi 2 desimal. Lihat catatan di bawah.       |
 | `accepts_cod`         | TINYINT(1) DEFAULT 1                                    | Menerima bayar di tempat. Sumber badge “Bisa COD”.                             |
 | `offers_delivery`     | TINYINT(1) DEFAULT 0                                    | Mengantar sendiri. Sumber badge “Bisa Diantar”.                                |
@@ -947,6 +949,46 @@ padanan resmi dari daftar berbahasa Indonesia di `PRD.md` §5.5:
 > ⚠️ Menambah alasan baru berarti `ALTER TABLE`. Kalau daftar ini diperkirakan
 > sering berubah, pindahkan ke tabel `dispute_reasons` dengan FK. Untuk MVP
 > dengan 5 nilai yang stabil, ENUM lebih sederhana dan lebih cepat.
+
+### 4.9a `user_devices`
+
+Satu pengguna bisa memakai beberapa perangkat (ponsel lama + baru, atau ponsel
+dan tablet). Menyimpan satu `fcm_token` di kolom `users` berarti hanya
+perangkat terakhir yang menerima notifikasi.
+
+```sql
+CREATE TABLE user_devices (
+  id           CHAR(36) PRIMARY KEY,
+  user_id      CHAR(36) NOT NULL,
+  device_id    VARCHAR(100) NOT NULL,       -- pengenal perangkat dari klien
+  fcm_token    VARCHAR(255) NOT NULL,
+  platform     ENUM('android','ios') NOT NULL,
+  last_used_at TIMESTAMP NULL,
+  created_at   TIMESTAMP,
+  updated_at   TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE KEY user_devices_device_unique (device_id),
+  INDEX user_devices_user_idx (user_id)
+);
+```
+
+> ⚠️ **`UNIQUE` pada `device_id` saja, bukan `(user_id, device_id)`.**
+> Satu perangkat fisik hanya boleh terikat ke satu akun pada satu waktu. Kalau
+> pengguna B masuk di ponsel bekas pengguna A, baris lama harus **ditimpa** —
+> kalau tidak, notifikasi milik A tetap terkirim ke ponsel yang kini dipakai B.
+>
+> ```php
+> UserDevice::updateOrCreate(
+>     ['device_id' => $deviceId],                 // kunci pencarian
+>     ['user_id' => $user->id, 'fcm_token' => $token, 'platform' => $platform,
+>      'last_used_at' => now()]
+> );
+> ```
+>
+> Token yang ditolak Firebase (`NotFound`/`InvalidMessage`) **wajib dihapus**
+> dari tabel ini — lihat `Server_Implementation_Guide.md` §15.1. Tanpa
+> pembersihan, antrian terus mencoba mengirim ke perangkat yang aplikasinya
+> sudah dihapus.
 
 ### 4.10 `service_slots` (Fase 2)
 

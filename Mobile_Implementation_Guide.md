@@ -1,6 +1,6 @@
 # 📱 Seekitar – Mobile Implementation Guide
 
-**Versi:** 1.0 (Production‑Ready)  
+**Versi:** 2.1 (Production‑Ready)  
 **Tanggal:** 27 Juli 2026  
 **Target:** Flutter 3.44+ (Dart 3.12+) · Android & iOS  
 **Arsitektur:** Clean Architecture + Riverpod · Dependency Injection dengan Riverpod  
@@ -1951,6 +1951,184 @@ listings.when(
 - **Unit Test:** Usecase, repository (mock `Dio`), model.
 - **Widget Test:** Halaman dengan provider overrides.
 - **Integration Test:** Alur login → jelajahi → pasang kebutuhan.
+
+```bash
+flutter test                              # unit + widget
+flutter test integration_test             # perlu perangkat/emulator
+flutter test --coverage
+```
+
+### 17.1 Widget Test
+
+Kuncinya adalah **`overrides`** pada `ProviderScope` — inilah alasan dependensi
+dideklarasikan sebagai provider (§4.1), bukan dibuat langsung di dalam widget.
+
+```dart
+// test/presentation/login_page_test.dart
+class MockAuthRepository extends Mock implements AuthRepository {}
+
+void main() {
+  late MockAuthRepository repo;
+
+  setUp(() => repo = MockAuthRepository());
+
+  Widget buildSubject() => ProviderScope(
+        overrides: [authRepositoryProvider.overrideWithValue(repo)],
+        child: const MaterialApp(home: LoginPage()),
+      );
+
+  testWidgets('nomor tidak valid menampilkan pesan galat', (tester) async {
+    await tester.pumpWidget(buildSubject());
+
+    await tester.enterText(find.byType(TextFormField), '123');
+    await tester.tap(find.text('Minta OTP'));
+    await tester.pump();                       // jalankan validator
+
+    expect(find.text('Nomor tidak valid'), findsOneWidget);
+    verifyNever(() => repo.requestOtp(any()));  // API tidak boleh dipanggil
+  });
+
+  testWidgets('nomor 08xxx dinormalkan ke 62xxx sebelum dikirim', (tester) async {
+    when(() => repo.requestOtp(any())).thenAnswer((_) async {});
+
+    await tester.pumpWidget(buildSubject());
+    await tester.enterText(find.byType(TextFormField), '08123456789');
+    await tester.tap(find.text('Minta OTP'));
+    await tester.pump();
+
+    // Normalisasi klien harus cocok dengan aturan server (§18A.6 Server Guide).
+    verify(() => repo.requestOtp('628123456789')).called(1);
+  });
+
+  testWidgets('tombol nonaktif selama pengiriman', (tester) async {
+    final completer = Completer<void>();
+    when(() => repo.requestOtp(any())).thenAnswer((_) => completer.future);
+
+    await tester.pumpWidget(buildSubject());
+    await tester.enterText(find.byType(TextFormField), '08123456789');
+    await tester.tap(find.text('Minta OTP'));
+    await tester.pump();
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+    await tester.tap(find.byType(FilledButton));  // klik kedua diabaikan
+    await tester.pump();
+    verify(() => repo.requestOtp(any())).called(1);
+
+    completer.complete();
+    await tester.pumpAndSettle();
+  });
+}
+```
+
+> ⚠️ **`pump()` vs `pumpAndSettle()`.** `pumpAndSettle()` menunggu semua animasi
+> selesai — dan akan **menggantung selamanya** bila ada animasi berulang seperti
+> `CircularProgressIndicator`. Untuk menguji keadaan memuat, pakai `pump()`.
+
+Daftar widget test minimum:
+
+| Berkas | Yang diuji |
+| :-- | :-- |
+| `login_page_test.dart` | Validasi nomor, normalisasi, keadaan memuat |
+| `otp_page_test.dart` | 6 digit, hitung mundur kirim ulang, OTP salah |
+| `listing_card_test.dart` | Harga terformat, jarak, penanganan judul panjang |
+| `explore_page_test.dart` | Skeleton → data → keadaan kosong |
+| `offer_card_test.dart` | Total = harga + biaya tambahan (§4.6 DATABASE) |
+
+### 17.2 Integration Test
+
+```dart
+// integration_test/create_request_flow_test.dart
+void main() {
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('login sampai memasang kebutuhan', (tester) async {
+    await tester.pumpWidget(const ProviderScope(child: SeekitarApp()));
+    await tester.pumpAndSettle();
+
+    // 1. Masuk
+    await tester.enterText(find.byKey(const Key('phone_field')), '08123456789');
+    await tester.tap(find.text('Minta OTP'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const Key('otp_field')), '123456');
+    await tester.pumpAndSettle();
+
+    // 2. Sampai di Jelajahi
+    expect(find.text('Jelajahi'), findsOneWidget);
+
+    // 3. Pasang kebutuhan
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const Key('request_title')), 'Servis AC 1 PK');
+    await tester.tap(find.text('Pasang'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Menunggu penawaran…'), findsOneWidget);
+  });
+}
+```
+
+> ⚠️ **Integration test butuh backend yang dapat diprediksi.** Arahkan ke
+> server staging dengan data benih tetap, atau jalankan API tiruan:
+> ```bash
+> flutter test integration_test \
+>   --dart-define=API_BASE_URL=http://localhost:8000/api/v1
+> ```
+>
+> **OTP tidak bisa diuji ujung-ke-ujung** tanpa menerima WhatsApp sungguhan.
+> Sediakan nomor uji di server yang selalu menerima kode `123456`, aktif
+> **hanya** di environment non-produksi.
+>
+> Pakai `Key` yang eksplisit (`Key('phone_field')`) alih-alih mencari lewat
+> teks — teks berubah saat terjemahan atau penulisan ulang, `Key` tidak.
+
+### 17.3 Konfigurasi Linting
+
+Proyek sudah memuat `analysis_options.yaml` bawaan dengan
+`package:flutter_lints`. Untuk arsitektur ini perlu ditambah:
+
+```yaml
+# analysis_options.yaml
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    invalid_annotation_target: ignore   # false positive json_serializable
+  exclude:
+    - "**/*.g.dart"        # berkas hasil generate, jangan dianalisis
+    - "**/*.freezed.dart"
+
+linter:
+  rules:
+    - always_use_package_imports    # cegah campur import relatif & package
+    - avoid_print                   # pakai logger, bukan print
+    - prefer_const_constructors     # kurangi rebuild yang tak perlu
+    - prefer_const_widgets
+    - unawaited_futures             # Future yang lupa di-await = bug senyap
+    - use_build_context_synchronously  # BuildContext setelah await = crash
+```
+
+Tambahkan `custom_lint` untuk aturan khusus Riverpod:
+
+```yaml
+dev_dependencies:
+  custom_lint: ^0.7.0
+  riverpod_lint: ^3.0.0
+```
+
+```bash
+dart run custom_lint      # memeriksa pemakaian ref, provider yang tak dipakai
+```
+
+> ⚠️ **`use_build_context_synchronously` adalah aturan terpenting di sini.**
+> Memakai `context` setelah `await` tanpa memeriksa `mounted` adalah penyebab
+> crash paling umum di Flutter — dan seluruh alur di aplikasi ini asinkron.
+> Itulah alasan setiap `await` di §7.1 diikuti pemeriksaan `if (!mounted) return;`.
+>
+> `exclude` untuk `*.g.dart` mencegah ribuan peringatan pada kode yang memang
+> tidak kita tulis sendiri.
 
 ---
 

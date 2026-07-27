@@ -1,6 +1,6 @@
 # 📘 API DOCUMENTATION – SEEKITAR
 
-**Versi:** 1.0 (Production‑Ready)  
+**Versi:** 2.1 (Production‑Ready)  
 **Tanggal Publikasi:** 27 Juli 2026  
 **Backend:** Laravel 13 · PHP 8.3+ · Sanctum 4
 
@@ -1502,6 +1502,56 @@ Ulasan ganda:
 }
 ```
 
+### Contoh Body 422 Validation Error
+
+`errors` memuat **semua** field yang gagal sekaligus — bukan satu per satu.
+Klien menandai seluruh field bermasalah dalam satu kali render:
+
+```json
+{
+  "success": false,
+  "message": "Data yang dikirim tidak valid.",
+  "errors": {
+    "phone": ["Format nomor tidak valid."],
+    "otp": ["Kode OTP harus 6 digit."]
+  }
+}
+```
+
+Satu field bisa punya lebih dari satu pesan:
+
+```json
+{
+  "success": false,
+  "message": "Data yang dikirim tidak valid.",
+  "errors": {
+    "price": [
+      "Harga wajib diisi untuk listing tipe product.",
+      "Harga tidak boleh kurang dari 0."
+    ],
+    "images": ["Minimal 1 foto wajib diunggah."]
+  }
+}
+```
+
+Field bersarang memakai notasi titik, sesuai aturan Laravel:
+
+```json
+{
+  "errors": {
+    "operating_hours.senin.close": ["Jam tutup harus setelah jam buka."],
+    "images.2": ["Berkas ketiga bukan gambar yang valid."]
+  }
+}
+```
+
+> ⚠️ **Kunci `errors` selalu berupa objek berisi array**, bahkan untuk satu
+> pesan. Klien yang mengasumsikan string akan gagal mem-parsing — lihat
+> `mapDioException` di `Mobile_Implementation_Guide.md` §5.3.
+>
+> Indeks array dimulai dari **0** (`images.2` = berkas ketiga). Saat
+> menampilkannya ke pengguna, tambahkan 1 agar tidak membingungkan.
+
 ### Contoh Body 423 Locked
 
 ```json
@@ -1587,3 +1637,56 @@ Berlaku untuk: `GET /stores/nearby`, `/listings`, `/requests`,
 
 Koordinat dalam response berbentuk GeoJSON `[longitude, latitude]` — perhatikan
 urutannya terbalik dari kebiasaan menulis "lat, lng".
+
+---
+
+## 13. KOLEKSI API (POSTMAN / OPENAPI)
+
+Dokumen ini adalah acuan kontrak; untuk mencoba endpoint secara langsung
+tersedia koleksi yang dapat diimpor.
+
+| Berkas | Format | Status |
+| :-- | :-- | :-- |
+| `docs/api/seekitar.postman_collection.json` | Postman v2.1 | ⏳ Dibuat saat endpoint pertama selesai |
+| `docs/api/openapi.yaml` | OpenAPI 3.1 | ⏳ Dibangkitkan dari kode |
+
+### Membangkitkan, bukan menulis manual
+
+Koleksi yang ditulis tangan akan cepat basi begitu endpoint berubah. Hasilkan
+dari kode agar selalu sinkron:
+
+```bash
+composer require --dev dedoc/scramble
+php artisan scramble:export      # -> openapi.yaml dari Form Request & Resource
+```
+
+OpenAPI dapat diimpor langsung ke Postman, Insomnia, maupun Bruno, sehingga
+cukup satu berkas untuk semua perkakas.
+
+### Variabel Koleksi
+
+Jangan menyematkan URL atau token di dalam setiap request:
+
+| Variabel | Nilai contoh | Keterangan |
+| :-- | :-- | :-- |
+| `{{base_url}}` | `http://10.0.2.2:8000/api/v1` | Ganti per environment (§12) |
+| `{{token}}` | — | Diisi otomatis oleh skrip di bawah |
+
+```js
+// Tab "Tests" pada request POST /auth/verify-otp
+const data = pm.response.json().data;
+if (data?.token) {
+    pm.collectionVariables.set("token", data.token);
+}
+```
+
+Dengan skrip itu, seluruh request lain cukup memakai
+`Authorization: Bearer {{token}}` tanpa menyalin token secara manual.
+
+> ⚠️ **Jangan commit koleksi yang masih memuat token asli.** Simpan token di
+> *collection variable* bertipe `secret`, dan gunakan environment terpisah
+> untuk produksi.
+>
+> Endpoint yang tidak bisa diuji lewat Postman: unggah berkas multipart lebih
+> mudah dicoba dari aplikasi, dan alur OTP memerlukan WhatsApp sungguhan —
+> pakai nomor uji di staging (`Mobile_Implementation_Guide.md` §17.2).

@@ -10,7 +10,7 @@ _“Yang kamu butuhkan, ada di sekitar.”_
 | :-------------------- | :------------------------------------------------------------------------ |
 | **Nama Produk**       | Seekitar                                                                  |
 | **Platform**          | Mobile App (Flutter) & Web App (Laravel 13 + Bootstrap 5.3.x) + Admin Dashboard |
-| **Versi Dokumen**     | 3.0 (Production Ready – MySQL)                                            |
+| **Versi Dokumen**     | 2.1 (Production Ready – MySQL)                                            |
 | **Tanggal**           | 27 Juli 2026                                                              |
 | **Penulis**           | Tim Pengembang Seekitar                                                   |
 | **Status**            | Final – Siap Implementasi                                                 |

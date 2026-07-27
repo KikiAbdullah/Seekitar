@@ -1,7 +1,7 @@
 # 🎨 BRAND GUIDELINE — SEEKITAR
 
 **Dokumen Identitas & Panduan Merek**  
-**Versi 2.0 — Komprehensif & Siap Implementasi**
+**Versi:** 2.1 (Komprehensif & Siap Implementasi)
 
 | Informasi Dokumen    |                                                                                                           |
 | :------------------- | :-------------------------------------------------------------------------------------------------------- |
@@ -795,6 +795,60 @@ sehingga pengguna melihat dua layar pembuka berturut-turut.
 - **Tombol Aksi Utama:** Tinggi 48px, radius 24px, warna Hijau, teks putih SemiBold.
 - **Tombol Sekunder:** Border Hijau, teks Hijau, latar transparan.
 - **Input Field:** Border `#E5E7EB`, fokus border Hijau, tinggi 48px, radius 8px.
+
+**Floating Action Button (FAB):**
+
+| Properti | Nilai |
+| :-- | :-- |
+| Ikon | `plus` (Heroicons outline, 24×24) |
+| Warna latar | Hijau Lokal `#168A4A` |
+| Warna ikon | Putih |
+| Ukuran | 56×56 dp (standar Material) |
+| Posisi | Kanan bawah, margin 16 dp dari tepi |
+| Bayangan | `0 4px 12px rgba(22,138,74,0.3)` |
+| Varian diperluas | Ikon + teks “Pasang Kebutuhan”, tinggi 48 dp, radius 24 dp |
+
+- FAB **hanya satu per layar**. Dua FAB membuat pengguna ragu mana aksi utama.
+- Muncul di tab **Jelajahi** dan **Kebutuhan** saja — keduanya bermuara ke
+  “Pasang Kebutuhan”, aksi utama produk ini.
+- **Tidak** ditampilkan di tab Transaksi dan Profil, yang tidak punya aksi
+  penciptaan.
+
+> ⚠️ FAB **wajib naik** saat keyboard muncul atau saat snackbar tampil, agar
+> tidak menutupi konten. Di Flutter, `Scaffold` menanganinya otomatis selama
+> FAB dipasang lewat properti `floatingActionButton`, bukan ditumpuk manual
+> dengan `Stack`.
+>
+> Margin 16 dp bukan sekadar estetika: itu batas area jangkauan ibu jari yang
+> nyaman pada ponsel satu tangan.
+
+**Badge Notifikasi pada Bottom Navigation:**
+
+| Properti | Nilai |
+| :-- | :-- |
+| Warna latar | Bahaya `#DC2626` |
+| Warna teks | Putih, 11 px, SemiBold |
+| Bentuk | Lingkaran (1–9) · pil (10+) |
+| Batas tampilan | **“9+”** untuk jumlah di atas 9 |
+| Posisi | Menempel kanan atas ikon tab |
+| Titik tanpa angka | 8 dp, untuk penanda “ada yang baru” tanpa hitungan pasti |
+
+Tab yang memakai badge:
+
+| Tab | Kapan badge muncul |
+| :-- | :-- |
+| **Kebutuhan** | Ada penawaran baru yang belum dilihat (pembeli), atau permintaan baru cocok (penyedia) |
+| **Transaksi** | Status pesanan berubah dan belum dibuka |
+| Jelajahi · Profil | Tidak memakai badge |
+
+- Badge **hilang setelah tab dibuka**, bukan setelah item satu per satu dibaca —
+  aturan yang lebih sederhana dan lebih mudah ditebak pengguna.
+- Jangan menampilkan badge untuk hal yang tidak butuh tindakan (mis. promo).
+  Badge merah yang muncul terus akan diabaikan.
+
+> ⚠️ **Angka pada badge harus mencerminkan jumlah yang benar-benar baru**, bukan
+> total keseluruhan. Menampilkan “12” untuk seluruh riwayat pesanan membuat
+> penanda itu kehilangan makna.
 
 **Favicon & Web:**
 

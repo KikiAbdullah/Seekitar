@@ -246,6 +246,31 @@ Definisi lengkap istilah menghadap-pengguna ada di
 
 ---
 
+## 6A. VERSI & TANGGAL DOKUMEN
+
+Seluruh dokumen memakai **satu nomor versi bersama**, bukan versi per berkas.
+Dokumen-dokumen ini saling merujuk secara ketat, jadi "PRD v3.0 dengan API v1.0"
+tidak bermakna — keduanya harus dibaca sebagai satu himpunan.
+
+| Dokumen | Versi |
+| :-- | :-- |
+| `PRD.md`, `DATABASE.md`, `API_DOCUMENTATION.md`, `Server_Implementation_Guide.md`, `Mobile_Implementation_Guide.md`, `BRANDING-GUIDELINE.md` | **2.1** |
+
+**Aturan penomoran:**
+
+| Perubahan | Naikkan |
+| :-- | :-- |
+| Perubahan skema / kontrak API yang memutus kompatibilitas | Mayor (2.x → 3.0) |
+| Penambahan fitur, kolom, atau endpoint baru | Minor (2.1 → 2.2) |
+| Perbaikan penulisan, klarifikasi, contoh kode | Tidak perlu |
+
+> ℹ️ **Tanggal “27 Juli 2026” bukan salah ketik.** Sempat dipertanyakan apakah
+> itu tanggal masa depan; dokumen ini memang disusun pada tanggal tersebut.
+> Yang perlu dijaga adalah **konsistensinya** — perbarui tanggal hanya saat
+> nomor versi berubah, bukan setiap kali menyunting kalimat.
+
+---
+
 ## 7. CARA MENAIKKAN VERSI
 
 1. Ubah tabel di dokumen ini lebih dulu.
@@ -255,9 +280,9 @@ Definisi lengkap istilah menghadap-pengguna ada di
    `pubspec.lock`.
 4. Cek dokumen turunan masih konsisten:
    ```bash
-   for c in versions structure datamodel api backend mobile brand prd terms security deploy dbperf; do
+   for c in versions structure datamodel api backend mobile brand prd terms security deploy dbperf docs; do
      node tools/dev/check-$c.mjs || exit 1
    done
    ```
-   Dua belas pemeriksa ini menggantikan pencarian `grep` manual dan keluar
+   Tiga belas pemeriksa ini menggantikan pencarian `grep` manual dan keluar
    dengan status bukan-nol bila ada yang meleset.
