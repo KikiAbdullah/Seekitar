@@ -124,6 +124,8 @@ Setiap tabel dilengkapi penjelasan tiap kolom, alasan pemilihan tipe, dan constr
 | `selfie_image`       | VARCHAR(500) NULL    | URL selfie memegang KTP. Wajib bersama `ktp_image`.                                  |
 | `ktp_submitted_at`   | TIMESTAMP NULL       | Kapan berkas diajukan — dipakai SLA peninjauan admin 1×24 jam.                       |
 | `ktp_rejected_reason`| TEXT NULL            | Alasan penolakan agar pengguna tahu apa yang harus diperbaiki.                       |
+| `nik`                | VARCHAR(255) NULL    | NIK hasil pembacaan admin. **Terenkripsi** (cast `encrypted`), bukan plaintext.      |
+| `nik_hash`           | CHAR(64) NULL        | SHA-256 dari NIK. Untuk mendeteksi NIK ganda, karena kolom terenkripsi tak bisa di-`WHERE`. |
 | `deleted_at`         | TIMESTAMP NULL       | Soft delete untuk pengguna yang menonaktifkan akun.                                  |
 | `created_at`         | TIMESTAMP            | Otomatis diisi Laravel.                                                              |
 | `updated_at`         | TIMESTAMP            | Otomatis diisi Laravel.                                                              |
@@ -156,6 +158,14 @@ Setiap tabel dilengkapi penjelasan tiap kolom, alasan pemilihan tipe, dan constr
 > Opsi 1 dipilih karena kolom ini hanya dipakai sebagai *default* saat
 > pengguna membuka aplikasi; query radius yang sesungguhnya selalu memakai
 > `stores.location` dan `customer_requests.location` yang keduanya NOT NULL.
+
+- UNIQUE KEY `users_nik_hash_unique` (`nik_hash`) — satu NIK hanya untuk satu akun.
+
+> ⚠️ **Kolom `encrypted` tidak bisa dicari.** Laravel memakai IV acak per baris,
+> sehingga NIK yang sama menghasilkan ciphertext berbeda setiap kali disimpan —
+> `WHERE nik = ?` selalu gagal. Karena itu `nik_hash` disimpan terpisah sebagai
+> SHA-256 (dengan `APP_KEY` sebagai pepper) agar bisa diindeks dan diperiksa
+> keunikannya. Lihat `Server_Implementation_Guide.md` §18A.3.
 
 **Verifikasi KTP (Level 2):** `ktp_image` dan `selfie_image` adalah data pribadi
 sensitif menurut UU PDP. Simpan di bucket privat, akses hanya lewat URL

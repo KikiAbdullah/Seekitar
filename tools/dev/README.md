@@ -32,11 +32,12 @@ green, and the app served over HTTP (`/` and `/up` both return 200).
 | `node tools/dev/check-brand.mjs` | Guards brand guideline: design tokens, badge data sources, legal contacts. |
 | `node tools/dev/check-prd.mjs` | Guards PRD: promised schema exists, KPI formulas, status mapping. |
 | `node tools/dev/check-terms.mjs` | Guards cross-layer terminology (UI ↔ DB ↔ API) and enum value spelling. |
+| `node tools/dev/check-security.mjs` | Guards PRD §11 security promises against their §18A implementation. |
 
 All checkers exit non-zero on failure, so they work as CI/pre-commit steps:
 
 ```bash
-for c in versions structure datamodel api backend mobile brand prd terms; do
+for c in versions structure datamodel api backend mobile brand prd terms security; do
   node tools/dev/check-$c.mjs || exit 1
 done
 ```

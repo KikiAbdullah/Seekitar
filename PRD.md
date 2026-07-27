@@ -853,9 +853,22 @@ Setiap notifikasi membawa `data` payload yang berisi `type`, `entity_id`, dan `s
 
 ## 11. KEAMANAN & KEPATUHAN REGULASI
 
+> 📌 Implementasi teknis setiap poin di bab ini ada di
+> [`Server_Implementation_Guide.md`](Server_Implementation_Guide.md) §18A,
+> lengkap dengan tabel pemetaan janji → kode (§18A.7).
+
 ### 11.1 Perlindungan Data Pribadi
 
-- **KTP & Selfie** dienkripsi saat penyimpanan (AES-256, kunci di Vault). Hanya diakses oleh admin terotorisasi.
+- **KTP & Selfie** dienkripsi saat penyimpanan (AES-256). Hanya diakses oleh admin terotorisasi, lewat URL berumur pendek yang setiap aksesnya dicatat.
+
+> ⚠️ **Cara enkripsinya berbeda antara berkas dan teks.** Berkas gambar memakai
+> **S3 SSE-KMS** (enkripsi at-rest oleh penyedia), sedangkan NIK memakai
+> `Crypt::encryptString()` di kolom database. Mengenkripsi berkas 5 MB lewat
+> `Crypt` membengkakkannya 33% dan memuat seluruhnya ke memori — lihat
+> pengukurannya di `Server_Implementation_Guide.md` §18A.3.
+>
+> Kuncinya dikelola **AWS KMS**, bukan Vault — menyelaraskan dengan pilihan
+> penyimpanan S3 di §7.2 dan menghindari satu komponen infrastruktur tambahan.
 - **Koordinat Lokasi** hanya digunakan untuk pencarian dan tidak ditampilkan secara mentah ke publik. Pembeli tidak melihat alamat lengkap penyedia sebelum order diterima.
 - **Nomor Telepon** ditampilkan bertahap: di halaman penawaran (penyedia) hanya informasi umum; setelah transaksi disepakati, nomor terbuka dua arah. Peringatan ditampilkan: “Hati-hati berkomunikasi di luar platform. Simpan bukti transaksi.”
 - **Data pribadi tidak dijual**, sesuai UU PDP. Saat registrasi, pengguna wajib menyetujui kebijakan privasi yang menjelaskan pengumpulan data lokasi dan KTP.

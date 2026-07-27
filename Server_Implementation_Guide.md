@@ -51,6 +51,13 @@
 16. [Geospasial & Query Radius](#16-geospasial--query-radius)
 17. [API Response & Paginasi (Web & API)](#17-api-response--paginasi-web--api)
 18. [Error Handling & Logging](#18-error-handling--logging)
+18A. [Keamanan Aplikasi](#18a-keamanan-aplikasi)
+    - 18A.1 Route Model Binding & UUID
+    - 18A.2 CORS
+    - 18A.3 Enkripsi Data Sensitif (KTP & NIK)
+    - 18A.4 Proteksi XSS di Blade
+    - 18A.5 Rate Limiting Login Admin
+    - 18A.6 Validasi Nomor Telepon Indonesia
 19. [Migration & Seeder (Lengkap)](#19-migration--seeder-lengkap)
 20. [Testing](#20-testing)
 21. [Deployment](#21-deployment)
@@ -2330,6 +2337,355 @@ Khusus web, kita bisa menggunakan `abort(403)` jika tidak punya permission, dan 
 
 ---
 
+## 18A. KEAMANAN APLIKASI
+
+Bab ini mengimplementasikan janji keamanan di `PRD.md` §11. Setiap poin di PRD
+harus punya padanan kode di sini — kalau tidak, janji itu tidak berlaku.
+
+### 18A.1 Route Model Binding & UUID
+
+Semua ID publik memakai UUID (`DATABASE.md` §8). Tanpa pembatasan format,
+setiap ID yang salah bentuk tetap menembus ke query database.
+
+```php
+// bootstrap/app.php — di dalam withRouting(then: ...)
+Route::pattern('id', '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}');
+Route::pattern('store', '[0-9a-fA-F-]{36}');
+Route::pattern('listing', '[0-9a-fA-F-]{36}');
+Route::pattern('order', '[0-9a-fA-F-]{36}');
+```
+
+Manfaatnya bukan sekadar kerapian:
+
+| Tanpa pattern | Dengan pattern |
+| :-- | :-- |
+| `/orders/1 OR 1=1` masuk ke query | Ditolak router → **404** |
+| `/orders/../../etc/passwd` diproses | Ditolak router |
+| Pemindai otomatis membebani DB | Ditolak sebelum menyentuh DB |
+
+> ⚠️ **Pattern bukan pengganti otorisasi.** UUID memang sulit ditebak, tetapi
+> ID yang bocor lewat tangkapan layar atau riwayat browser tetap sah. Policy
+> (§6.3) tetap wajib memeriksa kepemilikan pada setiap akses.
+
+**Kunci `orders` lewat `order_number`, bukan UUID**, saat dipakai di URL yang
+dibagikan pengguna — supaya UUID internal tidak tersebar:
+
+```php
+// app/Models/Order.php
+public function getRouteKeyName(): string
+{
+    return request()->is('admin/*') ? 'id' : 'order_number';
+}
+```
+
+### 18A.2 CORS
+
+API dipakai aplikasi mobile (tanpa origin) dan panel admin (dengan origin).
+Konfigurasi bawaan Laravel membuka `allowed_origins => ['*']`, yang **tidak
+boleh** dipakai bersama kredensial.
+
+```php
+// config/cors.php
+return [
+    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'allowed_methods' => ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
+
+    // JANGAN '*' — nilai ini dipasangkan dengan supports_credentials
+    'allowed_origins' => array_filter(explode(',', env('CORS_ALLOWED_ORIGINS', ''))),
+
+    'allowed_headers' => ['Accept', 'Authorization', 'Content-Type', 'X-Requested-With'],
+    'exposed_headers' => ['X-RateLimit-Limit', 'X-RateLimit-Remaining', 'Retry-After'],
+    'max_age' => 86400,
+    'supports_credentials' => true,
+];
+```
+
+```env
+CORS_ALLOWED_ORIGINS=https://admin.seekitar.id,https://seekitar.id
+```
+
+> ⚠️ **`allowed_origins => ['*']` + `supports_credentials => true` adalah
+> kombinasi terlarang** — peramban menolaknya, dan bila dipaksa lewat wildcard
+> pola, situs mana pun bisa mengirim request ber-cookie atas nama admin yang
+> sedang login.
+>
+> Aplikasi mobile **tidak terpengaruh CORS sama sekali** (itu mekanisme
+> peramban), jadi daftar ini cukup memuat domain web saja.
+>
+> `exposed_headers` diperlukan agar klien bisa membaca header kuota
+> (`API_DOCUMENTATION.md` §1); tanpa itu, peramban menyembunyikannya.
+
+### 18A.3 Enkripsi Data Sensitif (KTP & NIK)
+
+`PRD.md` §11.1 mewajibkan KTP dan selfie dienkripsi AES-256. Cara
+penerapannya **berbeda** untuk berkas dan untuk teks pendek.
+
+> ⚠️ **`Crypt::encryptString()` TIDAK cocok untuk berkas gambar.** Sempat
+> diusulkan demikian, tetapi hasil pengukuran menunjukkan:
+>
+> | Ukuran KTP | Setelah base64 | Pembengkakan |
+> | :-- | :-- | :-- |
+> | 2 MB | 2,7 MB | +33% |
+> | 5 MB | 6,7 MB | +33% |
+>
+> Selain membengkak, `Crypt` memuat **seluruh berkas ke memori** (baca + hasil
+> base64 + salinan JSON), sehingga beberapa unggahan serentak mudah menembus
+> `memory_limit`. Berkas terenkripsi juga tidak bisa disajikan lewat URL
+> pre-signed, sehingga setiap tampilan gambar harus melewati PHP.
+
+**Yang dipakai:**
+
+| Data | Cara | Alasan |
+| :-- | :-- | :-- |
+| Berkas KTP & selfie | **S3 SSE-KMS**, bucket privat | Enkripsi at-rest AES-256 oleh penyedia, tanpa pembengkakan |
+| NIK & nama pada KTP | **`Crypt::encryptString()`** di kolom DB | Teks pendek; hasil 216 byte, muat di `VARCHAR(255)` |
+| Akses berkas | URL pre-signed, umur 5 menit | Tidak ada berkas KTP yang bisa diakses publik |
+
+```php
+// Unggah ke bucket privat dengan enkripsi sisi server.
+$path = $request->file('ktp_image')->store('ktp', [
+    'disk'       => 's3-private',
+    'visibility' => 'private',
+]);
+
+Storage::disk('s3-private')->setVisibility($path, 'private');
+
+$user->update([
+    'ktp_image'        => $path,          // simpan PATH, bukan URL
+    'ktp_submitted_at' => now(),
+]);
+```
+
+```php
+// config/filesystems.php
+'s3-private' => [
+    'driver' => 's3',
+    'bucket' => env('AWS_BUCKET_PRIVATE'),
+    'options' => [
+        'ServerSideEncryption' => 'aws:kms',
+        'SSEKMSKeyId'          => env('AWS_KMS_KEY_ID'),
+    ],
+    'visibility' => 'private',
+],
+```
+
+**Kolom terenkripsi** memakai cast bawaan Laravel — otomatis terenkripsi saat
+simpan, terdekripsi saat baca:
+
+```php
+// app/Models/User.php
+protected function casts(): array
+{
+    return [
+        'nik'      => 'encrypted',   // NIK hasil pembacaan admin/OCR
+        'ktp_name' => 'encrypted',
+    ];
+}
+```
+
+> ⚠️ Kolom `encrypted` **tidak bisa di-`WHERE`** — setiap baris memakai IV
+> berbeda, jadi nilai sama menghasilkan ciphertext berbeda. Untuk memeriksa
+> duplikasi NIK, simpan `nik_hash` (`hash('sha256', $nik.config('app.key'))`)
+> sebagai kolom terpisah yang bisa diindeks.
+
+**Akses admin** selalu lewat URL berumur pendek, dan setiap aksesnya dicatat:
+
+```php
+public function viewKtp(User $user): RedirectResponse
+{
+    $this->authorize('verify-users');
+
+    activity()->causedBy(auth()->user())->performedOn($user)->log('Melihat berkas KTP');
+
+    return redirect(
+        Storage::disk('s3-private')->temporaryUrl($user->ktp_image, now()->addMinutes(5))
+    );
+}
+```
+
+**Retensi:** setelah `verification_level` naik ke 2, berkas KTP dihapus
+terjadwal (mis. 30 hari). Data yang tidak disimpan tidak bisa bocor.
+
+### 18A.4 Proteksi XSS di Blade
+
+> ⚠️ Rekomendasi yang menyarankan *“untuk atribut gunakan `{!! !!}` dengan
+> hati-hati”* **keliru dan berbahaya.** `{!! !!}` justru **mematikan**
+> escaping — itu sumber XSS, bukan solusinya.
+
+Aturannya sederhana:
+
+| Sintaks | Perilaku | Kapan dipakai |
+| :-- | :-- | :-- |
+| `{{ $x }}` | `e($x)`, HTML-escaped | **Hampir selalu** |
+| `{{ $x }}` di dalam atribut | Aman, asalkan atributnya dikutip | Nilai atribut |
+| `@json($x)` | JSON + escaped | Mengirim data ke JavaScript |
+| `{!! $x !!}` | **Mentah, tanpa escaping** | Hanya untuk HTML yang dihasilkan sistem sendiri |
+
+**Titik paling rawan di proyek ini adalah `rawColumns()` pada Datatables**,
+karena kolom aksi memang dirender sebagai HTML mentah:
+
+```php
+// ❌ BERBAHAYA — nama toko diisi pengguna, bisa memuat </button><script>
+->addColumn('action', fn ($s) => '<button data-name="'.$s->name.'">Edit</button>')
+->rawColumns(['action'])
+
+// ✅ AMAN — render lewat view; Blade meng-escape otomatis
+->addColumn('action', fn ($s) => view('admin.stores.actions', ['store' => $s]))
+->rawColumns(['action'])
+```
+
+Untuk mengirim data ke atribut, pakai `@json` agar tanda kutip ikut aman:
+
+```blade
+<button class="edit-btn" data-store='@json($store->only(["id","name"]))'>Edit</button>
+```
+
+**Aturan tambahan:**
+
+- `{!! $dataTable->table() !!}` dan `->scripts()` **aman** — keluarannya
+  dihasilkan Yajra, bukan masukan pengguna.
+- Jangan pernah menaruh input pengguna di dalam `<script>` secara langsung.
+  Selalu lewat `@json`.
+- Aktifkan Content-Security-Policy sebagai lapis kedua:
+
+```php
+// app/Http/Middleware/SecurityHeaders.php
+$response->headers->add([
+    'X-Content-Type-Options' => 'nosniff',
+    'X-Frame-Options'        => 'DENY',
+    'Referrer-Policy'        => 'strict-origin-when-cross-origin',
+    'Content-Security-Policy' => "default-src 'self'; img-src 'self' https://cdn.seekitar.id data:; script-src 'self' https://cdn.jsdelivr.net https://code.jquery.com https://cdn.datatables.net",
+]);
+```
+
+> CSP di atas mengizinkan CDN yang dipakai layout admin (§22.3). Bila kelak
+> aset di-bundel sendiri, persempit menjadi `'self'` saja.
+
+### 18A.5 Rate Limiting Login Admin
+
+Rate limiter untuk OTP dan API sudah didefinisikan di §5.3. Login admin
+memerlukan pembatas tersendiri karena memakai kata sandi — sasaran empuk
+serangan tebak-paksa.
+
+```php
+// AppServiceProvider::boot()
+RateLimiter::for('admin-login', fn (Request $request) => [
+    // Dua sumbu: per akun DAN per IP.
+    Limit::perMinute(5)->by('admin-login:'.$request->input('email').'|'.$request->ip()),
+    Limit::perMinute(20)->by('admin-login-ip:'.$request->ip()),
+]);
+```
+
+```php
+// routes/admin.php
+Route::post('login', [AdminLoginController::class, 'store'])
+    ->middleware(['guest', 'throttle:admin-login']);
+```
+
+> ⚠️ **Dua sumbu itu perlu.** Pembatas per-email saja bisa dilewati dengan
+> mencoba banyak email dari satu IP (*password spraying*); pembatas per-IP saja
+> bisa dilewati dengan botnet yang menyerang satu akun dari banyak IP.
+>
+> Batas per-IP dibuat lebih longgar (20) karena beberapa admin bisa berbagi
+> satu IP kantor.
+
+Melengkapi janji `PRD.md` §11.3 (*“gagal 5x → blokir sementara”*):
+
+```php
+// Catat kegagalan untuk audit & deteksi anomali.
+Event::listen(Failed::class, function (Failed $event) {
+    Log::channel('security')->warning('Login admin gagal', [
+        'email' => $event->credentials['email'] ?? null,
+        'ip'    => request()->ip(),
+    ]);
+});
+
+Event::listen(Lockout::class, fn (Lockout $e) =>
+    Log::channel('security')->alert('Login admin diblokir sementara', ['ip' => request()->ip()])
+);
+```
+
+Sesi admin juga dipersingkat dibanding pengguna biasa:
+
+```env
+SESSION_LIFETIME=120          # menit
+SESSION_EXPIRE_ON_CLOSE=true
+```
+
+### 18A.6 Validasi Nomor Telepon Indonesia
+
+`PRD.md` §5.3.1 mensyaratkan nomor HP Indonesia, dan `DATABASE.md` §4.1
+menyimpannya sebagai `VARCHAR(15)` berawalan `62`. Tanpa normalisasi, satu
+orang bisa membuat beberapa akun dengan menulis nomor yang sama dalam format
+berbeda: `08123456789`, `+628123456789`, `628123456789`.
+
+```bash
+composer require propaganistas/laravel-phone:^6.0
+```
+
+Paket ini mendukung `illuminate/support: ^11.0|^12.0|^13.0`, jadi kompatibel
+dengan Laravel 13.
+
+```php
+// FormRequest
+public function rules(): array
+{
+    return [
+        'phone' => ['required', 'phone:ID', 'max:15'],
+    ];
+}
+
+// Normalisasi SEBELUM validasi & penyimpanan — ini yang mencegah akun ganda.
+protected function prepareForValidation(): void
+{
+    $this->merge(['phone' => $this->normalizePhone($this->phone)]);
+}
+
+private function normalizePhone(?string $input): ?string
+{
+    if (! $input) return null;
+
+    $digits = preg_replace('/\D/', '', $input);
+
+    return match (true) {
+        str_starts_with($digits, '0')  => '62'.substr($digits, 1),
+        str_starts_with($digits, '62') => $digits,
+        default                        => '62'.$digits,
+    };
+}
+```
+
+| Masukan pengguna | Tersimpan |
+| :-- | :-- |
+| `08123456789` | `628123456789` |
+| `+62 812-3456-789` | `628123456789` |
+| `628123456789` | `628123456789` |
+
+> ⚠️ Normalisasi harus dilakukan di **satu tempat** (FormRequest), bukan di
+> tiap controller. Jika satu jalur masuk lupa menormalkan, `UNIQUE` pada
+> `users.phone` tidak akan menangkap duplikatnya — dan OTP terkirim ke nomor
+> yang sama untuk dua akun berbeda.
+>
+> Logika normalisasi yang sama diterapkan di sisi klien
+> (`Mobile_Implementation_Guide.md` §7.1) agar pengguna melihat format yang
+> konsisten, tetapi **server tetap menormalkan ulang** — masukan dari klien
+> tidak pernah dipercaya.
+
+### 18A.7 Ringkasan Pemetaan ke PRD §11
+
+| Janji di PRD | Implementasi |
+| :-- | :-- |
+| KTP & selfie dienkripsi AES-256 | §18A.3 — S3 SSE-KMS + cast `encrypted` untuk NIK |
+| Koordinat tidak ditampilkan mentah | Lokasi pembeli dibulatkan (PRD §5.2.3) |
+| Nomor telepon bertahap | Disaring di API Resource, bukan di klien |
+| HTTPS/TLS 1.3 | Konfigurasi server + `SESSION_SECURE_COOKIE=true` |
+| Validasi input ketat | FormRequest di semua aksi tulis (§11) |
+| Rate limiting OTP & penawaran | §5.3 |
+| Blokir setelah 5x gagal login | §18A.5 |
+| Cegah XSS & SQL Injection | §18A.4 + Eloquent binding (`DATABASE.md` §9) |
+
+---
+
 ## 19. MIGRATION & SEEDER (LENGKAP)
 
 ### 19.1 Migration: Tidak berubah dari dokumen database.
@@ -2519,6 +2875,11 @@ AWS_DEFAULT_REGION=ap-southeast-1
 AWS_BUCKET=seekitar-media
 AWS_URL=https://cdn.seekitar.id
 AWS_BUCKET_PRIVATE=seekitar-ktp     # KTP & selfie, TIDAK publik
+AWS_KMS_KEY_ID=                     # kunci SSE-KMS untuk bucket privat (§18A.3)
+
+# --- Keamanan ---------------------------------------------------------------
+CORS_ALLOWED_ORIGINS=https://admin.seekitar.id,https://seekitar.id
+SESSION_EXPIRE_ON_CLOSE=true
 
 # --- Firebase (FCM) -------------------------------------------------------
 FIREBASE_CREDENTIALS=storage/app/firebase/service-account.json
