@@ -166,7 +166,10 @@ kebijakan retensi.
 | --------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | `id`                  | CHAR(36)                                                | PK, UUID.                                                                      |
 | `user_id`             | CHAR(36)                                                | FK ke `users.id`. Pemilik toko. Satu user bisa punya banyak toko.              |
-| `name`                | VARCHAR(100)                                            | Nama lapak, unik per kabupaten (unik dijamin aplikasi).                        |
+| `name`                | VARCHAR(100)                                            | Nama lapak, unik per kabupaten (`regency`). Lihat catatan uniqueness.          |
+| `regency`             | VARCHAR(100)                                            | Kabupaten/kota tempat toko berada. Diisi dari reverse geocoding saat pinpoint. |
+| `regency_code`        | CHAR(4) NULL                                            | Kode wilayah BPS (mis. `3578`). Sumber kebenaran untuk geofencing.             |
+| `npwp`                | VARCHAR(20) NULL                                        | NPWP usaha (opsional). Syarat pendukung verifikasi Level 3 (PRD §5.3.2).       |
 | `store_type`          | SET('goods','services','rental')                        | Kombinasi jenis usaha. SET lebih efisien dari VARCHAR untuk pilihan tetap.     |
 | `category_ids`        | JSON                                                    | Array ID dari `categories`. Contoh: `[1, 3, 7]`.                               |
 | `location`            | POINT SRID 4326                                         | Titik koordinat toko (longitude, latitude). Wajib.                             |
@@ -225,6 +228,76 @@ satu pesanan**. Kolom di sini yang menjadi sumber badge di
   ber-`offers_delivery = 0` ditolak `422`; begitu pula `payment_method = 'cod'`
   pada toko ber-`accepts_cod = 0`.
 - INDEX `stores_delivery_idx` (`offers_delivery`) — untuk filter “bisa diantar”.
+
+**Uniqueness nama toko per kabupaten.** PRD §5.3.3 mensyaratkan nama unik per
+kabupaten, tetapi tanpa kolom wilayah aturan itu tidak bisa ditegakkan sama
+sekali. Karena itu `regency` ditambahkan sebagai lingkup keunikan.
+
+> ⚠️ **`UNIQUE (name, regency, deleted_at)` TIDAK BEKERJA.** Dalam SQL, `NULL`
+> tidak pernah dianggap sama dengan `NULL`, sehingga dua toko aktif
+> (`deleted_at IS NULL`) bernama sama di kabupaten sama **tetap lolos**.
+> Constraint-nya ada, tapi tidak menegakkan apa pun — jenis bug yang baru
+> ketahuan setelah ada data duplikat di produksi.
+
+Solusinya memakai **kolom generated** yang bernilai `NULL` saat baris sudah
+di-soft-delete. Karena `NULL` diabaikan indeks unik, nama otomatis bebas
+dipakai ulang setelah toko dihapus:
+
+```sql
+ALTER TABLE stores
+  ADD COLUMN name_regency_active VARCHAR(210)
+    GENERATED ALWAYS AS (
+      CASE WHEN deleted_at IS NULL THEN CONCAT(name, '|', regency) END
+    ) STORED,
+  ADD UNIQUE KEY stores_name_regency_active_unique (name_regency_active);
+```
+
+Perilaku yang dihasilkan (sudah diuji):
+
+| Kasus | Hasil |
+| :-- | :-- |
+| Nama sama, kabupaten berbeda | ✅ Diizinkan |
+| Nama sama, kabupaten sama, keduanya aktif | ❌ Ditolak |
+| Nama sama, yang lama sudah di-soft-delete | ✅ Diizinkan |
+| Beberapa toko terhapus dengan nama sama | ✅ Diizinkan |
+
+> Perbandingan nama bergantung pada collation. Dengan `utf8mb4_unicode_ci`
+> (§Charset), "Warung Bu Sri" dan "warung bu sri" dianggap **sama** — memang
+> yang diinginkan, karena keduanya membingungkan pembeli.
+
+**Geofencing kabupaten target (PRD §5.3.3).** Toko di luar kabupaten target
+harus ditolak otomatis. Ada dua tingkat pemeriksaan:
+
+1. **Cepat (saat submit):** `regency_code` hasil reverse geocoding dicocokkan
+   dengan daftar kabupaten yang dilayani. Menolak sebagian besar kasus salah
+   wilayah tanpa biaya spasial.
+2. **Akurat (opsional):** simpan poligon batas kabupaten dan uji titiknya —
+   reverse geocoding bisa meleset di dekat perbatasan.
+
+```sql
+CREATE TABLE service_areas (
+  id           SMALLINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  regency_code CHAR(4) NOT NULL UNIQUE,
+  name         VARCHAR(100) NOT NULL,
+  boundary     POLYGON SRID 4326 NULL,   -- opsional, dari data BPS/OSM
+  is_active    TINYINT(1) NOT NULL DEFAULT 1,
+  SPATIAL INDEX service_areas_boundary_spatial (boundary)
+);
+```
+
+```php
+// Verifikasi presisi saat poligon tersedia.
+$inside = DB::selectOne(
+    'SELECT ST_Contains(boundary, ST_GeomFromText(?, 4326)) AS ok
+     FROM service_areas WHERE regency_code = ? AND is_active = 1',
+    ["POINT($lng $lat)", $regencyCode]
+)?->ok;
+```
+
+> Kolom `boundary` dibuat NULL-able supaya MVP bisa jalan hanya dengan
+> pencocokan `regency_code`; poligon ditambahkan belakangan tanpa migrasi ulang.
+> Admin tetap meninjau manual sebagai lapis terakhir — geofencing menyaring,
+> bukan menggantikan verifikasi.
 
 **Kenapa SET untuk store_type?**  
 Karena tipe toko terbatas (3 pilihan), SET lebih hemat ruang dan memungkinkan pencarian dengan `FIND_IN_SET` atau `LIKE` jika perlu.
@@ -480,7 +553,9 @@ bersamaan bisa menghasilkan dua order dari satu permintaan.
 | `id`              | CHAR(36)                                                | PK, UUID.                       |
 | `request_id`      | CHAR(36)                                                | FK ke `customer_requests`.      |
 | `store_id`        | CHAR(36)                                                | FK ke `stores`.                 |
-| `price`           | DECIMAL(12,2)                                           | Harga penawaran.                |
+| `price`           | DECIMAL(12,2)                                           | Harga jasa/barang saja, **belum** termasuk biaya tambahan. |
+| `additional_cost` | DECIMAL(12,2) DEFAULT 0.00                              | Ongkos antar/transport/material. 0 jika tidak ada.         |
+| `additional_cost_note` | VARCHAR(150) NULL                                  | Rincian singkat, mis. "Ongkos antar 3 km".                 |
 | `estimation_time` | VARCHAR(100)                                            | Teks bebas yang ditampilkan ke pembeli, mis. "2–3 hari kerja". |
 | `estimated_hours` | SMALLINT UNSIGNED NULL                                  | Bentuk numerik untuk sorting & analitik. Lihat catatan.        |
 | `notes`           | TEXT NULL                                               | Catatan tambahan.               |
@@ -498,6 +573,28 @@ bersamaan bisa menghasilkan dua order dari satu permintaan.
 - INDEX `offers_status_idx` (`status`)
 
 **Mengapa CASCADE pada store_id?** Jika toko dihapus (soft delete), penawaran menjadi tidak valid. Daripada memperumit, kita hapus cascade; data penawaran sudah tidak relevan. Order yang sudah terjadi tetap utuh karena `offer_id` di orders menggunakan `SET NULL`.
+
+**Biaya tambahan dipisah dari harga.** PRD §5.2.4 menyebut pembeli mengurutkan
+penawaran berdasarkan "Harga Terendah". Jika ongkos antar digabung ke `price`,
+penyedia yang jujur mencantumkan ongkos akan selalu kalah urutan dari yang
+menyembunyikannya lalu menagih di tempat.
+
+- `price` = nilai pekerjaan/barang.
+- `additional_cost` = ongkos antar, transport, atau material.
+- **Total yang mengikat** = `price + additional_cost`, dan inilah yang menjadi
+  `orders.total_amount` saat penawaran diterima.
+
+Pengurutan "termurah" memakai total, bukan `price` saja:
+
+```sql
+ORDER BY (price + additional_cost) ASC
+```
+
+> ⚠️ UI **wajib** menampilkan rincian ("Rp150.000 + Rp15.000 ongkos antar"),
+> bukan hanya total. Pembeli yang merasa ada biaya tersembunyi adalah salah
+> satu pemicu dispute paling umum di marketplace lokal.
+
+- CHECK: `additional_cost >= 0`.
 
 **Kenapa `estimation_time` DIPERTAHANKAN dan `estimated_hours` DITAMBAHKAN.**  
 Sempat diusulkan mengganti `estimation_time` menjadi kolom numerik. Mengganti
@@ -718,6 +815,10 @@ $store->update([
 | `reason`          | ENUM('barang_tidak_sesuai','jasa_tidak_profesional','penyedia_tidak_responsif','pembeli_fiktif','lainnya') | Alasan baku. Lihat catatan. |
 | `description`     | TEXT NULL                              | Penjelasan tambahan.                  |
 | `status`          | ENUM('open','resolved') DEFAULT 'open' |                                       |
+| `response_deadline` | TIMESTAMP NOT NULL                   | Batas SLA tanggapan admin (1×24 jam, PRD §5.5). |
+| `first_responded_at` | TIMESTAMP NULL                      | Kapan admin pertama kali menanggapi. Dasar hitung kepatuhan SLA. |
+| `escalated_at`    | TIMESTAMP NULL                         | Kapan dieskalasi karena melewati SLA. |
+| `assigned_to`     | CHAR(36) NULL                          | FK ke `users` (admin penangan).       |
 | `resolution_note` | TEXT NULL                              | Catatan dari admin.                   |
 | `resolved_at`     | TIMESTAMP NULL                         | Kapan selesai.                        |
 | `created_at`      | TIMESTAMP                              |                                       |
@@ -738,6 +839,29 @@ ALTER TABLE disputes
   CHECK (reason <> 'lainnya' OR description IS NOT NULL);
 ```
 
+**Pelacakan SLA (PRD §5.5: tanggapan wajib 1×24 jam).** Tanpa kolom tenggat,
+kewajiban itu hanya kalimat di dokumen — tidak ada cara mengetahui mana laporan
+yang terlambat, apalagi mengukurnya sebagai KPI.
+
+- `response_deadline` diisi otomatis saat dispute dibuat:
+  `now() + settings.dispute_sla_hours` (lihat `Server_Implementation_Guide.md` §9.12).
+- `first_responded_at` **berbeda** dari `resolved_at`: SLA mengukur seberapa
+  cepat admin *merespons*, bukan seberapa cepat kasus selesai. Kasus rumit
+  boleh lama, tetapi pelapor tidak boleh didiamkan.
+- Scheduler menandai yang lewat tenggat:
+
+```php
+Dispute::where('status', DisputeStatus::Open)
+    ->whereNull('first_responded_at')
+    ->whereNull('escalated_at')
+    ->where('response_deadline', '<', now())
+    ->each(fn ($d) => $d->update(['escalated_at' => now()])
+        && Notification::send($supervisors, new DisputeOverdue($d)));
+```
+
+- INDEX `disputes_sla_idx` (`status`, `response_deadline`) — dipakai scheduler
+  di atas; tanpa indeks ini, query berjalan penuh di seluruh tabel.
+
 **Kenapa `reason` diubah dari VARCHAR ke ENUM.** Kolom lama menyebut "dipilih
 dari enum di aplikasi", tapi tanpa penegakan di database nilai apa pun bisa
 masuk lewat SQL langsung, seeder, atau bug. Karena laporan ini dipakai untuk
@@ -757,6 +881,87 @@ padanan resmi dari daftar berbahasa Indonesia di `PRD.md` §5.5:
 > ⚠️ Menambah alasan baru berarti `ALTER TABLE`. Kalau daftar ini diperkirakan
 > sering berubah, pindahkan ke tabel `dispute_reasons` dengan FK. Untuk MVP
 > dengan 5 nilai yang stabil, ENUM lebih sederhana dan lebih cepat.
+
+### 4.10 `service_slots` (Fase 2)
+
+PRD §5.1.3 menyebut pemesanan jasa memilih **slot waktu**, dan §5.1.1 menyebut
+`listings.slot`. Keduanya hal berbeda dan sering tertukar:
+
+| | `listings.slot` | `service_slots` |
+| :-- | :-- | :-- |
+| Arti | **Kapasitas per hari** (mis. 3 order/hari) | Jadwal konkret (mis. Senin 09:00) |
+| Tipe | TINYINT UNSIGNED | tabel tersendiri |
+| Status | ✅ ada di MVP | ⏳ Fase 2 |
+
+**MVP:** `listings.slot` hanya membatasi berapa pesanan jasa yang diterima per
+hari. Waktu spesifik dinegosiasikan lewat WhatsApp (PRD §5.6) dan dicatat pada
+`offers.estimation_time` — konsisten dengan MVP yang belum punya chat in-app.
+
+**Fase 2**, saat penjadwalan benar-benar dibutuhkan:
+
+```sql
+CREATE TABLE service_slots (
+  id          CHAR(36) PRIMARY KEY,
+  listing_id  CHAR(36) NOT NULL,
+  start_at    TIMESTAMP NOT NULL,
+  end_at      TIMESTAMP NOT NULL,
+  order_id    CHAR(36) NULL,             -- terisi saat slot dipesan
+  status      ENUM('available','booked','blocked') DEFAULT 'available',
+  created_at  TIMESTAMP,
+  updated_at  TIMESTAMP,
+  FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE,
+  FOREIGN KEY (order_id)   REFERENCES orders(id)   ON DELETE SET NULL,
+  UNIQUE KEY service_slots_unique (listing_id, start_at),
+  INDEX service_slots_lookup_idx (listing_id, status, start_at),
+  CONSTRAINT service_slots_time_chk CHECK (end_at > start_at)
+);
+```
+
+> ⚠️ `UNIQUE(listing_id, start_at)` mencegah dua pesanan pada slot yang sama.
+> Pemesanan slot **wajib** `lockForUpdate()` seperti penerimaan penawaran
+> (§4.5) — dua pembeli yang menekan tombol nyaris bersamaan bisa memesan slot
+> yang sama.
+
+### 4.11 `subscriptions` (Fase 2)
+
+PRD §12 mencantumkan paket "Penyedia Pro" Rp49.000/bulan dan "Boost Listing"
+Rp9.900/hari, tetapi **tidak ada tabel** untuk menyimpannya. Selama MVP gratis
+(PRD §12: "Fase 1 seluruh fitur gratis"), tabel ini belum dibuat — dicantumkan
+di sini agar rancangannya sudah disepakati.
+
+```sql
+CREATE TABLE subscriptions (
+  id          CHAR(36) PRIMARY KEY,
+  user_id     CHAR(36) NOT NULL,
+  store_id    CHAR(36) NULL,             -- NULL = paket tingkat akun
+  plan        ENUM('pro_monthly','boost_listing') NOT NULL,
+  status      ENUM('pending','active','expired','cancelled') DEFAULT 'pending',
+  amount      DECIMAL(12,2) NOT NULL,
+  starts_at   TIMESTAMP NOT NULL,
+  ends_at     TIMESTAMP NOT NULL,
+  payment_ref VARCHAR(100) NULL,         -- referensi dari payment gateway
+  created_at  TIMESTAMP,
+  updated_at  TIMESTAMP,
+  FOREIGN KEY (user_id)  REFERENCES users(id)  ON DELETE CASCADE,
+  FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE,
+  INDEX subscriptions_active_idx (status, ends_at),
+  INDEX subscriptions_store_idx (store_id, status),
+  CONSTRAINT subscriptions_period_chk CHECK (ends_at > starts_at)
+);
+```
+
+**Catatan desain:**
+
+- Satu tabel untuk kedua produk (`plan`), bukan dua tabel — keduanya sama-sama
+  "hak berbatas waktu" dan hanya berbeda durasi serta cakupan.
+- `boost_listing` memakai `store_id`; `pro_monthly` bisa `NULL` karena berlaku
+  untuk seluruh toko milik pengguna.
+- **Jangan** menyimpan status Pro sebagai boolean di `stores`. Boolean tidak
+  punya masa berlaku, sehingga tidak bisa kedaluwarsa otomatis. Status aktif
+  selalu diturunkan dari `status = 'active' AND ends_at > NOW()`.
+- Prioritas broadcast untuk Pro bersifat **penambah bobot, bukan mutlak**
+  (PRD §12) — jangan sampai penyedia berbayar menggeser penyedia terdekat yang
+  jelas lebih relevan.
 
 ---
 

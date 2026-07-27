@@ -838,11 +838,21 @@ POST /requests/{request_id}/offers
 ```json
 {
   "price": 150000,
+  "additional_cost": 15000,
+  "additional_cost_note": "Ongkos antar 3 km",
   "estimation_time": "Bisa datang siang ini jam 2",
   "estimated_hours": 4,
   "notes": "Garansi 1 minggu"
 }
 ```
+
+`price` adalah nilai pekerjaan/barang **saja**; ongkos antar atau biaya
+material masuk ke `additional_cost` (default `0`). Yang mengikat sebagai
+`orders.total_amount` adalah **jumlah keduanya**.
+
+> ⚠️ Memasukkan ongkos antar ke `price` membuat penyedia yang jujur kalah pada
+> pengurutan "termurah" — karena itu pengurutan memakai
+> `price + additional_cost`, bukan `price` saja.
 
 `estimation_time` adalah teks yang dibaca pembeli; `estimated_hours` adalah
 bentuk numeriknya untuk pengurutan "tercepat". Keduanya sebaiknya dikirim

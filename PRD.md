@@ -79,6 +79,39 @@ Dengan memanfaatkan teknologi geolokasi akurat (MySQL Spatial), platform ini mem
 | **Membuktikan Transaksi Lokal** | Menunjukkan bahwa transaksi COD/transfer langsung dapat terlacak dan menghasilkan ulasan    | GMV ≥ Rp 50.000.000, 200 pesanan sukses                                        |
 | **Kepatuhan & Kepercayaan**     | Platform beroperasi sesuai regulasi PSE dan UU PDP, dengan sistem verifikasi yang berfungsi | 0 insiden pelanggaran data, 100% penyedia jasa di kabupaten target tervalidasi |
 
+#### Asumsi di Balik Target 3 Bulan
+
+Target di atas hanya bermakna bila asumsinya dinyatakan terbuka — jika salah
+satu meleset, targetnya harus direvisi, bukan dipaksakan.
+
+| Asumsi | Nilai | Dasar |
+| :-- | :-- | :-- |
+| Populasi kabupaten target | 1–2 juta jiwa | Rata-rata kabupaten di Jawa Timur |
+| Peluncuran bertahap | 3 kecamatan (bukan 1 kabupaten penuh) | Roadmap §14, minggu 17–18 |
+| Populasi terjangkau efektif | ±150.000 jiwa | 3 kecamatan × ±50.000 |
+| Konversi instal → daftar | 25% | Kisaran umum aplikasi lokal baru |
+| Penyedia dari hasil rekrutmen langsung | 100 dari 150 | Closed beta minggu 15–16 |
+| Nilai transaksi rata-rata | Rp 250.000 | 200 pesanan × Rp250rb = GMV Rp50 juta |
+
+**Konsekuensi angkanya:** 500 pengguna dari ±150.000 penduduk terjangkau =
+**penetrasi 0,33%**. Ini konservatif dan realistis untuk produk baru tanpa
+anggaran iklan besar.
+
+Yang **tidak** konservatif adalah **150 penyedia terverifikasi**: rasio 1
+penyedia per 3,3 pengguna sangat tinggi untuk marketplace. Angka ini hanya
+tercapai lewat rekrutmen langsung di lapangan (mendatangi pasar, bengkel,
+komunitas UMKM), bukan lewat pertumbuhan organik.
+
+> ⚠️ **Risiko terbesar bukan jumlah pengguna, melainkan likuiditas.**
+> Papan kebutuhan menjadi tidak berguna jika permintaan tidak mendapat
+> penawaran. Karena itu target **Match Rate ≥75%** (§13) lebih penting
+> daripada GMV — kalau harus memilih, prioritaskan kedalaman penyedia di
+> sedikit kategori daripada menyebar tipis ke seluruh kategori.
+>
+> **Asumsi verifikasi:** dengan SLA 1×24 jam dan ±150 pengajuan dalam 3 bulan
+> (≈2 per hari), satu admin paruh waktu masih memadai. Di atas 10 pengajuan
+> per hari, dibutuhkan admin khusus atau OCR otomatis (Fase 2).
+
 ---
 
 ## 3. TARGET PENGGUNA & PERSONA
@@ -98,6 +131,21 @@ Platform menggunakan **Unified Account** (satu akun multi-peran). Persona dibagi
 - **Tujuan:** Mendapatkan pelanggan baru secara konsisten tanpa biaya iklan besar. Ingin sistem yang memberitahu ketika ada permintaan servis di dekatnya.
 - **Perilaku Digital:** Punya smartphone Android, aktif di WhatsApp, tapi gaptek terhadap aplikasi rumit.
 - **Pain Points:** Waktu luang terbuang sia-sia; pelanggan sering mencari tetapi tidak menemukan kontaknya; takut ditipu pelanggan fiktif.
+
+> ℹ️ **Bagaimana “teknisi AC lepas” ditemukan di MVP.** Persona ini menyiratkan
+> keahlian spesifik, tetapi MVP **tidak** punya field “keahlian” tersendiri.
+> Penyedia ditemukan lewat tiga mekanisme yang sudah ada:
+>
+> 1. **Kategori toko** (`stores.category_ids`, maks 3 subkategori) — mis.
+>    “Servis & Bengkel → AC”. Inilah dasar pencocokan broadcast.
+> 2. **Judul & deskripsi listing** — terindeks FULLTEXT, jadi pencarian
+>    “servis AC” tetap menemukannya.
+> 3. **Foto hasil kerja** pada listing jasa, sebagai portofolio sederhana.
+>
+> Profil keahlian terstruktur (daftar sertifikat, tahun pengalaman, portofolio
+> terpisah) masuk **Fase 2** bersama badge “Keahlian Terverifikasi”
+> (`BRANDING-GUIDELINE.md` §4.1) — keduanya membutuhkan alur unggah dokumen dan
+> peninjauan admin yang sama.
 
 ### 3.3 Persona C – Penjual Barang / Penyewa
 
@@ -121,6 +169,27 @@ Platform menggunakan **Unified Account** (satu akun multi-peran). Persona dibagi
 | **Admin Dashboard**                    | Review verifikasi KTP/toko, manajemen kategori, lihat dispute, blokir pengguna                   | Dashboard analitik, sistem otomatis deteksi penipuan                                   |
 | **Monetisasi**                         | Gratis 100% (fokus akuisisi)                                                                     | Paket langganan penyedia, boost listing, admin fee transaksi escrow                    |
 
+#### Penjelasan Istilah Fase 2
+
+Beberapa istilah di kolom kanan disebut sekali lalu tidak pernah dijelaskan.
+Definisinya di sini agar tidak ditafsirkan berbeda-beda saat perencanaan Fase 2:
+
+| Istilah | Maksud | Prasyarat |
+| :-- | :-- | :-- |
+| **Auto-bidding** | Penyedia menyetel aturan sekali (kategori, radius, harga dasar), lalu sistem mengirim penawaran awal otomatis saat ada permintaan cocok | `subscriptions` (fitur Pro), template harga per kategori, batas harian agar tidak jadi spam |
+| **AI rekomendasi penyedia** | Mengurutkan penyedia berdasarkan riwayat kecocokan, bukan hanya jarak & rating | Data historis ≥6 bulan |
+| **Verifikasi KTP otomatis (OCR)** | Membaca NIK & nama dari foto KTP, mencocokkan dengan input pengguna | Layanan OCR pihak ketiga, uji akurasi, tetap perlu tinjauan manual saat skor rendah |
+| **Escrow / in-app wallet** | Dana ditahan platform sampai pesanan selesai | Izin PJP dari Bank Indonesia — proses panjang |
+
+> ⚠️ **Auto-bidding berisiko merusak kepercayaan** bila diterapkan tanpa
+> pembatas. Pembeli yang menerima lima penawaran identik dalam hitungan detik
+> akan curiga penawarannya bukan dari manusia. Bila kelak diaktifkan:
+> penawaran otomatis **wajib** ditandai jelas di UI, dan dibatasi jumlahnya
+> per penyedia per hari.
+>
+> **Escrow bukan sekadar fitur teknis** — menahan dana pengguna memerlukan izin
+> penyelenggara jasa pembayaran. Jangan dijadwalkan tanpa jalur perizinannya.
+
 ---
 
 ## 5. FITUR INTI & KEBUTUHAN FUNGSIONAL RINCI
@@ -131,14 +200,38 @@ Platform menggunakan **Unified Account** (satu akun multi-peran). Persona dibagi
 
 - **Jenis Listing:**
   - `product` (barang siap jual) → wajib isi stok, harga tetap
-  - `service` (jasa) → wajib isi kategori jasa, slot waktu (opsional), harga bisa tetap atau “mulai dari”
+  - `service` (jasa) → wajib isi kategori jasa, kapasitas harian (`slot`), harga bisa tetap atau “mulai dari”
   - `rental` (sewa) → wajib isi harga per hari/minggu, ketersediaan kalender, biaya antar/jemput
 - **Data Listing:** Judul, deskripsi, kategori (dari taxonomy tree yang dikelola admin), foto (min 1, max 5), lokasi toko (otomatis dari profil toko), status aktif/nonaktif.
 - **Aturan:** Satu toko bisa memiliki banyak listing, namun satu listing hanya untuk satu jenis (tidak campur). Listing jasa boleh menampilkan foto hasil kerja.
 
+> ℹ️ **Arti `slot` pada listing jasa = kapasitas per hari, bukan jadwal.**
+> Nilai `3` berarti penyedia sanggup menerima 3 pesanan per hari — bukan tiga
+> jam tertentu. Waktu spesifik disepakati lewat WhatsApp dan dicatat di
+> `offers.estimation_time`.
+>
+> Penjadwalan slot konkret (pilih “Senin 09:00”) memerlukan tabel
+> `service_slots` dan masuk **Fase 2** — lihat `DATABASE.md` §4.10.
+>
+> Padanan kolomnya: `product`/`rental` memakai `stock_qty`, `service` memakai
+> `slot`. Keduanya saling meniadakan dan ditegakkan CHECK constraint.
+
 **5.1.2 Penelusuran & Filter**
 
 - **Default tampilan:** Berdasarkan jarak terdekat dari lokasi pengguna, dengan batas radius maksimal 25 km (konfigurasi admin).
+
+> ℹ️ **Tiga angka radius yang berbeda — jangan tertukar:**
+>
+> | Angka | Milik | Kolom / setelan | Arti |
+> | :-- | :-- | :-- | :-- |
+> | **25 km** | Sistem | `settings.max_search_radius_km` | Batas atas pencarian katalog |
+> | **15 km** | Pembeli | `customer_requests.radius_km` | Jangkauan pencarian penyedia (§5.2.1) |
+> | **5 km** | Penjual | `stores.service_radius_km` | Sejauh mana toko bersedia melayani (§5.3.3) |
+>
+> Ketiganya bukan duplikasi: 25 km membatasi *pencarian*, 15 km adalah default
+> *permintaan*, 5 km adalah *kesanggupan toko*. Pencocokan broadcast menuntut
+> **keduanya terpenuhi** — toko harus berada dalam radius pembeli, dan pembeli
+> harus berada dalam radius layanan toko.
 - **Filter tersedia:** Kategori/subkategori, jenis listing (barang/jasa/sewa), rentang harga, rating minimum.
 - **Pencarian teks:** Full-text search pada judul dan deskripsi (menggunakan indeks FULLTEXT MySQL), dengan auto-suggest.
 - **Tampilan Peta (opsional):** User dapat beralih ke tampilan peta untuk melihat sebaran listing di sekitar.
@@ -180,6 +273,29 @@ Platform menggunakan **Unified Account** (satu akun multi-peran). Persona dibagi
 **5.2.3 Penawaran (Offer) oleh Penyedia**
 
 - Penyedia yang menerima notifikasi dapat melihat detail permintaan (tanpa identitas lengkap pembeli, hanya nama depan dan rating pembeli).
+
+> 🔒 **Data pembeli yang boleh dilihat penyedia sebelum penawaran diterima:**
+>
+> | Data | Sebelum diterima | Setelah diterima |
+> | :-- | :-- | :-- |
+> | Nama depan (`"Budi S."`) | ✅ | ✅ nama lengkap |
+> | Rating sebagai pembeli | ✅ | ✅ |
+> | Jarak perkiraan (“±3 km”) | ✅ | ✅ jarak tepat |
+> | Lokasi | ⚠️ dibulatkan ke kelurahan | ✅ titik & alamat |
+> | Nomor telepon | ❌ | ✅ |
+> | Alamat lengkap | ❌ | ✅ |
+>
+> Ini bukan sekadar preferensi produk: menampilkan nomor telepon di papan
+> kebutuhan terbuka akan membuat data kontak bisa dipanen massal — pelanggaran
+> UU PDP sekaligus alasan pembeli berhenti memakai aplikasi.
+>
+> **Lokasi sengaja dibulatkan**, bukan disamarkan sebagian. Menampilkan
+> koordinat dengan sedikit gangguan acak masih memungkinkan titik aslinya
+> disimpulkan bila permintaan yang sama dilihat berkali-kali.
+>
+> Nama depan diturunkan dari kata pertama `users.name` + inisial kata kedua.
+> API **tidak boleh** mengirim nama lengkap lalu memotongnya di klien — data
+> yang terkirim ke perangkat harus sudah tersaring dari server.
 - Penyedia mengisi **Form Penawaran**:
   - Harga penawaran (wajib, jika pembeli fixed maka tidak bisa diubah)
   - Estimasi waktu pengerjaan (teks bebas, mis. “Bisa datang hari ini jam 4 sore”)
@@ -191,6 +307,23 @@ Platform menggunakan **Unified Account** (satu akun multi-peran). Persona dibagi
 
 - Pembeli mendapat notifikasi setiap kali ada penawaran baru.
 - Pada halaman “Permintaan Saya”, pembeli melihat daftar penawaran yang terurut: **Harga Terendah** (default) atau bisa diurutkan berdasarkan Rating Tertinggi, Jarak Terdekat.
+
+> **Parameter API pengurutan** — `GET /requests/{id}/offers?sort=cheapest`:
+>
+> | `sort` | Kriteria | Catatan |
+> | :-- | :-- | :-- |
+> | `cheapest` (default) | `price + additional_cost` ASC | **Total**, bukan harga saja — lihat `DATABASE.md` §4.6 |
+> | `best_rating` | `stores.rating_avg` DESC, `total_reviews` DESC | Toko tanpa ulasan di urutan bawah |
+> | `nearest` | `distance_km` ASC | Dihitung `ST_Distance_Sphere` |
+> | `fastest` | `estimated_hours` ASC | Yang tidak mengisi ditaruh di akhir |
+>
+> Pengurutan **wajib di sisi server**, bukan di klien: daftar penawaran
+> dipaginasi, dan mengurutkan hanya halaman pertama akan memberi hasil yang
+> keliru.
+>
+> `best_rating` memakai `total_reviews` sebagai pemecah imbang — tanpa itu,
+> toko dengan satu ulasan bintang 5 akan mengalahkan toko dengan lima puluh
+> ulasan rata-rata 4,8.
 - Setiap kartu penawaran menampilkan: nama toko/penyedia, rating, jumlah transaksi sukses, jarak, harga penawaran, estimasi, dan pesan.
 - Pembeli bisa menekan tombol **“Terima Penawaran”** pada salah satu penawaran.
 - Setelah penerimaan:
@@ -232,11 +365,60 @@ Platform menggunakan **Unified Account** (satu akun multi-peran). Persona dibagi
   - Nomor rekening bank/QRIS (opsional untuk menampilkan ke pembeli) – nanti digunakan jika transfer langsung.
 - Setelah disimpan, toko berstatus `pending review`. Admin akan memverifikasi data dan lokasi (terutama memastikan toko benar-benar di dalam wilayah kabupaten target). Jika di luar, otomatis ditolak.
 
+> **Cara “uniqueness per kabupaten” dan “di dalam kabupaten target” ditegakkan.**
+> Keduanya membutuhkan kolom wilayah yang semula tidak ada. Kini tersedia
+> `stores.regency` dan `stores.regency_code` (`DATABASE.md` §4.2):
+>
+> - **Uniqueness:** `UNIQUE (name, regency, deleted_at)` — nama toko boleh sama
+>   di kabupaten berbeda, tetapi tidak di kabupaten yang sama.
+> - **Geofencing berlapis:**
+>   1. `regency_code` hasil reverse geocoding dicocokkan dengan tabel
+>      `service_areas` (daftar kabupaten yang dilayani) → penolakan instan.
+>   2. Bila poligon batas tersedia, diuji `ST_Contains` — reverse geocoding
+>      bisa meleset di dekat perbatasan.
+>   3. Admin tetap meninjau manual sebagai lapis terakhir.
+>
+> Penolakan otomatis **tidak** boleh menjadi satu-satunya penentu: kesalahan
+> GPS di dalam bangunan bisa menggeser titik ratusan meter. Karena itu toko
+> yang ditolak otomatis tetap bisa mengajukan banding lewat kanal pengaduan.
+
+> **NPWP untuk Level 3.** Kolom `stores.npwp` (opsional, `DATABASE.md` §4.2)
+> menampung nomor NPWP usaha. Karena bersifat opsional, ketiadaannya **tidak**
+> boleh memblokir verifikasi Level 3 — foto tempat usaha dan verifikasi GPS
+> tetap menjadi syarat utama. NPWP diperlakukan sebagai data sensitif dan tidak
+> pernah ditampilkan ke pengguna lain.
+
 ---
 
 ### 5.4 Manajemen Pesanan & State Machine
 
 Setiap pesanan memiliki tipe `order_type`: `goods`, `service`, `rental`. Alur status disesuaikan.
+
+> ⚠️ **Diagram di bawah adalah alur pengalaman pengguna, bukan nilai kolom.**
+> `orders.status` hanya punya **enam** nilai (`DATABASE.md` §4.7):
+> `menunggu_konfirmasi`, `diproses`, `dikirim`, `selesai`, `dibatalkan`,
+> `dispute`. Label seperti “Dijadwalkan” atau “Dikembalikan” adalah **tampilan
+> turunan**, bukan status baru.
+>
+> Pemetaannya:
+>
+> | Label di diagram | `orders.status` | Pembeda |
+> | :-- | :-- | :-- |
+> | Menunggu Konfirmasi | `menunggu_konfirmasi` | — |
+> | Diproses / Dijadwalkan / Dalam Pengerjaan | `diproses` | `order_type` + `scheduled_at` |
+> | Dikirim / Siap Diambil | `dikirim` | `delivery_method` (`delivery` vs `pickup`) |
+> | Disewa / Dikembalikan | `dikirim` → `selesai` | `order_type = 'rental'` |
+> | Selesai | `selesai` | — |
+> | Dibatalkan | `dibatalkan` | — |
+>
+> **Kenapa tidak menambah nilai ENUM saja?** Menambah `siap_diambil`,
+> `dijadwalkan`, dan `dikembalikan` membuat state machine bercabang per
+> `order_type`, dan setiap cabang menggandakan jumlah transisi yang harus
+> divalidasi serta diuji. Label UI cukup diturunkan dari kombinasi
+> `status + order_type + delivery_method` yang datanya sudah ada.
+>
+> Contoh: pesanan `status = 'dikirim'` ditampilkan sebagai **“Dikirim”** bila
+> `delivery_method = 'delivery'`, dan **“Siap Diambil”** bila `pickup`.
 
 **5.4.1 State Diagram Pesanan Barang**
 
@@ -261,6 +443,14 @@ Setiap pesanan memiliki tipe `order_type`: `goods`, `service`, `rental`. Alur st
 
 - Mirip barang, tetapi ada tambahan sub-state pengembalian:  
   `... [Disewa] → [Dikembalikan] → [Selesai]` (jika ada sistem pengembalian). MVP sederhana: status “Selesai” setelah masa sewa berakhir berdasarkan konfirmasi kedua pihak.
+
+**Pemetaan MVP untuk sewa:** “Disewa” = `dikirim` (barang sudah di tangan
+penyewa), “Dikembalikan” = konfirmasi pengembalian yang langsung menutup
+pesanan ke `selesai`. Tidak ada nilai ENUM `dikembalikan`.
+
+> Sistem pengembalian bertahap (dengan pemeriksaan kondisi barang dan denda
+> keterlambatan) masuk **Fase 2** — memerlukan kolom denda, bukti kondisi, dan
+> alur sengketa tersendiri.
 
 ---
 
@@ -394,8 +584,10 @@ Setiap pesanan memiliki tipe `order_type`: `goods`, `service`, `rental`. Alur st
 | id | CHAR(36) | Primary Key (UUID) |
 | user_id | CHAR(36) | FK ke users |
 | name | VARCHAR(100) | Nama toko / lapak |
-| store_type | VARCHAR(20) | `goods`, `services`, `rental` (bisa comma-separated) |
-| category_ids | VARCHAR(255) | JSON array atau comma-separated category_id |
+| store_type | SET('goods','services','rental') | Kombinasi jenis usaha |
+| category_ids | JSON | Array ID kategori, mis. `[1,3,7]` |
+| regency | VARCHAR(100) | Kabupaten/kota; lingkup uniqueness nama toko |
+| npwp | VARCHAR(20) NULL | Opsional, pendukung verifikasi Level 3 |
 | location | POINT SRID 4326 | Titik lokasi toko |
 | service_radius_km | DECIMAL(5,2) | |
 | operating_hours | JSON | Jam operasional per hari |
@@ -566,7 +758,10 @@ Body:
 ```json
 {
   "price": 150000,
+  "additional_cost": 15000,
+  "additional_cost_note": "Ongkos antar 3 km",
   "estimation_time": "Bisa datang siang ini jam 2",
+  "estimated_hours": 4,
   "notes": "Garansi 1 minggu"
 }
 ```
@@ -575,11 +770,30 @@ Body:
 
 ```json
 {
-  "id": "offer-456",
-  "status": "pending",
-  "created_at": "2026-07-27T10:30:00Z"
+  "success": true,
+  "data": {
+    "id": "offer-456",
+    "request_id": "req-123",
+    "store_id": "store-789",
+    "store": { "id": "store-789", "name": "Bengkel AC Yanto", "rating_avg": 4.5 },
+    "price": 150000,
+    "additional_cost": 15000,
+    "total_amount": 165000,
+    "status": "pending",
+    "expires_at": "2026-07-29T10:30:00Z",
+    "created_at": "2026-07-27T10:30:00Z"
+  }
 }
 ```
+
+`store_id` disertakan agar klien tidak perlu memanggil ulang untuk mengetahui
+toko mana yang menawar — satu penyedia bisa memiliki lebih dari satu toko.
+`total_amount` (`price + additional_cost`) juga dikirim server supaya
+perhitungan tidak diulang di klien dan berisiko berbeda.
+
+Format response mengikuti pembungkus `success`/`data` yang baku
+(`API_DOCUMENTATION.md` §1) — contoh lama di dokumen ini sempat mengembalikan
+objek telanjang, yang tidak konsisten dengan endpoint lain.
 
 Jika user mencoba mengirim lagi sementara masih ada offer pending: **409 Conflict** `"Anda sudah mengirim penawaran pada permintaan ini."`
 
@@ -603,6 +817,38 @@ Notifikasi bersifat kritis untuk engagement. Digunakan **Firebase Cloud Messagin
 
 Setiap notifikasi membawa `data` payload yang berisi `type`, `entity_id`, dan `screen` untuk navigasi langsung ke halaman terkait (deep link).
 
+**Struktur payload:**
+
+```json
+{
+  "notification": {
+    "title": "Permintaan Baru: Servis Kulkas",
+    "body": "Jarak 3.2 km dari lokasi Anda. Kirim penawaran sekarang."
+  },
+  "data": {
+    "type": "request_broadcast",
+    "screen": "request_detail",
+    "entity_id": "uuid-permintaan",
+    "distance_km": "3.2"
+  }
+}
+```
+
+> ⚠️ **`distance_km` wajib ikut di payload.** Teks notifikasi “Jarak [X] km”
+> disusun di server saat job broadcast berjalan — jaraknya **sudah dihitung**
+> di sana lewat `ST_Distance_Sphere` antara `stores.location` dan
+> `customer_requests.location` (lihat `Server_Implementation_Guide.md` §14.1).
+>
+> Aplikasi **tidak bisa** menghitungnya sendiri saat notifikasi tiba: lokasi
+> toko penerima tidak tentu tersedia di perangkat, dan menghitung ulang saat
+> aplikasi masih tertutup itu mustahil.
+>
+> Nilai `data` pada FCM **harus berupa string** — `"3.2"`, bukan `3.2`.
+> Mengirim angka menyebabkan pesan ditolak Firebase.
+>
+> Jarak dibulatkan **satu desimal** dan bersifat perkiraan; jarak tepat baru
+> ditampilkan setelah penawaran diterima (§5.2.3).
+
 ---
 
 ## 11. KEAMANAN & KEPATUHAN REGULASI
@@ -617,6 +863,26 @@ Setiap notifikasi membawa `data` payload yang berisi `type`, `entity_id`, dan `s
 ### 11.2 Kepatuhan PSE & Permendag
 
 - **Registrasi PSE:** Sistem didaftarkan ke Kominfo (Komdigi) sebelum publik. Menyediakan halaman pelaporan konten dan kontak resmi.
+
+> **Timeline pendaftaran PSE — mulai pada minggu 11, bukan menjelang rilis.**
+>
+> | Kapan | Kegiatan |
+> | :-- | :-- |
+> | Minggu 11–12 | Siapkan prasyarat: akta badan usaha, NPWP, kebijakan privasi, syarat & ketentuan, kanal pengaduan aktif |
+> | Minggu 13 | Ajukan pendaftaran lewat OSS |
+> | Minggu 13–16 | Masa proses (umumnya beberapa minggu; bisa ada permintaan perbaikan) |
+> | Minggu 17 | **Tanda daftar terbit** — syarat sebelum open beta |
+> | Minggu 17–18 | Open beta / rilis publik |
+>
+> Prasyaratnya bukan pekerjaan sepele: kebijakan privasi dan syarat & ketentuan
+> harus sudah final, dan alamat pengaduan (`pengaduan@seekitar.id`,
+> `privasi@seekitar.id`) harus **sudah aktif** karena dicantumkan di formulir —
+> lihat `BRANDING-GUIDELINE.md` §8.3.
+>
+> ⚠️ Play Store dan App Store dapat menolak aplikasi marketplace Indonesia yang
+> belum terdaftar PSE. Karena itu pendaftaran berjalan **paralel** dengan
+> pengembangan, bukan setelahnya. Distribusi APK untuk closed beta (minggu
+> 15–16) masih boleh berjalan lebih dulu.
 - **Dispute Resolution:** Fitur laporan di aplikasi langsung, tim admin memproses sesuai SLA.
 - **Transparansi:** Halaman “Pusat Bantuan” berisi kebijakan pengembalian dana, syarat COD, dan prosedur komplain.
 
@@ -659,6 +925,62 @@ Selain target GMV dan DAU, detail metrik berikut dilacak via dashboard analitik 
 | **Bisnis**     | Conversion Rate (penjual) | Pengguna yang registrasi lalu buka toko                      | ≥ 25%          |
 |                | Time to Verify KTP        | SLA admin menyetujui verifikasi                              | ≤ 24 jam       |
 
+#### Rumus Perhitungan
+
+Definisi tekstual saja menghasilkan angka berbeda-beda antar orang. Berikut
+rumus bakunya:
+
+| Metrik | Rumus |
+| :-- | :-- |
+| **Match Rate** | `permintaan dengan ≥1 penawaran ÷ total permintaan` |
+| **Time to First Offer** | `median(offer_pertama.created_at − request.created_at)` |
+| **Offer Acceptance Rate** | `penawaran accepted ÷ total penawaran` |
+| **Conversion Rate (penjual)** | `pengguna punya ≥1 toko verified ÷ total pengguna` |
+| **Dispute Rate** | `pesanan dengan ≥1 dispute ÷ pesanan selesai/dibatalkan` |
+| **Time to Verify KTP** | `median(approved_at − ktp_submitted_at)` |
+
+```sql
+-- Match Rate (30 hari terakhir, hanya permintaan yang sudah selesai masa aktifnya)
+SELECT ROUND(100 * SUM(has_offer) / COUNT(*), 1) AS match_rate_pct
+FROM (
+  SELECT cr.id, EXISTS(SELECT 1 FROM offers o WHERE o.request_id = cr.id) AS has_offer
+  FROM customer_requests cr
+  WHERE cr.created_at >= NOW() - INTERVAL 30 DAY
+    AND cr.status <> 'open'          -- yang masih terbuka belum bisa dinilai
+) t;
+```
+
+```sql
+-- Time to First Offer: MEDIAN, bukan AVG
+SELECT
+  AVG(minutes) AS mean_minutes,
+  MAX(CASE WHEN rn = mid THEN minutes END) AS median_minutes
+FROM (
+  SELECT TIMESTAMPDIFF(MINUTE, cr.created_at, MIN(o.created_at)) AS minutes,
+         ROW_NUMBER() OVER (ORDER BY TIMESTAMPDIFF(MINUTE, cr.created_at, MIN(o.created_at))) AS rn,
+         CEIL(COUNT(*) OVER () / 2) AS mid
+  FROM customer_requests cr
+  JOIN offers o ON o.request_id = cr.id
+  WHERE cr.created_at >= NOW() - INTERVAL 30 DAY
+  GROUP BY cr.id, cr.created_at
+) t;
+```
+
+> ⚠️ **Tiga jebakan pengukuran:**
+>
+> 1. **Permintaan `open` harus dikecualikan** dari Match Rate. Permintaan yang
+>    baru dibuat 5 menit lalu belum tentu gagal — memasukkannya membuat angka
+>    terlihat buruk secara palsu.
+> 2. **Time to First Offer memakai median, bukan rata-rata.** Satu permintaan
+>    yang dijawab setelah 20 jam akan menarik rata-rata jauh ke atas, padahal
+>    mayoritas dijawab dalam hitungan menit.
+> 3. **Denominator Dispute Rate adalah pesanan yang sudah berakhir**, bukan
+>    seluruh pesanan — pesanan yang masih berjalan belum berpeluang disengketakan.
+>
+> Semua metrik dihitung dari basis data (sumber kebenaran transaksi), sedangkan
+> Firebase Analytics dipakai untuk metrik perilaku (corong, retensi) yang tidak
+> tercatat di basis data.
+
 ---
 
 ## 14. ROADMAP & TAHAPAN PROYEK
@@ -667,16 +989,46 @@ Perkiraan dengan tim kecil (2-3 orang full-stack Laravel + Flutter, 1 UI/UX). Fa
 
 | Minggu    | Deliverable                         | Detail                                                                                                                                                                  |
 | :-------- | :---------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **1-2**   | Setup Infrastruktur & Database      | Provisioning server, MySQL 8.0.34+, Redis 7, Firebase project, CI/CD pipeline, inisialisasi proyek Laravel 13 dan Flutter                                                     |
+| **1-2**   | Setup Infrastruktur & Database      | Provisioning server, MySQL 8.0.34+, Redis 7, Firebase project, CI/CD (GitHub Actions + Laravel Forge), inisialisasi proyek Laravel 13 dan Flutter                       |
 | **3-4**   | Backend Core: Auth, Profil, Toko    | API registrasi, OTP, CRUD profil, buka toko + endpoint geospasial toko, admin verifikasi toko                                                                           |
 | **5-6**   | Frontend: Auth & Profil UI, Peta    | Flutter screen register, home skeleton, integrasi Google Maps, komponen pilih lokasi. Web Laravel landing & halaman katalog SSR (Blade)                                 |
 | **7-8**   | Engine 1: Marketplace Katalog       | Backend listing, pencarian full-text, filter radius, frontend feed katalog, detail listing, pemesanan langsung                                                          |
 | **9-10**  | Engine 2: Papan Kebutuhan & Bidding | Backend request, broadcast job Redis (Laravel Queue), offer API, notifikasi FCM. Frontend form pasang kebutuhan, halaman permintaan, daftar penawaran, terima penawaran |
 | **11-12** | Pesanan, Review & Dispute           | State machine pesanan, integrasi halaman status di mobile, review pasca-selesai, laporan/dispute di admin (Laravel Blade)                                               |
-| **13-14** | Admin Dashboard & Web Public        | Dashboard admin (verifikasi, dispute, manajemen kategori) dengan Bootstrap. Web public SEO (landing, halaman listing)                                                   |
+| **13-14** | Admin Dashboard Lanjutan & Web Public | Dashboard analitik, manajemen kategori, penanganan dispute, pengaturan sistem. Web public SEO (landing, halaman listing)                                              |
 | **15-16** | Testing, Closed Beta & Perbaikan    | UAT internal, perbaikan bug, closed beta 50 penyedia di 1 kecamatan. Optimasi performa query spasial MySQL                                                              |
 | **17-18** | Open Beta & Monitoring              | Rilis ke Play Store/App Store (atau distribusi APK), open beta 3 kecamatan, monitoring crash, analitik KPI                                                              |
 | **19+**   | Iterasi & Monetisasi                | Evaluasi metrik, aktifkan paket langganan dan boost, tambah fitur Fase 2 sesuai prioritas                                                                               |
+
+### Catatan Urutan Pengerjaan
+
+> ⚠️ **Halaman verifikasi admin tidak boleh menunggu minggu 13.**
+> Minggu 3–4 sudah menghasilkan fitur “buka toko”, dan setiap toko lahir dengan
+> status `pending`. Tanpa antarmuka verifikasi, **tidak ada satu pun toko yang
+> bisa aktif** — seluruh pengujian alur berikutnya (listing, pencarian,
+> broadcast) ikut tersumbat.
+>
+> Karena itu urutannya:
+>
+> | Minggu | Bagian admin yang dikerjakan |
+> | :-- | :-- |
+> | **3–4** | Verifikasi pengguna & toko (approve/reject) — minimal, seadanya |
+> | **11–12** | Penanganan dispute, mengikuti modul pesanan |
+> | **13–14** | Dashboard analitik, manajemen kategori, pengaturan sistem |
+>
+> Yang digeser ke awal hanya **halaman verifikasi**, bukan seluruh dashboard.
+> Alternatif jangka pendek: perintah artisan untuk menyetujui toko, lalu
+> diganti antarmuka penuh di minggu 13–14.
+
+**Perkakas CI/CD (minggu 1–2):**
+
+| Kebutuhan | Perkakas | Catatan |
+| :-- | :-- | :-- |
+| CI (uji & analisis) | **GitHub Actions** | `phpunit`, `pint`, `flutter analyze`, `flutter test` |
+| Deploy backend | **Laravel Forge** (alternatif: Ploi) | Deploy otomatis dari branch `main` |
+| Build APK/IPA | GitHub Actions + Fastlane | Artefak untuk closed beta |
+| Distribusi beta | Firebase App Distribution | Sebelum masuk Play Store |
+| Pemantauan galat | Sentry (server) + Crashlytics (mobile) | |
 
 ---
 
@@ -694,18 +1046,67 @@ Perkiraan dengan tim kecil (2-3 orang full-stack Laravel + Flutter, 1 UI/UX). Fa
 
 ## 16. LAMPIRAN: WIREFRAME KUNCI & REFERENSI
 
-_(Dalam implementasi nyata, bagian ini berisi link Figma atau screenshot. Di sini diberikan deskripsi alur visual.)_
+**Status:** wireframe belum dibuat. Deskripsi di bawah adalah spesifikasi yang
+menjadi acuan desainer, bukan pengganti wireframe.
+
+| Berkas | Isi | Status |
+| :-- | :-- | :-- |
+| Figma – `Seekitar / Wireframe MVP` | 5 alur kunci di bawah | ⏳ Belum dibuat |
+| Figma – `Seekitar / Design System` | Komponen dari Brand Guideline §3 | ⏳ Belum dibuat |
+| [`assets/brand/logo-grid-construction.svg`](assets/brand/logo-grid-construction.svg) | Konstruksi logo | ✅ Tersedia |
+
+> Tautan Figma ditambahkan ke tabel ini begitu berkasnya dibuat. Menyimpan
+> tautan hanya di percakapan tim membuatnya hilang saat anggota berganti.
+>
+> Prioritas pembuatan mengikuti roadmap: alur **Pasang Kebutuhan** dan
+> **Banding Penawaran** dibutuhkan paling awal (minggu 9–10), sedangkan
+> Jelajahi dan Pesanan menyusul.
 
 - **Halaman Utama (Jelajahi):** Header dengan search bar, chip filter kategori horizontal, lalu daftar kartu listing dengan foto, nama, jarak, rating. Float action button “Pasang Kebutuhan”.
 - **Halaman Pasang Kebutuhan:** Langkah-langkah (stepper) – Kategori → Deskripsi & Foto → Budget → Lokasi & Radius → Konfirmasi.
 - **Halaman Permintaan Saya:** Tabs “Aktif”, “Riwayat”. Di dalamnya list permintaan dengan status dan counter penawaran.
+
+  Tiap kartu permintaan menampilkan:
+
+  | Elemen | Isi | Catatan |
+  | :-- | :-- | :-- |
+  | Judul | `customer_requests.title`, maks 2 baris | |
+  | Lencana status | `open` hijau · `closed` abu · `expired` oranye | Warna dari Brand Guideline §3.5.3 |
+  | Penghitung penawaran | “3 penawaran” / “Belum ada penawaran” | **Bukan “0 penawaran”** |
+  | Sisa waktu | “Berakhir 6 jam lagi” | Dari `expires_at`; merah bila <2 jam |
+  | Kategori & radius | “Servis & Bengkel · 15 km” | |
+  | Aksi | “Lihat Penawaran” · “Perpanjang” (bila hampir kedaluwarsa) | |
+
+  **Keadaan kosong** ditangani berbeda, karena maknanya berbeda:
+
+  | Keadaan | Tampilan |
+  | :-- | :-- |
+  | Belum pernah pasang | Ilustrasi + “Pasang kebutuhan pertama Anda” + tombol |
+  | Ada, tapi belum ada penawaran | “Menunggu penawaran…” + waktu tunggu berjalan |
+  | Kedaluwarsa tanpa penawaran | “Tidak ada penawaran masuk” + tombol “Pasang Ulang” dengan radius lebih luas |
+
+  > Menampilkan “0 penawaran” terasa seperti kegagalan. “Menunggu penawaran…”
+  > menyampaikan hal yang sama tanpa membuat pengguna menyerah — penting karena
+  > penawaran pertama ditargetkan datang dalam 20 menit (§13), bukan seketika.
 - **Halaman Banding Penawaran:** Kartu penawaran bisa di-swipe untuk menolak, atau tap untuk detail lalu “Terima”.
 - **Halaman Pesanan:** Timeline status vertikal, menampilkan langkah yang sudah dilalui, tombol aksi sesuai status (misal “Konfirmasi Terima” untuk pembeli).
 
 **Referensi Teknis:**
 
 - MySQL Spatial Documentation: https://dev.mysql.com/doc/refman/8.0/en/spatial-types.html
-- Laravel Documentation: https://laravel.com/docs/11.x
-- Flutter Documentation: https://flutter.dev/docs
+- Laravel Documentation: https://laravel.com/docs/13.x
+- Flutter Documentation: https://docs.flutter.dev
+- Riverpod 3 Migration Guide: https://riverpod.dev/docs/3.0_migration
+
+**Dokumen Internal Terkait:**
+
+| Dokumen | Isi |
+| :-- | :-- |
+| [`TECH_STACK.md`](TECH_STACK.md) | Sumber kebenaran versi & matriks kompatibilitas |
+| [`DATABASE.md`](DATABASE.md) | Skema tabel, constraint, keputusan desain |
+| [`API_DOCUMENTATION.md`](API_DOCUMENTATION.md) | Kontrak REST API & konvensi global |
+| [`Server_Implementation_Guide.md`](Server_Implementation_Guide.md) | Implementasi Laravel & panel admin |
+| [`Mobile_Implementation_Guide.md`](Mobile_Implementation_Guide.md) | Implementasi Flutter |
+| [`BRANDING-GUIDELINE.md`](BRANDING-GUIDELINE.md) | Identitas visual & verbal |
 
 ---

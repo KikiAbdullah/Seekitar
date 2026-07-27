@@ -30,11 +30,12 @@ green, and the app served over HTTP (`/` and `/up` both return 200).
 | `node tools/dev/check-backend.mjs` | Guards Laravel implementation guide: middleware, policies, jobs, deployment. |
 | `node tools/dev/check-mobile.mjs` | Guards Flutter guide: Riverpod 3 patterns, routing, FCM, deep links. |
 | `node tools/dev/check-brand.mjs` | Guards brand guideline: design tokens, badge data sources, legal contacts. |
+| `node tools/dev/check-prd.mjs` | Guards PRD: promised schema exists, KPI formulas, status mapping. |
 
 All checkers exit non-zero on failure, so they work as CI/pre-commit steps:
 
 ```bash
-for c in versions structure datamodel api backend mobile brand; do
+for c in versions structure datamodel api backend mobile brand prd; do
   node tools/dev/check-$c.mjs || exit 1
 done
 ```
