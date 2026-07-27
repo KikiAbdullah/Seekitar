@@ -57,6 +57,9 @@ polling ringan sebagai pelengkap push.
 16. [UI/UX Guidelines Implementasi](#16-uiux-guidelines-implementasi)
 17. [Testing](#17-testing)
 18. [Deployment & CI/CD](#18-deployment--cicd)
+    - 18.1 Penandatanganan Android (Keystore)
+    - 18.2 Penandatanganan iOS
+    - 18.3 GitHub Actions
 19. [Lampiran: Contoh Kode Penting](#19-lampiran-contoh-kode-penting)
 20. [Konfigurasi Environment (dev/staging/prod)](#20-konfigurasi-environment-dev--staging--prod)
 21. [Error Handling Global](#21-error-handling-global)
@@ -1953,11 +1956,202 @@ listings.when(
 
 ## 18. DEPLOYMENT & CI/CD
 
-- **Build Android:** `flutter build apk --release` atau app bundle.
-- **Build iOS:** `flutter build ipa --release` (via Xcode).
-- **GitHub Actions:**
-  - `flutter analyze` → `flutter test` → `flutter build apk` (artifact).
-  - Fastlane untuk distribusi ke Play Store/App Store.
+- **Build Android:** `flutter build appbundle --release` (Play Store) atau `apk` (distribusi langsung).
+- **Build iOS:** `flutter build ipa --release`.
+- **GitHub Actions:** `flutter analyze` → `flutter test` → build → unggah artefak.
+
+### 18.1 Penandatanganan Android (Keystore)
+
+Tanpa penandatanganan yang benar, aplikasi tidak bisa diunggah ke Play Store —
+dan yang lebih berbahaya, **keystore yang hilang membuat pembaruan aplikasi
+mustahil selamanya**.
+
+```bash
+keytool -genkey -v -keystore ~/seekitar-release.jks \
+  -keyalg RSA -keysize 2048 -validity 10000 -alias seekitar
+```
+
+`android/key.properties` — **jangan pernah di-commit**:
+
+```properties
+storePassword=<sandi>
+keyPassword=<sandi>
+keyAlias=seekitar
+storeFile=/absolute/path/seekitar-release.jks
+```
+
+```gitignore
+# android/.gitignore
+key.properties
+*.jks
+*.keystore
+```
+
+`android/app/build.gradle.kts`:
+
+```kotlin
+import java.util.Properties
+import java.io.FileInputStream
+
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
+android {
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties["keyAlias"] as String?
+            keyPassword = keystoreProperties["keyPassword"] as String?
+            storeFile = keystoreProperties["storeFile"]?.let { file(it) }
+            storePassword = keystoreProperties["storePassword"] as String?
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+    }
+}
+```
+
+> ⚠️ **Cadangkan keystore di tempat aman (password manager / brankas tim).**
+> Kehilangannya berarti **tidak bisa lagi memperbarui aplikasi** — satu-satunya
+> jalan adalah menerbitkan aplikasi baru dengan `applicationId` berbeda dan
+> kehilangan seluruh pengguna beserta ulasannya.
+>
+> Aktifkan **Play App Signing** agar Google menyimpan kunci penandatanganan
+> akhir; keystore lokal tetap dibutuhkan sebagai kunci unggah.
+>
+> ⚠️ R8/ProGuard bisa mem-*strip* kelas yang dipakai refleksi. Model
+> `json_serializable` aman (kodenya dibangkitkan), tetapi Firebase perlu
+> pengecualian:
+> ```proguard
+> -keep class com.google.firebase.** { *; }
+> -keep class io.flutter.plugins.** { *; }
+> ```
+
+**Membangun:**
+
+```bash
+flutter build appbundle --release --dart-define-from-file=config/prod.json
+# keluaran: build/app/outputs/bundle/release/app-release.aab
+```
+
+### 18.2 Penandatanganan iOS
+
+iOS memerlukan akun Apple Developer berbayar dan sertifikat distribusi.
+
+| Berkas | Fungsi | Disimpan di |
+| :-- | :-- | :-- |
+| Distribution Certificate (`.p12`) | Identitas penandatangan | Brankas tim |
+| Provisioning Profile (`.mobileprovision`) | Mengikat App ID + sertifikat | Brankas tim |
+| App Store Connect API Key (`.p8`) | Unggah otomatis dari CI | GitHub Secrets |
+
+**Fastlane Match** mengelola sertifikat lewat repositori Git terenkripsi —
+lebih baik daripada saling mengirim `.p12` antaranggota tim:
+
+```ruby
+# ios/fastlane/Fastfile
+default_platform(:ios)
+
+platform :ios do
+  desc "Bangun & unggah ke TestFlight"
+  lane :beta do
+    match(type: "appstore", readonly: is_ci)
+    build_app(scheme: "Runner", export_method: "app-store")
+    upload_to_testflight(skip_waiting_for_build_processing: true)
+  end
+end
+```
+
+```bash
+cd ios && bundle exec fastlane beta
+```
+
+> ⚠️ Build iOS **hanya bisa dilakukan di macOS** — Xcode tidak tersedia di
+> Linux/Windows. Di CI, gunakan runner `macos-latest`, yang jauh lebih mahal
+> dari runner Linux; karena itu build iOS sebaiknya dipicu hanya saat rilis,
+> bukan setiap push.
+>
+> Aplikasi Seekitar meminta izin **lokasi**, **kamera**, dan **notifikasi**.
+> Ketiganya wajib punya penjelasan di `Info.plist`, atau Apple akan menolak
+> aplikasi saat peninjauan:
+> ```xml
+> <key>NSLocationWhenInUseUsageDescription</key>
+> <string>Lokasi digunakan untuk menampilkan toko dan penyedia jasa di sekitar Anda.</string>
+> <key>NSCameraUsageDescription</key>
+> <string>Kamera digunakan untuk memotret produk dan dokumen verifikasi.</string>
+> <key>NSPhotoLibraryUsageDescription</key>
+> <string>Galeri digunakan untuk memilih foto produk.</string>
+> ```
+
+### 18.3 GitHub Actions
+
+```yaml
+# .github/workflows/mobile.yml
+name: Mobile CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable, cache: true }
+      - run: flutter pub get
+      - run: dart run build_runner build --delete-conflicting-outputs
+      - run: flutter analyze
+      - run: flutter test
+
+  build-android:
+    needs: analyze
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable, cache: true }
+
+      # Keystore & konfigurasi disuntikkan dari Secrets, tidak pernah di repo.
+      - name: Siapkan keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/release.jks
+          cat > android/key.properties <<EOF
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          keyAlias=seekitar
+          storeFile=release.jks
+          EOF
+          echo '${{ secrets.PROD_CONFIG_JSON }}' > config/prod.json
+
+      - run: flutter pub get
+      - run: dart run build_runner build --delete-conflicting-outputs
+      - run: flutter build appbundle --release --dart-define-from-file=config/prod.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: build/app/outputs/bundle/release/app-release.aab
+```
+
+> ⚠️ `dart run build_runner build` **wajib** sebelum `analyze` dan `build`.
+> Berkas `.g.dart` hasil `json_serializable` dan `riverpod_generator` tidak
+> di-commit, jadi tanpa langkah ini seluruh build gagal dengan ratusan galat
+> "tidak ditemukan".
+>
+> `config/prod.json` memuat konfigurasi environment (§20) dan **tidak
+> di-commit** — nilainya datang dari GitHub Secrets.
 
 ---
 

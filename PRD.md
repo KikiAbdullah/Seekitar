@@ -1011,7 +1011,32 @@ Perkiraan dengan tim kecil (2-3 orang full-stack Laravel + Flutter, 1 UI/UX). Fa
 | **13-14** | Admin Dashboard Lanjutan & Web Public | Dashboard analitik, manajemen kategori, penanganan dispute, pengaturan sistem. Web public SEO (landing, halaman listing)                                              |
 | **15-16** | Testing, Closed Beta & Perbaikan    | UAT internal, perbaikan bug, closed beta 50 penyedia di 1 kecamatan. Optimasi performa query spasial MySQL                                                              |
 | **17-18** | Open Beta & Monitoring              | Rilis ke Play Store/App Store (atau distribusi APK), open beta 3 kecamatan, monitoring crash, analitik KPI                                                              |
-| **19+**   | Iterasi & Monetisasi                | Evaluasi metrik, aktifkan paket langganan dan boost, tambah fitur Fase 2 sesuai prioritas                                                                               |
+| **19-20** | **Buffer: Stabilisasi & Perbaikan** | Menindaklanjuti temuan open beta, perbaikan bug prioritas, penyetelan performa query spasial. **Tidak ada fitur baru.**                                                |
+| **21+**   | Iterasi & Monetisasi                | Evaluasi metrik, aktifkan paket langganan dan boost, tambah fitur Fase 2 sesuai prioritas                                                                               |
+
+### Kenapa Ada Buffer 2 Minggu (Minggu 19–20)
+
+UAT internal memang sudah dijadwalkan di minggu 15–16, tetapi itu pengujian
+**oleh tim sendiri** sebelum closed beta. Yang belum dialokasikan adalah waktu
+menindaklanjuti temuan dari **pengguna sungguhan** di open beta.
+
+| Fase | Siapa yang menguji | Temuan khasnya |
+| :-- | :-- | :-- |
+| Minggu 15–16 | Tim internal | Bug fungsional, alur yang buntu |
+| Minggu 17–18 | 3 kecamatan, pengguna nyata | Perangkat beragam, sinyal lemah, cara pakai di luar dugaan |
+| **Minggu 19–20** | — (perbaikan) | Menindaklanjuti keduanya |
+
+Tanpa buffer ini, perbaikan bug open beta akan bertabrakan dengan pekerjaan
+monetisasi — dan yang biasanya dikorbankan adalah perbaikan bug.
+
+> ⚠️ **Buffer bukan waktu luang.** Aturannya tegas: **tidak ada fitur baru**
+> di minggu 19–20. Kalau ternyata tidak ada bug serius, waktunya dipakai untuk
+> menurunkan utang teknis atau menaikkan cakupan pengujian — bukan menarik maju
+> pekerjaan Fase 2.
+>
+> Dua hal yang hampir pasti muncul di open beta dan butuh waktu:
+> **query spasial melambat** saat data bertambah (`DATABASE.md` §11), dan
+> **perilaku di sinyal lemah** yang tidak terlihat saat diuji di kantor.
 
 ### Catatan Urutan Pengerjaan
 

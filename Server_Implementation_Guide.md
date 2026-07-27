@@ -63,9 +63,14 @@
 21. [Deployment](#21-deployment)
     - 21.1 Environment Variables
     - 21.2 Perintah Deploy
+    - 21.2a Penyiapan Redis
+    - 21.2b Penyimpanan Objek (S3 / MinIO)
+    - 21.2c SSL/TLS
+    - 21.2d Backup Basis Data
     - 21.3 Queue Worker (Supervisor)
     - 21.4 Scheduler (Cron)
     - 21.5 Tooling Pengembangan
+    - 21.6 Monitoring Produksi (Sentry & Pulse)
 22. [Lampiran: Contoh Kode Blade & Controller](#22-lampiran-contoh-kode-blade--controller)
 
 ---
@@ -2920,6 +2925,204 @@ php artisan up
 > ⚠️ Jangan pakai `config:cache` bila ada `env()` di luar berkas `config/` —
 > nilainya akan menjadi `null` setelah cache dibuat.
 
+### 21.2a Penyiapan Redis
+
+Redis menangani tiga hal sekaligus di Seekitar: cache, session, dan antrian.
+Ketiganya punya sifat berbeda, dan menyatukannya tanpa pemisahan adalah sumber
+masalah yang sulit dilacak.
+
+```bash
+sudo apt install redis-server
+sudo systemctl enable --now redis-server
+redis-cli ping     # -> PONG
+```
+
+**`/etc/redis/redis.conf`:**
+
+```conf
+bind 127.0.0.1 ::1              # JANGAN 0.0.0.0 — Redis tanpa auth = terbuka
+requirepass <sandi-panjang-acak>
+maxmemory 512mb
+maxmemory-policy allkeys-lru    # lihat peringatan di bawah
+appendonly yes                  # AOF: antrian tidak hilang saat restart
+appendfsync everysec
+```
+
+**Pisahkan database** agar `cache:clear` tidak ikut menghapus antrian:
+
+```env
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=
+REDIS_PORT=6379
+
+REDIS_DB=0            # cache
+REDIS_CACHE_DB=1      # cache tag
+REDIS_QUEUE_DB=2      # antrian job
+```
+
+```php
+// config/database.php
+'redis' => [
+    'client' => env('REDIS_CLIENT', 'phpredis'),
+    'default' => ['host' => env('REDIS_HOST'), 'password' => env('REDIS_PASSWORD'),
+                  'port' => env('REDIS_PORT', 6379), 'database' => env('REDIS_DB', 0)],
+    'cache'   => ['host' => env('REDIS_HOST'), 'password' => env('REDIS_PASSWORD'),
+                  'port' => env('REDIS_PORT', 6379), 'database' => env('REDIS_CACHE_DB', 1)],
+    'queue'   => ['host' => env('REDIS_HOST'), 'password' => env('REDIS_PASSWORD'),
+                  'port' => env('REDIS_PORT', 6379), 'database' => env('REDIS_QUEUE_DB', 2)],
+],
+```
+
+> ⚠️ **`allkeys-lru` bisa membuang job antrian.** Kebijakan itu menghapus kunci
+> apa pun saat memori penuh — termasuk `BroadcastRequestJob` yang belum
+> diproses. Permintaan pembeli lalu tidak pernah disebar, tanpa error apa pun.
+>
+> Karena itu database antrian **wajib** dipisah dan diberi kebijakan berbeda:
+>
+> ```bash
+> redis-cli -n 2 CONFIG SET maxmemory-policy noeviction
+> ```
+>
+> Dengan `noeviction`, Redis menolak penulisan baru saat penuh (job gagal
+> dengan error yang terlihat) alih-alih membuang job lama secara diam-diam.
+>
+> Alternatif yang lebih aman untuk produksi: jalankan **dua instance Redis**
+> pada port berbeda — satu untuk cache (boleh evict), satu untuk antrian
+> (tidak boleh).
+
+### 21.2b Penyimpanan Objek (S3 / MinIO)
+
+Dua bucket dengan sifat berbeda (lihat §18A.3):
+
+| Bucket | Akses | Isi |
+| :-- | :-- | :-- |
+| `seekitar-media` | publik lewat CDN | Foto listing, avatar |
+| `seekitar-ktp` | **privat**, SSE-KMS | KTP & selfie |
+
+```env
+FILESYSTEM_DISK=s3
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_DEFAULT_REGION=ap-southeast-1
+AWS_BUCKET=seekitar-media
+AWS_URL=https://cdn.seekitar.id
+AWS_USE_PATH_STYLE_ENDPOINT=false
+```
+
+**MinIO untuk pengembangan lokal** — API-nya kompatibel S3, jadi kode tidak
+perlu diubah:
+
+```bash
+docker run -d --name minio -p 9000:9000 -p 9001:9001 \
+  -e MINIO_ROOT_USER=seekitar -e MINIO_ROOT_PASSWORD=rahasia123 \
+  -v minio-data:/data minio/minio server /data --console-address ":9001"
+```
+
+```env
+AWS_ENDPOINT=http://localhost:9000
+AWS_USE_PATH_STYLE_ENDPOINT=true    # WAJIB true untuk MinIO
+```
+
+> ⚠️ `AWS_USE_PATH_STYLE_ENDPOINT=true` wajib untuk MinIO. Tanpa itu, klien
+> memakai gaya *virtual-host* (`bucket.localhost:9000`) yang tidak bisa
+> di-resolve, dan unggahan gagal dengan galat DNS yang membingungkan.
+>
+> Kebijakan bucket privat harus benar-benar diuji, bukan diasumsikan:
+> ```bash
+> curl -I https://seekitar-ktp.s3.ap-southeast-1.amazonaws.com/ktp/contoh.jpg
+> # harus 403, BUKAN 200
+> ```
+
+### 21.2c SSL/TLS
+
+Dua pilihan, keduanya sah:
+
+| Cara | Cocok untuk | Catatan |
+| :-- | :-- | :-- |
+| **Let's Encrypt** (certbot) | Server sendiri | Gratis, perpanjangan otomatis |
+| **Cloudflare** | Butuh CDN + proteksi DDoS | Pakai mode **Full (strict)** |
+
+```bash
+sudo apt install certbot python3-certbot-nginx
+sudo certbot --nginx -d seekitar.id -d www.seekitar.id \
+  -d api.seekitar.id -d admin.seekitar.id
+sudo certbot renew --dry-run     # uji perpanjangan otomatis
+```
+
+```nginx
+# Paksa HTTPS + HSTS (PRD §11.3: TLS 1.3)
+server {
+    listen 443 ssl http2;
+    server_name api.seekitar.id;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+}
+
+server {
+    listen 80;
+    server_name api.seekitar.id;
+    return 301 https://$host$request_uri;
+}
+```
+
+> ⚠️ Mode Cloudflare **"Flexible" berbahaya**: lalu lintas Cloudflare→server
+> berjalan tanpa enkripsi, sehingga token Bearer melintas sebagai teks biasa.
+> Selalu gunakan **Full (strict)**.
+>
+> Aktifkan HSTS **setelah** HTTPS terbukti stabil. `max-age` satu tahun tidak
+> bisa dibatalkan cepat — peramban akan menolak HTTP sampai masa itu habis.
+
+### 21.2d Backup Basis Data
+
+Tanpa backup teruji, seluruh data transaksi bergantung pada satu disk.
+
+```bash
+#!/usr/bin/env bash
+# /usr/local/bin/seekitar-backup.sh
+set -euo pipefail
+
+STAMP=$(date +%Y%m%d-%H%M)
+FILE="/tmp/seekitar-${STAMP}.sql.gz"
+
+# --single-transaction: konsisten tanpa mengunci tabel (InnoDB)
+# --routines --triggers: ikut sertakan objek non-tabel
+mysqldump --single-transaction --quick --routines --triggers \
+  -u"$DB_USER" -p"$DB_PASS" seekitar | gzip -9 > "$FILE"
+
+aws s3 cp "$FILE" "s3://seekitar-backup/db/${STAMP}.sql.gz" \
+  --storage-class STANDARD_IA --sse aws:kms
+
+rm -f "$FILE"
+```
+
+```cron
+0 2 * * * /usr/local/bin/seekitar-backup.sh >> /var/log/seekitar-backup.log 2>&1
+```
+
+| Aspek | Nilai |
+| :-- | :-- |
+| Frekuensi | Harian pukul 02:00 WIB |
+| Retensi | 30 harian + 12 bulanan (aturan lifecycle S3) |
+| Enkripsi | SSE-KMS, bucket terpisah dari media |
+| **Uji pemulihan** | **Wajib tiap bulan** ke basis data sementara |
+
+> ⚠️ **Backup yang tidak pernah diuji bukan backup.** Jadwalkan pemulihan
+> bulanan ke database uji dan pastikan jumlah barisnya masuk akal:
+> ```bash
+> gunzip -c backup.sql.gz | mysql -u root seekitar_restore_test
+> mysql -e "SELECT COUNT(*) FROM seekitar_restore_test.orders;"
+> ```
+>
+> Bucket backup **tidak boleh** berada di akun/kredensial yang sama dengan
+> server aplikasi. Penyerang yang menguasai server juga akan menghapus
+> backup-nya. Pakai IAM user terpisah yang hanya punya izin `PutObject`.
+>
+> Berkas di S3 (foto listing, KTP) **tidak** tercakup `mysqldump` — aktifkan
+> *versioning* dan *cross-region replication* pada bucket media secara terpisah.
+
 ### 21.3 Queue Worker (Supervisor)
 
 Antrian `high` diproses lebih dulu agar OTP dan broadcast tidak tertahan di
@@ -2963,6 +3166,40 @@ Verifikasi jadwal yang terdaftar:
 php artisan schedule:list
 ```
 
+**Alternatif tanpa cron — `schedule:work` di Supervisor.** Berguna pada
+kontainer yang tidak menjalankan cron, dan membuat semua proses latar
+terpantau lewat satu perkakas:
+
+```ini
+; /etc/supervisor/conf.d/seekitar-schedule.conf
+[program:seekitar-schedule]
+command=php /var/www/seekitar/artisan schedule:work
+directory=/var/www/seekitar
+autostart=true
+autorestart=true
+user=www-data
+numprocs=1
+redirect_stderr=true
+stdout_logfile=/var/www/seekitar/storage/logs/schedule.log
+```
+
+> ⚠️ **Pilih salah satu — cron ATAU `schedule:work`, jangan keduanya.**
+> Menjalankan bersamaan membuat setiap tugas terjadwal dieksekusi dua kali:
+> permintaan kedaluwarsa diproses ganda, dan notifikasi terkirim dua kali.
+>
+> ⚠️ `numprocs=1` mutlak untuk scheduler. Tidak seperti worker antrian yang
+> boleh diperbanyak, dua proses scheduler berarti dua kali eksekusi. Pada
+> beberapa server, tambahkan `->onOneServer()` pada tugasnya (sudah dipakai di
+> §14.1) dan pastikan cache terpusat di Redis.
+
+**Memantau semua proses:**
+
+```bash
+sudo supervisorctl status
+# seekitar-worker:seekitar-worker_00   RUNNING   pid 1234, uptime 2:14:03
+# seekitar-schedule                    RUNNING   pid 1240, uptime 2:14:03
+```
+
 ### 21.5 Tooling Pengembangan
 
 Hanya untuk lokal — **jangan** dipasang di produksi:
@@ -2988,6 +3225,107 @@ Telescope::filter(fn (IncomingEntry $entry) =>
     $entry->isReportableException() || $entry->isFailedJob() || $entry->isSlowQuery()
 );
 ```
+
+### 21.6 Monitoring Produksi
+
+Telescope tidak dipakai di produksi (menyimpan setiap request ke database).
+Untuk produksi dipakai dua perkakas dengan peran berbeda:
+
+| Perkakas | Menjawab | Lingkup |
+| :-- | :-- | :-- |
+| **Sentry** | “Apa yang rusak, di baris mana?” | Galat & exception |
+| **Laravel Pulse** | “Apa yang lambat, apa yang menumpuk?” | Performa & antrian |
+
+#### Sentry — pelacakan galat
+
+```bash
+composer require sentry/sentry-laravel
+php artisan sentry:publish --dsn=<dsn-anda>
+```
+
+```env
+SENTRY_LARAVEL_DSN=https://xxx@xxx.ingest.sentry.io/xxx
+SENTRY_TRACES_SAMPLE_RATE=0.1     # 10% request; 1.0 terlalu mahal & bising
+SENTRY_ENVIRONMENT=production
+```
+
+```php
+// bootstrap/app.php
+->withExceptions(function (Exceptions $exceptions) {
+    Integration::handles($exceptions);
+
+    // Galat yang MEMANG alur normal jangan mencemari laporan —
+    // kalau semua dilaporkan, yang penting jadi tenggelam.
+    $exceptions->dontReport([
+        ValidationException::class,
+        AuthenticationException::class,
+        ModelNotFoundException::class,
+        ThrottleRequestsException::class,
+    ]);
+})
+```
+
+> 🔒 **Jangan sampai data pribadi ikut terkirim ke Sentry.** Body request bisa
+> memuat OTP, NIK, atau token:
+>
+> ```php
+> // config/sentry.php
+> 'send_default_pii' => false,
+> 'before_send' => function (Event $event): ?Event {
+>     $request = $event->getRequest();
+>     foreach (['phone', 'otp', 'nik', 'token', 'password'] as $key) {
+>         if (isset($request['data'][$key])) {
+>             $request['data'][$key] = '[disaring]';
+>         }
+>     }
+>     $event->setRequest($request);
+>     return $event;
+> },
+> ```
+>
+> Tambahkan konteks yang berguna tanpa membocorkan identitas — cukup ID:
+> ```php
+> Sentry::configureScope(fn (Scope $s) => $s->setUser(['id' => auth()->id()]));
+> ```
+
+#### Laravel Pulse — pemantauan performa
+
+```bash
+composer require laravel/pulse
+php artisan vendor:publish --provider="Laravel\Pulse\PulseServiceProvider"
+php artisan migrate
+```
+
+Yang paling relevan untuk Seekitar:
+
+| Kartu Pulse | Kenapa penting di sini |
+| :-- | :-- |
+| **Slow Queries** | Query radius `ST_Distance_Sphere` adalah yang terberat (`DATABASE.md` §11) |
+| **Queues** | Antrian `high` menumpuk = OTP & broadcast tertunda |
+| **Slow Jobs** | `BroadcastRequestJob` melambat saat penyedia bertambah |
+| **Exceptions** | Ringkasan cepat, detailnya tetap di Sentry |
+| **Slow Requests** | Endpoint pencarian biasanya yang pertama melambat |
+
+```php
+// Pulse hanya untuk admin — dasbornya memuat data operasional sensitif.
+Gate::define('viewPulse', fn (User $user) => $user->hasRole('super-admin'));
+```
+
+```env
+PULSE_ENABLED=true
+PULSE_SAMPLE_RATE=0.1        # rekam 10% agar tidak membebani
+```
+
+> ⚠️ Tabel Pulse tumbuh cepat. Pangkas berkala, kalau tidak ia sendiri yang
+> menjadi penyebab lambatnya database:
+> ```php
+> Schedule::command('pulse:trim')->daily();
+> ```
+>
+> **Uptime monitoring** ditangani layanan eksternal (UptimeRobot/Better Stack)
+> yang menembak `GET /up` — endpoint health check bawaan Laravel yang sudah
+> aktif di `bootstrap/app.php`. Pemantauan dari dalam server tidak berguna saat
+> servernya sendiri mati.
 
 ---
 
