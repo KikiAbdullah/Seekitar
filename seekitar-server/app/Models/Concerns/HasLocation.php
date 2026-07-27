@@ -72,10 +72,12 @@ trait HasLocation
     /** Tambahkan kolom `distance_km` ke hasil query. */
     public function scopeWithDistance(Builder $q, float $lat, float $lng): Builder
     {
-        return $q->select('*')->selectRaw(
-            'ST_Distance_Sphere(location, ST_GeomFromText(?, 4326, ?)) / 1000 AS distance_km',
-            [self::wkt($lat, $lng), self::AXIS]
-        );
+        return $q
+            ->select($this->baseSelect($q))
+            ->selectRaw(
+                'ST_Distance_Sphere(location, ST_GeomFromText(?, 4326, ?)) / 1000 AS distance_km',
+                [self::wkt($lat, $lng), self::AXIS]
+            );
     }
 
     public function scopeOrderByDistance(Builder $q, string $dir = 'asc'): Builder
@@ -92,9 +94,25 @@ trait HasLocation
      */
     public function scopeWithCoordinates(Builder $q, string $column = 'location'): Builder
     {
-        return $q->select('*')->selectRaw(
-            "ST_Latitude(`$column`) AS latitude, ST_Longitude(`$column`) AS longitude"
-        );
+        return $q
+            ->select($this->baseSelect($q))
+            ->selectRaw("ST_Latitude(`$column`) AS latitude, ST_Longitude(`$column`) AS longitude");
+    }
+
+    /**
+     * Kolom yang sudah dipilih, atau `*` bila belum ada.
+     *
+     * KENAPA PERLU: `select('*')` MENIMPA daftar kolom sebelumnya. Menulis
+     * `->withCoordinates()->withDistance()` tanpa ini membuat scope kedua
+     * membuang `latitude`/`longitude` yang baru saja ditambahkan scope
+     * pertama — hilang diam-diam, tanpa error, dan baru ketahuan saat
+     * pencocokan siaran mendapat koordinat NULL.
+     *
+     * @return array<int, mixed>
+     */
+    private function baseSelect(Builder $q): array
+    {
+        return $q->getQuery()->columns ?: ['*'];
     }
 
     /**

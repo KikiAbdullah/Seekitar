@@ -39,11 +39,12 @@ green, and the app served over HTTP (`/` and `/up` both return 200).
 | `node tools/dev/check-schema-drift.mjs` | Compares migrations ⇄ `DATABASE.md` ⇄ Eloquent `$fillable`; catches columns that exist in one layer but not the others. |
 | `node tools/dev/check-mysql.mjs` | Asserts the project stays MySQL-only: no SQLite path, SRID 4326 + `axis-order=long-lat`, spatial indexes on NOT NULL, native ENUM/SET, CHECK constraints, InnoDB. |
 | `node tools/dev/check-seeders.mjs` | Asserts seeders match the docs: 24 categories, 12 permissions, 8 settings keys, idempotency, UUID morph key for Spatie. |
+| `node tools/dev/check-services.mjs` | Asserts service-layer guarantees: OTP hashing/TTL/attempt limit, two-way broadcast matching, state-machine finality, phone masking in logs. |
 
 All checkers exit non-zero on failure, so they work as CI/pre-commit steps:
 
 ```bash
-for c in versions structure datamodel api backend mobile brand prd terms security deploy dbperf docs schema-drift mysql seeders; do
+for c in versions structure datamodel api backend mobile brand prd terms security deploy dbperf docs schema-drift mysql seeders services; do
   node tools/dev/check-$c.mjs || exit 1
 done
 ```

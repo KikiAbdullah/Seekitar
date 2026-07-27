@@ -28,6 +28,21 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Kirim WA — pengiriman OTP WhatsApp (Server_Implementation_Guide §15.2)
+    |--------------------------------------------------------------------------
+    |
+    | Hanya dipakai di produksi. Di luar produksi AppServiceProvider mengikat
+    | LogWhatsAppGateway, sehingga kredensial ini boleh kosong saat lokal.
+    |
+    */
+
+    'kirimwa' => [
+        'url'   => env('KIRIMWA_URL', 'https://api.kirimwa.id/v1'),
+        'token' => env('KIRIMWA_TOKEN'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
