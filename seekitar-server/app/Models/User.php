@@ -38,6 +38,7 @@ class User extends Authenticatable
             'verification_level' => VerificationLevel::class,
             'nik'                => 'encrypted',
             'is_blocked'         => 'boolean',
+            'rating_avg'         => 'decimal:2',
             'ktp_submitted_at'   => 'datetime',
             'verified1_at'       => 'datetime',
             'verified2_at'       => 'datetime',

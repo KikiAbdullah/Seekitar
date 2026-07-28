@@ -19,6 +19,7 @@ class UsersDataTable
     {
         $query = User::query()->select([
             'id', 'phone', 'name', 'verification_level',
+            'rating_avg', 'total_reviews',
             'is_blocked', 'ktp_submitted_at', 'created_at',
         ]);
 
@@ -33,6 +34,10 @@ class UsersDataTable
         return DataTables::eloquent($query)
             ->editColumn('created_at', fn (User $u) => $u->created_at?->format('d M Y H:i'))
             ->editColumn('verification_level', fn (User $u) => $u->verification_level?->label())
+            // ★ teks, bukan HTML — kolom ini lolos escaping DataTables apa adanya.
+            ->addColumn('rating', fn (User $u) => (int) $u->total_reviews > 0
+                ? sprintf('★ %s (%d)', number_format((float) $u->rating_avg, 1, ',', '.'), $u->total_reviews)
+                : '—')
             ->addColumn('status', fn (User $u) => $u->is_blocked ? 'Diblokir' : 'Aktif')
             ->addColumn('action', fn (User $u) => view('admin.users._actions', ['user' => $u])->render())
             // Kolom hasil render HTML tidak boleh di-escape ulang; sisanya

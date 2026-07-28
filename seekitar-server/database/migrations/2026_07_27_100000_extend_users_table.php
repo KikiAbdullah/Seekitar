@@ -65,6 +65,12 @@ return new class extends Migration
                 ->constrained('users')->nullOnDelete();
             $table->timestamp('verified2_at')->nullable();
 
+            // Reputasi pembeli — dihitung ulang ReviewObserver dari ulasan
+            // store_to_buyer (reviewee = pembeli ini). Cermin
+            // stores.rating_avg; bukan diisi manual.
+            $table->decimal('rating_avg', 3, 2)->default(0);
+            $table->unsignedInteger('total_reviews')->default(0);
+
             // NIK terenkripsi; nik_hash agar duplikasi tetap terdeteksi
             // (kolom encrypted tidak bisa di-WHERE, DATABASE.md §4.1).
             $table->string('nik', 255)->nullable();

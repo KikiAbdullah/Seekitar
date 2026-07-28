@@ -43,7 +43,7 @@
                     <h5 class="fw-semibold mb-1">{{ $user->name }}</h5>
                     <div class="font-monospace text-muted mb-2">{{ $user->phone }}</div>
 
-                    <div class="d-flex flex-wrap justify-content-center gap-2 mb-3">
+                    <div class="d-flex flex-wrap justify-content-center gap-2 mb-2">
                         <span class="badge bg-primary-subtle text-primary">
                             Level {{ $user->verification_level->value }} · {{ $user->verification_level->label() }}
                         </span>
@@ -51,6 +51,18 @@
                             <span class="badge bg-danger-subtle text-danger">Diblokir</span>
                         @else
                             <span class="badge bg-success-subtle text-success">Aktif</span>
+                        @endif
+                    </div>
+
+                    {{-- Reputasi pembeli dari ulasan toko → pembeli. --}}
+                    <div class="mb-3">
+                        @if ((int) $user->total_reviews > 0)
+                            @include('admin.partials._stars', [
+                                'rating' => $user->rating_avg,
+                                'total'  => $user->total_reviews,
+                            ])
+                        @else
+                            <span class="text-muted fs-2">Belum ada ulasan sebagai pembeli</span>
                         @endif
                     </div>
 
@@ -216,6 +228,12 @@
                         </td>
                         <td>
                             <div class="fw-semibold">{{ $store->name }}</div>
+                            @if ((int) $store->total_reviews > 0)
+                                @include('admin.partials._stars', [
+                                    'rating' => $store->rating_avg,
+                                    'total'  => $store->total_reviews,
+                                ])
+                            @endif
                             <div class="text-muted" style="font-size: 12px;">sejak {{ $store->created_at->format('d M Y') }}</div>
                         </td>
                         <td class="text-end text-nowrap">

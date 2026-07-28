@@ -156,6 +156,8 @@ Setiap tabel dilengkapi penjelasan tiap kolom, alasan pemilihan tipe, dan constr
 | `verified1_at`       | TIMESTAMP NULL       | Kapan tahap 1 disetujui — untuk audit & SLA. |
 | `verified2_by`       | CHAR(36) NULL FK → `users.id` | Admin yang memverifikasi tahap 2 (KTP & NIK). ON DELETE SET NULL. |
 | `verified2_at`       | TIMESTAMP NULL       | Kapan tahap 2 disetujui — bersamaan naiknya level ke 2. |
+| `rating_avg`         | DECIMAL(3,2) DEFAULT 0.00 | Rata-rata rating 1–5 sebagai PEMBELI — hanya dari ulasan `store_to_buyer`. Dihitung ulang `ReviewObserver`, bukan diisi manual. |
+| `total_reviews`      | INT UNSIGNED DEFAULT 0      | Jumlah ulasan yang diterima sebagai pembeli — pasangan `rating_avg`. |
 | `nik`                | VARCHAR(255) NULL    | NIK hasil pembacaan admin. **Terenkripsi** (cast `encrypted`), bukan plaintext.      |
 | `nik_hash`           | CHAR(64) NULL        | SHA-256 dari NIK. Untuk mendeteksi NIK ganda, karena kolom terenkripsi tak bisa di-`WHERE`. |
 | `is_blocked`         | TINYINT(1) DEFAULT 0 | Diblokir admin. Dipakai filter `GET /admin/users` & respons `423`.                   |
@@ -933,10 +935,14 @@ ALTER TABLE reviews
 >
 > **Solusi:** simpan keduanya, dibedakan oleh `direction`.
 >
-> | `direction` | `reviewee_id` | `store_id` | Memengaruhi `stores.rating_avg`? |
-> | :-- | :-- | :-- | :-- |
-> | `buyer_to_store` | pemilik toko | **terisi** | ✅ Ya |
-> | `store_to_buyer` | pembeli | NULL | ❌ Tidak |
+> | `direction` | `reviewee_id` | `store_id` | `stores.rating_avg` | `users.rating_avg` (pembeli) |
+> | :-- | :-- | :-- | :-- | :-- |
+> | `buyer_to_store` | pemilik toko | **terisi** | ✅ Ya | ❌ |
+> | `store_to_buyer` | pembeli | NULL | ❌ | ✅ Ya |
+>
+> Keduanya dijaga `ReviewObserver`: ulasan baru maupun yang dihapus memicu
+> COUNT/AVG ulang penuh ke target masing-masing — angka tidak digeser
+> inkremental, jadi tidak akan pernah selisih dari sumbernya.
 >
 > `UNIQUE(order_id, direction)` menggantikan `UNIQUE(order_id)` — kalau tidak,
 > hanya satu pihak yang bisa memberi ulasan dan fitur dua arah tetap mustahil.

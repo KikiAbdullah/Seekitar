@@ -51,7 +51,7 @@ class UserController extends Controller
                 ->with([
                     'verified1By:id,name',
                     'verified2By:id,name',
-                    'stores:id,user_id,name,photo,verification_status,is_active,created_at',
+                    'stores:id,user_id,name,photo,verification_status,is_active,rating_avg,total_reviews,created_at',
                 ])
                 ->withCount(['stores', 'customerRequests', 'orders'])
                 ->findOrFail($user->getKey()),

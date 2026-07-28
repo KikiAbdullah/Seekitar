@@ -68,6 +68,17 @@
                     </dd>
                     <dt class="col-sm-3">Radius layanan</dt>
                     <dd class="col-sm-9">{{ rtrim(rtrim(number_format((float) $store->service_radius_km, 2), '0'), '.') }} km</dd>
+                    <dt class="col-sm-3">Rating</dt>
+                    <dd class="col-sm-9">
+                        @if ((int) $store->total_reviews > 0)
+                            @include('admin.partials._stars', [
+                                'rating' => $store->rating_avg,
+                                'total'  => $store->total_reviews,
+                            ])
+                        @else
+                            <span class="text-muted">Belum ada ulasan</span>
+                        @endif
+                    </dd>
                     @if ($store->npwp)
                         <dt class="col-sm-3">NPWP</dt>
                         <dd class="col-sm-9 font-monospace">{{ $store->npwp }}</dd>
