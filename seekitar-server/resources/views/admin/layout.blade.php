@@ -10,142 +10,113 @@
     <meta name="robots" content="noindex, nofollow">
     <title>@yield('title', 'Panel Admin') — Seekitar Admin</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
-    {{-- FontAwesome 7.3.1 — HANYA di panel admin. Aplikasi mobile & web publik
-         memakai Heroicons; mencampurnya dalam satu layar langsung terasa tidak
-         rapi karena ketebalan garisnya berbeda (BRANDING §3.7.1). --}}
-    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css" rel="stylesheet">
+    {{--
+        Modernize (AdminMart) — Bootstrap 5 admin template, lisensi MIT.
+        Sumber: github.com/adminmart/Modernize-bootstrap-free (src/assets),
+        salinan lisensinya ada di public/vendor/modernize/LICENSE.txt.
+
+        ⚠️ styles.min.css SUDAH MEMUAT Bootstrap 5.3.3 di dalamnya. Karena itu
+        Bootstrap TIDAK dimuat terpisah lagi — memuatnya dua kali menggandakan
+        ±200 KB CSS dan membuat aturan yang belakangan menang secara acak
+        tergantung urutan berkas.
+
+        Dua @import di dalamnya (simplebar & tabler-icons) sengaja diarahkan
+        ulang ke CDN: berkas fontnya berukuran ±8 MB dan tidak layak masuk
+        repositori.
+    --}}
+    <link rel="stylesheet" href="{{ asset('vendor/modernize/css/styles.min.css') }}">
+
     <link href="https://cdn.datatables.net/2.1.8/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-    {{-- Select2 4.1.0 + tema Bootstrap 5. Tema terpisah wajib: tanpa itu
-         kotak Select2 tidak sejajar tinggi & border dengan .form-control
-         Bootstrap di sebelahnya. --}}
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+
+    {{-- Terakhir, supaya penyesuaian Seekitar menang atas gaya template. --}}
     <link href="{{ asset('css/admin.css') }}" rel="stylesheet">
     @stack('styles')
 </head>
 <body>
 
 {{-- Lewati navigasi: tautan pertama bagi pengguna keyboard & pembaca layar,
-     supaya tidak perlu menelusuri 12 butir menu di setiap halaman. --}}
+     supaya tidak perlu menelusuri belasan butir menu di setiap halaman. --}}
 <a href="#konten-utama" class="visually-hidden-focusable admin-skip">Lewati ke konten</a>
 
-<div class="admin-shell">
+{{--
+    Atribut data-* di bawah BUKAN hiasan: app.min.js membacanya untuk
+    menentukan mode sidebar, dan CSS template menargetkannya langsung
+    (mis. [data-sidebartype="mini-sidebar"]). Menghapusnya membuat tombol
+    ciutkan sidebar tidak berfungsi.
+--}}
+<div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6"
+     data-sidebartype="full" data-sidebar-position="fixed" data-header-position="fixed">
 
     @include('admin.partials.sidebar')
 
-    {{-- Latar gelap saat sidebar terbuka di layar kecil. Tanpa ini, sidebar
-         menutupi konten dan tidak ada cara jelas untuk menutupnya kembali. --}}
-    <div class="admin-backdrop" id="sidebarBackdrop" hidden></div>
+    <div class="body-wrapper">
 
-    <div class="admin-main">
+        @include('admin.partials.header')
 
-        <header class="admin-topbar">
-            <button class="btn btn-sm btn-outline-secondary d-lg-none" type="button"
-                    id="sidebarToggle" aria-controls="sidebar" aria-expanded="false"
-                    aria-label="Buka menu navigasi">
-                <i class="fa-solid fa-bars" aria-hidden="true"></i>
-            </button>
+        <div class="container-fluid">
 
-            <div class="admin-topbar-title">
-                <h1 class="h6 mb-0">@yield('title', 'Panel Admin')</h1>
-                @hasSection('breadcrumb')
-                    <nav aria-label="Remah roti">
-                        <ol class="breadcrumb mb-0">@yield('breadcrumb')</ol>
-                    </nav>
+            @hasSection('breadcrumb')
+                <nav aria-label="Remah roti" class="mb-3">
+                    <ol class="breadcrumb mb-0">@yield('breadcrumb')</ol>
+                </nav>
+            @endif
+
+            <main id="konten-utama">
+
+                {{-- role="alert" agar pembaca layar mengumumkan hasil aksi;
+                     tanpa itu pengguna non-visual tidak tahu simpannya
+                     berhasil. --}}
+                @if (session('success'))
+                    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2" role="alert">
+                        <i class="ti ti-circle-check fs-5" aria-hidden="true"></i>
+                        <span>{{ session('success') }}</span>
+                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Tutup"></button>
+                    </div>
                 @endif
-            </div>
 
-            <div class="dropdown ms-auto">
-                <button class="btn btn-sm btn-light border d-flex align-items-center gap-2"
-                        type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
-                    <span class="d-none d-sm-inline">{{ auth()->user()?->name }}</span>
-                    <i class="fa-solid fa-chevron-down fa-xs opacity-50" aria-hidden="true"></i>
-                </button>
+                @if (session('error'))
+                    <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2" role="alert">
+                        <i class="ti ti-alert-triangle fs-5" aria-hidden="true"></i>
+                        <span>{{ session('error') }}</span>
+                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Tutup"></button>
+                    </div>
+                @endif
 
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li class="px-3 py-2">
-                        <div class="fw-semibold">{{ auth()->user()?->name }}</div>
-                        <div class="small text-muted">{{ auth()->user()?->email }}</div>
-                        <div class="mt-1">
-                            {{-- Peran ditampilkan apa adanya dari Spatie, bukan
-                                 ditebak dari daftar permission: dua admin bisa
-                                 punya izin sama tetapi peran berbeda. --}}
-                            @foreach (auth()->user()?->getRoleNames() ?? [] as $role)
-                                <span class="badge text-bg-secondary">{{ $role }}</span>
+                @if ($errors->any())
+                    <div class="alert alert-danger" role="alert">
+                        <ul class="mb-0 ps-3">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
                             @endforeach
-                        </div>
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li>
-                        <a class="dropdown-item" href="{{ route('admin.profile.edit') }}">
-                            <i class="fa-solid fa-user fa-fw me-1" aria-hidden="true"></i> Profil Saya
-                        </a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item" href="{{ route('admin.password.edit') }}">
-                            <i class="fa-solid fa-key fa-fw me-1" aria-hidden="true"></i> Ubah Kata Sandi
-                        </a>
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li>
-                        {{-- POST, bukan GET: logout mengubah state, dan tautan
-                             GET bisa dipicu prefetch browser atau <img> di
-                             halaman lain. --}}
-                        <form method="POST" action="{{ route('admin.logout') }}" class="px-3 py-1">
-                            @csrf
-                            <button type="submit" class="btn btn-sm btn-outline-danger w-100">
-                                <i class="fa-solid fa-right-from-bracket fa-fw me-1" aria-hidden="true"></i> Keluar
-                            </button>
-                        </form>
-                    </li>
-                </ul>
-            </div>
-        </header>
+                        </ul>
+                    </div>
+                @endif
 
-        <main class="admin-content" id="konten-utama">
+                @yield('content')
+            </main>
 
-            {{-- role="alert" agar pembaca layar mengumumkan hasil aksi; tanpa
-                 itu, pengguna non-visual tidak tahu simpannya berhasil. --}}
-            @if (session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    <i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
-                </div>
-            @endif
-
-            @if (session('error'))
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>
-                    {{ session('error') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
-                </div>
-            @endif
-
-            @if ($errors->any())
-                <div class="alert alert-danger" role="alert">
-                    <ul class="mb-0 ps-3">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-
-            @yield('content')
-        </main>
-
-        <footer class="admin-footer">
-            <span>&copy; {{ now()->year }} {{ config('seekitar.company.name') }}</span>
-            <span class="text-muted">Panel Admin Seekitar</span>
-        </footer>
+            <footer class="admin-footer text-center py-4 mt-4">
+                <p class="mb-0 fs-2">
+                    &copy; {{ now()->year }} {{ config('seekitar.company.name') }} ·
+                    <span class="text-muted">Panel Admin Seekitar</span>
+                </p>
+            </footer>
+        </div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+{{-- jQuery WAJIB paling awal: sidebarmenu.js, app.min.js, Datatables, dan
+     Select2 semuanya plugin jQuery. --}}
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+{{-- bootstrap.bundle: HANYA JS-nya. CSS-nya sudah ada di styles.min.css. --}}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/simplebar@6.3.3/dist/simplebar.min.js"></script>
+
+<script src="{{ asset('vendor/modernize/js/sidebarmenu.js') }}"></script>
+<script src="{{ asset('vendor/modernize/js/app.min.js') }}"></script>
+
 <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/2.1.8/js/dataTables.bootstrap5.min.js"></script>
 {{-- select2.full: varian ini sudah memuat modul terjemahan, sehingga berkas
@@ -153,6 +124,7 @@
      TIDAK memuatnya dan bahasa Indonesia diam-diam diabaikan. --}}
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/i18n/id.js"></script>
+
 <script>
     // Token CSRF dipasang sekali untuk seluruh request AJAX.
     $.ajaxSetup({ headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') } });
@@ -160,23 +132,10 @@
     /*
      * Bahasa Datatables — disetel SEKALI untuk seluruh panel.
      *
-     * KENAPA BERKAS SENDIRI, BUKAN CDN
-     * --------------------------------
-     * Sebelumnya tiap tabel memuat
-     * `cdn.datatables.net/plug-ins/2.1.8/i18n/id.json` dan SELALU gagal dengan
-     * "i18n file loading error". Sebabnya: 2.1.8 adalah versi CORE Datatables,
-     * sedangkan repo Plugins punya penomoran sendiri (2.1.4, 2.3.6, 3.0.0 …)
-     * dan tidak pernah punya tag 2.1.8 — URL-nya 404, dan Datatables
-     * melaporkannya sebagai galat i18n.
-     *
-     * Menaikkan nomor versinya saja hanya memindahkan masalah: nomor itu akan
-     * basi lagi pada rilis berikutnya, dan tabel admin ikut rusak setiap kali
-     * pihak ketiga mengubah jalurnya. Berkasnya 800 byte, jadi di-host sendiri
-     * di public/vendor/datatables/id.json (terjemahan resmi, lisensi MIT).
-     *
-     * DataTable.defaults.language, bukan opsi per-tabel: lima tabel yang
-     * masing-masing menulis ulang URL-nya adalah lima tempat yang bisa
-     * menyimpang. Tabel tetap boleh menimpanya bila perlu.
+     * Berkasnya di-host sendiri, bukan dari CDN: jalur
+     * `cdn.datatables.net/plug-ins/<versi>/i18n/id.json` memakai penomoran
+     * repo Plugins yang berbeda dari versi core, sehingga URL-nya mudah 404
+     * dan seluruh tabel memunculkan "i18n file loading error".
      */
     $.extend(true, $.fn.dataTable.defaults, {
         language: { url: @js(asset('vendor/datatables/id.json')) },
@@ -185,12 +144,9 @@
     /*
      * Select2 untuk SEMUA dropdown panel — disetel sekali di sini.
      *
-     * Dipasang ke `.js-select2`, bukan ke seluruh `select`: kotak centang
-     * palsu, input tersembunyi, atau select bawaan pihak ketiga (mis. pemilih
-     * "Tampilkan N entri" milik Datatables) tidak boleh ikut berubah.
-     * Datatables merender pemilihnya sendiri setiap kali tabel digambar
-     * ulang, dan membungkusnya dengan Select2 membuat kontrol itu hilang
-     * setelah sortir.
+     * Dipasang ke `.js-select2`, bukan ke seluruh `select`: pemilih
+     * "Tampilkan N entri" milik Datatables dirender ulang setiap tabel
+     * digambar, dan membungkusnya membuat kontrol itu hilang setelah sortir.
      */
     window.seekitarSelect2 = function (scope) {
         const $target = $(scope || document).find('.js-select2');
@@ -207,45 +163,14 @@
                 theme: 'bootstrap-5',
                 language: 'id',
                 width: $el.data('width') || 'style',
-
-                // Placeholder diambil dari opsi kosong bila ada, sehingga
-                // tiap dropdown tidak perlu menuliskannya dua kali.
                 placeholder: $el.data('placeholder') || $el.find('option[value=""]').text() || 'Pilih…',
-
-                // Opsi kosong berfungsi sebagai "hapus pilihan" — tanpa ini,
-                // filter yang sudah dipilih tidak bisa dikembalikan ke Semua
-                // selain lewat daftar.
                 allowClear: $el.find('option[value=""]').length > 0 && !$el.prop('required'),
-
-                // Kotak pencarian disembunyikan pada daftar pendek: untuk 3
-                // pilihan, kolom cari hanya menambah satu langkah tanpa guna.
                 minimumResultsForSearch: Number($el.data('min-search') ?? 8),
             });
         });
     };
 
     seekitarSelect2();
-
-
-    // Sidebar geser di layar kecil. aria-expanded ikut diperbarui — tanpa itu
-    // pembaca layar selalu melaporkan menu dalam keadaan tertutup.
-    (function () {
-        const shell    = document.querySelector('.admin-shell');
-        const toggle   = document.getElementById('sidebarToggle');
-        const backdrop = document.getElementById('sidebarBackdrop');
-        if (!shell || !toggle || !backdrop) return;
-
-        const setOpen = (open) => {
-            shell.classList.toggle('sidebar-open', open);
-            toggle.setAttribute('aria-expanded', String(open));
-            backdrop.hidden = !open;
-        };
-
-        toggle.addEventListener('click', () => setOpen(!shell.classList.contains('sidebar-open')));
-        backdrop.addEventListener('click', () => setOpen(false));
-        // Escape menutup menu: pola yang sudah diharapkan pengguna keyboard.
-        document.addEventListener('keydown', e => { if (e.key === 'Escape') setOpen(false); });
-    })();
 </script>
 @stack('scripts')
 </body>

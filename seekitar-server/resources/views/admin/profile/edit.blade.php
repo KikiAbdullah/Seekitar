@@ -99,7 +99,7 @@
                         saat Anda hanya memperbaiki nama.
                     </p>
                     <a href="{{ route('admin.password.edit') }}" class="btn btn-outline-secondary btn-sm">
-                        <i class="fa-solid fa-key me-1" aria-hidden="true"></i> Ubah Kata Sandi
+                        <i class="ti ti-key me-1" aria-hidden="true"></i> Ubah Kata Sandi
                     </a>
                 </div>
             </div>

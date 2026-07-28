@@ -10,7 +10,7 @@
 @section('content')
 
     <div class="alert alert-warning py-2 d-flex align-items-center gap-2" role="alert">
-        <i class="fa-solid fa-clock" aria-hidden="true"></i>
+        <i class="ti ti-clock-hour-4" aria-hidden="true"></i>
         <span>
             SLA peninjauan <strong>1×24 jam</strong> (PRD §5.3.2).
             Diurutkan dari pengajuan <strong>terlama</strong> — itulah yang paling dekat melewati batas.
@@ -66,7 +66,7 @@
                                   method="POST" class="d-inline">
                                 @csrf
                                 <button type="submit" class="btn btn-sm btn-outline-success">
-                                    <i class="fa-solid fa-circle-check" aria-hidden="true"></i> Setujui
+                                    <i class="ti ti-circle-check" aria-hidden="true"></i> Setujui
                                 </button>
                             </form>
 
@@ -86,7 +86,7 @@
                 @empty
                     <tr>
                         <td colspan="5" class="text-center text-muted py-5">
-                            <i class="fa-solid fa-circle-check fa-2x d-block mb-2 opacity-25" aria-hidden="true"></i>
+                            <i class="ti ti-circle-check fs-7 d-block mb-2 opacity-25" aria-hidden="true"></i>
                             Tidak ada pengajuan menunggu.
                         </td>
                     </tr>

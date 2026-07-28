@@ -1,7 +1,7 @@
 {{-- Aksi baris kategori — tampil di bilah aksi sebelah judul. --}}
 @can('manage-categories')
     <a href="{{ route('admin.categories.edit', $category) }}" class="btn btn-sm btn-outline-secondary">
-        <i class="fa-solid fa-pen me-1" aria-hidden="true"></i> Sunting
+        <i class="ti ti-pencil me-1" aria-hidden="true"></i> Sunting
     </a>
 
     <form action="{{ route('admin.categories.destroy', $category) }}" method="POST" class="d-inline">
@@ -11,7 +11,7 @@
              toko/permintaan — FK RESTRICT + pemeriksaan JSON_CONTAINS. --}}
         <button type="submit" class="btn btn-sm btn-outline-danger"
                 onclick="return confirm('Hapus kategori ini?')">
-            <i class="fa-solid fa-trash me-1" aria-hidden="true"></i> Hapus
+            <i class="ti ti-trash me-1" aria-hidden="true"></i> Hapus
         </button>
     </form>
 @endcan

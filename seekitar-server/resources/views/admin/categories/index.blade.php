@@ -20,7 +20,7 @@
             {{-- "Tambah" BUKAN aksi baris: ia tidak bergantung pilihan, jadi
                  selalu tampil dan dipisahkan garis dari bilah di atas. --}}
             <a href="{{ route('admin.categories.create') }}" class="btn btn-seekitar btn-sm">
-                <i class="fa-solid fa-plus me-1" aria-hidden="true"></i> Kategori
+                <i class="ti ti-plus me-1" aria-hidden="true"></i> Kategori
             </a>
         </div>
     </div>

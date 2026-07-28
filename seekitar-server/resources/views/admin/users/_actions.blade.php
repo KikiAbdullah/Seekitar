@@ -6,7 +6,7 @@
 --}}
 @can('manage-users')
     <a href="{{ route('admin.users.edit', $user) }}" class="btn btn-sm btn-outline-secondary">
-        <i class="fa-solid fa-pen me-1" aria-hidden="true"></i> Sunting
+        <i class="ti ti-pencil me-1" aria-hidden="true"></i> Sunting
     </a>
 
     <form action="{{ route('admin.users.block', $user) }}" method="POST" class="d-inline">
@@ -18,7 +18,7 @@
         <button type="submit"
                 class="btn btn-sm {{ $user->is_blocked ? 'btn-outline-success' : 'btn-outline-danger' }}"
                 onclick="return confirm('Yakin ubah status blokir {{ $user->name }}?')">
-            <i class="fa-solid {{ $user->is_blocked ? 'fa-unlock' : 'fa-ban' }} me-1" aria-hidden="true"></i>
+            <i class="ti {{ $user->is_blocked ? 'ti-lock-open' : 'ti-ban' }} me-1" aria-hidden="true"></i>
             {{ $user->is_blocked ? 'Buka Blokir' : 'Blokir' }}
         </button>
     </form>

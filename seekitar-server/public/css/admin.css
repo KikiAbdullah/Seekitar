@@ -1,180 +1,110 @@
 /*
- * Panel Admin Seekitar — gaya sidebar & shell.
+ * Penyesuaian Seekitar di atas template Modernize (AdminMart, MIT).
  *
- * Palet dari BRANDING-GUIDELINE.md §3.5. Ditulis sebagai berkas statis, bukan
- * lewat Vite: panel admin hanya memakai Bootstrap dari CDN dan tidak punya
- * langkah build sendiri, jadi menambahkan bundler hanya untuk 200 baris CSS
- * akan menambah beban rilis tanpa manfaat.
+ * Berkas ini dimuat TERAKHIR supaya menang atas styles.min.css tanpa perlu
+ * menyunting berkas vendor — pembaruan template nanti cukup menimpa
+ * public/vendor/modernize/ tanpa kehilangan penyesuaian di sini.
  *
- * ⚠️ Ukuran huruf terkecil di berkas ini adalah 11px. Batas itu bukan selera:
- * target pengguna Seekitar berusia 40+ dan umumnya sudah presbiopia
+ * ⚠️ Ukuran huruf terkecil di berkas ini 11px. Batas itu bukan selera: target
+ * pengguna Seekitar berusia 40+ dan umumnya sudah presbiopia
  * (BRANDING-GUIDELINE.md §4). Usulan font 8–10px di TODO_BUG #135 ditolak
  * dengan alasan yang sama.
  */
 
 :root {
+    /* Palet merek (BRANDING-GUIDELINE.md §3.5). */
     --seekitar-green: #168A4A;
     --seekitar-green-dark: #11703C;
-    --seekitar-green-deep: #0C5A30;
     --seekitar-yellow: #F5B83D;
     --seekitar-ink: #1F2933;
 
-    /* Warna umpan balik status (BRANDING §3.5.3) — sengaja BUKAN hijau
-       lokal, agar tombol aksi dan pesan status tidak tertukar. */
+    /* Umpan balik status (§3.5.3) — sengaja BUKAN hijau lokal, agar tombol
+       aksi dan pesan status tidak tertukar. */
     --seekitar-success: #16A34A;
     --seekitar-warning: #EA580C;
     --seekitar-danger: #DC2626;
     --seekitar-info: #0891B2;
     --seekitar-trust: #2563EB;
-
-    --sidebar-width: 248px;
-    --topbar-height: 60px;
 }
 
-body {
-    background-color: #F1F5F9;
-    color: var(--seekitar-ink);
-    font-size: 14px;
+/*
+ * Warna utama template diganti hijau Seekitar.
+ *
+ * Modernize memakai biru #5D87FF sebagai --bs-primary. Menimpanya di sini
+ * membuat SELURUH komponen Bootstrap (tombol, badge, tautan, state aktif
+ * sidebar) otomatis ikut hijau — jauh lebih andal daripada menambal satu per
+ * satu kelas .btn-primary, .text-primary, .bg-primary, dan seterusnya.
+ */
+:root,
+[data-bs-theme="light"] {
+    --bs-primary: var(--seekitar-green);
+    --bs-primary-rgb: 22, 138, 74;
+    --bs-primary-text-emphasis: var(--seekitar-green-dark);
+    --bs-primary-bg-subtle: #E3F3EA;
+    --bs-primary-border-subtle: #B9E0CA;
+    --bs-link-color: var(--seekitar-green);
+    --bs-link-hover-color: var(--seekitar-green-dark);
+    --bs-link-color-rgb: 22, 138, 74;
 }
 
-/* --------------------------------------------------------------- Kerangka */
-
-.admin-shell {
-    display: flex;
-    min-height: 100vh;
+/* Beberapa gaya template memakai nilai heksa langsung, bukan variabel,
+   sehingga tetap perlu ditimpa eksplisit. */
+.btn-primary {
+    --bs-btn-bg: var(--seekitar-green);
+    --bs-btn-border-color: var(--seekitar-green);
+    --bs-btn-hover-bg: var(--seekitar-green-dark);
+    --bs-btn-hover-border-color: var(--seekitar-green-dark);
+    --bs-btn-active-bg: var(--seekitar-green-dark);
+    --bs-btn-active-border-color: var(--seekitar-green-dark);
+    --bs-btn-disabled-bg: var(--seekitar-green);
+    --bs-btn-disabled-border-color: var(--seekitar-green);
 }
 
-.admin-main {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    /* min-width:0 wajib pada flex item yang memuat tabel lebar. Tanpa itu
-       Datatables mendorong lebar kolom dan seluruh halaman ikut melebar. */
-    min-width: 0;
-}
-
-/* --------------------------------------------------------------- Sidebar */
-
-.admin-sidebar {
-    width: var(--sidebar-width);
-    flex: 0 0 var(--sidebar-width);
-    background: linear-gradient(180deg, var(--seekitar-green) 0%, var(--seekitar-green-deep) 100%);
+/* Alias lama: sejumlah view masih memakai .btn-seekitar. Dipertahankan agar
+   tidak perlu menyunting belasan berkas sekaligus. */
+.btn-seekitar {
+    background-color: var(--seekitar-green);
+    border-color: var(--seekitar-green);
     color: #fff;
-    display: flex;
-    flex-direction: column;
-    position: sticky;
-    top: 0;
-    height: 100vh;
-    overflow-y: auto;
 }
-
-.admin-brand {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 1rem 1.1rem;
+.btn-seekitar:hover,
+.btn-seekitar:focus {
+    background-color: var(--seekitar-green-dark);
+    border-color: var(--seekitar-green-dark);
     color: #fff;
-    text-decoration: none;
-    font-weight: 700;
-    font-size: 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
 }
 
-.admin-brand:hover { color: #fff; }
+/* Menu sidebar aktif ikut hijau. */
+.sidebar-nav ul .sidebar-item .sidebar-link.active {
+    background-color: var(--seekitar-green);
+    color: #fff;
+}
+
+/* ----------------------------------------------------------- Identitas */
 
 .admin-brand-dot {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: var(--seekitar-yellow);
-    color: var(--seekitar-ink);
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--seekitar-green);
+    color: #fff;
     display: grid;
     place-items: center;
     font-weight: 800;
     flex: 0 0 auto;
 }
 
-.admin-nav { padding: 0.6rem 0.55rem 1rem; }
-
-.admin-nav .nav-link {
-    color: rgba(255, 255, 255, 0.85);
-    border-radius: 0.5rem;
-    padding: 0.5rem 0.7rem;
-    margin-bottom: 0.15rem;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    transition: background-color 0.12s ease-in-out;
-}
-
-.admin-nav .nav-link:hover,
-.admin-nav .nav-link:focus-visible {
-    background-color: rgba(255, 255, 255, 0.12);
+/* Inisial pengganti foto profil — panel tidak menyimpan avatar admin. */
+.admin-avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: var(--seekitar-green);
     color: #fff;
-}
-
-/* Menu aktif ditandai latar + garis kuning, BUKAN hanya warna teks:
-   perbedaan warna saja gagal untuk pengguna buta warna (WCAG 1.4.1). */
-.admin-nav .nav-link.active {
-    background-color: rgba(255, 255, 255, 0.18);
-    color: #fff;
-    font-weight: 600;
-    box-shadow: inset 3px 0 0 var(--seekitar-yellow);
-}
-
-.admin-nav-heading {
-    /* 11px = batas terkecil yang diizinkan (BRANDING §4). */
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: rgba(255, 255, 255, 0.55);
-    padding: 0.9rem 0.75rem 0.35rem;
+    display: grid;
+    place-items: center;
     font-weight: 700;
-}
-
-.admin-subnav { padding-left: 1.1rem; }
-.admin-subnav .nav-link { font-size: 13px; padding: 0.4rem 0.7rem; }
-
-.admin-sidebar-foot {
-    margin-top: auto;
-    padding: 0.9rem 1.1rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.15);
-    /* 12px, masih di atas batas 11px. */
-    font-size: 12px;
-}
-
-/* --------------------------------------------------------------- Topbar */
-
-.admin-topbar {
-    height: var(--topbar-height);
-    background: #fff;
-    border-bottom: 1px solid #E2E8F0;
-    display: flex;
-    align-items: center;
-    gap: 0.85rem;
-    padding: 0 1rem;
-    position: sticky;
-    top: 0;
-    z-index: 1020;
-}
-
-.admin-topbar-title { min-width: 0; }
-.admin-topbar .breadcrumb { font-size: 12px; margin: 0; }
-.admin-topbar .breadcrumb-item + .breadcrumb-item::before { content: "›"; }
-
-.admin-content { padding: 1.25rem 1rem 2rem; flex: 1 1 auto; }
-
-.admin-footer {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    flex-wrap: wrap;
-    padding: 0.85rem 1rem;
-    border-top: 1px solid #E2E8F0;
-    background: #fff;
-    font-size: 12px;
-    color: #64748B;
+    font-size: 14px;
 }
 
 .admin-skip {
@@ -187,14 +117,57 @@ body {
     border-radius: 0.4rem;
 }
 
+.admin-footer {
+    border-top: 1px solid var(--bs-border-color);
+}
+
+/* ------------------------------------------------- Tabel terpilih-satu */
+
+/*
+ * Baris tabel bisa dipilih; aksinya muncul di bilah sebelah judul, bukan
+ * sebagai kolom tombol di setiap baris.
+ */
+.admin-selectable tbody tr {
+    cursor: pointer;
+}
+
+/* Penanda baris terpilih TIDAK mengandalkan warna latar saja: perbedaan
+   warna gagal untuk pengguna buta warna (WCAG 1.4.1). Karena itu ditambah
+   garis di tepi kiri. */
+.admin-selectable tbody tr.table-active {
+    box-shadow: inset 3px 0 0 var(--seekitar-green);
+}
+
+/* Fokus keyboard wajib terlihat — baris dijangkau lewat Tab. */
+.admin-selectable tbody tr:focus-visible {
+    outline: 2px solid var(--seekitar-trust);
+    outline-offset: -2px;
+}
+
+/* Bilah aksi sejajar judul.
+
+   min-height WAJIB: bilahnya kosong sampai ada baris dipilih, dan tanpa
+   tinggi tetap seluruh baris judul akan melompat naik-turun setiap tombol
+   muncul lalu hilang. Nilainya menyamai tinggi .btn-sm Bootstrap. */
+.admin-rowactions {
+    min-height: 31px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+/* Form di dalam bilah aksi tampil sebaris dengan tombol lainnya. */
+.admin-rowactions form {
+    display: inline;
+    margin: 0;
+}
+
 /* --------------------------------------------------------------- Kartu KPI */
 
 .stat-card {
-    border: 1px solid #E2E8F0;
+    border: 1px solid var(--bs-border-color);
     border-radius: 0.75rem;
     background: #fff;
     height: 100%;
-    /* Garis warna di tepi kiri diisi .stat-card[data-tone] di bawah. */
     border-left-width: 4px;
     border-left-style: solid;
     border-left-color: #CBD5E1;
@@ -225,61 +198,9 @@ body {
     border-radius: 0.6rem;
     display: grid;
     place-items: center;
-    background: #F1F5F9;
-    color: #475569;
+    background: var(--bs-primary-bg-subtle);
+    color: var(--seekitar-green);
     flex: 0 0 auto;
-}
-
-/* --------------------------------------------------------------- Tombol */
-
-.btn-seekitar { background-color: var(--seekitar-green); color: #fff; border-color: var(--seekitar-green); }
-.btn-seekitar:hover,
-.btn-seekitar:focus { background-color: var(--seekitar-green-dark); border-color: var(--seekitar-green-dark); color: #fff; }
-
-.table, .form-control, .form-select, .btn { font-size: 14px; }
-.table > :not(caption) > * > * { padding: 0.55rem 0.6rem; }
-
-/* Datatables memasang kontrol di atas & bawah tabel; rapikan jaraknya. */
-div.dt-container .dt-search input { min-width: 200px; }
-div.dt-container .dt-length select { width: auto; display: inline-block; }
-
-/* ----------------------------------------------- Tabel terpilih-satu */
-
-/*
- * Baris tabel bisa dipilih; aksinya muncul di bilah sebelah judul, bukan
- * sebagai kolom tombol di setiap baris.
- */
-.admin-selectable tbody tr {
-    cursor: pointer;
-}
-
-/* Penanda baris terpilih TIDAK mengandalkan warna latar saja: perbedaan warna
-   gagal untuk pengguna buta warna (WCAG 1.4.1). Karena itu ditambah garis. */
-.admin-selectable tbody tr.table-active {
-    box-shadow: inset 3px 0 0 var(--seekitar-green);
-}
-
-/* Fokus keyboard wajib terlihat — baris dijangkau lewat Tab. */
-.admin-selectable tbody tr:focus-visible {
-    outline: 2px solid var(--seekitar-trust);
-    outline-offset: -2px;
-}
-
-/* Bilah aksi sejajar judul.
-
-   min-height WAJIB: bilahnya kosong sampai ada baris dipilih, dan tanpa
-   tinggi tetap seluruh baris judul akan melompat naik-turun setiap tombol
-   muncul lalu hilang. Nilainya menyamai tinggi .btn-sm Bootstrap. */
-.admin-rowactions {
-    min-height: 31px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-}
-
-/* Form di dalam bilah aksi tampil sebaris dengan tombol lainnya. */
-.admin-rowactions form {
-    display: inline;
-    margin: 0;
 }
 
 /* ----------------------------------------------------------------- Select2 */
@@ -287,16 +208,15 @@ div.dt-container .dt-length select { width: auto; display: inline-block; }
 /*
  * Penyelarasan Select2 dengan Bootstrap 5.
  *
- * Tema resmi sudah menyamakan warna & border, tetapi tiga hal berikut tetap
- * perlu ditangani sendiri.
+ * Tema resminya sudah menyamakan warna & border, tetapi tiga hal berikut
+ * tetap perlu ditangani sendiri.
  */
 
 /* 1. Lebar. `width: 'style'` membuat Select2 mewarisi lebar inline elemen
-      aslinya; untuk <select> tanpa gaya inline hasilnya menciut ke 0 di
-      dalam flexbox. Lebar minimum menjaga kotaknya tetap terbaca. */
+      aslinya; untuk <select> tanpa gaya inline hasilnya menciut di dalam
+      flexbox. */
 .select2-container { min-width: 190px; }
 
-/* Di dalam form bertata kolom, biarkan Select2 mengisi kolomnya penuh. */
 .col-12 > .select2-container,
 .mb-3 > .select2-container { width: 100% !important; }
 
@@ -313,19 +233,17 @@ div.dt-container .dt-length select { width: auto; display: inline-block; }
     align-items: center;
 }
 
-/* 3. Daftar hasil & kotak cari mengikuti ukuran huruf panel (batas 11px,
-      BRANDING §4). */
+/* 3. Daftar hasil & kotak cari mengikuti ukuran huruf panel. */
 .select2-container--bootstrap-5 .select2-results__option,
 .select2-container--bootstrap-5 .select2-search__field { font-size: 14px; }
 
-/* Pilihan yang sedang disorot memakai hijau merek, bukan biru bawaan. */
 .select2-container--bootstrap-5 .select2-results__option--highlighted[aria-selected] {
     background-color: var(--seekitar-green);
     color: #fff;
 }
 
 .select2-container--bootstrap-5 .select2-results__option[aria-selected="true"] {
-    background-color: rgba(22, 138, 74, 0.12);
+    background-color: var(--bs-primary-bg-subtle);
     color: var(--seekitar-ink);
 }
 
@@ -337,49 +255,27 @@ div.dt-container .dt-length select { width: auto; display: inline-block; }
  */
 .select2-container--open { z-index: 1060; }
 
-/* Kotak pencarian di dalam dropdown perlu jarak agar tidak menempel tepi. */
 .select2-container--bootstrap-5 .select2-dropdown .select2-search {
     padding: 0.4rem;
 }
 
+/* -------------------------------------------------------------- Datatables */
+
+.table, .form-control, .form-select, .btn { font-size: 14px; }
+
+div.dt-container .dt-search input { min-width: 200px; }
+div.dt-container .dt-length select { width: auto; display: inline-block; }
+
 /* --------------------------------------------------------------- Responsif */
-
-@media (max-width: 991.98px) {
-    .admin-sidebar {
-        position: fixed;
-        z-index: 1045;
-        top: 0;
-        left: 0;
-        /* Disembunyikan lewat transform, bukan display:none — dengan begitu
-           fokus keyboard tetap bisa dikembalikan dan animasinya mulus. */
-        transform: translateX(-100%);
-        transition: transform 0.2s ease-in-out;
-    }
-
-    .admin-shell.sidebar-open .admin-sidebar { transform: translateX(0); }
-
-    .admin-backdrop {
-        position: fixed;
-        inset: 0;
-        background: rgba(15, 23, 42, 0.45);
-        z-index: 1040;
-    }
-}
-
-@media (min-width: 992px) {
-    /* Backdrop tidak pernah dipakai di layar besar; [hidden] saja tidak cukup
-       karena .admin-backdrop menetapkan position:fixed. */
-    .admin-backdrop { display: none !important; }
-}
 
 /* Hormati preferensi sistem: animasi geser bisa memicu mual pada sebagian
    pengguna (WCAG 2.3.3). */
 @media (prefers-reduced-motion: reduce) {
-    .admin-sidebar { transition: none; }
-    .admin-nav .nav-link { transition: none; }
+    .left-sidebar,
+    .sidebar-nav .sidebar-link { transition: none !important; }
 }
 
 @media print {
-    .admin-sidebar, .admin-topbar, .admin-footer, .admin-backdrop { display: none !important; }
-    .admin-content { padding: 0; }
+    .left-sidebar, .app-header, .admin-footer { display: none !important; }
+    .body-wrapper { margin-left: 0 !important; }
 }

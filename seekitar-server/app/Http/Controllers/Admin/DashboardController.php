@@ -71,7 +71,7 @@ class DashboardController extends Controller
             $cards['users'] = [
                 'label' => 'Total Pengguna',
                 'value' => User::count(),
-                'icon'  => 'fa-users',
+                'icon'  => 'ti-users',
                 'tone'  => 'green',
                 'hint'  => User::whereDate('created_at', today())->count().' baru hari ini',
                 'url'   => route('admin.users.index'),
@@ -84,7 +84,7 @@ class DashboardController extends Controller
                 'value' => Store::where('is_active', true)
                     ->where('verification_status', VerificationStatus::Verified)
                     ->count(),
-                'icon'  => 'fa-store',
+                'icon'  => 'ti-building-store',
                 'tone'  => 'green',
                 'hint'  => Store::count().' toko terdaftar',
                 'url'   => route('admin.stores.index'),
@@ -99,7 +99,7 @@ class DashboardController extends Controller
             $cards['orders'] = [
                 'label' => 'Pesanan Bulan Ini',
                 'value' => $bulanIni,
-                'icon'  => 'fa-cart-shopping',
+                'icon'  => 'ti-shopping-cart',
                 'tone'  => 'blue',
                 'hint'  => Order::whereDate('created_at', today())->count().' hari ini',
                 'url'   => route('admin.orders.index'),
@@ -112,7 +112,7 @@ class DashboardController extends Controller
                 'value' => CustomerRequest::where('status', RequestStatus::Open)
                     ->where('expires_at', '>', now())
                     ->count(),
-                'icon'  => 'fa-circle-question',
+                'icon'  => 'ti-clipboard-list',
                 'tone'  => 'cyan',
                 'hint'  => 'kedaluwarsa otomatis 24 jam',
                 'url'   => route('admin.requests.index'),
@@ -128,7 +128,7 @@ class DashboardController extends Controller
             $cards['disputes'] = [
                 'label' => 'Laporan Lewat SLA',
                 'value' => $lewatSla,
-                'icon'  => 'fa-triangle-exclamation',
+                'icon'  => 'ti-alert-triangle',
                 'tone'  => $lewatSla > 0 ? 'red' : 'green',
                 'hint'  => Dispute::where('status', DisputeStatus::Open)->count().' laporan terbuka',
                 'url'   => route('admin.disputes.index'),
@@ -139,7 +139,7 @@ class DashboardController extends Controller
             $cards['reviews'] = [
                 'label' => 'Ulasan Masuk',
                 'value' => Review::where('created_at', '>=', now()->startOfMonth())->count(),
-                'icon'  => 'fa-star',
+                'icon'  => 'ti-star',
                 'tone'  => 'yellow',
                 'hint'  => 'bulan berjalan',
                 'url'   => route('admin.reviews.index'),
@@ -150,7 +150,7 @@ class DashboardController extends Controller
             $cards['listings'] = [
                 'label' => 'Listing Aktif',
                 'value' => Listing::where('status', \App\Enums\ListingStatus::Active)->count(),
-                'icon'  => 'fa-boxes-stacked',
+                'icon'  => 'ti-package',
                 'tone'  => 'blue',
                 'hint'  => Listing::count().' total listing',
                 'url'   => route('admin.listings.index'),
@@ -163,7 +163,7 @@ class DashboardController extends Controller
                 'value' => Offer::where('status', OfferStatus::Pending)
                     ->where('expires_at', '>', now())
                     ->count(),
-                'icon'  => 'fa-handshake',
+                'icon'  => 'ti-discount-2',
                 'tone'  => 'cyan',
                 'hint'  => 'belum diputuskan pembeli',
                 'url'   => route('admin.offers.index'),
@@ -192,7 +192,7 @@ class DashboardController extends Controller
                 'value' => $this->ktpMenunggu(),
                 'url'   => route('admin.verifications.users'),
                 'tone'  => 'warning',
-                'icon'  => 'fa-id-card',
+                'icon'  => 'ti-id',
             ];
         }
 
@@ -202,7 +202,7 @@ class DashboardController extends Controller
                 'value' => Store::where('verification_status', VerificationStatus::Pending)->count(),
                 'url'   => route('admin.verifications.stores'),
                 'tone'  => 'warning',
-                'icon'  => 'fa-shop',
+                'icon'  => 'ti-building-store',
             ];
         }
 
@@ -212,7 +212,7 @@ class DashboardController extends Controller
                 'value' => Dispute::where('status', DisputeStatus::Open)->count(),
                 'url'   => route('admin.disputes.index'),
                 'tone'  => 'danger',
-                'icon'  => 'fa-triangle-exclamation',
+                'icon'  => 'ti-alert-triangle',
             ];
         }
 
@@ -222,7 +222,7 @@ class DashboardController extends Controller
                 'value' => Order::where('status', OrderStatus::Dispute)->count(),
                 'url'   => route('admin.orders.index').'?status='.OrderStatus::Dispute->value,
                 'tone'  => 'danger',
-                'icon'  => 'fa-cart-shopping',
+                'icon'  => 'ti-shopping-cart',
             ];
         }
 

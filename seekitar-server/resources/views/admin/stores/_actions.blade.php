@@ -15,7 +15,7 @@
         <form action="{{ route('admin.stores.approve', $store) }}" method="POST" class="d-inline">
             @csrf
             <button type="submit" class="btn btn-sm btn-outline-success">
-                <i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i> Setujui
+                <i class="ti ti-circle-check me-1" aria-hidden="true"></i> Setujui
             </button>
         </form>
     @endif
@@ -25,7 +25,7 @@
         <button type="button" class="btn btn-sm btn-outline-danger js-tolak-toko"
                 data-action="{{ route('admin.stores.reject', $store) }}"
                 data-nama="{{ $store->name }}">
-            <i class="fa-solid fa-ban me-1" aria-hidden="true"></i> Tolak
+            <i class="ti ti-ban me-1" aria-hidden="true"></i> Tolak
         </button>
     @endif
 @endcan

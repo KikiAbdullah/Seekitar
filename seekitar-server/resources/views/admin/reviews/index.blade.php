@@ -9,7 +9,7 @@
 
 @section('content')
     <div class="alert alert-warning py-2 d-flex align-items-center gap-2" role="alert">
-        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+        <i class="ti ti-alert-triangle" aria-hidden="true"></i>
         <span>Menghapus ulasan otomatis menghitung ulang rating toko terkait.</span>
     </div>
 

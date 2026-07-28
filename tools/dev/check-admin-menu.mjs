@@ -434,12 +434,16 @@ if (!/dataTable\.defaults[\s\S]{0,200}vendor\/datatables\/id\.json/.test(layoutS
   ok('bahasa Datatables disetel sekali di layout');
 }
 
-// Ikon FontAwesome wajib punya aria-hidden: pembaca layar tidak boleh
-// membacakan glyph dekoratif sebagai teks acak.
+// Ikon Tabler wajib punya aria-hidden: pembaca layar tidak boleh membacakan
+// glyph dekoratif sebagai teks acak.
+//
+// Panel memakai Tabler (`ti ti-*`) sejak beralih ke template Modernize —
+// FontAwesome tidak lagi dimuat sama sekali, jadi kelas `fa-*` yang tersisa
+// akan tampil sebagai kotak kosong.
 const ikonTanpaAria = [];
 for (const p of blades) {
   const src = fs.readFileSync(p, 'utf8');
-  for (const m of src.matchAll(/<i class="fa-[^"]*"(?![^>]*aria-hidden)[^>]*>/g)) {
+  for (const m of src.matchAll(/<i class="ti [^"]*"(?![^>]*aria-hidden)[^>]*>/g)) {
     ikonTanpaAria.push(`${path.basename(p)}: ${m[0].slice(0, 50)}`);
   }
 }
@@ -448,6 +452,52 @@ if (ikonTanpaAria.length) {
 } else {
   ok('semua ikon dekoratif memakai aria-hidden');
 }
+
+/*
+ * Tidak boleh ada sisa FontAwesome.
+ *
+ * Template Modernize memakai Tabler, dan FontAwesome sudah TIDAK dimuat sama
+ * sekali. Kelas `fa-*` yang tertinggal tidak memunculkan error apa pun — ia
+ * hanya tampil sebagai ruang kosong, dan itu baru terlihat oleh mata manusia.
+ */
+const sisaFa = [];
+for (const p of blades) {
+  const src = fs.readFileSync(p, 'utf8').replace(/\{\{--[\s\S]*?--\}\}/g, '');
+  if (/\bfa-solid\b|\bfa-regular\b|"fa-[a-z]/.test(src)) {
+    sisaFa.push(path.basename(path.dirname(p)) + '/' + path.basename(p));
+  }
+}
+if (sisaFa.length) {
+  fail(`kelas FontAwesome tersisa (ikon akan kosong): ${sisaFa.join(', ')}`);
+} else {
+  ok('tidak ada sisa FontAwesome — semua ikon Tabler');
+}
+
+// Template Modernize sudah memuat Bootstrap 5.3.3 di styles.min.css.
+// Memuat CSS Bootstrap lagi menggandakan ~200 KB dan membuat aturan yang
+// belakangan menang secara acak tergantung urutan berkas.
+const layoutBlades = [
+  path.join(viewDir, 'layout.blade.php'),
+  path.join(viewDir, 'auth/login.blade.php'),
+];
+const bootstrapGanda = layoutBlades.filter(f =>
+  fs.existsSync(f) && /<link[^>]+bootstrap@[^>]+\.css/.test(fs.readFileSync(f, 'utf8')));
+if (bootstrapGanda.length) {
+  fail(`CSS Bootstrap dimuat terpisah padahal sudah ada di styles.min.css: ${bootstrapGanda.map(f => path.basename(f)).join(', ')}`);
+} else {
+  ok('Bootstrap tidak dimuat ganda');
+}
+
+// Aset template harus benar-benar ada di repositori.
+for (const aset of [
+  'seekitar-server/public/vendor/modernize/css/styles.min.css',
+  'seekitar-server/public/vendor/modernize/js/sidebarmenu.js',
+  'seekitar-server/public/vendor/modernize/js/app.min.js',
+  'seekitar-server/public/vendor/modernize/LICENSE.txt',
+]) {
+  if (!exists(aset)) fail(`aset template hilang: ${aset}`);
+}
+ok('aset template Modernize lengkap (termasuk LICENSE)');
 
 // ─────────────────────────────────── 5b. Pola tabel: pilih baris, bukan kolom aksi
 console.log('\nPola tabel: baris terpilih, bukan kolom aksi');

@@ -148,6 +148,49 @@ composer require yajra/laravel-datatables-buttons:^13.0
 
 **Konfigurasi:** Tidak ada file konfig khusus. Langsung gunakan facade `DataTables`.
 
+#### Template UI: Modernize (AdminMart)
+
+Panel admin memakai **Modernize Bootstrap 5 Free** — template yang sama dengan
+`bootstrapdemos.adminmart.com/modernize-bt-free/src/html/`.
+
+| Hal | Nilai |
+| :-- | :-- |
+| Sumber | `github.com/adminmart/Modernize-bootstrap-free` (`src/assets`) |
+| Lisensi | **MIT** — salinannya di `public/vendor/modernize/LICENSE.txt` |
+| Aset lokal | `styles.min.css`, `sidebarmenu.js`, `app.min.js` |
+| Ikon | **Tabler** (`ti ti-*`), bukan FontAwesome |
+
+Struktur wajib (dibaca CSS & JS template):
+
+```
+.page-wrapper#main-wrapper[data-sidebartype]
+├── aside.left-sidebar → nav.sidebar-nav > ul#sidebarnav > li.sidebar-item > a.sidebar-link
+└── .body-wrapper
+    ├── header.app-header  (tombol .sidebartoggler)
+    └── .container-fluid
+```
+
+> ⚠️ **`styles.min.css` SUDAH memuat Bootstrap 5.3.3.** Memuat CSS Bootstrap
+> lagi menggandakan ±200 KB dan membuat aturan yang belakangan menang secara
+> acak tergantung urutan berkas. Yang dimuat terpisah hanya **JS**-nya
+> (`bootstrap.bundle.min.js`). Ditegakkan `check-admin-menu.mjs`.
+
+> ⚠️ **Kelas `sidebar-item`, `sidebar-link`, `has-arrow`, `first-level`, id
+> `sidebarnav`, dan atribut `data-sidebartype` bukan hiasan.** `sidebarmenu.js`
+> memakainya untuk menandai menu aktif dan membuka submenu; `app.min.js`
+> memakai `.sidebartoggler` dan `data-sidebartype` untuk mode mini-sidebar.
+> Mengganti nama kelasnya mematikan perilaku itu tanpa error apa pun.
+
+Dua `@import` di dalam `styles.min.css` (simplebar & tabler-icons) diarahkan
+ulang ke CDN karena berkas fontnya ±8 MB dan tidak layak masuk repositori.
+
+**Warna merek dipertahankan lewat variabel, bukan tambalan per kelas.**
+Template memakai biru `#5D87FF` sebagai `--bs-primary`; `public/css/admin.css`
+menimpanya dengan hijau Seekitar `#168A4A`, sehingga seluruh komponen Bootstrap
+(tombol, badge, tautan, state aktif sidebar) ikut berubah sekaligus. Berkas itu
+dimuat **terakhir** supaya menang tanpa perlu menyunting berkas vendor —
+pembaruan template nanti cukup menimpa `public/vendor/modernize/`.
+
 #### Select2 untuk semua dropdown
 
 Seluruh `<select>` panel memakai **Select2 4.1.0** + tema Bootstrap 5, dengan

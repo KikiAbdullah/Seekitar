@@ -9,7 +9,7 @@
 
 @section('content')
     <div class="alert alert-info py-2 d-flex align-items-center gap-2" role="alert">
-        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+        <i class="ti ti-info-circle" aria-hidden="true"></i>
         <span>
             Halaman ini <strong>hanya baca</strong> (§9.8). Penawaran adalah kesepakatan
             harga antara penyedia dan pembeli; admin tidak mengubahnya. Untuk penawaran

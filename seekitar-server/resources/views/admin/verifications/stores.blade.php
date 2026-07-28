@@ -10,7 +10,7 @@
 @section('content')
 
     <div class="alert alert-info py-2 d-flex align-items-center gap-2" role="alert">
-        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+        <i class="ti ti-info-circle" aria-hidden="true"></i>
         <span>
             Toko yang belum disetujui <strong>tidak bisa memasang listing</strong>
             maupun mengirim penawaran. Pemiliknya wajib sudah terverifikasi KTP (Level 2).
@@ -65,7 +65,7 @@
                                   method="POST" class="d-inline">
                                 @csrf
                                 <button type="submit" class="btn btn-sm btn-outline-success">
-                                    <i class="fa-solid fa-circle-check" aria-hidden="true"></i> Setujui
+                                    <i class="ti ti-circle-check" aria-hidden="true"></i> Setujui
                                 </button>
                             </form>
 
@@ -85,7 +85,7 @@
                 @empty
                     <tr>
                         <td colspan="5" class="text-center text-muted py-5">
-                            <i class="fa-solid fa-circle-check fa-2x d-block mb-2 opacity-25" aria-hidden="true"></i>
+                            <i class="ti ti-circle-check fs-7 d-block mb-2 opacity-25" aria-hidden="true"></i>
                             Tidak ada pengajuan toko menunggu.
                         </td>
                     </tr>

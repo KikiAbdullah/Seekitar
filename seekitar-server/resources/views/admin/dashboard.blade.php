@@ -26,7 +26,7 @@
                     <a href="{{ $item['url'] }}"
                        class="text-decoration-none d-block border rounded-3 bg-white p-3 h-100">
                         <div class="d-flex align-items-center gap-2">
-                            <i class="fa-solid {{ $item['icon'] }} fa-fw text-{{ $item['tone'] }}" aria-hidden="true"></i>
+                            <i class="ti {{ $item['icon'] }} text-{{ $item['tone'] }}" aria-hidden="true"></i>
                             <span class="fs-5 fw-bold text-{{ $item['value'] > 0 ? $item['tone'] : 'body' }}">
                                 {{ \App\Support\Angka::bulat($item['value']) }}
                             </span>
@@ -57,7 +57,7 @@
                                 <div class="stat-hint">{{ $card['hint'] }}</div>
                             </div>
                             <div class="stat-icon">
-                                <i class="fa-solid {{ $card['icon'] }}" aria-hidden="true"></i>
+                                <i class="ti {{ $card['icon'] }}" aria-hidden="true"></i>
                             </div>
                         </div>
 
@@ -78,7 +78,7 @@
         <div class="card mb-4">
             <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <span class="fw-semibold">
-                    <i class="fa-solid fa-chart-line me-1" aria-hidden="true"></i> Aktivitas Harian
+                    <i class="ti ti-chart-line me-1" aria-hidden="true"></i> Aktivitas Harian
                 </span>
 
                 <div class="btn-group btn-group-sm" role="group" aria-label="Rentang grafik">
@@ -112,7 +112,7 @@
                 <div class="card h-100">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span class="fw-semibold">
-                            <i class="fa-solid fa-circle-question me-1" aria-hidden="true"></i> Permintaan Terbaru
+                            <i class="ti ti-clipboard-list me-1" aria-hidden="true"></i> Permintaan Terbaru
                         </span>
                         <a href="{{ route('admin.requests.index') }}" class="small">Lihat semua</a>
                     </div>
@@ -168,7 +168,7 @@
                 <div class="card h-100">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span class="fw-semibold">
-                            <i class="fa-solid fa-handshake me-1" aria-hidden="true"></i> Penawaran Terbaru
+                            <i class="ti ti-discount-2 me-1" aria-hidden="true"></i> Penawaran Terbaru
                         </span>
                         <a href="{{ route('admin.offers.index') }}" class="small">Lihat semua</a>
                     </div>
@@ -219,7 +219,7 @@
          penjelasan — ia akan tampak seperti panel yang rusak. --}}
     @if (count($stats) === 0 && count($antrian) === 0)
         <div class="alert alert-info" role="alert">
-            <i class="fa-solid fa-circle-info me-1" aria-hidden="true"></i>
+            <i class="ti ti-info-circle me-1" aria-hidden="true"></i>
             Akun Anda belum diberi izin apa pun di panel ini. Hubungi super-admin
             untuk mendapatkan akses.
         </div>
