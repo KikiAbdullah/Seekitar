@@ -6,7 +6,9 @@ use App\Enums\VerificationLevel;
 use App\Models\Concerns\HasLocation;
 use App\Models\Concerns\SerializesDatesAsUtc;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -20,12 +22,14 @@ class User extends Authenticatable
     protected $fillable = [
         'phone', 'email', 'password', 'name', 'avatar_url', 'address', 'verification_level',
         'ktp_image', 'selfie_image', 'ktp_submitted_at', 'ktp_rejected_reason',
+        'verified1_by', 'verified1_at', 'verified2_by', 'verified2_at',
         'nik', 'nik_hash', 'is_blocked', 'blocked_reason', 'blocked_at',
     ];
 
     /** Data pribadi tidak boleh bocor lewat response API (UU PDP). */
     protected $hidden = [
-        'ktp_image', 'selfie_image', 'nik', 'nik_hash', 'password', 'remember_token',
+        'ktp_image', 'selfie_image', 'nik', 'nik_hash',
+        'password', 'remember_token',
     ];
 
     protected function casts(): array
@@ -35,6 +39,8 @@ class User extends Authenticatable
             'nik'                => 'encrypted',
             'is_blocked'         => 'boolean',
             'ktp_submitted_at'   => 'datetime',
+            'verified1_at'       => 'datetime',
+            'verified2_at'       => 'datetime',
             'blocked_at'         => 'datetime',
             'email_verified_at'  => 'datetime',
             // Cast 'hashed' membuat password otomatis di-hash saat diisi,
@@ -67,6 +73,18 @@ class User extends Authenticatable
         return $this->hasMany(Store::class);
     }
 
+    /** Admin yang memverifikasi tahap 1 (nomor HP). */
+    public function verified1By(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified1_by');
+    }
+
+    /** Admin yang memverifikasi tahap 2 (KTP + NIK). */
+    public function verified2By(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified2_by');
+    }
+
     public function customerRequests(): HasMany
     {
         return $this->hasMany(CustomerRequest::class);
@@ -85,6 +103,51 @@ class User extends Authenticatable
     public function canOpenStore(): bool
     {
         return $this->verification_level->canOpenStore();
+    }
+
+    /**
+     * Antrian verifikasi admin — pengajuan KTP yang belum selesai dua tahap.
+     *
+     * SATU-SATUNYA definisi antrian: dipakai halaman antrian (VerificationController)
+     * dan lencana sidebar (SidebarComposer). Dua definisi terpisah akan
+     * membuat angka lencana tidak cocok dengan isi halaman yang dibukanya.
+     */
+    public function scopePendingVerification(Builder $query): Builder
+    {
+        return $query->whereNotNull('ktp_submitted_at')
+            ->whereNull('verified2_at');
+    }
+
+    /**
+     * Tahap verifikasi berikutnya yang menunggu admin: 1, 2, atau null
+     * bila tidak ada yang bisa dikerjakan.
+     *
+     * Tiap klik "Verifikasi" hanya menyelesaikan SATU tahap — admin dipaksa
+     * memeriksa ulang berkas antar-tahap, bukan menyetujui dua-duanya
+     * sekaligus tanpa melihat.
+     */
+    public function nextVerificationStep(): ?int
+    {
+        // Kedua tahap hanya ada selama pengajuan KTP masih terbuka.
+        if ($this->ktp_submitted_at === null) {
+            return null;
+        }
+
+        if ($this->verified1_at === null) {
+            return 1;   // nomor HP
+        }
+
+        return $this->verified2_at === null ? 2 : null;   // KTP & NIK
+    }
+
+    /** Label singkat tiap tahap — untuk tombol dan pesan sukses. */
+    public static function verificationStepLabel(int $step): string
+    {
+        return match ($step) {
+            1       => 'Nomor HP',
+            2       => 'KTP & NIK',
+            default => 'Tidak diketahui',
+        };
     }
 
     /**

@@ -3,7 +3,6 @@
 namespace App\View\Composers;
 
 use App\Enums\DisputeStatus;
-use App\Enums\VerificationLevel;
 use App\Enums\VerificationStatus;
 use App\Models\Dispute;
 use App\Models\Store;
@@ -54,7 +53,11 @@ class SidebarComposer
     }
 
     /**
-     * Antrian KTP yang menunggu verifikasi.
+     * Antrian verifikasi pengguna (tahap 1 nomor HP & tahap 2 KTP).
+     *
+     * WAJIB memakai scope `pendingVerification` — definisi yang sama dengan
+     * halaman antrian. Menulis ulang WHERE-nya di sini akan membuat angka
+     * lencana berbeda dari jumlah baris yang dilihat admin.
      *
      * Angka antrian adalah data: admin tanpa izin `verify-users` tidak boleh
      * melihat volume pengajuannya, jadi query-nya pun tidak dijalankan —
@@ -66,9 +69,8 @@ class SidebarComposer
             return 0;
         }
 
-        return $this->remember('sidebar.pending_ktp', fn (): int => User::query()
-            ->whereNotNull('ktp_submitted_at')
-            ->where('verification_level', VerificationLevel::Basic)
+        return $this->remember('sidebar.pending_users', fn (): int => User::query()
+            ->pendingVerification()
             ->count());
     }
 

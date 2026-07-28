@@ -152,6 +152,10 @@ Setiap tabel dilengkapi penjelasan tiap kolom, alasan pemilihan tipe, dan constr
 | `selfie_image`       | VARCHAR(500) NULL    | URL selfie memegang KTP. Wajib bersama `ktp_image`.                                  |
 | `ktp_submitted_at`   | TIMESTAMP NULL       | Kapan berkas diajukan — dipakai SLA peninjauan admin 1×24 jam.                       |
 | `ktp_rejected_reason`| TEXT NULL            | Alasan penolakan agar pengguna tahu apa yang harus diperbaiki.                       |
+| `verified1_by`       | CHAR(36) NULL FK → `users.id` | Admin yang memverifikasi tahap 1 (nomor HP). ON DELETE SET NULL. |
+| `verified1_at`       | TIMESTAMP NULL       | Kapan tahap 1 disetujui — untuk audit & SLA. |
+| `verified2_by`       | CHAR(36) NULL FK → `users.id` | Admin yang memverifikasi tahap 2 (KTP & NIK). ON DELETE SET NULL. |
+| `verified2_at`       | TIMESTAMP NULL       | Kapan tahap 2 disetujui — bersamaan naiknya level ke 2. |
 | `nik`                | VARCHAR(255) NULL    | NIK hasil pembacaan admin. **Terenkripsi** (cast `encrypted`), bukan plaintext.      |
 | `nik_hash`           | CHAR(64) NULL        | SHA-256 dari NIK. Untuk mendeteksi NIK ganda, karena kolom terenkripsi tak bisa di-`WHERE`. |
 | `is_blocked`         | TINYINT(1) DEFAULT 0 | Diblokir admin. Dipakai filter `GET /admin/users` & respons `423`.                   |
@@ -223,6 +227,14 @@ sensitif menurut UU PDP. Simpan di bucket privat, akses hanya lewat URL
 pre-signed berumur pendek, dan **jangan** pernah dikembalikan di response API
 publik. Setelah `verification_level` naik ke 2, berkas boleh dihapus sesuai
 kebijakan retensi.
+
+**Verifikasi admin DUA TAHAP** (`verified1_*`, `verified2_*`):
+tiap tahap disetujui lewat satu klik tombol "Verifikasi" pada baris antrian,
+dan stempelnya — siapa (`_by`) + kapan (`_at`) — tidak pernah ditimpa.
+
+1. **Tahap 1 · Nomor HP** → `verified1_by` / `verified1_at`.
+2. **Tahap 2 · KTP & NIK** → `verified2_by` / `verified2_at` + level naik ke 2.
+   NIK yang terbaca di foto KTP dicocokkan dengan kolom `nik`.
 
 ### 4.2 `stores`
 

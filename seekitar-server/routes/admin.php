@@ -137,10 +137,20 @@ Route::middleware(['auth', 'role:admin|super-admin'])->group(function (): void {
     Route::middleware('permission:verify-users')->group(function (): void {
         Route::get('verifications/users', [VerificationController::class, 'users'])
             ->name('verifications.users');
-        Route::post('verifications/users/{user}/approve', [VerificationController::class, 'approveUser'])
-            ->name('verifications.users.approve');
+        Route::post('verifications/users/{user}/verify', [VerificationController::class, 'verifyUser'])
+            ->name('verifications.users.verify');
         Route::post('verifications/users/{user}/reject', [VerificationController::class, 'rejectUser'])
             ->name('verifications.users.reject');
+
+        /*
+         * Berkas privat (KTP, selfie) tidak punya URL publik —
+         * satu-satunya jalan melihatnya lewat route berizin ini (UU PDP).
+         * `kind` dibatasi whereIn supaya tidak ada kolom lain yang bisa
+         * diintip lewat parameter bebas.
+         */
+        Route::get('verifications/users/{user}/media/{kind}', [VerificationController::class, 'media'])
+            ->name('verifications.users.media')
+            ->whereIn('kind', ['ktp', 'selfie']);
     });
 
     Route::middleware('permission:verify-stores')->group(function (): void {

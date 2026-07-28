@@ -10,13 +10,22 @@ use App\Models\Store;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Antrian verifikasi — KTP pengguna & pengajuan toko.
+ * Antrian verifikasi — pengguna (3 tahap) & pengajuan toko.
  *
  * DUA HALAMAN, DUA IZIN. `verify-users` dan `verify-stores` adalah permission
  * terpisah (§6.2), jadi menggabungkannya dalam satu halaman akan memaksa admin
  * yang hanya punya salah satunya melihat data yang bukan haknya.
+ *
+ * Verifikasi pengguna DUA TAHAP, masing-masing di-stempel admin+waktu:
+ *   1. nomor HP   2. KTP & NIK  (→ level Verified)
+ * Tiap klik tombol "Verifikasi" hanya menyelesaikan satu tahap — admin dipaksa
+ * memeriksa ulang berkas antar-tahap.
  *
  * SLA peninjauan 1×24 jam (PRD §5.3.2) — karena itu urutannya SELALU dari
  * pengajuan terlama, bukan terbaru: yang paling lama menunggu adalah yang
@@ -24,15 +33,21 @@ use Illuminate\Http\RedirectResponse;
  */
 class VerificationController extends Controller
 {
-    /** Antrian KTP pengguna. */
+    /**
+     * Antrian verifikasi pengguna (semua tahap dalam satu tabel).
+     *
+     * Definisi antriannya BUKAN di sini, melainkan scope
+     * `User::pendingVerification()` — lencana sidebar memakai definisi yang
+     * sama, dan dua sumber kebenaran akan membuat angkanya tidak cocok.
+     */
     public function users(): View
     {
         return view('admin.verifications.users', [
             'pending' => User::query()
-                ->select(['id', 'name', 'phone', 'verification_level',
-                          'ktp_submitted_at', 'ktp_rejected_reason', 'created_at'])
-                ->whereNotNull('ktp_submitted_at')
-                ->where('verification_level', VerificationLevel::Basic)
+                // Nama admin pemverifikasi tiap tahap ikut dimuat — kolom
+                // tabel menampilkannya, dan N+1 di tabel 20 baris tidak perlu.
+                ->with(['verified1By:id,name', 'verified2By:id,name'])
+                ->pendingVerification()
                 ->orderBy('ktp_submitted_at')
                 ->paginate(20)
                 ->withQueryString(),
@@ -55,22 +70,81 @@ class VerificationController extends Controller
         ]);
     }
 
-    public function approveUser(User $user): RedirectResponse
+    /**
+     * Memverifikasi SATU tahap berikutnya (1 → 2).
+     *
+     * Tahapnya ditentukan SERVER dari data terkini, bukan dari tombol yang
+     * kebetulan diklik: dua admin bisa membuka baris yang sama, dan klik
+     * kedua tidak boleh menimpa stempel yang sudah ada. Karena itu baris
+     * dikunci (lockForUpdate) di dalam transaksi sebelum dibaca ulang.
+     */
+    public function verifyUser(Request $request, User $user): RedirectResponse
     {
-        $user->verification_level  = VerificationLevel::Verified;
-        $user->ktp_rejected_reason = null;
-        $user->save();
+        $adminId = $request->user()->id;
 
-        return back()->with('success', "Verifikasi {$user->name} disetujui.");
+        $tahap = DB::transaction(function () use ($user, $adminId): ?int {
+            $antrian = User::lockForUpdate()->findOrFail($user->id);
+
+            $tahap = $antrian->nextVerificationStep();
+            if ($tahap === null) {
+                return null;
+            }
+
+            if ($tahap === 1) {
+                $antrian->verified1_by = $adminId;
+                $antrian->verified1_at = now();
+            } else {
+                $antrian->verified2_by        = $adminId;
+                $antrian->verified2_at        = now();
+                $antrian->verification_level  = VerificationLevel::Verified;
+                $antrian->ktp_rejected_reason = null;
+            }
+
+            $antrian->save();
+
+            return $tahap;
+        });
+
+        if ($tahap === null) {
+            // Bisa terjadi bila admin lain lebih dulu menyelesaikan tahap
+            // terakhirnya — bukan kesalahan, cukup diberi tahu.
+            return back()->with('error', "Tidak ada tahap yang menunggu untuk {$user->name}.");
+        }
+
+        return back()->with('success',
+            "Verifikasi tahap {$tahap} (".User::verificationStepLabel($tahap).") {$user->name} berhasil.");
+    }
+
+    /**
+     * Berkas privat antrian pengguna: KTP atau selfie.
+     *
+     * Disimpan di disk privat dan TIDAK pernah dipetakan ke URL publik.
+     * Satu-satunya jalan melihatnya adalah route berizin `verify-users`
+     * ini, dan `kind` sudah dibatasi whereIn pada route — parameter bebas
+     * tidak bisa dipakai mengintip kolom lain. no-store: berkas identitas
+     * tidak boleh tersangkut di cache perantara.
+     */
+    public function media(User $user, string $kind): StreamedResponse
+    {
+        $path = match ($kind) {
+            'ktp'    => $user->ktp_image,
+            'selfie' => $user->selfie_image,
+        };
+
+        abort_if($path === null || ! Storage::disk('local')->exists($path), 404);
+
+        return Storage::disk('local')
+            ->response($path)
+            ->header('Cache-Control', 'private, no-store');
     }
 
     /**
      * Menolak pengajuan KTP.
      *
-     * Level TETAP di Basic — penolakan bukan penurunan peringkat, melainkan
-     * kembalinya pengguna ke keadaan sebelum mengajukan. `ktp_submitted_at`
-     * dikosongkan supaya barisnya keluar dari antrian dan pengguna bisa
-     * mengirim ulang berkas.
+     * `ktp_submitted_at` dikosongkan supaya barisnya keluar dari antrian dan
+     * pengguna bisa mengirim ulang berkas. Stempel tahap yang SUDAH lolos
+     * tidak dicabut: tahap 1 memeriksa nomor HP yang tetap valid meski foto
+     * KTP-nya ditolak — pengguna hanya mengulang dari tahap yang gagal.
      */
     public function rejectUser(RejectVerificationRequest $request, User $user): RedirectResponse
     {

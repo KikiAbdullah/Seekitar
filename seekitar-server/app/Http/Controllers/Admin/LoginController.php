@@ -14,8 +14,8 @@ use Illuminate\Validation\ValidationException;
  * Login panel admin — email + kata sandi (Server_Implementation_Guide §18A.5).
  *
  * Berbeda dari aplikasi mobile yang memakai OTP WhatsApp: panel ini dibuka di
- * browser desktop, sering tanpa ponsel di tangan. Lihat catatan pada migrasi
- * `add_admin_credentials_to_users_table` untuk alasan lengkapnya.
+ * browser desktop, sering tanpa ponsel di tangan. Lihat komentar kolom
+ * email/password pada migrasi `extend_users_table` untuk alasan lengkapnya.
  */
 class LoginController extends Controller
 {
