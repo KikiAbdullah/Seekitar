@@ -6,14 +6,15 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Masuk — Seekitar Admin</title>
 
-    {{-- styles.min.css sudah memuat Bootstrap 5.3.3; jangan memuatnya lagi
+    {{-- style.min.css sudah memuat Bootstrap 5.3.0; jangan memuatnya lagi
          terpisah (lihat catatan di admin/layout.blade.php). --}}
-    <link rel="stylesheet" href="{{ asset('vendor/modernize/css/styles.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/modernize/css/icons/tabler-icons/tabler-icons.min.css') }}">
+    <link id="themeColors" rel="stylesheet" href="{{ asset('vendor/modernize/css/style.min.css') }}">
     <link href="{{ asset('css/admin.css') }}" rel="stylesheet">
 </head>
 <body>
 
-<div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6"
+<div class="page-wrapper" id="main-wrapper" data-layout="vertical"
      data-sidebartype="full" data-sidebar-position="fixed" data-header-position="fixed">
 
     <div class="position-relative overflow-hidden text-bg-light min-vh-100 d-flex align-items-center justify-content-center">

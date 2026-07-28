@@ -489,15 +489,60 @@ if (bootstrapGanda.length) {
 }
 
 // Aset template harus benar-benar ada di repositori.
+const V = 'seekitar-server/public/vendor/modernize';
+let asetHilang = 0;
 for (const aset of [
-  'seekitar-server/public/vendor/modernize/css/styles.min.css',
-  'seekitar-server/public/vendor/modernize/js/sidebarmenu.js',
-  'seekitar-server/public/vendor/modernize/js/app.min.js',
-  'seekitar-server/public/vendor/modernize/LICENSE.txt',
+  `${V}/css/style.min.css`,
+  `${V}/css/icons/tabler-icons/tabler-icons.min.css`,
+  `${V}/css/icons/tabler-icons/fonts/tabler-icons.woff2`,
+  `${V}/js/app.min.js`,
+  `${V}/js/seekitar.init.js`,
+  `${V}/js/sidebarmenu.js`,
+  `${V}/js/custom.js`,
+  `${V}/SUMBER.md`,   // provenance & catatan lisensi
 ]) {
-  if (!exists(aset)) fail(`aset template hilang: ${aset}`);
+  if (!exists(aset)) { fail(`aset template hilang: ${aset}`); asetHilang++; }
 }
-ok('aset template Modernize lengkap (termasuk LICENSE)');
+if (!asetHilang) ok('aset template Modernize lengkap');
+
+/*
+ * Warna template WAJIB sudah hijau.
+ *
+ * Biru bawaan #5D87FF ditulis langsung di 117 tempat di dalam style.min.css —
+ * variabel CSS tidak menjangkaunya. Kalau berkas vendor diperbarui tanpa
+ * menjalankan ulang tools/dev/recolor-modernize.mjs, panel diam-diam kembali
+ * biru di ratusan komponen.
+ */
+const vendorCss = path.join(ROOT, `${V}/css/style.min.css`);
+if (fs.existsSync(vendorCss)) {
+  const isi = fs.readFileSync(vendorCss, 'utf8');
+  const biru = (isi.match(/#5[dD]87[fF][fF]/g) || []).length;
+
+  if (biru > 0) {
+    fail(`style.min.css masih memuat ${biru} biru #5D87FF — jalankan: node tools/dev/recolor-modernize.mjs`);
+  } else if (!isi.includes('#168A4A') && !isi.includes('#168a4a')) {
+    fail('style.min.css tidak memuat hijau Seekitar #168A4A — pewarnaan belum dijalankan');
+  } else {
+    ok('CSS template sudah diwarnai hijau Seekitar');
+  }
+}
+
+/*
+ * Font Tabler: hanya woff2 yang disalin, jadi CSS-nya tidak boleh lagi
+ * meminta eot/ttf/woff — tiga permintaan 404 di setiap halaman.
+ */
+const tiCss = path.join(ROOT, `${V}/css/icons/tabler-icons/tabler-icons.min.css`);
+if (fs.existsSync(tiCss)) {
+  const isi = fs.readFileSync(tiCss, 'utf8');
+  const mati = ['\\.eot', '\\.ttf', '\\.woff\\?', '\\.woff"']
+    .filter(ext => new RegExp(`tabler-icons${ext}`).test(isi));
+
+  if (mati.length) {
+    fail(`tabler-icons.min.css masih merujuk font yang tidak disalin (404): ${mati.join(', ')}`);
+  } else {
+    ok('font Tabler hanya woff2 — tidak ada rujukan 404');
+  }
+}
 
 // ─────────────────────────────────── 5b. Pola tabel: pilih baris, bukan kolom aksi
 console.log('\nPola tabel: baris terpilih, bukan kolom aksi');

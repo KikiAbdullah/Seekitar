@@ -11,20 +11,21 @@
     <title>@yield('title', 'Panel Admin') — Seekitar Admin</title>
 
     {{--
-        Modernize (AdminMart) — Bootstrap 5 admin template, lisensi MIT.
-        Sumber: github.com/adminmart/Modernize-bootstrap-free (src/assets),
-        salinan lisensinya ada di public/vendor/modernize/LICENSE.txt.
+        Modernize — template admin Bootstrap 5, disalin dari
+        github.com/KikiAbdullah/mordenize-template-bs (package/dist).
 
-        ⚠️ styles.min.css SUDAH MEMUAT Bootstrap 5.3.3 di dalamnya. Karena itu
+        ⚠️ style.min.css SUDAH MEMUAT Bootstrap 5.3.0 di dalamnya. Karena itu
         Bootstrap TIDAK dimuat terpisah lagi — memuatnya dua kali menggandakan
         ±200 KB CSS dan membuat aturan yang belakangan menang secara acak
         tergantung urutan berkas.
 
-        Dua @import di dalamnya (simplebar & tabler-icons) sengaja diarahkan
-        ulang ke CDN: berkas fontnya berukuran ±8 MB dan tidak layak masuk
-        repositori.
+        Warnanya sudah diubah dari biru bawaan (#5D87FF) menjadi hijau
+        Seekitar (#168A4A) langsung di dalam berkas, lewat
+        tools/dev/recolor-modernize.mjs — 164 penggantian. Skrip itu idempoten
+        dan harus dijalankan ulang setiap kali berkas vendor diperbarui.
     --}}
-    <link rel="stylesheet" href="{{ asset('vendor/modernize/css/styles.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/modernize/css/icons/tabler-icons/tabler-icons.min.css') }}">
+    <link id="themeColors" rel="stylesheet" href="{{ asset('vendor/modernize/css/style.min.css') }}">
 
     <link href="https://cdn.datatables.net/2.1.8/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet">
@@ -46,7 +47,7 @@
     (mis. [data-sidebartype="mini-sidebar"]). Menghapusnya membuat tombol
     ciutkan sidebar tidak berfungsi.
 --}}
-<div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6"
+<div class="page-wrapper" id="main-wrapper" data-layout="vertical"
      data-sidebartype="full" data-sidebar-position="fixed" data-header-position="fixed">
 
     @include('admin.partials.sidebar')
@@ -114,8 +115,12 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/simplebar@6.3.3/dist/simplebar.min.js"></script>
 
-<script src="{{ asset('vendor/modernize/js/sidebarmenu.js') }}"></script>
+{{-- Urutan WAJIB: app.min.js mendefinisikan $.fn.AdminSettings yang dipanggil
+     seekitar.init.js. Membaliknya membuat sidebar responsif mati diam-diam. --}}
 <script src="{{ asset('vendor/modernize/js/app.min.js') }}"></script>
+<script src="{{ asset('vendor/modernize/js/seekitar.init.js') }}"></script>
+<script src="{{ asset('vendor/modernize/js/sidebarmenu.js') }}"></script>
+<script src="{{ asset('vendor/modernize/js/custom.js') }}"></script>
 
 <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/2.1.8/js/dataTables.bootstrap5.min.js"></script>

@@ -11,7 +11,7 @@
             @csrf
             <button type="submit" class="btn btn-sm btn-outline-secondary"
                     onclick="return confirm('Perpanjang permintaan ini 24 jam?')">
-                <i class="ti ti-clock-hour-4-rotate-left me-1" aria-hidden="true"></i> Perpanjang
+                <i class="ti ti-history me-1" aria-hidden="true"></i> Perpanjang
             </button>
         </form>
     @endif

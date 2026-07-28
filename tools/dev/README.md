@@ -45,6 +45,7 @@ green, and the app served over HTTP (`/` and `/up` both return 200).
 | `./tools/dev/php tools/dev/render-admin.php` | Renders all admin Blade pages under two permission sets without MySQL. Catches missing route names, missing view variables, and menu items that leak across roles. |
 | `./tools/dev/php tools/dev/check-relations.php` | Verifies every eager-loaded relation (`with`/`withCount`/`load`) actually exists on its model. Eager loading is lazy, so `with('user')` on a model whose relation is `owner()` throws only when rows are fetched — `toSql()` will not reveal it. |
 | `./tools/dev/php tools/dev/check-datatables.php` | Builds each DataTables query for real and checks that every column the Blade view requests exists in the SELECT list or as `addColumn`/`editColumn`. Also enforces `select()` before `withCount()`. |
+| `node tools/dev/recolor-modernize.mjs` | Rewrites the vendored Modernize CSS from its stock blue `#5D87FF` to Seekitar green `#168A4A` (164 replacements) and strips the Tabler `@font-face` down to woff2. Idempotent — re-run it after every template update. |
 | `./tools/dev/php tools/dev/run-seeders.php` | **Actually runs every seeder** against an in-memory SQLite mirror of the schema, then asserts row counts, FK wiring, uniqueness, `axis-order=long-lat` on every POINT, recomputed store ratings, and that each ENUM status is represented. Set `SKALA=1.0` for full volume. Called by `check-seeders.mjs`. |
 
 All checkers exit non-zero on failure, so they work as CI/pre-commit steps:

@@ -148,17 +148,18 @@ composer require yajra/laravel-datatables-buttons:^13.0
 
 **Konfigurasi:** Tidak ada file konfig khusus. Langsung gunakan facade `DataTables`.
 
-#### Template UI: Modernize (AdminMart)
+#### Template UI: Modernize
 
-Panel admin memakai **Modernize Bootstrap 5 Free** — template yang sama dengan
-`bootstrapdemos.adminmart.com/modernize-bt-free/src/html/`.
+Panel admin memakai template **Modernize Admin** (adminmart.com), disalin dari
+`github.com/KikiAbdullah/mordenize-template-bs` folder `package/dist/`.
 
 | Hal | Nilai |
 | :-- | :-- |
-| Sumber | `github.com/adminmart/Modernize-bootstrap-free` (`src/assets`) |
-| Lisensi | **MIT** — salinannya di `public/vendor/modernize/LICENSE.txt` |
-| Aset lokal | `styles.min.css`, `sidebarmenu.js`, `app.min.js` |
-| Ikon | **Tabler** (`ti ti-*`), bukan FontAwesome |
+| Aset lokal | `public/vendor/modernize/` (~1,6 MB dari repo 328 MB) |
+| CSS inti | `css/style.min.css` — **sudah memuat Bootstrap 5.3.0** |
+| Ikon | **Tabler 2.11.0** (`ti ti-*`), hanya font `.woff2` |
+| JS | `app.min.js`, `sidebarmenu.js`, `custom.js`, `seekitar.init.js` |
+| Provenance & lisensi | `public/vendor/modernize/SUMBER.md` |
 
 Struktur wajib (dibaca CSS & JS template):
 
@@ -170,26 +171,46 @@ Struktur wajib (dibaca CSS & JS template):
     └── .container-fluid
 ```
 
-> ⚠️ **`styles.min.css` SUDAH memuat Bootstrap 5.3.3.** Memuat CSS Bootstrap
-> lagi menggandakan ±200 KB dan membuat aturan yang belakangan menang secara
-> acak tergantung urutan berkas. Yang dimuat terpisah hanya **JS**-nya
-> (`bootstrap.bundle.min.js`). Ditegakkan `check-admin-menu.mjs`.
+##### Warna hijau ditulis ke dalam CSS vendor, bukan ditimpa
 
-> ⚠️ **Kelas `sidebar-item`, `sidebar-link`, `has-arrow`, `first-level`, id
-> `sidebarnav`, dan atribut `data-sidebartype` bukan hiasan.** `sidebarmenu.js`
-> memakainya untuk menandai menu aktif dan membuka submenu; `app.min.js`
-> memakai `.sidebartoggler` dan `data-sidebartype` untuk mode mini-sidebar.
-> Mengganti nama kelasnya mematikan perilaku itu tanpa error apa pun.
+Biru bawaan `#5D87FF` diganti hijau Seekitar `#168A4A` **langsung di dalam
+`style.min.css`**:
 
-Dua `@import` di dalam `styles.min.css` (simplebar & tabler-icons) diarahkan
-ulang ke CDN karena berkas fontnya ±8 MB dan tidak layak masuk repositori.
+```bash
+node tools/dev/recolor-modernize.mjs   # 164 penggantian, idempoten
+```
 
-**Warna merek dipertahankan lewat variabel, bukan tambalan per kelas.**
-Template memakai biru `#5D87FF` sebagai `--bs-primary`; `public/css/admin.css`
-menimpanya dengan hijau Seekitar `#168A4A`, sehingga seluruh komponen Bootstrap
-(tombol, badge, tautan, state aktif sidebar) ikut berubah sekaligus. Berkas itu
-dimuat **terakhir** supaya menang tanpa perlu menyunting berkas vendor —
-pembaruan template nanti cukup menimpa `public/vendor/modernize/`.
+> ⚠️ **Kenapa bukan sekadar menimpa `--bs-primary` dari `admin.css`?**
+> Karena **117 dari 164** kemunculan biru itu ditulis sebagai nilai heksa
+> langsung di dalam aturan, bukan lewat variabel CSS. Variabel tidak
+> menjangkaunya — hasilnya tombol dan badge biru nyasar di halaman yang jarang
+> dibuka. Diverifikasi dengan menghitung kemunculannya, bukan diasumsikan.
+
+Skrip itu **wajib dijalankan ulang** setiap kali berkas vendor diperbarui.
+`check-admin-menu.mjs` menolak build yang CSS-nya masih biru.
+
+##### Tiga jebakan yang sudah ditangani
+
+1. **Bootstrap ganda.** `style.min.css` sudah memuat Bootstrap 5.3.0. Memuat
+   CSS Bootstrap lagi menggandakan ±200 KB dan membuat aturan yang belakangan
+   menang secara acak. Yang dimuat terpisah hanya **JS**-nya.
+
+2. **Font Tabler 404.** Repo aslinya membawa `.eot`/`.ttf`/`.woff`/`.woff2`
+   (4,9 MB) demi IE8. Hanya `.woff2` (640 KB) yang disalin, dan
+   `tabler-icons.min.css` **ditulis ulang** agar `@font-face`-nya tidak lagi
+   meminta tiga berkas yang tidak ada — kalau tidak, tiga permintaan 404 di
+   setiap halaman.
+
+3. **`app.init.js` diganti.** Berkas bawaan menyetel `ThemeBg: "purple_theme"`
+   yang memicu pemuatan stylesheet tema terpisah. Seekitar memakai satu
+   stylesheet yang sudah hijau, jadi diganti `seekitar.init.js` yang hanya
+   memanggil `AdminSettings` untuk mode mini-sidebar responsif.
+
+> ⚠️ Kelas `sidebar-item`, `sidebar-link`, `has-arrow`, `first-level`, id
+> `sidebarnav`, dan atribut `data-sidebartype` **bukan hiasan**.
+> `sidebarmenu.js` memakainya untuk menandai menu aktif dan membuka submenu;
+> `app.min.js` memakai `.sidebartoggler` untuk mode mini-sidebar. Mengganti
+> nama kelasnya mematikan perilaku itu tanpa error apa pun.
 
 #### Select2 untuk semua dropdown
 

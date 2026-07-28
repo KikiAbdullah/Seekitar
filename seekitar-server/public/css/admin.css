@@ -1,9 +1,18 @@
 /*
- * Penyesuaian Seekitar di atas template Modernize (AdminMart, MIT).
+ * Penyesuaian Seekitar di atas template Modernize.
  *
- * Berkas ini dimuat TERAKHIR supaya menang atas styles.min.css tanpa perlu
+ * Sumber template: github.com/KikiAbdullah/mordenize-template-bs
+ * (package/dist), disalin ke public/vendor/modernize/.
+ *
+ * WARNA UTAMA TIDAK DITIMPA DI SINI. Biru bawaan template (#5D87FF) sudah
+ * diganti hijau Seekitar (#168A4A) langsung di dalam style.min.css lewat
+ * tools/dev/recolor-modernize.mjs — 164 penggantian, termasuk nilai heksa
+ * yang ditulis langsung di ratusan aturan dan tidak bisa dijangkau variabel
+ * CSS. Menimpanya lagi dari sini hanya menyisakan dua sumber kebenaran.
+ *
+ * Berkas ini dimuat TERAKHIR supaya menang atas style.min.css tanpa perlu
  * menyunting berkas vendor — pembaruan template nanti cukup menimpa
- * public/vendor/modernize/ tanpa kehilangan penyesuaian di sini.
+ * public/vendor/modernize/ lalu menjalankan ulang skrip pewarnaan.
  *
  * ⚠️ Ukuran huruf terkecil di berkas ini 11px. Batas itu bukan selera: target
  * pengguna Seekitar berusia 40+ dan umumnya sudah presbiopia
@@ -28,43 +37,13 @@
 }
 
 /*
- * Warna utama template diganti hijau Seekitar.
- *
- * Modernize memakai biru #5D87FF sebagai --bs-primary. Menimpanya di sini
- * membuat SELURUH komponen Bootstrap (tombol, badge, tautan, state aktif
- * sidebar) otomatis ikut hijau — jauh lebih andal daripada menambal satu per
- * satu kelas .btn-primary, .text-primary, .bg-primary, dan seterusnya.
+ * Alias lama: sejumlah view masih memakai .btn-seekitar. Dipertahankan agar
+ * tidak perlu menyunting belasan berkas sekaligus; nilainya mengikuti
+ * --bs-primary yang sudah hijau dari vendor CSS.
  */
-:root,
-[data-bs-theme="light"] {
-    --bs-primary: var(--seekitar-green);
-    --bs-primary-rgb: 22, 138, 74;
-    --bs-primary-text-emphasis: var(--seekitar-green-dark);
-    --bs-primary-bg-subtle: #E3F3EA;
-    --bs-primary-border-subtle: #B9E0CA;
-    --bs-link-color: var(--seekitar-green);
-    --bs-link-hover-color: var(--seekitar-green-dark);
-    --bs-link-color-rgb: 22, 138, 74;
-}
-
-/* Beberapa gaya template memakai nilai heksa langsung, bukan variabel,
-   sehingga tetap perlu ditimpa eksplisit. */
-.btn-primary {
-    --bs-btn-bg: var(--seekitar-green);
-    --bs-btn-border-color: var(--seekitar-green);
-    --bs-btn-hover-bg: var(--seekitar-green-dark);
-    --bs-btn-hover-border-color: var(--seekitar-green-dark);
-    --bs-btn-active-bg: var(--seekitar-green-dark);
-    --bs-btn-active-border-color: var(--seekitar-green-dark);
-    --bs-btn-disabled-bg: var(--seekitar-green);
-    --bs-btn-disabled-border-color: var(--seekitar-green);
-}
-
-/* Alias lama: sejumlah view masih memakai .btn-seekitar. Dipertahankan agar
-   tidak perlu menyunting belasan berkas sekaligus. */
 .btn-seekitar {
-    background-color: var(--seekitar-green);
-    border-color: var(--seekitar-green);
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
     color: #fff;
 }
 .btn-seekitar:hover,

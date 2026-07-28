@@ -9,8 +9,8 @@
     <nav class="navbar navbar-expand-lg navbar-light">
 
         <ul class="navbar-nav">
-            <li class="nav-item d-block d-xl-none">
-                <a class="nav-link sidebartoggler" id="headerCollapse" href="javascript:void(0)"
+            <li class="nav-item">
+                <a class="nav-link sidebartoggler nav-icon-hover ms-n3" id="headerCollapse" href="javascript:void(0)"
                    aria-label="Buka menu navigasi">
                     <i class="ti ti-menu-2" aria-hidden="true"></i>
                 </a>
@@ -31,7 +31,7 @@
                 @can('manage-disputes')
                     @if (($laporanLewatSla ?? 0) > 0)
                         <li class="nav-item">
-                            <a class="nav-link position-relative" href="{{ route('admin.disputes.index') }}"
+                            <a class="nav-link nav-icon-hover position-relative" href="{{ route('admin.disputes.index') }}"
                                title="{{ $laporanLewatSla }} laporan melewati SLA">
                                 <i class="ti ti-alert-triangle fs-6 text-danger" aria-hidden="true"></i>
                                 <span class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle">
@@ -44,7 +44,7 @@
                 @endcan
 
                 <li class="nav-item dropdown">
-                    <a class="nav-link d-flex align-items-center gap-2" href="javascript:void(0)"
+                    <a class="nav-link nav-icon-hover d-flex align-items-center gap-2" href="javascript:void(0)"
                        id="dropdownProfil" data-bs-toggle="dropdown" aria-expanded="false">
                         <span class="admin-avatar" aria-hidden="true">
                             {{ Str::upper(Str::substr(auth()->user()?->name ?? 'A', 0, 1)) }}
