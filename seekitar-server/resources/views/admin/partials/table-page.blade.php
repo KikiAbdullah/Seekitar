@@ -1,53 +1,14 @@
 {{--
-    Kerangka halaman tabel admin: judul + bilah aksi + tabel terpilih-satu.
+    Kerangka halaman tabel admin.
 
-    Parameter:
-      $judul     : teks judul halaman
-      $tableId   : id elemen <table>
-      $ajax      : URL endpoint Datatables
-      $columns    : [['data' => 'name', 'label' => 'Nama', 'orderable' => false], ...]
-      $order      : (opsional) [[index, 'asc'|'desc']]
-      $petunjuk   : (opsional) kalimat di bawah judul
-      $filterView : (opsional) NAMA view filter, mis. 'admin.stores._filter'
-
-    ⚠️ $filterView adalah NAMA view (string), BUKAN objek view atau HTML.
-
-    Versi sebelumnya mengoper `view('admin.stores._filter')` lalu menampilkannya
-    dengan `{{ $filter }}`, dan seluruh filter tampil sebagai teks mentah
-    (`&lt;select&gt;…`) alih-alih elemen form.
-
-    Sebabnya: @include me-RENDER sub-view menjadi string sebelum mengopernya.
-    Objek View sendiri bersifat Htmlable sehingga e() akan melewatkannya —
-    tetapi yang sampai ke `{{ }}` sudah berupa string biasa, dan string biasa
-    memang di-escape. Diverifikasi langsung: e($view) tidak meng-escape,
-    e($view->render()) meng-escape.
-
-    Perbaikannya BUKAN {!! !!} — itu mematikan escaping dan justru membuka XSS
-    (lihat penolakan TODO_BUG #202). Yang dipakai @includeIf dengan nama view,
-    sehingga tidak ada HTML yang pernah dioper sebagai nilai variabel.
-
-    KENAPA TOMBOL AKSI TIDAK LAGI JADI KOLOM
-    ----------------------------------------
-    Kolom aksi memaksa setiap baris membawa tombolnya sendiri: pada 1.000 baris
-    itu 1.000 tombol di DOM, dan kolomnya ikut melebar mengorbankan kolom data
-    yang justru dibaca. Sebagai gantinya baris dipilih, lalu aksinya muncul
-    sekali di kanan judul.
-
-    HTML tombolnya TETAP dikirim server di field `action`. Field yang tidak
-    dideklarasikan sebagai kolom tidak dirender Datatables, tetapi tetap ikut
-    di `row().data()` — diverifikasi langsung dengan Datatables 2.3.8. Dengan
-    begitu tombol tetap dirakit Blade lengkap dengan @csrf, @method, dan
-    pemeriksaan izin, bukan dirakit ulang di JavaScript.
-
-    PEMILIHAN TUNGGAL, TANPA EKSTENSI
-    ---------------------------------
-    Ekstensi resmi Select tidak dipakai: ia menambah satu berkas CSS + JS demi
-    perilaku yang di sini cukup belasan baris, dan defaultnya justru multi-baris.
+    $judul      teks judul
+    $tableId    id elemen <table>
+    $ajax       URL endpoint Datatables
+    $columns    [['data' => 'name', 'label' => 'Nama', 'orderable' => false], ...]
+    $order      (opsional) [[index, 'asc'|'desc']]
+    $filterView (opsional) nama view filter, mis. 'admin.stores._filter'
 --}}
 @php
-    // Disusun di blok @php, BUKAN di dalam @json(): Blade memotong argumen
-    // direktif pada kurung penutup pertama, sehingga arrow function
-    // multi-baris menghasilkan PHP yang tidak bisa di-parse.
     $dtColumns = array_map(static fn (array $c): array => [
         'data'       => $c['data'],
         'orderable'  => $c['orderable'] ?? true,
@@ -55,37 +16,38 @@
     ], $columns);
 @endphp
 
-<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
-    <h2 class="h5 mb-0">{{ $judul }}</h2>
-
-    {{--
-        Bilah aksi — sejajar judul, rata kanan.
-
-        Sengaja KOSONG saat belum ada baris terpilih: bilahnya hanya diisi
-        tombol, tanpa teks petunjuk. Tingginya tetap dipatok lewat CSS
-        (.admin-rowactions min-height) supaya judul tidak melompat naik-turun
-        ketika tombol muncul lalu hilang.
-
-        aria-live="polite" supaya pembaca layar mengumumkan tombol yang baru
-        muncul; tanpa itu pengguna non-visual tidak tahu ada aksi tersedia
-        setelah memilih baris.
-    --}}
-    <div id="{{ $tableId }}-actions" class="admin-rowactions d-flex align-items-center gap-2"
-         aria-live="polite"></div>
+<div class="card bg-light-primary shadow-none position-relative overflow-hidden mb-4">
+    <div class="card-body px-4 py-3">
+        <div class="row align-items-center">
+            <div class="col-12">
+                <h4 class="fw-semibold mb-2">{{ $judul }}</h4>
+                <nav aria-label="Remah roti">
+                    <ol class="breadcrumb mb-0">
+                        <li class="breadcrumb-item">
+                            <a class="text-muted text-decoration-none" href="{{ route('admin.dashboard') }}">Dasbor</a>
+                        </li>
+                        <li class="breadcrumb-item active" aria-current="page">{{ $judul }}</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
 </div>
 
-<div class="card">
+<div class="card w-100">
     <div class="card-body">
-        @isset($filterView)
-            {{-- @includeIf, bukan {{ $filter }}: direktif ini menggemakan
-                 keluaran view apa adanya, sehingga tidak ada tahap escaping
-                 yang bisa mengubah <select> menjadi teks. --}}
-            <div class="mb-3">
-                @includeIf($filterView)
+        <div class="d-sm-flex d-block align-items-center justify-content-between mb-4">
+            <div class="mb-3 mb-sm-0">
+                @isset($filterView)
+                    @includeIf($filterView)
+                @endisset
             </div>
-        @endisset
 
-        <table id="{{ $tableId }}" class="table table-striped table-hover w-100 admin-selectable">
+            <div id="{{ $tableId }}-actions" class="admin-rowactions d-flex align-items-center gap-2"
+                 aria-live="polite"></div>
+        </div>
+
+        <table id="{{ $tableId }}" class="table align-middle text-nowrap w-100 admin-selectable">
             <thead>
                 <tr>
                     @foreach ($columns as $col)

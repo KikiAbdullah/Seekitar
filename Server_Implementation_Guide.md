@@ -189,6 +189,66 @@ node tools/dev/recolor-modernize.mjs   # 164 penggantian, idempoten
 Skrip itu **wajib dijalankan ulang** setiap kali berkas vendor diperbarui.
 `check-admin-menu.mjs` menolak build yang CSS-nya masih biru.
 
+##### Pola halaman
+
+Setiap halaman admin memakai susunan yang sama:
+
+```blade
+@extends('admin.layout')
+@section('title', 'Toko')
+
+@section('content')
+    {{-- kartu judul + remah roti --}}
+    <div class="card bg-light-primary shadow-none position-relative overflow-hidden mb-4">
+        <div class="card-body px-4 py-3">
+            <h4 class="fw-semibold mb-2">Toko</h4>
+            <nav aria-label="Remah roti"><ol class="breadcrumb mb-0">…</ol></nav>
+        </div>
+    </div>
+
+    <div class="card w-100">
+        <div class="card-body">…</div>
+    </div>
+@endsection
+```
+
+Halaman tabel tidak menulisnya sendiri — `admin.partials.table-page` sudah
+merender kartu judul, remah roti, filter, dan bilah aksi sekaligus.
+
+**Pengumuman memakai kartu `bg-light-*`, bukan `.alert` polos.** Bentuknya
+mengikuti komponen Modernize sehingga menyatu dengan kartu di sekitarnya:
+
+```blade
+<div class="card bg-light-info shadow-none border-0 mb-4">
+    <div class="card-body py-3 px-4">
+        <div class="d-flex align-items-start gap-3">
+            <i class="ti ti-info-circle fs-6 text-info mt-1" aria-hidden="true"></i>
+            <p class="mb-0 fs-3">…</p>
+        </div>
+    </div>
+</div>
+```
+
+Nilai `tone` yang dikirim `DashboardController` **wajib** berupa nama warna
+Bootstrap (`primary`, `secondary`, `success`, `warning`, `danger`, `info`).
+Nama karangan seperti `green` atau `cyan` tidak menghasilkan kelas apa pun,
+dan kartunya tampil tanpa warna sama sekali.
+
+##### View bebas komentar naratif
+
+Blade adalah lapisan presentasi. Penjelasan alasan, riwayat perbaikan, dan
+catatan investigasi **tidak boleh** ada di sana — tempatnya di controller,
+service, atau dokumen ini.
+
+Yang masih boleh: dokumentasi **parameter** partial, karena itu kontrak bagi
+pemanggilnya. Hanya tiga berkas yang memilikinya (`_datatable`, `table-page`,
+`_reject_modal`).
+
+> Ditegakkan `check-admin-menu.mjs` dan
+> `DataTableQueryTest::test_blade_admin_bersih_dari_komentar_naratif`. Aturannya:
+> komentar lebih dari 2 baris, atau memuat kata penanda seperti "KENAPA",
+> "Sebabnya", "Diverifikasi", ditolak.
+
 ##### Tiga jebakan yang sudah ditangani
 
 1. **Bootstrap ganda.** `style.min.css` sudah memuat Bootstrap 5.3.0. Memuat

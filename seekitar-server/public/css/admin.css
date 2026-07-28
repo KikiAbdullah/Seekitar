@@ -100,6 +100,22 @@
     border-top: 1px solid var(--bs-border-color);
 }
 
+
+/* Efek angkat pada kartu ringkasan. Kelas .zoom-in dipakai markup Modernize
+   tetapi tidak ada di style.min.css yang disalin. */
+.zoom-in {
+    transition: transform 0.18s ease-in-out, box-shadow 0.18s ease-in-out;
+}
+
+.zoom-in:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 18px rgba(31, 41, 51, 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .zoom-in, .zoom-in:hover { transition: none; transform: none; }
+}
+
 /* ------------------------------------------------- Tabel terpilih-satu */
 
 /*
@@ -138,48 +154,6 @@
 .admin-rowactions form {
     display: inline;
     margin: 0;
-}
-
-/* --------------------------------------------------------------- Kartu KPI */
-
-.stat-card {
-    border: 1px solid var(--bs-border-color);
-    border-radius: 0.75rem;
-    background: #fff;
-    height: 100%;
-    border-left-width: 4px;
-    border-left-style: solid;
-    border-left-color: #CBD5E1;
-}
-
-.stat-card[data-tone="green"]  { border-left-color: var(--seekitar-green); }
-.stat-card[data-tone="blue"]   { border-left-color: var(--seekitar-trust); }
-.stat-card[data-tone="yellow"] { border-left-color: var(--seekitar-yellow); }
-.stat-card[data-tone="orange"] { border-left-color: var(--seekitar-warning); }
-.stat-card[data-tone="red"]    { border-left-color: var(--seekitar-danger); }
-.stat-card[data-tone="cyan"]   { border-left-color: var(--seekitar-info); }
-
-.stat-card .stat-label {
-    /* 12px — di atas batas 11px, tetap terbaca pengguna presbiopia. */
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #64748B;
-    font-weight: 600;
-}
-
-.stat-card .stat-value { font-size: 26px; font-weight: 700; line-height: 1.15; }
-.stat-card .stat-hint  { font-size: 12px; color: #94A3B8; }
-
-.stat-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 0.6rem;
-    display: grid;
-    place-items: center;
-    background: var(--bs-primary-bg-subtle);
-    color: var(--seekitar-green);
-    flex: 0 0 auto;
 }
 
 /* ----------------------------------------------------------------- Select2 */

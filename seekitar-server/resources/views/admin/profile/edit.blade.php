@@ -1,12 +1,26 @@
 @extends('admin.layout')
 @section('title', 'Profil Saya')
 
-@section('breadcrumb')
-    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dasbor</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Profil Saya</li>
-@endsection
-
 @section('content')
+
+    <div class="card bg-light-primary shadow-none position-relative overflow-hidden mb-4">
+        <div class="card-body px-4 py-3">
+            <div class="row align-items-center">
+                <div class="col-12">
+                    <h4 class="fw-semibold mb-2">Profil Saya</h4>
+                    <nav aria-label="Remah roti">
+                        <ol class="breadcrumb mb-0">
+                            <li class="breadcrumb-item">
+                                <a class="text-muted text-decoration-none" href="{{ route('admin.dashboard') }}">Dasbor</a>
+                            </li>
+                        <li class="breadcrumb-item active" aria-current="page">Profil Saya</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row g-3">
 
         <div class="col-12 col-lg-7">
@@ -44,9 +58,6 @@
 
                         <div class="mb-3">
                             <label for="phone" class="form-label">Nomor Telepon</label>
-                            {{-- Hanya baca: nomor adalah identitas akun di Seekitar
-                                 (DATABASE.md §4.1) dan hanya bisa berganti lewat
-                                 alur OTP, bukan lewat form ini. --}}
                             <input type="text" id="phone" class="form-control"
                                    value="{{ $user->phone }}" readonly>
                             <div class="form-text">
@@ -77,9 +88,6 @@
                         <div class="text-muted small mb-1">
                             Izin aktif ({{ $user->getAllPermissions()->count() }})
                         </div>
-                        {{-- Ditampilkan apa adanya dari Spatie. Menghitungnya
-                             sendiri dari daftar peran akan meleset begitu ada
-                             izin yang diberikan langsung ke pengguna. --}}
                         <div class="d-flex flex-wrap gap-1">
                             @forelse ($user->getAllPermissions()->pluck('name')->sort() as $izin)
                                 <span class="badge text-bg-light border">{{ $izin }}</span>

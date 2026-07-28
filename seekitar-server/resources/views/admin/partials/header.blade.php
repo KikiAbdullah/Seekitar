@@ -1,10 +1,3 @@
-{{--
-    Header panel — struktur `app-header` milik template Modernize.
-
-    Kelas `sidebartoggler` pada tombol hamburger dibaca app.min.js untuk
-    membuka/menutup sidebar; menggantinya membuat tombol itu mati di layar
-    kecil.
---}}
 <header class="app-header">
     <nav class="navbar navbar-expand-lg navbar-light">
 
@@ -16,8 +9,6 @@
                 </a>
             </li>
 
-            {{-- Judul halaman dipindahkan ke header agar tidak diulang di
-                 setiap view, dan tetap terbaca saat sidebar tertutup. --}}
             <li class="nav-item d-none d-md-flex align-items-center ps-2">
                 <span class="fw-semibold fs-4 text-dark">@yield('title', 'Panel Admin')</span>
             </li>
@@ -26,8 +17,6 @@
         <div class="navbar-collapse justify-content-end px-0" id="navbarNav">
             <ul class="navbar-nav flex-row ms-auto align-items-center justify-content-end gap-2">
 
-                {{-- Lencana antrian: angka yang sama dengan sidebar, ditaruh di
-                     header agar terlihat meski sidebar diciutkan. --}}
                 @can('manage-disputes')
                     @if (($laporanLewatSla ?? 0) > 0)
                         <li class="nav-item">
@@ -61,9 +50,6 @@
                                 <div class="fw-semibold">{{ auth()->user()?->name }}</div>
                                 <div class="fs-2 text-muted">{{ auth()->user()?->email }}</div>
                                 <div class="mt-1">
-                                    {{-- Peran diambil apa adanya dari Spatie, bukan
-                                         ditebak dari daftar permission: dua admin bisa
-                                         punya izin sama tetapi peran berbeda. --}}
                                     @foreach (auth()->user()?->getRoleNames() ?? [] as $role)
                                         <span class="badge bg-primary-subtle text-primary fs-1">{{ $role }}</span>
                                     @endforeach
@@ -84,9 +70,6 @@
                                 <p class="mb-0 fs-3">Ubah Kata Sandi</p>
                             </a>
 
-                            {{-- POST, bukan GET: logout mengubah state, dan tautan
-                                 GET bisa dipicu prefetch browser atau <img> di
-                                 halaman lain. --}}
                             <form method="POST" action="{{ route('admin.logout') }}" class="px-3 mt-2">
                                 @csrf
                                 <button type="submit" class="btn btn-outline-danger w-100 d-block">

@@ -72,7 +72,7 @@ class DashboardController extends Controller
                 'label' => 'Total Pengguna',
                 'value' => User::count(),
                 'icon'  => 'ti-users',
-                'tone'  => 'green',
+                'tone'  => 'primary',
                 'hint'  => User::whereDate('created_at', today())->count().' baru hari ini',
                 'url'   => route('admin.users.index'),
             ];
@@ -85,7 +85,7 @@ class DashboardController extends Controller
                     ->where('verification_status', VerificationStatus::Verified)
                     ->count(),
                 'icon'  => 'ti-building-store',
-                'tone'  => 'green',
+                'tone'  => 'primary',
                 'hint'  => Store::count().' toko terdaftar',
                 'url'   => route('admin.stores.index'),
             ];
@@ -100,7 +100,7 @@ class DashboardController extends Controller
                 'label' => 'Pesanan Bulan Ini',
                 'value' => $bulanIni,
                 'icon'  => 'ti-shopping-cart',
-                'tone'  => 'blue',
+                'tone'  => 'info',
                 'hint'  => Order::whereDate('created_at', today())->count().' hari ini',
                 'url'   => route('admin.orders.index'),
             ];
@@ -113,7 +113,7 @@ class DashboardController extends Controller
                     ->where('expires_at', '>', now())
                     ->count(),
                 'icon'  => 'ti-clipboard-list',
-                'tone'  => 'cyan',
+                'tone'  => 'secondary',
                 'hint'  => 'kedaluwarsa otomatis 24 jam',
                 'url'   => route('admin.requests.index'),
             ];
@@ -129,7 +129,7 @@ class DashboardController extends Controller
                 'label' => 'Laporan Lewat SLA',
                 'value' => $lewatSla,
                 'icon'  => 'ti-alert-triangle',
-                'tone'  => $lewatSla > 0 ? 'red' : 'green',
+                'tone'  => $lewatSla > 0 ? 'danger' : 'primary',
                 'hint'  => Dispute::where('status', DisputeStatus::Open)->count().' laporan terbuka',
                 'url'   => route('admin.disputes.index'),
             ];
@@ -140,7 +140,7 @@ class DashboardController extends Controller
                 'label' => 'Ulasan Masuk',
                 'value' => Review::where('created_at', '>=', now()->startOfMonth())->count(),
                 'icon'  => 'ti-star',
-                'tone'  => 'yellow',
+                'tone'  => 'warning',
                 'hint'  => 'bulan berjalan',
                 'url'   => route('admin.reviews.index'),
             ];
@@ -151,7 +151,7 @@ class DashboardController extends Controller
                 'label' => 'Listing Aktif',
                 'value' => Listing::where('status', \App\Enums\ListingStatus::Active)->count(),
                 'icon'  => 'ti-package',
-                'tone'  => 'blue',
+                'tone'  => 'info',
                 'hint'  => Listing::count().' total listing',
                 'url'   => route('admin.listings.index'),
             ];
@@ -164,7 +164,7 @@ class DashboardController extends Controller
                     ->where('expires_at', '>', now())
                     ->count(),
                 'icon'  => 'ti-discount-2',
-                'tone'  => 'cyan',
+                'tone'  => 'secondary',
                 'hint'  => 'belum diputuskan pembeli',
                 'url'   => route('admin.offers.index'),
             ];

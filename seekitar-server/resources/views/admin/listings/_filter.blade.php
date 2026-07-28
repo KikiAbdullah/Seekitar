@@ -1,4 +1,3 @@
-{{-- Filter dibaca partial table-page lewat atribut data-dt-filter. --}}
 <div class="row g-2 align-items-end">
     <div class="col-auto">
         <label for="filter-listing-status" class="form-label">Status</label>

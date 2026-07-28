@@ -4,26 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    {{-- Panel admin tidak boleh terindeks mesin pencari, apa pun isi
-         robots.txt. Halaman di balik login memang tak terjangkau crawler,
-         tetapi URL-nya bisa bocor lewat referer atau riwayat browser. --}}
     <meta name="robots" content="noindex, nofollow">
     <title>@yield('title', 'Panel Admin') — Seekitar Admin</title>
 
-    {{--
-        Modernize — template admin Bootstrap 5, disalin dari
-        github.com/KikiAbdullah/mordenize-template-bs (package/dist).
-
-        ⚠️ style.min.css SUDAH MEMUAT Bootstrap 5.3.0 di dalamnya. Karena itu
-        Bootstrap TIDAK dimuat terpisah lagi — memuatnya dua kali menggandakan
-        ±200 KB CSS dan membuat aturan yang belakangan menang secara acak
-        tergantung urutan berkas.
-
-        Warnanya sudah diubah dari biru bawaan (#5D87FF) menjadi hijau
-        Seekitar (#168A4A) langsung di dalam berkas, lewat
-        tools/dev/recolor-modernize.mjs — 164 penggantian. Skrip itu idempoten
-        dan harus dijalankan ulang setiap kali berkas vendor diperbarui.
-    --}}
     <link rel="stylesheet" href="{{ asset('vendor/modernize/css/icons/tabler-icons/tabler-icons.min.css') }}">
     <link id="themeColors" rel="stylesheet" href="{{ asset('vendor/modernize/css/style.min.css') }}">
 
@@ -31,22 +14,13 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
 
-    {{-- Terakhir, supaya penyesuaian Seekitar menang atas gaya template. --}}
     <link href="{{ asset('css/admin.css') }}" rel="stylesheet">
     @stack('styles')
 </head>
 <body>
 
-{{-- Lewati navigasi: tautan pertama bagi pengguna keyboard & pembaca layar,
-     supaya tidak perlu menelusuri belasan butir menu di setiap halaman. --}}
 <a href="#konten-utama" class="visually-hidden-focusable admin-skip">Lewati ke konten</a>
 
-{{--
-    Atribut data-* di bawah BUKAN hiasan: app.min.js membacanya untuk
-    menentukan mode sidebar, dan CSS template menargetkannya langsung
-    (mis. [data-sidebartype="mini-sidebar"]). Menghapusnya membuat tombol
-    ciutkan sidebar tidak berfungsi.
---}}
 <div class="page-wrapper" id="main-wrapper" data-layout="vertical"
      data-sidebartype="full" data-sidebar-position="fixed" data-header-position="fixed">
 
@@ -58,40 +32,38 @@
 
         <div class="container-fluid">
 
-            @hasSection('breadcrumb')
-                <nav aria-label="Remah roti" class="mb-3">
-                    <ol class="breadcrumb mb-0">@yield('breadcrumb')</ol>
-                </nav>
-            @endif
-
             <main id="konten-utama">
 
-                {{-- role="alert" agar pembaca layar mengumumkan hasil aksi;
-                     tanpa itu pengguna non-visual tidak tahu simpannya
-                     berhasil. --}}
                 @if (session('success'))
-                    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2" role="alert">
-                        <i class="ti ti-circle-check fs-5" aria-hidden="true"></i>
-                        <span>{{ session('success') }}</span>
+                    <div class="alert alert-success bg-light-success text-success border-0 alert-dismissible fade show d-flex align-items-start gap-3"
+                         role="alert">
+                        <i class="ti ti-circle-check fs-6 mt-1" aria-hidden="true"></i>
+                        <p class="mb-0 fs-3">{{ session('success') }}</p>
                         <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Tutup"></button>
                     </div>
                 @endif
 
                 @if (session('error'))
-                    <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2" role="alert">
-                        <i class="ti ti-alert-triangle fs-5" aria-hidden="true"></i>
-                        <span>{{ session('error') }}</span>
+                    <div class="alert alert-danger bg-light-danger text-danger border-0 alert-dismissible fade show d-flex align-items-start gap-3"
+                         role="alert">
+                        <i class="ti ti-alert-triangle fs-6 mt-1" aria-hidden="true"></i>
+                        <p class="mb-0 fs-3">{{ session('error') }}</p>
                         <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Tutup"></button>
                     </div>
                 @endif
 
                 @if ($errors->any())
-                    <div class="alert alert-danger" role="alert">
-                        <ul class="mb-0 ps-3">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
+                    <div class="alert alert-danger bg-light-danger text-danger border-0 d-flex align-items-start gap-3"
+                         role="alert">
+                        <i class="ti ti-alert-circle fs-6 mt-1" aria-hidden="true"></i>
+                        <div>
+                            <p class="mb-1 fs-3 fw-semibold">Periksa kembali isian berikut:</p>
+                            <ul class="mb-0 ps-3 fs-3">
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
                     </div>
                 @endif
 
@@ -108,15 +80,10 @@
     </div>
 </div>
 
-{{-- jQuery WAJIB paling awal: sidebarmenu.js, app.min.js, Datatables, dan
-     Select2 semuanya plugin jQuery. --}}
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-{{-- bootstrap.bundle: HANYA JS-nya. CSS-nya sudah ada di styles.min.css. --}}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/simplebar@6.3.3/dist/simplebar.min.js"></script>
 
-{{-- Urutan WAJIB: app.min.js mendefinisikan $.fn.AdminSettings yang dipanggil
-     seekitar.init.js. Membaliknya membuat sidebar responsif mati diam-diam. --}}
 <script src="{{ asset('vendor/modernize/js/app.min.js') }}"></script>
 <script src="{{ asset('vendor/modernize/js/seekitar.init.js') }}"></script>
 <script src="{{ asset('vendor/modernize/js/sidebarmenu.js') }}"></script>
@@ -124,9 +91,6 @@
 
 <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/2.1.8/js/dataTables.bootstrap5.min.js"></script>
-{{-- select2.full: varian ini sudah memuat modul terjemahan, sehingga berkas
-     i18n/id.js di bawah bisa mendaftarkan dirinya. Varian select2.min biasa
-     TIDAK memuatnya dan bahasa Indonesia diam-diam diabaikan. --}}
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/i18n/id.js"></script>
 

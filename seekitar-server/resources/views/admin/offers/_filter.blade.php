@@ -1,4 +1,3 @@
-{{-- Filter dibaca partial table-page lewat atribut data-dt-filter. --}}
 <label for="filter-offer-status" class="form-label">Status</label>
 
 <select id="filter-offer-status" name="status"

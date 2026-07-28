@@ -6,8 +6,6 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Masuk — Seekitar Admin</title>
 
-    {{-- style.min.css sudah memuat Bootstrap 5.3.0; jangan memuatnya lagi
-         terpisah (lihat catatan di admin/layout.blade.php). --}}
     <link rel="stylesheet" href="{{ asset('vendor/modernize/css/icons/tabler-icons/tabler-icons.min.css') }}">
     <link id="themeColors" rel="stylesheet" href="{{ asset('vendor/modernize/css/style.min.css') }}">
     <link href="{{ asset('css/admin.css') }}" rel="stylesheet">
@@ -31,9 +29,6 @@
                                 <p class="fs-2 text-muted mb-0">{{ config('seekitar.regency') }}</p>
                             </div>
 
-                            {{-- Pesan kegagalan sengaja seragam: membedakan "email
-                                 tidak terdaftar" dari "kata sandi salah" akan
-                                 membocorkan email mana yang ada di sistem. --}}
                             @if ($errors->any())
                                 <div class="alert alert-danger py-2 d-flex align-items-center gap-2" role="alert">
                                     <i class="ti ti-alert-triangle" aria-hidden="true"></i>

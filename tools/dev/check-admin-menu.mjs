@@ -724,6 +724,61 @@ if (!fs.existsSync(partialTabel)) {
   }
 }
 
+
+/*
+ * Blade admin harus bersih dari komentar naratif.
+ *
+ * View adalah lapisan presentasi; penjelasan alasan, riwayat perbaikan, dan
+ * catatan investigasi tidak dibaca siapa pun di sana dan membuat berkasnya
+ * sulit dipindai. Alasan teknis tempatnya di controller, service, atau
+ * Server_Implementation_Guide.md.
+ *
+ * Dokumentasi PARAMETER partial tetap boleh — itu kontrak bagi pemanggilnya.
+ */
+const PARTIAL_BERDOKUMEN = [
+  '_datatable.blade.php',
+  'table-page.blade.php',
+  '_reject_modal.blade.php',
+];
+
+const naratif = [];
+for (const p of blades) {
+  if (PARTIAL_BERDOKUMEN.some(n => path.basename(p) === n)) continue;
+
+  const src = fs.readFileSync(p, 'utf8');
+  for (const m of src.matchAll(/\{\{--([\s\S]*?)--\}\}/g)) {
+    const isi = m[1].trim();
+    const baris = isi.split('\n').length;
+    const penanda = /KENAPA|Kenapa|Sebabnya|Diverifikasi|Versi sebelumnya|⚠️|TODO_BUG|jebakan|Akibatnya/.test(isi);
+
+    if (baris > 2 || penanda) {
+      naratif.push(`${path.basename(path.dirname(p))}/${path.basename(p)}`);
+      break;
+    }
+  }
+}
+if (naratif.length) {
+  fail(`komentar naratif di Blade (pindahkan ke controller/dokumen): ${[...new Set(naratif)].join(', ')}`);
+} else {
+  ok('Blade admin bersih dari komentar naratif');
+}
+
+// Kartu judul + remah roti memakai pola Modernize di setiap halaman.
+const tanpaHeader = [];
+for (const p of blades) {
+  const src = fs.readFileSync(p, 'utf8');
+  if (!/@extends\('admin\.layout'\)/.test(src)) continue;
+  if (/admin\.partials\.table-page/.test(src)) continue;   // sudah dari partial
+  if (!/card bg-light-primary/.test(src)) {
+    tanpaHeader.push(path.basename(path.dirname(p)) + '/' + path.basename(p));
+  }
+}
+if (tanpaHeader.length) {
+  fail(`halaman tanpa kartu judul Modernize: ${tanpaHeader.join(', ')}`);
+} else {
+  ok('semua halaman memakai kartu judul + remah roti Modernize');
+}
+
 // ─────────────────────────────────── 6. Query DataTables
 console.log('\nQuery & relasi DataTables');
 

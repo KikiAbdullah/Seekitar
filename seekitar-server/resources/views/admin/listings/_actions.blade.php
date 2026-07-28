@@ -1,4 +1,3 @@
-{{-- Aksi baris listing — tampil di bilah aksi sebelah judul. --}}
 @can('manage-listings')
     <a href="{{ route('admin.listings.show', $listing) }}" class="btn btn-sm btn-outline-primary">
         <i class="ti ti-eye me-1" aria-hidden="true"></i> Lihat

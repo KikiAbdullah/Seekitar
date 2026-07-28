@@ -1,9 +1,3 @@
-{{--
-    Aksi baris pengguna — tampil di bilah aksi sebelah judul.
-
-    Blade meng-escape otomatis dengan {{ }}; JANGAN pakai {!! !!} di sini,
-    karena itu justru MEMATIKAN escaping dan membuka XSS.
---}}
 @can('manage-users')
     <a href="{{ route('admin.users.edit', $user) }}" class="btn btn-sm btn-outline-secondary">
         <i class="ti ti-pencil me-1" aria-hidden="true"></i> Sunting

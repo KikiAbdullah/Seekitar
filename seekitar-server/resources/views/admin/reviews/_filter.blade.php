@@ -1,4 +1,3 @@
-{{-- Filter dibaca partial table-page lewat atribut data-dt-filter. --}}
 <label for="filter-rating" class="form-label">Rating</label>
 
 <select id="filter-rating" name="rating"

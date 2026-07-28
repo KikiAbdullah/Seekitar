@@ -1,24 +1,33 @@
 @extends('admin.layout')
 @section('title', 'Kategori')
 
-@section('breadcrumb')
-    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dasbor</a></li>
-    <li class="breadcrumb-item">Manajemen Data</li>
-    <li class="breadcrumb-item active" aria-current="page">Kategori</li>
-@endsection
-
 @section('content')
+
+    <div class="card bg-light-primary shadow-none position-relative overflow-hidden mb-4">
+        <div class="card-body px-4 py-3">
+            <div class="row align-items-center">
+                <div class="col-12">
+                    <h4 class="fw-semibold mb-2">Kategori</h4>
+                    <nav aria-label="Remah roti">
+                        <ol class="breadcrumb mb-0">
+                            <li class="breadcrumb-item">
+                                <a class="text-muted text-decoration-none" href="{{ route('admin.dashboard') }}">Dasbor</a>
+                            </li>
+                        <li class="breadcrumb-item active" aria-current="page">Kategori</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
         <h2 class="h5 mb-0">Kategori</h2>
 
         <div class="d-flex align-items-center gap-2">
-            {{-- Bilah aksi baris; strukturnya sama dengan partial table-page
-                 supaya perilakunya konsisten di seluruh panel. --}}
             <div id="categories-table-actions" class="admin-rowactions d-flex align-items-center gap-2"
                  aria-live="polite"></div>
 
-            {{-- "Tambah" BUKAN aksi baris: ia tidak bergantung pilihan, jadi
-                 selalu tampil dan dipisahkan garis dari bilah di atas. --}}
             <a href="{{ route('admin.categories.create') }}" class="btn btn-seekitar btn-sm">
                 <i class="ti ti-plus me-1" aria-hidden="true"></i> Kategori
             </a>
@@ -27,9 +36,6 @@
 
     <div class="card">
         <div class="card-body p-0">
-            {{-- Tabel biasa, bukan Datatables: 24 baris tidak perlu paginasi
-                 sisi server, dan struktur induk-anak justru rusak bila diurutkan
-                 ulang per kolom. --}}
             <table id="categories-table" class="table table-hover mb-0 align-middle admin-selectable">
                 <thead>
                     <tr>

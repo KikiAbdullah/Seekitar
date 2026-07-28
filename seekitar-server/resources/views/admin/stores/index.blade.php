@@ -1,12 +1,6 @@
 @extends('admin.layout')
 @section('title', 'Toko')
 
-@section('breadcrumb')
-    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dasbor</a></li>
-    <li class="breadcrumb-item">Manajemen Data</li>
-    <li class="breadcrumb-item active" aria-current="page">Toko</li>
-@endsection
-
 @section('content')
     @include('admin.partials.table-page', [
         'judul'    => 'Toko',
@@ -24,17 +18,6 @@
         ],
     ])
 
-    {{--
-        SATU modal penolakan untuk seluruh tabel.
-
-        Sebelumnya tiap baris membawa modalnya sendiri ber-id `reject-{uuid}`,
-        sehingga 100 baris berarti 100 modal di DOM — dan begitu HTML aksi
-        dipindah ke bilah yang isinya diganti-ganti, id-nya ikut berpindah dan
-        `data-bs-target` bisa menunjuk elemen yang sudah tidak ada.
-
-        Modal tunggal ini hidup di luar bilah aksi, jadi tidak pernah terhapus.
-        Action form-nya disetel saat tombol ditekan.
-    --}}
     @can('verify-stores')
         <div class="modal fade" id="modalTolakToko" tabindex="-1"
              aria-labelledby="modalTolakTokoLabel" aria-hidden="true">
@@ -51,9 +34,6 @@
                         <p class="mb-2">Menolak: <strong id="modalTolakTokoNama"></strong></p>
 
                         <label for="modalTolakTokoAlasan" class="form-label">Alasan penolakan</label>
-                        {{-- Wajib, minimal 10 karakter (RejectVerificationRequest):
-                             tanpa alasan jelas, pemilik akan mengajukan ulang
-                             berkas yang sama persis. --}}
                         <textarea id="modalTolakTokoAlasan" name="reason" class="form-control"
                                   rows="3" required minlength="10" maxlength="500"
                                   placeholder="Contoh: Alamat toko tidak sesuai dengan wilayah layanan."></textarea>

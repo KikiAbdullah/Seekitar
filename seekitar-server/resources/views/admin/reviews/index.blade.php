@@ -1,16 +1,14 @@
 @extends('admin.layout')
 @section('title', 'Ulasan')
 
-@section('breadcrumb')
-    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dasbor</a></li>
-    <li class="breadcrumb-item">Manajemen Data</li>
-    <li class="breadcrumb-item active" aria-current="page">Ulasan</li>
-@endsection
-
 @section('content')
-    <div class="alert alert-warning py-2 d-flex align-items-center gap-2" role="alert">
-        <i class="ti ti-alert-triangle" aria-hidden="true"></i>
-        <span>Menghapus ulasan otomatis menghitung ulang rating toko terkait.</span>
+    <div class="card bg-light-warning shadow-none border-0 mb-4">
+        <div class="card-body py-3 px-4">
+            <div class="d-flex align-items-start gap-3">
+                <i class="ti ti-alert-triangle fs-6 text-warning mt-1" aria-hidden="true"></i>
+                <p class="mb-0 fs-3">Menghapus ulasan otomatis menghitung ulang rating toko terkait.</p>
+            </div>
+        </div>
     </div>
 
     @include('admin.partials.table-page', [

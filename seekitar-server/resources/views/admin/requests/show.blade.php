@@ -1,14 +1,28 @@
 @extends('admin.layout')
 @section('title', 'Detail Permintaan')
 
-@section('breadcrumb')
-    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dasbor</a></li>
-    <li class="breadcrumb-item"><a href="{{ route('admin.requests.index') }}">Permintaan</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Detail</li>
-@endsection
-
 @section('content')
-    <h1 class="h4 mb-3">{{ $request->title }}</h1>
+
+    <div class="card bg-light-primary shadow-none position-relative overflow-hidden mb-4">
+        <div class="card-body px-4 py-3">
+            <div class="row align-items-center">
+                <div class="col-12">
+                    <h4 class="fw-semibold mb-2">{{ $request->title }}</h4>
+                    <nav aria-label="Remah roti">
+                        <ol class="breadcrumb mb-0">
+                            <li class="breadcrumb-item">
+                                <a class="text-muted text-decoration-none" href="{{ route('admin.dashboard') }}">Dasbor</a>
+                            </li>
+                        <li class="breadcrumb-item">
+                            <a class="text-muted text-decoration-none" href="{{ route('admin.requests.index') }}">Permintaan</a>
+                        </li>
+                        <li class="breadcrumb-item active" aria-current="page">Detail</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="card mb-3"><div class="card-body">
         <dl class="row mb-0">
@@ -63,8 +77,6 @@
                         <td>{{ $offer->store?->name ?? '—' }}</td>
                         <td>Rp {{ number_format((int) $offer->price, 0, ',', '.') }}</td>
                         <td>Rp {{ number_format((int) $offer->additional_cost, 0, ',', '.') }}</td>
-                        {{-- Total = harga + ongkos. Pengurutan "termurah" di
-                             aplikasi memakai angka ini, bukan harga saja. --}}
                         <td><strong>Rp {{ number_format((int) $offer->price + (int) $offer->additional_cost, 0, ',', '.') }}</strong></td>
                         <td>{{ $offer->estimation_time }}</td>
                         <td>{{ $offer->status?->value }}</td>

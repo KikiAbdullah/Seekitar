@@ -1,20 +1,35 @@
 @extends('admin.layout')
 @section('title', 'Verifikasi Toko')
 
-@section('breadcrumb')
-    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dasbor</a></li>
-    <li class="breadcrumb-item">Verifikasi</li>
-    <li class="breadcrumb-item active" aria-current="page">Toko</li>
-@endsection
-
 @section('content')
 
-    <div class="alert alert-info py-2 d-flex align-items-center gap-2" role="alert">
-        <i class="ti ti-info-circle" aria-hidden="true"></i>
-        <span>
-            Toko yang belum disetujui <strong>tidak bisa memasang listing</strong>
-            maupun mengirim penawaran. Pemiliknya wajib sudah terverifikasi KTP (Level 2).
-        </span>
+    <div class="card bg-light-primary shadow-none position-relative overflow-hidden mb-4">
+        <div class="card-body px-4 py-3">
+            <div class="row align-items-center">
+                <div class="col-12">
+                    <h4 class="fw-semibold mb-2">Verifikasi Toko</h4>
+                    <nav aria-label="Remah roti">
+                        <ol class="breadcrumb mb-0">
+                            <li class="breadcrumb-item">
+                                <a class="text-muted text-decoration-none" href="{{ route('admin.dashboard') }}">Dasbor</a>
+                            </li>
+                        <li class="breadcrumb-item active" aria-current="page">Verifikasi</li>
+                        <li class="breadcrumb-item active" aria-current="page">Toko</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="card bg-light-info shadow-none border-0 mb-4">
+        <div class="card-body py-3 px-4">
+            <div class="d-flex align-items-start gap-3">
+                <i class="ti ti-info-circle fs-6 text-info mt-1" aria-hidden="true"></i>
+                <p class="mb-0 fs-3">Toko yang belum disetujui <strong>tidak bisa memasang listing</strong> maupun mengirim penawaran. Pemiliknya wajib sudah terverifikasi KTP (Level 2).</p>
+            </div>
+        </div>
     </div>
 
     <div class="card">
@@ -48,8 +63,6 @@
                             <div class="text-muted" style="font-size: 12px;">{{ $store->owner?->phone }}</div>
                         </td>
                         <td>
-                            {{-- store_type adalah SET MySQL — satu toko bisa
-                                 sekaligus berjualan barang, jasa, dan sewa. --}}
                             @foreach ($store->store_type ?? [] as $tipe)
                                 <span class="badge text-bg-light border">{{ $tipe }}</span>
                             @endforeach

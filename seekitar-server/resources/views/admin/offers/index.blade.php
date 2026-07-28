@@ -1,21 +1,14 @@
 @extends('admin.layout')
 @section('title', 'Penawaran')
 
-@section('breadcrumb')
-    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dasbor</a></li>
-    <li class="breadcrumb-item">Manajemen Data</li>
-    <li class="breadcrumb-item active" aria-current="page">Penawaran</li>
-@endsection
-
 @section('content')
-    <div class="alert alert-info py-2 d-flex align-items-center gap-2" role="alert">
-        <i class="ti ti-info-circle" aria-hidden="true"></i>
-        <span>
-            Halaman ini <strong>hanya baca</strong> (§9.8). Penawaran adalah kesepakatan
-            harga antara penyedia dan pembeli; admin tidak mengubahnya. Untuk penawaran
-            bermasalah, tangani lewat toko terkait atau penyelesaian laporan agar
-            alasannya tercatat.
-        </span>
+    <div class="card bg-light-info shadow-none border-0 mb-4">
+        <div class="card-body py-3 px-4">
+            <div class="d-flex align-items-start gap-3">
+                <i class="ti ti-info-circle fs-6 text-info mt-1" aria-hidden="true"></i>
+                <p class="mb-0 fs-3">Halaman ini <strong>hanya baca</strong>. Penawaran adalah kesepakatan harga antara penyedia dan pembeli. Untuk penawaran bermasalah, tangani lewat toko terkait atau penyelesaian laporan agar alasannya tercatat.</p>
+            </div>
+        </div>
     </div>
 
     @include('admin.partials.table-page', [

@@ -1,13 +1,29 @@
 @extends('admin.layout')
 @section('title', 'Ubah Kata Sandi')
 
-@section('breadcrumb')
-    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dasbor</a></li>
-    <li class="breadcrumb-item"><a href="{{ route('admin.profile.edit') }}">Profil Saya</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Ubah Kata Sandi</li>
-@endsection
-
 @section('content')
+
+    <div class="card bg-light-primary shadow-none position-relative overflow-hidden mb-4">
+        <div class="card-body px-4 py-3">
+            <div class="row align-items-center">
+                <div class="col-12">
+                    <h4 class="fw-semibold mb-2">Ubah Kata Sandi</h4>
+                    <nav aria-label="Remah roti">
+                        <ol class="breadcrumb mb-0">
+                            <li class="breadcrumb-item">
+                                <a class="text-muted text-decoration-none" href="{{ route('admin.dashboard') }}">Dasbor</a>
+                            </li>
+                        <li class="breadcrumb-item">
+                            <a class="text-muted text-decoration-none" href="{{ route('admin.profile.edit') }}">Profil Saya</a>
+                        </li>
+                        <li class="breadcrumb-item active" aria-current="page">Ubah Kata Sandi</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row g-3">
         <div class="col-12 col-lg-7">
             <div class="card">
@@ -24,9 +40,6 @@
                         @csrf
                         @method('PUT')
 
-                        {{-- Kolom email tersembunyi: pengelola kata sandi browser
-                             butuh tahu akun mana yang sedang diubah, kalau tidak
-                             ia menyimpan sandi baru tanpa nama pengguna. --}}
                         <input type="hidden" name="email" autocomplete="username"
                                value="{{ auth()->user()?->email }}">
 

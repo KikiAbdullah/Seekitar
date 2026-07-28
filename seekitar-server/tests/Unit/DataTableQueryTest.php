@@ -200,6 +200,12 @@ class DataTableQueryTest extends TestCase
             glob(__DIR__.'/../../resources/views/admin/*.blade.php') ?: [],
         );
 
+        // Tanpa ini test lolos secara palsu bila glob-nya salah dan tidak
+        // ada berkas yang terperiksa sama sekali.
+        $this->assertGreaterThan(30, count($berkas), 'Glob view admin tidak menemukan berkas.');
+
+        $diperiksa = 0;
+
         foreach ($berkas as $view) {
             $src = preg_replace(
                 ['/\{\{--[\s\S]*?--\}\}/', '/\{\{[\s\S]*?\}\}/', '/@\w+\([^)]*\)/'],
@@ -239,6 +245,52 @@ class DataTableQueryTest extends TestCase
         );
 
         $this->assertStringContainsString("data-dt-filter", $partial);
+    }
+
+    public function test_blade_admin_bersih_dari_komentar_naratif(): void
+    {
+        $berdokumen = ['_datatable.blade.php', 'table-page.blade.php', '_reject_modal.blade.php'];
+
+        $berkas = array_merge(
+            glob(__DIR__.'/../../resources/views/admin/*/*.blade.php') ?: [],
+            glob(__DIR__.'/../../resources/views/admin/*.blade.php') ?: [],
+        );
+
+        // Tanpa ini test lolos secara palsu bila glob-nya salah dan tidak
+        // ada berkas yang terperiksa sama sekali.
+        $this->assertGreaterThan(30, count($berkas), 'Glob view admin tidak menemukan berkas.');
+
+        $diperiksa = 0;
+
+        foreach ($berkas as $view) {
+            if (in_array(basename($view), $berdokumen, true)) {
+                continue;
+            }
+
+            $diperiksa++;
+
+            preg_match_all('/\{\{--([\s\S]*?)--\}\}/', file_get_contents($view), $cocok);
+
+            foreach ($cocok[1] as $isi) {
+                $baris = count(explode("\n", trim($isi)));
+
+                $this->assertLessThanOrEqual(
+                    2,
+                    $baris,
+                    basename(dirname($view)).'/'.basename($view)
+                    .' memuat komentar naratif. View adalah lapisan presentasi — '
+                    .'alasan teknis tempatnya di controller atau Server_Implementation_Guide.md.',
+                );
+
+                $this->assertDoesNotMatchRegularExpression(
+                    '/KENAPA|Sebabnya|Diverifikasi|Versi sebelumnya|TODO_BUG|jebakan/u',
+                    $isi,
+                    basename(dirname($view)).'/'.basename($view).' memuat catatan investigasi.',
+                );
+            }
+        }
+
+        $this->assertGreaterThan(30, $diperiksa, 'Terlalu sedikit view yang diperiksa.');
     }
 
     public function test_kolom_offers_count_dijamin_ada_nilainya(): void

@@ -1,12 +1,6 @@
 @extends('admin.layout')
 @section('title', 'Pengguna')
 
-@section('breadcrumb')
-    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dasbor</a></li>
-    <li class="breadcrumb-item">Manajemen Data</li>
-    <li class="breadcrumb-item active" aria-current="page">Pengguna</li>
-@endsection
-
 @section('content')
     @include('admin.partials.table-page', [
         'judul'    => 'Pengguna',

@@ -1,4 +1,3 @@
-{{-- Aksi baris ulasan — tampil di bilah aksi sebelah judul. --}}
 @can('manage-reviews')
     <form action="{{ route('admin.reviews.destroy', $review) }}" method="POST" class="d-inline">
         @csrf

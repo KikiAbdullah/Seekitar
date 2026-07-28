@@ -1,16 +1,10 @@
 {{--
     Partial tabel server-side.
 
-    $tableId : id elemen
-    $columns : [['data' => 'name', 'label' => 'Nama', 'orderable' => false], ...]
-    $ajax    : URL endpoint data
-    $order   : (opsional) [[index, 'asc'|'desc']]
-
-    Memakai @json(), BUKAN {!! !!}. Keduanya sama-sama menghasilkan output
-    tanpa escaping HTML, tetapi @json() melakukan escaping khusus konteks
-    JavaScript (JSON_HEX_TAG dkk) sehingga string berisi "</script>" tidak
-    bisa memutus blok skrip. {!! !!} tidak memberi perlindungan itu sama
-    sekali — lihat TODO_BUG #202.
+    $tableId  id elemen
+    $columns  [['data' => 'name', 'label' => 'Nama', 'orderable' => false], ...]
+    $ajax     URL endpoint data
+    $order    (opsional) [[index, 'asc'|'desc']]
 --}}
 @php
     // Disusun di blok @php, BUKAN di dalam @json(): Blade memotong argumen

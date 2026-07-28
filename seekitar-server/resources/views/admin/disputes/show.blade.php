@@ -1,14 +1,28 @@
 @extends('admin.layout')
 @section('title', 'Tinjau Laporan')
 
-@section('breadcrumb')
-    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dasbor</a></li>
-    <li class="breadcrumb-item"><a href="{{ route('admin.disputes.index') }}">Laporan</a></li>
-    <li class="breadcrumb-item active" aria-current="page">Tinjau</li>
-@endsection
-
 @section('content')
-    <h1 class="h4 mb-3">Laporan #{{ $dispute->order?->order_number }}</h1>
+
+    <div class="card bg-light-primary shadow-none position-relative overflow-hidden mb-4">
+        <div class="card-body px-4 py-3">
+            <div class="row align-items-center">
+                <div class="col-12">
+                    <h4 class="fw-semibold mb-2">Laporan #{{ $dispute->order?->order_number }}</h4>
+                    <nav aria-label="Remah roti">
+                        <ol class="breadcrumb mb-0">
+                            <li class="breadcrumb-item">
+                                <a class="text-muted text-decoration-none" href="{{ route('admin.dashboard') }}">Dasbor</a>
+                            </li>
+                        <li class="breadcrumb-item">
+                            <a class="text-muted text-decoration-none" href="{{ route('admin.disputes.index') }}">Laporan</a>
+                        </li>
+                        <li class="breadcrumb-item active" aria-current="page">Tinjau</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="row g-3">
         <div class="col-md-6">

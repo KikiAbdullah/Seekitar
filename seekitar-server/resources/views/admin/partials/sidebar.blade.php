@@ -1,25 +1,3 @@
-{{--
-    Sidebar panel admin — markup `left-sidebar` milik template Modernize
-    (Server_Implementation_Guide.md §8).
-
-    SETIAP butir menu dibungkus @can dengan permission yang SAMA PERSIS dengan
-    middleware `permission:` pada route-nya di routes/admin.php. Kalau keduanya
-    berbeda, salah satu dari dua hal buruk terjadi:
-
-      - menu tampil tapi diklik menghasilkan 403 (menu berbohong), atau
-      - menu tersembunyi padahal admin sebenarnya berhak (fitur hilang diam-diam).
-
-    Kecocokan itu ditegakkan otomatis oleh tools/dev/check-admin-menu.mjs, yang
-    membandingkan @can di berkas ini dengan middleware hasil `route:list`.
-
-    ⚠️ @can di sini HANYA menyembunyikan tautan — ia bukan pengaman. Otorisasi
-    sesungguhnya tetap di middleware route (§6.3); pengguna bisa mengetik URL
-    langsung.
-
-    CATATAN STRUKTUR: kelas `sidebar-item`, `sidebar-link`, `has-arrow`,
-    `first-level`, dan id `sidebarnav` dibaca sidebarmenu.js untuk menandai
-    menu aktif dan membuka submenu. Menggantinya mematikan perilaku itu.
---}}
 @php
     /*
      * Dihitung sekali; dipakai untuk kelas `show` pada submenu DAN untuk
@@ -49,9 +27,6 @@
                     <span class="hide-menu">Beranda</span>
                 </li>
 
-                {{-- Dasbor tanpa @can: setiap admin yang lolos
-                     `role:admin|super-admin` berhak melihatnya, dan isinya
-                     sendiri sudah disaring per permission di controller. --}}
                 <li class="sidebar-item">
                     <a class="sidebar-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"
                        href="{{ route('admin.dashboard') }}" aria-expanded="false"
@@ -61,9 +36,6 @@
                     </a>
                 </li>
 
-                {{-- ── Verifikasi ──────────────────────────────────────────
-                     @canany, bukan @can: induk dropdown harus tetap muncul
-                     bila admin punya SALAH SATU dari dua izin di dalamnya. --}}
                 @canany(['verify-users', 'verify-stores'])
                     <li class="nav-small-cap">
                         <i class="ti ti-dots nav-small-cap-icon fs-4" aria-hidden="true"></i>
@@ -112,10 +84,6 @@
                     </li>
                 @endcanany
 
-                {{-- ── Manajemen Data ──────────────────────────────────────
-                     Judul kelompok ikut disembunyikan bila admin tidak punya
-                     satu pun izin di bawahnya; kalau tidak, tampil judul
-                     tanpa isi. --}}
                 @canany([
                     'manage-users', 'manage-categories', 'manage-stores', 'manage-listings',
                     'manage-requests', 'manage-offers', 'manage-orders', 'manage-disputes',
@@ -205,10 +173,6 @@
                                 <span class="d-flex"><i class="ti ti-alert-triangle" aria-hidden="true"></i></span>
                                 <span class="hide-menu">Laporan</span>
                             </div>
-                            {{-- Angka merah HANYA untuk yang sudah lewat SLA —
-                                 kalau semua laporan terbuka ikut dihitung,
-                                 lencana ini selalu menyala dan berhenti
-                                 berarti apa-apa. --}}
                             @if ($laporanLewatSla ?? 0)
                                 <span class="hide-menu badge rounded-pill bg-danger-subtle text-danger fs-1 py-1">
                                     {{ $laporanLewatSla }}
@@ -228,7 +192,6 @@
                     </li>
                 @endcan
 
-                {{-- ── Sistem ────────────────────────────────────────────── --}}
                 @can('manage-settings')
                     <li class="nav-small-cap">
                         <i class="ti ti-dots nav-small-cap-icon fs-4" aria-hidden="true"></i>

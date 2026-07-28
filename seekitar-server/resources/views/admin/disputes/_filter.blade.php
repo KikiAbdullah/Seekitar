@@ -1,4 +1,3 @@
-{{-- Filter dibaca partial table-page lewat atribut data-dt-filter. --}}
 <label for="filter-dispute-status" class="form-label">Status</label>
 
 <select id="filter-dispute-status" data-min-search="20" name="status"
