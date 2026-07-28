@@ -4,105 +4,46 @@
 @section('content')
 
     <div class="row">
-        <div class="col-lg-8 d-flex align-items-stretch">
+        <div class="col-xl-5 d-flex align-items-stretch">
             <div class="card w-100 bg-light-primary overflow-hidden shadow-none">
-                <div class="card-body position-relative">
-                    <div class="row">
-                        <div class="col-sm-7">
-                            <div class="d-flex align-items-center mb-7">
-                                <span class="admin-avatar me-6" aria-hidden="true">
-                                    {{ Str::upper(Str::substr(auth()->user()?->name ?? '?', 0, 1)) }}
-                                </span>
-                                <h5 class="fw-semibold mb-0 fs-5">
-                                    Selamat datang, {{ auth()->user()?->name }}
-                                </h5>
-                            </div>
-                            <div class="d-flex align-items-center">
-                                <div class="border-end pe-4 border-muted border-opacity-10">
-                                    <h3 class="mb-1 fw-semibold fs-8">{{ \App\Support\Angka::bulat($sorotan['nilai']) }}</h3>
-                                    <p class="mb-0 text-dark">{{ $sorotan['label'] }}</p>
-                                </div>
-                                <div class="ps-4">
-                                    <h3 class="mb-1 fw-semibold fs-8">{{ now()->translatedFormat('d M') }}</h3>
-                                    <p class="mb-0 text-dark">{{ config('seekitar.regency') }}</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-sm-5">
-                            <div class="welcome-bg-img text-end">
-                                <img src="{{ asset('vendor/modernize/images/backgrounds/welcome-bg2.png') }}"
-                                     alt="" class="img-fluid" width="282" height="196">
-                            </div>
-                        </div>
-                    </div>
+                <div class="card-body position-relative py-4 admin-sambutan">
+                    <p class="fs-2 text-muted mb-1">{{ now()->translatedFormat('l, d F Y') }}</p>
+                    <h5 class="fw-semibold mb-1">Selamat datang,</h5>
+                    <h5 class="fw-semibold mb-3 text-truncate">
+                        {{ Str::before(auth()->user()?->name ?? '', ' ') }}
+                    </h5>
+                    <h3 class="fw-semibold fs-8 mb-0 lh-1">
+                        {{ \App\Support\Angka::bulat($sorotan['nilai']) }}
+                    </h3>
+                    <p class="mb-0 fs-2 text-muted">{{ $sorotan['label'] }}</p>
+
+                    <img src="{{ asset('vendor/modernize/images/backgrounds/welcome-bg2.png') }}"
+                         alt="" class="admin-sambutan-img" width="282" height="196">
                 </div>
             </div>
         </div>
 
-        <div class="col-lg-4 d-flex align-items-stretch">
-            <div class="card w-100">
-                <div class="card-body">
-                    <div class="mb-4">
-                        <h5 class="card-title fw-semibold">Peran &amp; Wilayah</h5>
-                        <p class="card-subtitle mb-0">Hak akses akun Anda</p>
-                    </div>
-
-                    <div class="d-flex align-items-center justify-content-between mb-4">
-                        <div class="d-flex">
-                            <div class="p-6 bg-light-primary rounded-2 me-6 d-flex align-items-center justify-content-center">
-                                <i class="ti ti-shield-check text-primary fs-6" aria-hidden="true"></i>
-                            </div>
-                            <div>
-                                <h6 class="mb-1 fs-4 fw-semibold">Peran</h6>
-                                <p class="fs-3 mb-0 text-muted">
-                                    {{ (auth()->user()?->getRoleNames() ?? collect())->join(', ') ?: '—' }}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div class="d-flex">
-                            <div class="p-6 bg-light-secondary rounded-2 me-6 d-flex align-items-center justify-content-center">
-                                <i class="ti ti-map-pin text-secondary fs-6" aria-hidden="true"></i>
-                            </div>
-                            <div>
-                                <h6 class="mb-1 fs-4 fw-semibold">{{ config('seekitar.regency') }}</h6>
-                                <p class="fs-3 mb-0 text-muted">Kode BPS {{ config('seekitar.regency_code') }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    @if (count($antrian) > 0)
-        <div class="row">
-            <div class="col-12">
+        @if (count($antrian) > 0)
+            <div class="col-xl-7 d-flex align-items-stretch">
                 <div class="card w-100">
-                    <div class="card-body">
-                        <div class="mb-7">
-                            <h5 class="card-title fw-semibold">Antrian Kerja</h5>
-                            <p class="card-subtitle mb-0">Hal yang menunggu tindakan Anda</p>
+                    <div class="card-body py-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h5 class="card-title fw-semibold mb-0">Antrian Kerja</h5>
+                            <span class="fs-2 text-muted">Menunggu tindakan</span>
                         </div>
 
-                        <div class="row">
+                        <div class="row g-3">
                             @foreach ($antrian as $item)
-                                <div class="col-md-6 col-xl-3">
+                                <div class="col-6 col-lg-3">
                                     <a href="{{ $item['url'] }}"
-                                       class="d-flex align-items-center justify-content-between mb-4 text-decoration-none">
-                                        <div class="d-flex">
-                                            <div class="p-8 bg-light-{{ $item['tone'] }} rounded-2 d-flex align-items-center justify-content-center me-6">
-                                                <i class="ti {{ $item['icon'] }} text-{{ $item['tone'] }} fs-6" aria-hidden="true"></i>
-                                            </div>
-                                            <div>
-                                                <h6 class="mb-1 fs-4 fw-semibold text-dark">
-                                                    {{ \App\Support\Angka::bulat($item['value']) }}
-                                                </h6>
-                                                <p class="fs-3 mb-0 text-muted">{{ $item['label'] }}</p>
-                                            </div>
-                                        </div>
+                                       class="admin-antrian d-block h-100 p-3 rounded-2 bg-light-{{ $item['tone'] }} text-decoration-none">
+                                        <span class="d-flex align-items-center gap-2 mb-1">
+                                            <i class="ti {{ $item['icon'] }} text-{{ $item['tone'] }} fs-5" aria-hidden="true"></i>
+                                            <span class="fs-6 fw-semibold text-dark lh-1">
+                                                {{ \App\Support\Angka::bulat($item['value']) }}
+                                            </span>
+                                        </span>
+                                        <span class="d-block fs-2 text-muted lh-sm">{{ $item['label'] }}</span>
                                     </a>
                                 </div>
                             @endforeach
@@ -110,32 +51,24 @@
                     </div>
                 </div>
             </div>
-        </div>
-    @endif
+        @endif
+    </div>
 
     @if (count($stats) > 0)
-        <div class="row">
+        <div class="row g-3 mb-3">
             @foreach ($stats as $card)
-                <div class="col-sm-6 col-xl-3 d-flex align-items-stretch">
-                    <div class="card w-100">
-                        <div class="card-body">
-                            <div class="row align-items-start">
-                                <div class="col-8">
-                                    <h5 class="card-title mb-9 fw-semibold">{{ $card['label'] }}</h5>
-                                    <div class="d-flex align-items-center mb-3">
-                                        <h4 class="fw-semibold mb-0 me-8">
-                                            {{ \App\Support\Angka::bulat($card['value']) }}
-                                        </h4>
-                                    </div>
-                                    <p class="fs-3 mb-0 text-muted">{{ $card['hint'] }}</p>
-                                </div>
-                                <div class="col-4">
-                                    <div class="d-flex justify-content-end">
-                                        <div class="p-6 bg-light-{{ $card['tone'] }} rounded-2 d-flex align-items-center justify-content-center">
-                                            <i class="ti {{ $card['icon'] }} text-{{ $card['tone'] }} fs-6" aria-hidden="true"></i>
-                                        </div>
-                                    </div>
-                                </div>
+                <div class="col-6 col-lg-3 d-flex align-items-stretch">
+                    <div class="card w-100 mb-0">
+                        <div class="card-body p-3 d-flex align-items-center gap-3">
+                            <span class="p-6 bg-light-{{ $card['tone'] }} rounded-2 d-flex align-items-center justify-content-center flex-shrink-0">
+                                <i class="ti {{ $card['icon'] }} text-{{ $card['tone'] }} fs-6" aria-hidden="true"></i>
+                            </span>
+                            <div class="min-w-0">
+                                <h4 class="fw-semibold mb-0 lh-1">
+                                    {{ \App\Support\Angka::bulat($card['value']) }}
+                                </h4>
+                                <p class="fs-3 fw-semibold text-dark mb-0 text-truncate">{{ $card['label'] }}</p>
+                                <p class="fs-2 text-muted mb-0 text-truncate">{{ $card['hint'] }}</p>
                             </div>
                         </div>
 
@@ -149,33 +82,29 @@
     @endif
 
     @canany(['manage-requests', 'manage-orders'])
-        <div class="row">
-            <div class="col-12">
-                <div class="card w-100">
-                    <div class="card-body">
-                        <div class="d-sm-flex d-block align-items-center justify-content-between mb-9">
-                            <div class="mb-3 mb-sm-0">
-                                <h5 class="card-title fw-semibold">Aktivitas Harian</h5>
-                                <p class="card-subtitle mb-0">Permintaan &amp; pesanan baru per hari</p>
-                            </div>
-                            <div>
-                                <select id="rentangGrafik" class="form-select js-select2" data-min-search="20"
-                                        aria-label="Rentang grafik">
-                                    @foreach ([7 => '7 hari terakhir', 14 => '14 hari terakhir', 30 => '30 hari terakhir'] as $hari => $label)
-                                        <option value="{{ $hari }}" @selected($hari === $chartHari)>{{ $label }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-
-                        <div style="position: relative; height: 300px;">
-                            <canvas id="grafikAktivitas" role="img"
-                                    aria-label="Grafik permintaan dan pesanan baru per hari"></canvas>
-                        </div>
-
-                        <p id="grafikStatus" class="fs-2 text-muted mb-0 mt-3" role="status"></p>
+        <div class="card w-100">
+            <div class="card-body py-4">
+                <div class="d-sm-flex d-block align-items-center justify-content-between mb-3">
+                    <div class="mb-3 mb-sm-0">
+                        <h5 class="card-title fw-semibold mb-0">Aktivitas Harian</h5>
+                        <p class="card-subtitle fs-2 mb-0">Permintaan &amp; pesanan baru per hari</p>
+                    </div>
+                    <div>
+                        <select id="rentangGrafik" class="form-select form-select-sm js-select2" data-min-search="20"
+                                aria-label="Rentang grafik">
+                            @foreach ([7 => '7 hari terakhir', 14 => '14 hari terakhir', 30 => '30 hari terakhir'] as $hari => $label)
+                                <option value="{{ $hari }}" @selected($hari === $chartHari)>{{ $label }}</option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
+
+                <div class="admin-grafik">
+                    <canvas id="grafikAktivitas" role="img"
+                            aria-label="Grafik permintaan dan pesanan baru per hari"></canvas>
+                </div>
+
+                <p id="grafikStatus" class="fs-2 text-muted mb-0 mt-2" role="status"></p>
             </div>
         </div>
     @endcanany
@@ -183,27 +112,23 @@
     <div class="row">
 
         @can('manage-requests')
-            <div class="col-12 d-flex align-items-stretch">
+            <div class="col-xl-6 d-flex align-items-stretch">
                 <div class="card w-100">
-                    <div class="card-body">
-                        <div class="d-sm-flex d-block align-items-center justify-content-between mb-4">
-                            <div>
-                                <h5 class="card-title fw-semibold">Permintaan Terbaru</h5>
-                                <p class="card-subtitle mb-0">5 permintaan yang baru masuk</p>
-                            </div>
+                    <div class="card-body py-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h5 class="card-title fw-semibold mb-0">Permintaan Terbaru</h5>
                             <a href="{{ route('admin.requests.index') }}" class="btn btn-sm btn-outline-primary">
                                 Lihat semua
                             </a>
                         </div>
 
                         <div class="table-responsive">
-                            <table class="table align-middle text-nowrap mb-0">
+                            <table class="table align-middle mb-0 admin-ringkas">
                                 <thead>
                                     <tr class="text-muted fw-semibold">
-                                        <th scope="col" class="ps-0">Judul</th>
-                                        <th scope="col">Pembeli</th>
+                                        <th scope="col" class="ps-0">Permintaan</th>
                                         <th scope="col" class="text-center">Tawaran</th>
-                                        <th scope="col">Status</th>
+                                        <th scope="col" class="text-end pe-0">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody class="border-top">
@@ -211,14 +136,16 @@
                                     <tr>
                                         <td class="ps-0">
                                             <a href="{{ route('admin.requests.show', $item) }}"
-                                               class="text-decoration-none">
-                                                <h6 class="fw-semibold mb-1">{{ Str::limit($item->title, 34) }}</h6>
+                                               class="text-decoration-none d-block">
+                                                <h6 class="fw-semibold mb-0 text-truncate">{{ $item->title }}</h6>
                                             </a>
-                                            <p class="fs-2 mb-0 text-muted">{{ $item->created_at?->diffForHumans() }}</p>
+                                            <p class="fs-2 mb-0 text-muted text-truncate">
+                                                {{ $item->user?->displayName() ?? '—' }} ·
+                                                {{ $item->created_at?->diffForHumans(short: true) }}
+                                            </p>
                                         </td>
-                                        <td><p class="mb-0 fs-3">{{ $item->user?->displayName() ?? '—' }}</p></td>
-                                        <td class="text-center"><p class="mb-0 fs-3">{{ $item->offers_count }}</p></td>
-                                        <td>
+                                        <td class="text-center"><span class="fs-3">{{ $item->offers_count }}</span></td>
+                                        <td class="text-end pe-0">
                                             <span class="badge fw-semibold py-1 bg-light-primary text-primary">
                                                 {{ $item->status?->label() ?? '—' }}
                                             </span>
@@ -226,7 +153,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="4" class="text-center text-muted py-5">Belum ada permintaan.</td>
+                                        <td colspan="3" class="text-center text-muted py-4">Belum ada permintaan.</td>
                                     </tr>
                                 @endforelse
                                 </tbody>
@@ -238,45 +165,43 @@
         @endcan
 
         @can('manage-offers')
-            <div class="col-12 d-flex align-items-stretch">
+            <div class="col-xl-6 d-flex align-items-stretch">
                 <div class="card w-100">
-                    <div class="card-body">
-                        <div class="d-sm-flex d-block align-items-center justify-content-between mb-4">
-                            <div>
-                                <h5 class="card-title fw-semibold">Penawaran Terbaru</h5>
-                                <p class="card-subtitle mb-0">5 penawaran yang baru dikirim</p>
-                            </div>
+                    <div class="card-body py-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h5 class="card-title fw-semibold mb-0">Penawaran Terbaru</h5>
                             <a href="{{ route('admin.offers.index') }}" class="btn btn-sm btn-outline-primary">
                                 Lihat semua
                             </a>
                         </div>
 
                         <div class="table-responsive">
-                            <table class="table align-middle text-nowrap mb-0">
+                            <table class="table align-middle mb-0 admin-ringkas">
                                 <thead>
                                     <tr class="text-muted fw-semibold">
-                                        <th scope="col" class="ps-0">Permintaan</th>
-                                        <th scope="col">Toko</th>
-                                        <th scope="col">Total</th>
-                                        <th scope="col">Status</th>
+                                        <th scope="col" class="ps-0">Penawaran</th>
+                                        <th scope="col" class="text-end">Total</th>
+                                        <th scope="col" class="text-end pe-0">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody class="border-top">
                                 @forelse ($ringkas['offers'] as $offer)
                                     <tr>
                                         <td class="ps-0">
-                                            <h6 class="fw-semibold mb-1">
-                                                {{ Str::limit($offer->request?->title ?? '—', 28) }}
+                                            <h6 class="fw-semibold mb-0 text-truncate">
+                                                {{ $offer->request?->title ?? '—' }}
                                             </h6>
-                                            <p class="fs-2 mb-0 text-muted">{{ $offer->created_at?->diffForHumans() }}</p>
-                                        </td>
-                                        <td><p class="mb-0 fs-3">{{ Str::limit($offer->store?->name ?? '—', 20) }}</p></td>
-                                        <td>
-                                            <p class="fs-3 text-dark mb-0">
-                                                {{ \App\Support\Angka::rupiah((int) $offer->price + (int) $offer->additional_cost) }}
+                                            <p class="fs-2 mb-0 text-muted text-truncate">
+                                                {{ $offer->store?->name ?? '—' }} ·
+                                                {{ $offer->created_at?->diffForHumans(short: true) }}
                                             </p>
                                         </td>
-                                        <td>
+                                        <td class="text-end">
+                                            <span class="fs-3 text-dark">
+                                                {{ \App\Support\Angka::rupiah((int) $offer->price + (int) $offer->additional_cost) }}
+                                            </span>
+                                        </td>
+                                        <td class="text-end pe-0">
                                             <span class="badge fw-semibold py-1 bg-light-warning text-warning">
                                                 {{ $offer->status?->label() ?? '—' }}
                                             </span>
@@ -284,7 +209,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="4" class="text-center text-muted py-5">Belum ada penawaran.</td>
+                                        <td colspan="3" class="text-center text-muted py-4">Belum ada penawaran.</td>
                                     </tr>
                                 @endforelse
                                 </tbody>
@@ -348,7 +273,8 @@
                 backgroundColor: warnaLatar(d.color),
                 fill: true,
                 tension: 0.4,
-                pointRadius: 3,
+                pointRadius: 0,
+                pointHoverRadius: 4,
                 pointBackgroundColor: d.color,
                 borderWidth: 2,
             }));
@@ -368,16 +294,19 @@
                         plugins: {
                             legend: {
                                 position: 'bottom',
-                                labels: { usePointStyle: true, boxWidth: 8, padding: 16 },
+                                labels: { usePointStyle: true, boxWidth: 8, padding: 12 },
                             },
                         },
                         scales: {
                             y: {
                                 beginAtZero: true,
-                                ticks: { precision: 0 },
+                                ticks: { precision: 0, maxTicksLimit: 5 },
                                 grid: { borderDash: [4, 4] },
                             },
-                            x: { grid: { display: false } },
+                            x: {
+                                grid: { display: false },
+                                ticks: { maxRotation: 0, autoSkipPadding: 16 },
+                            },
                         },
                     },
                 });

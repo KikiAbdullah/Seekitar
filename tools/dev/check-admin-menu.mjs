@@ -271,6 +271,64 @@ console.log('\nDasbor (pola index2 template)');
   } else {
     ok(`${dikirim.size} variabel dasbor semuanya disediakan controller`);
   }
+
+  /*
+   * Dasbor harus tetap RINGKAS.
+   *
+   * Diukur di Chromium pada 1440x900: versi sebelum pemadatan butuh 2818px
+   * (3,13 layar penuh) untuk isi yang sama. Penyebab terbesarnya blok yang
+   * mengulang informasi tempat lain — kartu "Peran & Wilayah" mengulang peran
+   * dari dropdown header DAN wilayah dari kaki sidebar — plus dua tabel yang
+   * ditumpuk ke bawah, bukan berdampingan.
+   *
+   * Pemeriksaan ini tidak bisa mengukur piksel tanpa peramban, jadi yang
+   * dijaga adalah keputusan strukturalnya: tabel berdampingan, dan tidak ada
+   * lagi kartu yang mengulang peran/wilayah.
+   */
+  const tabelBerdampingan = (dash.match(/col-xl-6 d-flex align-items-stretch/g) || []).length;
+  if (tabelBerdampingan < 2) {
+    fail('tabel ringkas tidak berdampingan (col-xl-6) — dasbor memanjang tanpa perlu');
+  } else {
+    ok('dua tabel ringkas berdampingan di layar lebar');
+  }
+
+  if (/Peran\s*&amp;\s*Wilayah|Hak akses akun Anda/.test(dash)) {
+    fail('kartu "Peran & Wilayah" mengulang isi dropdown header + kaki sidebar — hapus, bukan tampilkan tiga kali');
+  } else {
+    ok('dasbor tidak mengulang peran/wilayah yang sudah ada di header & sidebar');
+  }
+
+  /*
+   * Tinggi grafik tidak boleh dipatok piksel lewat atribut style.
+   *
+   * `height: 300px` memakan 39% tinggi layar laptop 1366x768 untuk satu blok,
+   * sementara di monitor besar justru terlihat kerdil. Dipindah ke .admin-grafik
+   * yang memakai clamp() terhadap tinggi viewport.
+   */
+  if (/style="[^"]*height:\s*\d+px/.test(dash)) {
+    fail('tinggi grafik dipatok piksel lewat atribut style — pakai .admin-grafik (clamp terhadap viewport)');
+  } else {
+    ok('tinggi grafik responsif terhadap tinggi layar');
+  }
+
+  /*
+   * Sel judul tabel ringkas WAJIB punya patokan lebar.
+   *
+   * `text-truncate` di dalam <td> tidak cukup: sel tabel melebar mengikuti isi
+   * terpanjang sehingga text-overflow tidak pernah aktif. Terukur — sel
+   * pertama tabel penawaran menolak menyusut di bawah 265px dan membuat tabel
+   * meluber 13px di 1366px serta 175px di ponsel.
+   */
+  const adminCssDash = read('seekitar-server/public/css/admin.css')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+  const punyaKelas = /class="[^"]*\badmin-ringkas\b/.test(dash);
+  const punyaAturan = /\.admin-ringkas\s+td:first-child[^{]*\{[^}]*max-width:\s*0/s.test(adminCssDash);
+
+  if (!punyaKelas || !punyaAturan) {
+    fail('tabel ringkas tanpa .admin-ringkas + max-width:0 pada sel pertama — kolom terakhir meluber (terukur 175px di 390px)');
+  } else {
+    ok('sel judul tabel ringkas bisa menyusut — tidak ada kolom yang meluber');
+  }
 }
 
 // ─────────────────────────────────── 2. @can sidebar ⇄ middleware route

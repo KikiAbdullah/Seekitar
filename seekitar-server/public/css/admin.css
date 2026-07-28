@@ -390,6 +390,108 @@ a:focus-visible {
     outline-offset: 2px;
 }
 
+/* ------------------------------------------------------------------ Dasbor */
+
+/*
+ * Tinggi grafik responsif.
+ *
+ * Sebelumnya dipatok `height: 300px` lewat atribut style. Di laptop 1366x768
+ * angka itu memakan 39% tinggi layar untuk satu blok, sementara di monitor
+ * besar grafiknya justru terlihat kerdil. `clamp()` membuatnya ikut tinggi
+ * viewport dengan batas atas-bawah yang tetap masuk akal.
+ */
+.admin-grafik {
+    position: relative;
+    height: clamp(200px, 26vh, 280px);
+}
+
+/*
+ * Kartu sambutan: ilustrasi sebagai hiasan latar, bukan kolom grid.
+ *
+ * Versi kolom (`col-7` teks + `col-5` gambar) terukur bermasalah: gambar
+ * 282px tidak muat di kolom 226px pada layar 1366px, sehingga MENIMPA teks
+ * sampai 103px — judulnya pun terpaksa patah jadi dua baris.
+ *
+ * Sebagai latar berposisi absolut, gambar tidak lagi merebut lebar dari teks.
+ * `max-width: 45%` menjaganya tetap proporsional, dan teks diberi jarak kanan
+ * lewat padding supaya tidak pernah bertabrakan berapa pun lebar kartunya.
+ */
+/*
+ * 46%, bukan 42%.
+ *
+ * Diukur per-glyph (Range.getBoundingClientRect, bukan kotak blok): pada
+ * 1440px judul yang dipangkas masih menyentuh tepi kiri gambar sejauh 8px,
+ * karena `text-truncate` memakai seluruh lebar yang tersedia. Padding ini
+ * harus lebih besar dari `max-width` gambar (45%) agar selalu ada sela.
+ */
+.admin-sambutan { padding-right: 46%; }
+
+.admin-sambutan-img {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    max-width: 45%;
+    height: auto;
+    pointer-events: none;
+}
+
+/* Di bawah lg ilustrasi hanya memakan ruang: kartu menyempit dan teksnya
+   yang lebih penting. */
+@media (max-width: 575.98px) {
+    .admin-sambutan { padding-right: 1.5rem; }
+    .admin-sambutan-img { display: none; }
+}
+
+/*
+ * Petak antrian kerja.
+ *
+ * Seluruh petak adalah tautan, jadi ia butuh umpan balik hover sendiri —
+ * tanpa itu tidak ada tanda bahwa area ini bisa diklik. Transform sengaja
+ * TIDAK dipakai: memindahkan elemen saat hover membuat kursor "mengejar"
+ * target pada layar sentuh-hibrida.
+ */
+.admin-antrian {
+    transition: box-shadow 0.15s ease-in-out, filter 0.15s ease-in-out;
+}
+.admin-antrian:hover,
+.admin-antrian:focus-visible {
+    box-shadow: 0 2px 10px rgba(31, 41, 51, 0.12);
+    filter: brightness(0.97);
+}
+
+/*
+ * `text-truncate` hanya bekerja bila induk fleksnya boleh menyusut. Item flex
+ * default `min-width: auto`, sehingga teks panjang justru melebarkan kartu
+ * alih-alih terpotong — kartu KPI jadi tidak sama lebar.
+ */
+.min-w-0 { min-width: 0; }
+
+/*
+ * Kolom judul tabel ringkas dasbor.
+ *
+ * `text-truncate` di dalam <td> TIDAK cukup: sel tabel melebar mengikuti isi
+ * terpanjang, jadi `text-overflow` tidak pernah aktif dan tabelnya yang
+ * meluber. Terukur di Chromium — sel pertama tabel penawaran menolak menyusut
+ * di bawah 265px, membuat tabel 465px dijejalkan ke wadah 452px (1366px) dan
+ * 290px (ponsel).
+ *
+ * `max-width` pada sel memberi patokan yang bisa dipakai `text-overflow`;
+ * nilainya sengaja kecil karena `width: 100%` pada kolom pertama sudah
+ * membuatnya mengambil semua sisa ruang yang ada.
+ */
+.admin-ringkas td:first-child,
+.admin-ringkas th:first-child {
+    width: 100%;
+    max-width: 0;
+}
+
+/* Kolom angka & status tidak boleh ikut menyusut sampai teksnya patah. */
+.admin-ringkas td:not(:first-child),
+.admin-ringkas th:not(:first-child) {
+    white-space: nowrap;
+    width: 1%;
+}
+
 /* -------------------------------------------------------------- Datatables */
 
 .table, .form-control, .form-select, .btn { font-size: 14px; }

@@ -259,6 +259,37 @@ Mengikuti `package/html/main/index2.html`:
 | Kartu KPI | `card-title mb-9` + angka `h4` + ikon kotak (pola *Monthly Earnings*) |
 | Tabel ringkas | `table align-middle text-nowrap` + `thead tr.text-muted fw-semibold` + `tbody.border-top` |
 
+##### Tata letak padat
+
+Dasbor dipadatkan dari **2818px (3,13 layar)** menjadi **1536px (1,71 layar)**
+pada 1440×900 — turun **45%** — tanpa menghapus satu pun angka. Diukur di
+Chromium, bukan diperkirakan.
+
+| Keputusan | Alasan terukur |
+| :-- | :-- |
+| Kartu "Peran & Wilayah" **dihapus** | Isinya muncul **tiga kali**: peran ada di dropdown header, wilayah ada di kaki sidebar |
+| Sambutan + antrian **satu baris** (`col-xl-5` / `col-xl-7`) | Dua blok terpisah memakan 508px hanya untuk 6 angka |
+| Kartu KPI jadi **ikon + angka sebaris** | Pola `card-title mb-9` memakai 473px untuk 8 kartu; versi padat 216px |
+| Dua tabel **berdampingan** (`col-xl-6`) | Ditumpuk ke bawah memakan 1147px |
+| Kolom "Pembeli"/"Toko" dilebur ke baris kedua | Menghilangkan 1 kolom tanpa menghilangkan datanya |
+| Tinggi grafik `clamp(200px, 26vh, 280px)` | `height: 300px` memakan 39% tinggi layar laptop 1366×768 |
+
+> `col-xl-6` dipilih, bukan `col-lg-6`. Diverifikasi di 1200/1199/992/991px:
+> di bawah 1200px kolomnya menumpuk penuh, jadi kasus 992px yang dulu
+> memotong kolom Status **tidak pernah terjadi**.
+
+##### Dua cacat tata letak yang ikut diperbaiki
+
+1. **Sel judul tabel tidak mau menyusut.** `text-truncate` di dalam `<td>`
+   tidak cukup — sel tabel melebar mengikuti isi terpanjang sehingga
+   `text-overflow` tidak pernah aktif. Terukur: sel pertama tabel penawaran
+   menolak turun di bawah 265px, membuat tabel meluber **13px di 1366px** dan
+   **175px di ponsel**. Diperbaiki `.admin-ringkas` (`width:100%; max-width:0`).
+2. **Ilustrasi sambutan menimpa teks.** Sebagai kolom grid (`col-5`), gambar
+   282px tidak muat di kolom 226px pada 1366px dan **menimpa teks sampai
+   103px**. Dijadikan latar berposisi absolut dengan `padding-right: 46%`
+   pada teks — 0 tabrakan di sembilan lebar yang diuji.
+
 Dua penyimpangan **disengaja**, keduanya berdasar ukuran:
 
 1. **Tabel ringkas memakai `col-12`, bukan `col-lg-6`.** Tabelnya 4 kolom
