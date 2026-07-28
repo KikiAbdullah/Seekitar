@@ -21,66 +21,436 @@
         ];
     @endphp
     <script type="application/ld+json">@json($jsonLd)</script>
+
+    {{-- Ikon Tabler — berkas yang sama dengan panel admin, sudah lokal. --}}
+    <link rel="stylesheet" href="{{ asset('vendor/modernize/css/icons/tabler-icons/tabler-icons.min.css') }}">
+
+    {{--
+        Gaya landing page (mengacu template Modernize "frontend-landingpage"
+        yang di-recolor Seekitar). Semua dekorasi murni CSS — tidak ada satu
+        pun gambar unduhan — supaya halaman tetap ringan di koneksi lambat.
+        Prefiks .lp- menjaganya tidak menabrak gaya halaman lain.
+    --}}
+    <style>
+        /* Navbar sticky menutupi judul anchor — beri ruang sebesar navbar. */
+        section[id] { scroll-margin-top: 88px; }
+
+        /* ----------------------------------------------------------- Hero */
+        .lp-hero {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(180deg, #F0FAF4 0%, #FFFFFF 100%);
+        }
+
+        /* Dua blob lembut ala banner-top-left/right template. Posisinya
+           absolut terhadap hero, bukan viewport: tidak ikut bergeser saat
+           gulir dan tidak memunculkan scrollbar horizontal. */
+        .lp-blob {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .lp-blob-hijau {
+            width: 360px; height: 360px; top: -120px; left: -100px;
+            background: radial-gradient(circle at 35% 35%, #D1FAE5 0%, rgba(209, 250, 229, 0) 70%);
+        }
+        .lp-blob-kuning {
+            width: 420px; height: 420px; bottom: -160px; right: -120px;
+            background: radial-gradient(circle at 60% 60%, #FEF3C7 0%, rgba(254, 243, 199, 0) 70%);
+        }
+
+        /* Pola titik halus pengganti ornamen garis template. */
+        .lp-dots {
+            position: absolute;
+            width: 200px; height: 200px;
+            background-image: radial-gradient(#B7DCC7 2px, transparent 2.2px);
+            background-size: 22px 22px;
+            opacity: .55;
+            pointer-events: none;
+        }
+        .lp-dots-atas { top: 48px; right: 12%; }
+        .lp-dots-bawah { bottom: 40px; left: 8%; }
+        @media (max-width: 991.98px) { .lp-dots { display: none; } }
+
+        /* Pill pengumuman di atas judul (pola "New — …" pada template). */
+        .lp-pill {
+            display: inline-flex; align-items: center; gap: .5rem;
+            background: #fff; border: 1px solid #E5E7EB; border-radius: 999px;
+            padding: .35rem .9rem; font-size: 14px; font-weight: 600;
+            color: var(--hijau-lokal);
+            box-shadow: 0 2px 10px rgba(31, 41, 51, .06);
+        }
+        .lp-pill::before {
+            content: ""; width: 8px; height: 8px; border-radius: 50%;
+            background: var(--kuning);
+        }
+
+        /* Tumpukan avatar inisial + kalimat kepercayaan (pengganti foto
+           profil template; panel tidak menyimpan foto pengguna publik). */
+        .lp-avatar-stack { display: inline-flex; }
+        .lp-avatar-stack span {
+            width: 42px; height: 42px; border-radius: 50%;
+            border: 2px solid #fff; display: grid; place-items: center;
+            color: #fff; font-weight: 700; font-size: 15px;
+            box-shadow: 0 2px 6px rgba(31, 41, 51, .12);
+        }
+        .lp-avatar-stack span + span { margin-left: -12px; }
+
+        /* Bar ikon tiga layanan (pengganti baris ikon teknologi template). */
+        .lp-iconbar {
+            display: flex; flex-wrap: wrap; justify-content: center;
+            gap: 1.25rem 2.5rem; color: #6B7280; font-weight: 600;
+        }
+        .lp-iconbar .ti { font-size: 22px; vertical-align: -3px; margin-right: .35rem; }
+
+        /* ----------------------------------------------- Mock antarmuka */
+        .lp-kartu {
+            background: #fff; border-radius: 18px;
+            box-shadow: 0 18px 44px rgba(31, 41, 51, .10);
+            padding: 1rem 1.1rem;
+        }
+        .lp-kartu-melayang {
+            position: absolute; z-index: 2;
+            box-shadow: 0 22px 50px rgba(31, 41, 51, .16);
+        }
+        .lp-melayang-1 { right: -8px; top: -34px; width: 230px; }
+        .lp-melayang-2 { left: -26px; bottom: -30px; width: 260px; }
+        /* Di ponsel & tablet kartu melayang hanya menutupi teks — susun vertikal. */
+        @media (max-width: 991.98px) {
+            .lp-kartu-melayang { position: static; width: 100%; margin-top: .75rem; }
+        }
+
+        .lp-thumb {
+            width: 44px; height: 44px; border-radius: 12px; flex: 0 0 auto;
+            display: grid; place-items: center; color: #fff; font-size: 20px;
+        }
+        .lp-skeleton {
+            height: 10px; border-radius: 999px; background: #EEF2F6;
+        }
+
+        /* ------------------------------------------------- Kartu keunggulan */
+        .lp-fitur-ikon {
+            width: 52px; height: 52px; border-radius: 14px;
+            display: grid; place-items: center; font-size: 25px;
+        }
+        .lp-tone-hijau  { background: #D1FAE5; color: var(--hijau-lokal); }
+        .lp-tone-kuning { background: #FEF3C7; color: #B45309; }
+        .lp-tone-biru   { background: #DBEAFE; color: #2563EB; }
+        .lp-tone-merah  { background: #FEE2E2; color: #DC2626; }
+
+        .lp-kartu-fitur {
+            height: 100%; background: #fff; border: 1px solid #E5E7EB;
+            border-radius: 18px; padding: 1.5rem;
+            transition: box-shadow .18s ease-in-out, transform .18s ease-in-out;
+        }
+        .lp-kartu-fitur:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 14px 34px rgba(31, 41, 51, .10);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .lp-kartu-fitur, .lp-kartu-fitur:hover { transition: none; transform: none; }
+        }
+
+        /* ------------------------------------------------------ Cara kerja */
+        .lp-langkah-no {
+            width: 34px; height: 34px; border-radius: 50%; flex: 0 0 auto;
+            display: grid; place-items: center; font-weight: 700; font-size: 15px;
+            background: var(--hijau-muda); color: var(--hijau-lokal);
+        }
+
+        /* ---------------------------------------------------- Pita statistik */
+        .lp-stats {
+            background: linear-gradient(135deg, #11703C 0%, #0B5A30 100%);
+            color: #fff;
+        }
+        .lp-stats .lp-angka { font-size: clamp(1.6rem, 4vw, 2.4rem); font-weight: 800; }
+        .lp-stats .lp-label { color: rgba(255, 255, 255, .78); }
+
+        /* ------------------------------------------------------------- CTA */
+        .lp-cta {
+            position: relative; overflow: hidden;
+            background: var(--hijau-muda); border-radius: 24px;
+        }
+        .lp-cta::before {
+            content: ""; position: absolute; inset: 0;
+            background-image: radial-gradient(rgba(22, 138, 74, .16) 2px, transparent 2.2px);
+            background-size: 24px 24px;
+            pointer-events: none;
+        }
+    </style>
 @endpush
 
 @section('content')
 
-    {{-- Hero (BRANDING §6.3) --}}
-    <section class="hero py-5">
-        <div class="container py-lg-4">
-            <div class="row align-items-center g-4">
-                <div class="col-lg-7">
-                    <h1 class="display-5 fw-bold mb-3">Yang kamu butuhkan, ada di sekitar.</h1>
-                    <p class="lead mb-4">
+    {{-- ================================ HERO ================================ --}}
+    <section class="lp-hero pt-5 pb-4 pb-lg-5">
+        <span class="lp-blob lp-blob-hijau" aria-hidden="true"></span>
+        <span class="lp-blob lp-blob-kuning" aria-hidden="true"></span>
+        <span class="lp-dots lp-dots-atas" aria-hidden="true"></span>
+        <span class="lp-dots lp-dots-bawah" aria-hidden="true"></span>
+
+        <div class="container position-relative py-lg-4">
+            <div class="row align-items-center g-5">
+
+                <div class="col-lg-7 text-center text-lg-start">
+                    <span class="lp-pill mb-3">Marketplace hyperlocal · {{ config('seekitar.regency') }}</span>
+
+                    <h1 class="display-5 fw-bold mb-3 lh-sm">
+                        Yang kamu butuhkan,<br class="d-none d-lg-block">
+                        ada di sekitar.
+                    </h1>
+
+                    <p class="lead text-secondary mb-4" style="max-width: 34rem;">
                         Seekitar menghubungkan warga {{ config('seekitar.regency') }} dengan
                         penjual, penyedia jasa, dan penyewaan terdekat — tanpa perantara.
                     </p>
-                    <div class="d-flex flex-wrap gap-2">
-                        <a href="#unduh" class="btn btn-seekitar btn-lg">Download App</a>
-                        <a href="{{ route('web.help') }}" class="btn btn-outline-dark btn-lg">Pelajari Dulu</a>
-                    </div>
-                </div>
-                <div class="col-lg-5 text-center">
-                    <div class="bg-white rounded-4 shadow-sm p-4 d-inline-block">
-                        <div class="brand-dot mx-auto mb-3" style="width:72px;height:72px;font-size:32px">S</div>
-                        <p class="mb-0 fw-semibold">Satu aplikasi,<br>dua arah kebutuhan.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
 
-    {{-- Tiga fitur inti --}}
-    <section class="py-5">
-        <div class="container">
-            <h2 class="h3 fw-bold text-center mb-5">Bagaimana Seekitar bekerja</h2>
-            <div class="row g-4">
-                @foreach ([
-                    ['Jelajahi', 'Lihat barang dan jasa dari toko di radius sekitarmu, lengkap dengan jarak dan rating.'],
-                    ['Pasang Kebutuhan', 'Belum ketemu? Tulis kebutuhanmu, dan penyedia terdekat yang akan menghubungi.'],
-                    ['Tawarkan', 'Punya usaha? Terima permintaan warga sekitar dan kirim penawaran langsung.'],
-                ] as [$judul, $isi])
-                    <div class="col-md-4">
-                        <div class="h-100 p-4 border rounded-4">
-                            <div class="fitur-ikon mb-3" aria-hidden="true">◎</div>
-                            <h3 class="h5 fw-bold">{{ $judul }}</h3>
-                            <p class="mb-0 text-secondary">{{ $isi }}</p>
+                    <div class="d-flex flex-wrap justify-content-center justify-content-lg-start gap-2 mb-4">
+                        <a href="#unduh" class="btn btn-seekitar btn-lg px-4">
+                            <i class="ti ti-download me-1" aria-hidden="true"></i> Mulai Sekarang
+                        </a>
+                        <a href="#cara-kerja" class="btn btn-outline-dark btn-lg px-4">
+                            Lihat Cara Kerja
+                        </a>
+                    </div>
+
+                    <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start gap-3 mb-5">
+                        <span class="lp-avatar-stack" aria-hidden="true">
+                            <span style="background: var(--hijau-lokal);">W</span>
+                            <span style="background: #B45309;">S</span>
+                            <span style="background: #2563EB;">R</span>
+                            <span style="background: #4B5563;">D</span>
+                        </span>
+                        <span class="text-secondary" style="max-width: 22rem;">
+                            Dibuat khusus untuk warga dan pelaku usaha {{ config('seekitar.regency') }}.
+                        </span>
+                    </div>
+
+                    <div class="lp-iconbar pb-lg-2">
+                        <span><i class="ti ti-package" aria-hidden="true"></i>Barang</span>
+                        <span><i class="ti ti-tools" aria-hidden="true"></i>Jasa</span>
+                        <span><i class="ti ti-key" aria-hidden="true"></i>Sewa</span>
+                    </div>
+                </div>
+
+                {{-- Mock antarmuka aplikasi (murni CSS, tanpa gambar). --}}
+                <div class="col-lg-5">
+                    <div class="position-relative mx-auto" style="max-width: 340px;">
+
+                        <div class="lp-kartu">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <span class="lp-thumb" style="background: var(--hijau-lokal);"
+                                      aria-hidden="true"><i class="ti ti-bolt"></i></span>
+                                <div class="flex-grow-1" style="min-width: 0;">
+                                    <div class="fw-bold lh-1">Permintaan Terkirim</div>
+                                    <div class="text-secondary" style="font-size: 13px;">Disiarkan ke toko sekitar</div>
+                                </div>
+                                <span class="badge bg-success-subtle text-success">Live</span>
+                            </div>
+                            <div class="fw-semibold mb-1">“Butuh tukang pipa besok pagi”</div>
+                            <div class="text-secondary mb-3" style="font-size: 13px;">
+                                <i class="ti ti-map-pin" aria-hidden="true"></i> Radius 5 km · 3 penawaran masuk
+                            </div>
+                            <div class="lp-skeleton mb-2" style="width: 100%;"></div>
+                            <div class="lp-skeleton mb-2" style="width: 82%;"></div>
+                            <div class="lp-skeleton" style="width: 64%;"></div>
                         </div>
+
+                        <div class="lp-kartu lp-kartu-melayang lp-melayang-1">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="lp-thumb" style="background: #2563EB; width: 38px; height: 38px;"
+                                      aria-hidden="true"><i class="ti ti-key"></i></span>
+                                <div style="min-width: 0;">
+                                    <div class="fw-bold lh-1 text-truncate">Sewa Tenda 3×3</div>
+                                    <div class="text-secondary" style="font-size: 13px;">Rp 75rb / hari</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="lp-kartu lp-kartu-melayang lp-melayang-2">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="lp-thumb" style="background: #B45309; width: 38px; height: 38px;"
+                                      aria-hidden="true"><i class="ti ti-tools"></i></span>
+                                <div style="min-width: 0;">
+                                    <div class="fw-bold lh-1 text-truncate">Bengkel Motor Jaya</div>
+                                    <div class="text-secondary" style="font-size: 13px;">1,2 km · menawar Rp 150rb</div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="text-warning" aria-label="Rating 4,8 dari 5">★★★★★</span>
+                                <span class="badge bg-success-subtle text-success">Diterima</span>
+                            </div>
+                        </div>
+
                     </div>
-                @endforeach
+                </div>
+
             </div>
         </div>
     </section>
 
-    {{-- Kategori diambil dari basis data: daftar yang berbeda dari isi
-         aplikasi justru merusak kepercayaan. --}}
+    {{-- ============================ KEUNGGULAN ============================ --}}
+    <section id="keunggulan" class="py-5">
+        <div class="container py-lg-3">
+            <div class="text-center mb-5">
+                <div class="fw-bold text-uppercase mb-2" style="color: var(--hijau-lokal); font-size: 13px; letter-spacing: .08em;">
+                    Kenapa Seekitar
+                </div>
+                <h2 class="h3 fw-bold mb-2">Aman dari hulu ke hilir</h2>
+                <p class="text-secondary mb-0 mx-auto" style="max-width: 36rem;">
+                    Setiap sisi transaksi dirancang agar warga berani bertransaksi
+                    dengan orang yang belum dikenal.
+                </p>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-3">
+                    <div class="lp-kartu-fitur">
+                        <div class="lp-fitur-ikon lp-tone-hijau mb-3" aria-hidden="true">
+                            <i class="ti ti-shield-check"></i>
+                        </div>
+                        <h3 class="h5 fw-bold">Verifikasi Berlapis</h3>
+                        <p class="text-secondary mb-0">
+                            Nomor HP, KTP, dan NIK ditinjau admin satu per satu.
+                            Penjual terverifikasi memakai tanda khusus.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="lp-kartu-fitur">
+                        <div class="lp-fitur-ikon lp-tone-kuning mb-3" aria-hidden="true">
+                            <i class="ti ti-star"></i>
+                        </div>
+                        <h3 class="h5 fw-bold">Rating Dua Arah</h3>
+                        <p class="text-secondary mb-0">
+                            Pembeli dan toko saling menilai 1–5 bintang, jadi
+                            reputasi baik terjaga di kedua sisi.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="lp-kartu-fitur">
+                        <div class="lp-fitur-ikon lp-tone-biru mb-3" aria-hidden="true">
+                            <i class="ti ti-map-pin"></i>
+                        </div>
+                        <h3 class="h5 fw-bold">Hyperlocal</h3>
+                        <p class="text-secondary mb-0">
+                            Semua dicari dalam radius kilometer dari lokasimu —
+                            dekat berarti cepat, murah, dan bisa dicek langsung.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="lp-kartu-fitur">
+                        <div class="lp-fitur-ikon lp-tone-merah mb-3" aria-hidden="true">
+                            <i class="ti ti-gavel"></i>
+                        </div>
+                        <h3 class="h5 fw-bold">Ada Penengah</h3>
+                        <p class="text-secondary mb-0">
+                            Sengketa ditinjau tim admin dengan batas respons yang
+                            jelas — kamu tidak dibiarkan sendirian.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {{-- ============================ CARA KERJA ============================ --}}
+    <section id="cara-kerja" class="py-5 bg-light">
+        <div class="container py-lg-3">
+            <div class="text-center mb-5">
+                <div class="fw-bold text-uppercase mb-2" style="color: var(--hijau-lokal); font-size: 13px; letter-spacing: .08em;">
+                    Cara Kerja
+                </div>
+                <h2 class="h3 fw-bold mb-2">Dua arah, satu aplikasi</h2>
+                <p class="text-secondary mb-0">Untuk pencari kebutuhan maupun pemilik usaha.</p>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="h-100 bg-white border rounded-4 p-4">
+                        <div class="d-flex align-items-center gap-2 mb-4">
+                            <span class="lp-fitur-ikon lp-tone-biru" style="width: 44px; height: 44px;" aria-hidden="true">
+                                <i class="ti ti-shopping-bag"></i>
+                            </span>
+                            <h3 class="h5 fw-bold mb-0">Untuk Pencari</h3>
+                        </div>
+                        @foreach ([
+                            ['Jelajahi atau pasang kebutuhan', 'Lihat barang dan jasa sekitar — atau tulis kebutuhanmu dan biarkan disiarkan ke toko terdekat.'],
+                            ['Bandingkan penawaran', 'Penawaran masuk lengkap dengan harga, ongkos, estimasi, dan rating toko. Pilih yang paling pas.'],
+                            ['Transaksi & beri ulasan', 'COD atau transfer, ambil sendiri atau diantar. Selesai, saling beri bintang.'],
+                        ] as $i => [$judul, $isi])
+                            <div class="d-flex gap-3 {{ $i < 2 ? 'mb-3' : '' }}">
+                                <span class="lp-langkah-no" aria-hidden="true">{{ $i + 1 }}</span>
+                                <div>
+                                    <div class="fw-semibold">{{ $judul }}</div>
+                                    <div class="text-secondary" style="font-size: 14px;">{{ $isi }}</div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="h-100 bg-white border rounded-4 p-4">
+                        <div class="d-flex align-items-center gap-2 mb-4">
+                            <span class="lp-fitur-ikon lp-tone-hijau" style="width: 44px; height: 44px;" aria-hidden="true">
+                                <i class="ti ti-building-store"></i>
+                            </span>
+                            <h3 class="h5 fw-bold mb-0">Untuk Penyedia</h3>
+                        </div>
+                        @foreach ([
+                            ['Daftar & verifikasi', 'Unggah KTP, isi profil toko dengan foto dan titik lokasi — ditinjau admin maksimal 1×24 jam.'],
+                            ['Terima siaran kebutuhan', 'Permintaan warga dalam radiusmu masuk otomatis. Tidak perlu menunggu pembeli datang.'],
+                            ['Kirim penawaran & layani', 'Tawar dengan transparan. Pesanan, pengantaran, dan pembayaran terpantau dalam satu aplikasi.'],
+                        ] as $i => [$judul, $isi])
+                            <div class="d-flex gap-3 {{ $i < 2 ? 'mb-3' : '' }}">
+                                <span class="lp-langkah-no" aria-hidden="true">{{ $i + 1 }}</span>
+                                <div>
+                                    <div class="fw-semibold">{{ $judul }}</div>
+                                    <div class="text-secondary" style="font-size: 14px;">{{ $isi }}</div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {{-- ========================= PITA STATISTIK ========================= --}}
+    <section class="lp-stats py-5">
+        <div class="container">
+            <div class="row text-center g-4">
+                <div class="col-4">
+                    <div class="lp-angka">{{ number_format($statistik['toko']) }}</div>
+                    <div class="lp-label">Toko Terverifikasi</div>
+                </div>
+                <div class="col-4">
+                    <div class="lp-angka">{{ number_format($statistik['listing']) }}</div>
+                    <div class="lp-label">Listing Aktif</div>
+                </div>
+                <div class="col-4">
+                    <div class="lp-angka">{{ number_format($categories->count()) }}</div>
+                    <div class="lp-label">Kategori Kebutuhan</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {{-- Kategori dari basis data: daftar yang berbeda dari isi aplikasi
+         justru merusak kepercayaan. --}}
     @if ($categories->isNotEmpty())
-        <section class="py-5 bg-light">
+        <section id="kategori" class="py-5">
             <div class="container">
-                <h2 class="h3 fw-bold text-center mb-4">Kategori</h2>
+                <div class="text-center mb-4">
+                    <h2 class="h3 fw-bold mb-2">Jelajahi kategori</h2>
+                    <p class="text-secondary mb-0">Semua kebutuhan sehari-hari, dari yang dijual sampai yang disewakan.</p>
+                </div>
                 <div class="d-flex flex-wrap justify-content-center gap-2">
                     @foreach ($categories as $category)
-                        <span class="badge rounded-pill text-bg-light border py-2 px-3">
+                        <span class="badge rounded-pill text-bg-light border py-2 px-3 fs-6">
                             {{ $category->name }}
                         </span>
                     @endforeach
@@ -89,14 +459,26 @@
         </section>
     @endif
 
-    <section id="unduh" class="py-5">
-        <div class="container text-center">
-            <h2 class="h3 fw-bold mb-3">Mulai dari sekarang</h2>
-            <p class="text-secondary mb-4">
-                Aplikasi Seekitar sedang dalam tahap pengembangan.
-                Tinggalkan pertanyaan lewat kanal kontak kami.
-            </p>
-            <a href="{{ route('web.contact') }}" class="btn btn-seekitar btn-lg">Hubungi Kami</a>
+    {{-- ================================ CTA ================================ --}}
+    <section id="unduh" class="pb-5">
+        <div class="container">
+            <div class="lp-cta text-center px-4 py-5">
+                <div class="position-relative">
+                    <h2 class="h3 fw-bold mb-3">Mulai dari sekarang</h2>
+                    <p class="text-secondary mb-4 mx-auto" style="max-width: 32rem;">
+                        Aplikasi Seekitar sedang dalam tahap pengembangan.
+                        Ada pertanyaan atau ingin jadi penyedia pertama? Kami siap membantu.
+                    </p>
+                    <div class="d-flex flex-wrap justify-content-center gap-2">
+                        <a href="{{ route('web.contact') }}" class="btn btn-seekitar btn-lg px-4">
+                            Hubungi Kami
+                        </a>
+                        <a href="{{ route('web.help') }}" class="btn btn-outline-dark btn-lg px-4">
+                            Pusat Bantuan
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 

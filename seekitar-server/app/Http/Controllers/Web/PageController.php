@@ -2,10 +2,15 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Enums\ListingStatus;
+use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Listing;
+use App\Models\Store;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Halaman publik & SEO (`Server_Implementation_Guide.md` §4, PRD §14).
@@ -23,14 +28,30 @@ class PageController extends Controller
      *
      * Kategori diambil dari basis data, bukan ditulis di template: daftar
      * yang berbeda dari isi aplikasi justru merusak kepercayaan.
+     *
+     * Angka pita kepercayaan pun demikian — tetapi di-cache: landing page
+     * adalah halaman paling ramai dibuka, dan angka yang basi 1 jam tidak
+     * mengubah keputusan pengunjung apa pun.
      */
     public function home(): View
     {
+        $statistik = Cache::remember('web.home.stats', self::STATIC_CACHE_SECONDS, fn () => [
+            // Hanya angka yang JUJUR diverifikasi sistem, bukan klaim pemasaran.
+            'toko'    => Store::query()
+                ->where('verification_status', VerificationStatus::Verified->value)
+                ->where('is_active', true)
+                ->count(),
+            'listing' => Listing::query()
+                ->where('status', ListingStatus::Active->value)
+                ->count(),
+        ]);
+
         return view('web.home', [
             'categories' => Category::query()
                 ->whereNull('parent_id')
                 ->orderBy('sort_order')
                 ->get(),
+            'statistik'  => $statistik,
         ]);
     }
 

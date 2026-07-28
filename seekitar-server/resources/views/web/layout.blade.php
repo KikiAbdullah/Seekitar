@@ -103,6 +103,11 @@
                     <a class="nav-link {{ request()->routeIs('web.contact') ? 'active fw-semibold' : '' }}"
                        href="{{ route('web.contact') }}">Kontak</a>
                 </li>
+                {{-- CTA selalu terjangkau dari halaman mana pun (pola template:
+                     tombol aksi menetap di kanan bilah navigasi). --}}
+                <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
+                    <a class="btn btn-seekitar btn-sm px-3" href="{{ route('web.home') }}#unduh">Mulai</a>
+                </li>
             </ul>
         </div>
     </div>
