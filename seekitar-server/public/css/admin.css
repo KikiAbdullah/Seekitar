@@ -243,6 +243,47 @@ body {
 div.dt-container .dt-search input { min-width: 200px; }
 div.dt-container .dt-length select { width: auto; display: inline-block; }
 
+/* ----------------------------------------------- Tabel terpilih-satu */
+
+/*
+ * Baris tabel bisa dipilih; aksinya muncul di bilah sebelah judul, bukan
+ * sebagai kolom tombol di setiap baris.
+ */
+.admin-selectable tbody tr {
+    cursor: pointer;
+}
+
+/* Penanda baris terpilih TIDAK mengandalkan warna latar saja: perbedaan warna
+   gagal untuk pengguna buta warna (WCAG 1.4.1). Karena itu ditambah garis. */
+.admin-selectable tbody tr.table-active {
+    box-shadow: inset 3px 0 0 var(--seekitar-green);
+}
+
+/* Fokus keyboard wajib terlihat — baris dijangkau lewat Tab. */
+.admin-selectable tbody tr:focus-visible {
+    outline: 2px solid var(--seekitar-trust);
+    outline-offset: -2px;
+}
+
+/* Bilah aksi sejajar judul. min-height dipatok agar judul tidak melompat
+   naik-turun setiap tombol muncul lalu hilang. */
+.admin-rowactions {
+    min-height: 31px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.admin-rowactions-hint {
+    /* 12px — masih di atas batas 11px (BRANDING §4). */
+    font-size: 12px;
+}
+
+/* Form di dalam bilah aksi tampil sebaris dengan tombol lainnya. */
+.admin-rowactions form {
+    display: inline;
+    margin: 0;
+}
+
 /* --------------------------------------------------------------- Responsif */
 
 @media (max-width: 991.98px) {

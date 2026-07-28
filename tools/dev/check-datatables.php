@@ -46,23 +46,23 @@ $gagal = function (string $m) use (&$masalah): void { echo "  GAGAL: {$m}\n"; $m
 $diharapkan = [
     App\DataTables\UsersDataTable::class => [
         'model'  => App\Models\User::class,
-        'kolom'  => ['name', 'phone', 'verification_level', 'status', 'created_at', 'action'],
+        'kolom'  => ['name', 'phone', 'verification_level', 'status', 'created_at'],
     ],
     App\DataTables\StoresDataTable::class => [
         'model'  => App\Models\Store::class,
-        'kolom'  => ['name', 'owner', 'regency', 'verification_status', 'rating_avg', 'created_at', 'action'],
+        'kolom'  => ['name', 'owner', 'regency', 'verification_status', 'rating_avg', 'created_at'],
     ],
     App\DataTables\ListingsDataTable::class => [
         'model'  => App\Models\Listing::class,
-        'kolom'  => ['title', 'store_name', 'listing_type', 'price', 'status', 'created_at', 'action'],
+        'kolom'  => ['title', 'store_name', 'listing_type', 'price', 'status', 'created_at'],
     ],
     App\DataTables\OrdersDataTable::class => [
         'model'  => App\Models\Order::class,
-        'kolom'  => ['order_number', 'store_name', 'order_type', 'total_amount', 'status_label', 'created_at', 'action'],
+        'kolom'  => ['order_number', 'store_name', 'order_type', 'total_amount', 'status_label', 'created_at'],
     ],
     App\DataTables\CustomerRequestsDataTable::class => [
         'model'  => App\Models\CustomerRequest::class,
-        'kolom'  => ['title', 'buyer', 'status', 'offers_count', 'expires_at', 'created_at', 'action'],
+        'kolom'  => ['title', 'buyer', 'status', 'offers_count', 'expires_at', 'created_at'],
     ],
     App\DataTables\OffersDataTable::class => [
         'model'  => App\Models\Offer::class,
@@ -70,11 +70,11 @@ $diharapkan = [
     ],
     App\DataTables\ReviewsDataTable::class => [
         'model'  => App\Models\Review::class,
-        'kolom'  => ['store_name', 'reviewer_name', 'direction', 'rating', 'comment', 'created_at', 'action'],
+        'kolom'  => ['store_name', 'reviewer_name', 'direction', 'rating', 'comment', 'created_at'],
     ],
     App\DataTables\DisputesDataTable::class => [
         'model'  => App\Models\Dispute::class,
-        'kolom'  => ['order_number', 'reason', 'status', 'response_deadline', 'overdue', 'action'],
+        'kolom'  => ['order_number', 'reason', 'status', 'response_deadline', 'overdue'],
     ],
 ];
 

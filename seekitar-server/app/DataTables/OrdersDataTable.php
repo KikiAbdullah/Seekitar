@@ -32,7 +32,6 @@ class OrdersDataTable
             ->editColumn('created_at', fn (Order $o) => $o->created_at?->format('d M Y H:i'))
             ->addColumn('action', fn (Order $o) => view('admin.orders._actions', ['order' => $o])->render())
             ->rawColumns(['action'])
-            ->orderColumn('action', fn ($q, $dir) => $q)
             ->toJson();
     }
 }

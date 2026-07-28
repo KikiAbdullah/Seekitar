@@ -1,16 +1,27 @@
-{{-- Blade meng-escape otomatis dengan {{ }}; JANGAN pakai {!! !!} di sini,
-     karena itu justru MEMATIKAN escaping dan membuka XSS. --}}
-<a href="{{ route('admin.users.edit', $user) }}" class="btn btn-sm btn-outline-secondary">Sunting</a>
+{{--
+    Aksi baris pengguna — tampil di bilah aksi sebelah judul.
 
-<form action="{{ route('admin.users.block', $user) }}" method="POST" class="d-inline">
-    @csrf
-    <input type="hidden" name="action" value="{{ $user->is_blocked ? 'unblock' : 'block' }}">
-    @unless ($user->is_blocked)
-        <input type="hidden" name="reason" value="Ditandai admin dari daftar pengguna">
-    @endunless
-    <button type="submit"
-            class="btn btn-sm {{ $user->is_blocked ? 'btn-outline-success' : 'btn-outline-danger' }}"
-            onclick="return confirm('Yakin ubah status blokir pengguna ini?')">
-        {{ $user->is_blocked ? 'Buka Blokir' : 'Blokir' }}
-    </button>
-</form>
+    Blade meng-escape otomatis dengan {{ }}; JANGAN pakai {!! !!} di sini,
+    karena itu justru MEMATIKAN escaping dan membuka XSS.
+--}}
+@can('manage-users')
+    <a href="{{ route('admin.users.edit', $user) }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fa-solid fa-pen me-1" aria-hidden="true"></i> Sunting
+    </a>
+
+    <form action="{{ route('admin.users.block', $user) }}" method="POST" class="d-inline">
+        @csrf
+        <input type="hidden" name="action" value="{{ $user->is_blocked ? 'unblock' : 'block' }}">
+        @unless ($user->is_blocked)
+            <input type="hidden" name="reason" value="Ditandai admin dari daftar pengguna">
+        @endunless
+        <button type="submit"
+                class="btn btn-sm {{ $user->is_blocked ? 'btn-outline-success' : 'btn-outline-danger' }}"
+                onclick="return confirm('Yakin ubah status blokir {{ $user->name }}?')">
+            <i class="fa-solid {{ $user->is_blocked ? 'fa-unlock' : 'fa-ban' }} me-1" aria-hidden="true"></i>
+            {{ $user->is_blocked ? 'Buka Blokir' : 'Blokir' }}
+        </button>
+    </form>
+
+    <span class="text-muted small ms-1">{{ $user->name }}</span>
+@endcan

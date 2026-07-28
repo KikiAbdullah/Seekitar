@@ -115,6 +115,42 @@ class DataTableQueryTest extends TestCase
         );
     }
 
+    public function test_action_bukan_lagi_kolom_tabel(): void
+    {
+        // Tombol aksi kini muncul di bilah sebelah judul saat baris dipilih.
+        // HTML-nya TETAP dikirim server di field `action`, tetapi field itu
+        // tidak boleh didaftarkan sebagai kolom — kalau didaftarkan, kolom
+        // tombol kembali dan polanya jadi setengah jadi.
+        foreach (glob(__DIR__.'/../../resources/views/admin/*/index.blade.php') as $view) {
+            $src = preg_replace('/\{\{--[\s\S]*?--\}\}/', '', file_get_contents($view));
+
+            $this->assertStringNotContainsString(
+                "'data' => 'action'",
+                $src,
+                basename(dirname($view)).'/index.blade.php masih mendaftarkan kolom action.',
+            );
+        }
+    }
+
+    public function test_partial_aksi_selalu_dibungkus_can(): void
+    {
+        $partials = glob(__DIR__.'/../../resources/views/admin/*/_actions.blade.php');
+
+        $this->assertNotEmpty($partials);
+
+        foreach ($partials as $partial) {
+            $src = preg_replace('/\{\{--[\s\S]*?--\}\}/', '', file_get_contents($partial));
+
+            // Bilah aksi hanyalah tempat menampilkan, bukan pengganti
+            // otorisasi. Tanpa @can, admin tanpa izin ikut melihat tombolnya.
+            $this->assertMatchesRegularExpression(
+                '/@can(any)?\(/',
+                $src,
+                basename(dirname($partial)).'/_actions.blade.php tidak dibungkus @can.',
+            );
+        }
+    }
+
     public function test_kolom_offers_count_dijamin_ada_nilainya(): void
     {
         $src = $this->tanpaKomentar(__DIR__.'/../../app/DataTables/CustomerRequestsDataTable.php');

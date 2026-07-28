@@ -1,10 +1,19 @@
-<a href="{{ route('admin.categories.edit', $category) }}" class="btn btn-sm btn-outline-secondary">Sunting</a>
+{{-- Aksi baris kategori — tampil di bilah aksi sebelah judul. --}}
+@can('manage-categories')
+    <a href="{{ route('admin.categories.edit', $category) }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fa-solid fa-pen me-1" aria-hidden="true"></i> Sunting
+    </a>
 
-<form action="{{ route('admin.categories.destroy', $category) }}" method="POST" class="d-inline">
-    @csrf
-    @method('DELETE')
-    {{-- Penghapusan bisa ditolak controller bila kategori masih dipakai
-         toko/permintaan — FK RESTRICT + pemeriksaan JSON_CONTAINS. --}}
-    <button type="submit" class="btn btn-sm btn-outline-danger"
-            onclick="return confirm('Hapus kategori ini?')">Hapus</button>
-</form>
+    <form action="{{ route('admin.categories.destroy', $category) }}" method="POST" class="d-inline">
+        @csrf
+        @method('DELETE')
+        {{-- Penghapusan bisa ditolak controller bila kategori masih dipakai
+             toko/permintaan — FK RESTRICT + pemeriksaan JSON_CONTAINS. --}}
+        <button type="submit" class="btn btn-sm btn-outline-danger"
+                onclick="return confirm('Hapus kategori ini?')">
+            <i class="fa-solid fa-trash me-1" aria-hidden="true"></i> Hapus
+        </button>
+    </form>
+
+    <span class="text-muted small ms-1">{{ $category->name }}</span>
+@endcan

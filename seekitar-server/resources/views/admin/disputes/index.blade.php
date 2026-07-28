@@ -3,46 +3,25 @@
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dasbor</a></li>
+    <li class="breadcrumb-item">Manajemen Data</li>
     <li class="breadcrumb-item active" aria-current="page">Laporan</li>
 @endsection
 
 @section('content')
-    <h1 class="h4 mb-3">Laporan Masalah</h1>
-
-    <div class="card">
-        <div class="card-body">
-            <table id="disputes-table" class="table table-striped w-100">
-                <thead>
-                <tr>
-                    <th>Pesanan</th>
-                    <th>Alasan</th>
-                    <th>Status</th>
-                    <th>Batas SLA</th>
-                    <th>Lewat SLA</th>
-                    <th>Aksi</th>
-                </tr>
-                </thead>
-            </table>
-        </div>
-    </div>
-@endsection
-
-@push('scripts')
-<script>
-    $('#disputes-table').DataTable({
-        processing: true,
-        serverSide: true,
-        ajax: '{{ route('admin.disputes.data') }}',
+    @include('admin.partials.table-page', [
+        'judul'    => 'Laporan Masalah',
+        'tableId'  => 'disputes-table',
         // Default: yang paling dekat melewati SLA lebih dulu.
-        order: [[3, 'asc']],
-        columns: [
-            { data: 'order_number' },
-            { data: 'reason' },
-            { data: 'status' },
-            { data: 'response_deadline' },
-            { data: 'overdue' },
-            { data: 'action', orderable: false, searchable: false },
+        'order'    => [[3, 'asc']],
+        'ajax'     => route('admin.disputes.data'),
+        'petunjuk' => 'Pilih baris untuk meninjau dan menyelesaikan laporan. Urutan default: batas SLA terdekat.',
+        'filter'   => view('admin.disputes._filter'),
+        'columns'  => [
+            ['data' => 'order_number',      'label' => 'Pesanan', 'orderable' => false],
+            ['data' => 'reason',            'label' => 'Alasan'],
+            ['data' => 'status',            'label' => 'Status'],
+            ['data' => 'response_deadline', 'label' => 'Batas SLA'],
+            ['data' => 'overdue',           'label' => 'Lewat SLA', 'orderable' => false, 'searchable' => false],
         ],
-    });
-</script>
-@endpush
+    ])
+@endsection

@@ -29,7 +29,6 @@ class StoresDataTable
             ->editColumn('created_at', fn (Store $s) => $s->created_at?->format('d M Y'))
             ->addColumn('action', fn (Store $s) => view('admin.stores._actions', ['store' => $s])->render())
             ->rawColumns(['action'])
-            ->orderColumn('action', fn ($q, $dir) => $q)
             ->toJson();
     }
 }

@@ -30,7 +30,6 @@ class DisputesDataTable
             ->editColumn('response_deadline', fn (Dispute $d) => $d->response_deadline?->format('d M Y H:i'))
             ->addColumn('action', fn (Dispute $d) => view('admin.disputes._actions', ['dispute' => $d])->render())
             ->rawColumns(['action'])
-            ->orderColumn('action', fn ($q, $dir) => $q)
             ->toJson();
     }
 }

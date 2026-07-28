@@ -40,7 +40,6 @@ class UsersDataTable
             ->rawColumns(['action'])
             // Kolom aksi tidak mewakili data, jadi mengurutkannya tidak
             // bermakna dan hanya menghasilkan SQL yang salah.
-            ->orderColumn('action', fn ($q, $dir) => $q)
             ->toJson();
     }
 }

@@ -33,7 +33,6 @@ class ListingsDataTable
             ->editColumn('created_at', fn (Listing $l) => $l->created_at?->format('d M Y'))
             ->addColumn('action', fn (Listing $l) => view('admin.listings._actions', ['listing' => $l])->render())
             ->rawColumns(['action'])
-            ->orderColumn('action', fn ($q, $dir) => $q)
             ->toJson();
     }
 }

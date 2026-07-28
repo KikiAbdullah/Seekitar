@@ -48,7 +48,6 @@ class CustomerRequestsDataTable
             ->editColumn('offers_count', fn (CustomerRequest $r) => (int) ($r->offers_count ?? 0))
             ->addColumn('action', fn (CustomerRequest $r) => view('admin.requests._actions', ['request' => $r])->render())
             ->rawColumns(['action'])
-            ->orderColumn('action', fn ($q, $dir) => $q)
             ->toJson();
     }
 }

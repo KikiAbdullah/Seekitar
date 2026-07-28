@@ -3,45 +3,24 @@
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dasbor</a></li>
+    <li class="breadcrumb-item">Manajemen Data</li>
     <li class="breadcrumb-item active" aria-current="page">Pengguna</li>
 @endsection
 
 @section('content')
-    <h1 class="h4 mb-3">Pengguna</h1>
-
-    <div class="card">
-        <div class="card-body">
-            <table id="users-table" class="table table-striped w-100">
-                <thead>
-                <tr>
-                    <th>Nama</th>
-                    <th>Telepon</th>
-                    <th>Verifikasi</th>
-                    <th>Status</th>
-                    <th>Terdaftar</th>
-                    <th>Aksi</th>
-                </tr>
-                </thead>
-            </table>
-        </div>
-    </div>
-@endsection
-
-@push('scripts')
-<script>
-    $('#users-table').DataTable({
-        processing: true,
-        serverSide: true,          // 100 ribu baris tidak dikirim ke browser
-        ajax: '{{ route('admin.users.data') }}',
-        columns: [
-            { data: 'name' },
-            { data: 'phone' },
-            { data: 'verification_level' },
-            { data: 'status' },
-            { data: 'created_at' },
-            // Kolom aksi bukan data; mengurutkannya tidak bermakna.
-            { data: 'action', orderable: false, searchable: false },
+    @include('admin.partials.table-page', [
+        'judul'    => 'Pengguna',
+        'tableId'  => 'users-table',
+        'ajax'     => route('admin.users.data'),
+        'order'    => [[4, 'desc']],
+        'petunjuk' => 'Pilih baris untuk menyunting atau memblokir pengguna.',
+        'filter'   => view('admin.users._filter'),
+        'columns'  => [
+            ['data' => 'name',               'label' => 'Nama'],
+            ['data' => 'phone',              'label' => 'Telepon'],
+            ['data' => 'verification_level', 'label' => 'Verifikasi'],
+            ['data' => 'status',             'label' => 'Status', 'orderable' => false, 'searchable' => false],
+            ['data' => 'created_at',         'label' => 'Terdaftar'],
         ],
-    });
-</script>
-@endpush
+    ])
+@endsection

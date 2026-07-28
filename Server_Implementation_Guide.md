@@ -148,6 +148,51 @@ composer require yajra/laravel-datatables-buttons:^13.0
 
 **Konfigurasi:** Tidak ada file konfig khusus. Langsung gunakan facade `DataTables`.
 
+#### Pola tabel admin: pilih baris, bukan kolom tombol
+
+Tabel admin **tidak memakai kolom aksi**. Baris dipilih (satu saja), lalu
+tombolnya muncul di bilah sebelah kanan judul halaman.
+
+Alasannya bukan selera: kolom aksi memaksa setiap baris membawa tombolnya
+sendiri — pada 1.000 baris itu 1.000 tombol di DOM — dan kolomnya ikut melebar
+mengorbankan kolom data yang justru dibaca.
+
+HTML tombolnya **tetap dirakit server** dan dikirim di field `action`. Field
+yang tidak didaftarkan sebagai `columns` tidak dirender Datatables, tetapi
+tetap ikut di `row().data()` (diverifikasi dengan Datatables 2.3.8). Dengan
+begitu tombol tetap melewati `@csrf`, `@method`, dan `@can` di Blade — bukan
+dirakit ulang di JavaScript, tempat otorisasi tidak bisa ditegakkan.
+
+Seluruhnya terpusat di `resources/views/admin/partials/table-page.blade.php`:
+
+```blade
+@include('admin.partials.table-page', [
+    'judul'   => 'Toko',
+    'tableId' => 'stores-table',
+    'ajax'    => route('admin.stores.data'),
+    'filter'  => view('admin.stores._filter'),
+    'columns' => [ ['data' => 'name', 'label' => 'Nama'], ... ],
+])
+```
+
+Catatan penerapan:
+
+- **Pemilihan tunggal tanpa ekstensi Select.** Ekstensi resmi menambah satu
+  berkas CSS + JS demi perilaku yang di sini cukup belasan baris, dan
+  defaultnya justru multi-baris. Polanya: buang kelas dari semua baris dulu,
+  baru tandai yang diklik.
+- **Pilihan dibatalkan pada event `draw`.** Tanpa itu, bilah aksi masih memuat
+  tombol milik baris yang sudah tidak tampak setelah sortir/paginasi — dan
+  menekannya mengubah data yang tidak sedang dilihat siapa pun.
+- **Modal penolakan toko dipakai bersama satu untuk seluruh tabel.** Versi
+  lama memberi tiap baris modalnya sendiri ber-id `reject-{uuid}`; begitu HTML
+  aksi berpindah ke bilah yang isinya diganti-ganti, `data-bs-target` bisa
+  menunjuk elemen yang sudah terhapus.
+- **Tombolnya dipasang lewat delegasi event pada `document`**, karena elemen
+  `.js-tolak-toko` baru dibuat setiap kali baris dipilih.
+- Baris diberi `tabindex` dan menanggapi Enter/Spasi; Escape membatalkan
+  pilihan (WCAG 2.1.1).
+
 #### ⚠️ Dua jebakan query yang hanya muncul di browser
 
 Keduanya lolos `php -l`, lolos test statis, dan bahkan lolos `toSql()`.

@@ -29,7 +29,6 @@ class ReviewsDataTable
             ->editColumn('created_at', fn (Review $r) => $r->created_at?->format('d M Y'))
             ->addColumn('action', fn (Review $r) => view('admin.reviews._actions', ['review' => $r])->render())
             ->rawColumns(['action'])
-            ->orderColumn('action', fn ($q, $dir) => $q)
             ->toJson();
     }
 }

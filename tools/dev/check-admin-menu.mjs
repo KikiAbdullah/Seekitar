@@ -289,8 +289,24 @@ for (const p of blades) {
     .replace(/@php[\s\S]*?@endphp/g, '');
 
   for (const baris of src.split('\n')) {
-    // Satu-at (bukan @@) sesudah // atau * dalam blok skrip.
-    if (/^\s*(\/\/|\*)\s.*[^@]@(js|json|can|php|include)\b/.test(baris)) {
+    // Hanya baris di dalam komentar JavaScript (// atau * pada blok /* */).
+    if (!/^\s*(\/\/|\*)\s/.test(baris)) continue;
+
+    // (a) direktif @js/@json/@can/… dengan satu-at (bukan @@).
+    if (/[^@]@(js|json|can|php|include)\b/.test(baris)) {
+      jsKomentar.push(`${path.basename(p)}: ${baris.trim().slice(0, 70)}`);
+      continue;
+    }
+
+    /*
+     * (b) sintaks kurung-kurawal-ganda Blade.
+     *
+     * Versi pertama pemeriksaan ini hanya mencari direktif @, dan langsung
+     * kecolongan: komentar berisi kurung-kurawal-ganda kosong di
+     * categories/index.blade.php tetap dikompilasi menjadi e() tanpa argumen
+     * dan mematikan halaman. Ditemukan render harness, bukan oleh checker ini.
+     */
+    if (/\{\{.*\}\}/.test(baris)) {
       jsKomentar.push(`${path.basename(p)}: ${baris.trim().slice(0, 70)}`);
     }
   }
@@ -431,6 +447,74 @@ if (ikonTanpaAria.length) {
   fail(`ikon tanpa aria-hidden: ${ikonTanpaAria.join(', ')}`);
 } else {
   ok('semua ikon dekoratif memakai aria-hidden');
+}
+
+// ─────────────────────────────────── 5b. Pola tabel: pilih baris, bukan kolom aksi
+console.log('\nPola tabel: baris terpilih, bukan kolom aksi');
+
+/*
+ * Tombol aksi TIDAK boleh kembali menjadi kolom tabel.
+ *
+ * HTML-nya tetap dikirim server di field `action` (dan tetap dipakai), tetapi
+ * `action` tidak boleh muncul di daftar `columns` view mana pun — kalau
+ * muncul, kolom tombol kembali dan pola pilih-baris jadi setengah jadi.
+ */
+const kolomAksi = [];
+for (const p of blades) {
+  const src = fs.readFileSync(p, 'utf8').replace(/\{\{--[\s\S]*?--\}\}/g, '');
+  if (/'data'\s*=>\s*'action'/.test(src) || /\{\s*data:\s*'action'/.test(src)) {
+    kolomAksi.push(path.basename(p));
+  }
+}
+if (kolomAksi.length) {
+  fail(`'action' masih didaftarkan sebagai kolom di: ${kolomAksi.join(', ')} — aksi seharusnya muncul di bilah sebelah judul`);
+} else {
+  ok("'action' tidak lagi menjadi kolom tabel");
+}
+
+// Setiap partial aksi WAJIB dibungkus @can. Bilah aksi hanyalah tempat
+// menampilkan; tanpa @can, admin tanpa izin ikut melihat tombolnya.
+const aksiTanpaCan = [];
+for (const p of blades.filter(x => path.basename(x) === '_actions.blade.php')) {
+  const src = fs.readFileSync(p, 'utf8').replace(/\{\{--[\s\S]*?--\}\}/g, '');
+  if (!/@can(any)?\(/.test(src)) {
+    aksiTanpaCan.push(path.relative(viewDir, p));
+  }
+}
+if (aksiTanpaCan.length) {
+  fail(`partial aksi tanpa @can: ${aksiTanpaCan.join(', ')} — tombol tampil ke admin yang tidak berhak`);
+} else {
+  ok('semua partial aksi dibungkus @can');
+}
+
+// Tabel yang memakai partial table-page tidak boleh lagi merakit DataTable
+// sendiri — dua implementasi berarti perilaku pemilihan bisa menyimpang.
+const daftarTabel = [
+  'users/index', 'stores/index', 'listings/index', 'orders/index',
+  'requests/index', 'offers/index', 'reviews/index', 'disputes/index',
+];
+const tidakPakaiPartial = daftarTabel.filter(v => {
+  const f = path.join(viewDir, `${v}.blade.php`);
+  return !fs.existsSync(f) || !fs.readFileSync(f, 'utf8').includes('admin.partials.table-page');
+});
+if (tidakPakaiPartial.length) {
+  fail(`tidak memakai partial table-page: ${tidakPakaiPartial.join(', ')}`);
+} else {
+  ok(`${daftarTabel.length} halaman tabel memakai partial bersama`);
+}
+
+// Pemilihan harus TUNGGAL: partial wajib membersihkan pilihan lama sebelum
+// menandai yang baru.
+const partialTabel = path.join(viewDir, 'partials/table-page.blade.php');
+if (!fs.existsSync(partialTabel)) {
+  fail('partial table-page tidak ada');
+} else {
+  const src = fs.readFileSync(partialTabel, 'utf8');
+  if (!/removeClass\('table-active'\)/.test(src)) {
+    fail('partial table-page tidak pernah membersihkan baris terpilih — pemilihan bisa jadi ganda');
+  } else {
+    ok('pemilihan baris dijaga tetap tunggal');
+  }
 }
 
 // ─────────────────────────────────── 6. Query DataTables
