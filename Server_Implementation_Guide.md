@@ -1082,15 +1082,70 @@ ditampilkan**, bukan ditampilkan lalu ditolak saat diklik:
 > `@canany` dipakai untuk induk dropdown: menu "Verifikasi" harus tetap muncul
 > bila admin punya **salah satu** dari dua izin tersebut.
 
+#### 8.1 Menu dan route WAJIB memakai permission yang sama
+
+Ketidakcocokan antara `@can` di menu dan `permission:` di route **tidak
+menimbulkan error di mana pun**. Akibatnya salah satu dari dua hal, yang
+keduanya hanya ketahuan dari keluhan pengguna:
+
+| Kesalahan | Gejala |
+| :-- | :-- |
+| Menu lebih longgar dari route | Menu tampil, diklik, lalu **403** — menu berbohong |
+| Menu lebih ketat dari route | Menu tersembunyi padahal admin berhak — **fitur hilang diam-diam** |
+
+Karena itu pasangannya ditegakkan otomatis oleh `tools/dev/check-admin-menu.mjs`,
+yang membaca `@can` dari `resources/views/admin/partials/sidebar.blade.php` dan
+membandingkannya dengan middleware hasil `artisan route:list --json`.
+
+**Endpoint JSON Datatables ikut dijaga.** `admin/users/data` mengembalikan isi
+tabel yang sama dengan halamannya; kalau hanya halamannya yang diberi
+`permission:manage-users`, admin tanpa izin tetap bisa memanggil endpoint
+datanya langsung meski menunya tersembunyi.
+
+**Halaman akun sendiri justru TIDAK boleh menuntut permission.** `admin/profil`
+dan `admin/kata-sandi` hanya menyentuh `$request->user()`. Kalau keduanya
+diletakkan di dalam grup `permission:`, admin dengan izin paling sedikit tidak
+akan pernah bisa mengganti kata sandi default-nya sendiri.
+
+#### 8.2 Dua permission verifikasi = dua halaman
+
+`verify-users` dan `verify-stores` adalah permission terpisah (§6.2), sehingga
+antriannya juga dipisah menjadi `admin/verifications/users` dan
+`admin/verifications/stores`. Satu halaman gabungan akan memaksa admin yang
+hanya punya salah satunya melihat data yang bukan haknya.
+
 ---
 
 ## 9. HALAMAN ADMIN – DETAIL TAMPILAN & FORM
 
 ### 9.1 Dashboard Admin
 
-- **Cards:** Total Pengguna, Total Toko, Total Pesanan Bulan Ini, Dispute Aktif.
-- **Chart:** Grafik permintaan baru per hari dalam 7 hari terakhir (Chart.js).
+- **Antrian kerja (paling atas):** KTP menunggu, toko menunggu, laporan terbuka,
+  pesanan dalam sengketa. Ditaruh sebelum KPI karena dasbor pertama-tama harus
+  menjawab _"apa yang harus saya kerjakan"_, baru _"bagaimana keadaannya"_.
+- **Cards:** Total Pengguna, Toko Aktif, Pesanan Bulan Ini, Permintaan Terbuka,
+  Laporan Lewat SLA, Ulasan Masuk, Listing Aktif, Penawaran Menunggu.
+- **Chart:** Permintaan & pesanan baru per hari (Chart.js), rentang 7/14/30 hari.
 - **Tabel ringkas:** 5 permintaan terbaru, 5 penawaran terbaru.
+
+> ⚠️ **Kartu KPI adalah data, dan ikut disaring permission.** Angka
+> "4.812 pengguna" tetap membocorkan ukuran basis pengguna kepada admin yang
+> tidak punya `manage-users`. Karena itu tiap blok dibungkus
+> `Gate::allows()` di controller — **query-nya tidak dijalankan sama sekali**
+> bila admin tidak berhak, bukan sekadar disembunyikan di Blade. Menyembunyikan
+> di view berarti server tetap membayar biaya `COUNT` untuk angka yang tidak
+> akan pernah ditampilkan.
+
+**Definisi "Laporan Lewat SLA"** sama persis dengan `Dispute::isOverdue()`:
+status `open`, `first_responded_at` masih NULL, dan `response_deadline` sudah
+lewat. Menghitung semua laporan terbuka membuat lencana ini selalu menyala dan
+berhenti berarti apa-apa.
+
+**Lencana sidebar memakai View Composer, bukan variabel dari controller.**
+Sidebar tampil di semua halaman; mengirim angkanya dari tiap controller berarti
+12 tempat mengulang query yang sama, dan satu yang lupa membuat lencana hilang
+di halaman itu saja — tampak seperti antrian yang mendadak kosong. Lihat
+`app/View/Composers/SidebarComposer.php`; hasilnya di-cache 60 detik.
 
 **Controller** — data grafik disajikan lewat endpoint terpisah supaya halaman
 tidak menunggu agregasi selesai:

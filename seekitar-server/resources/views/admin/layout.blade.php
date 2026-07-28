@@ -4,137 +4,140 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Panel Admin') — Seekitar</title>
+    {{-- Panel admin tidak boleh terindeks mesin pencari, apa pun isi
+         robots.txt. Halaman di balik login memang tak terjangkau crawler,
+         tetapi URL-nya bisa bocor lewat referer atau riwayat browser. --}}
+    <meta name="robots" content="noindex, nofollow">
+    <title>@yield('title', 'Panel Admin') — Seekitar Admin</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    {{-- FontAwesome 7.3.1 — HANYA di panel admin. Aplikasi mobile & web publik
+         memakai Heroicons; mencampurnya dalam satu layar langsung terasa tidak
+         rapi karena ketebalan garisnya berbeda (BRANDING §3.7.1). --}}
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/2.1.8/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-    <style>
-        /* Palet dari BRANDING-GUIDELINE.md §3.5 */
-        :root { --seekitar-green: #168A4A; --seekitar-yellow: #F5B83D; }
-        .navbar-seekitar { background-color: var(--seekitar-green); }
-        .navbar-seekitar .navbar-brand,
-        .navbar-seekitar .nav-link { color: #fff; }
-        .navbar-seekitar .nav-link.active { font-weight: 600; text-decoration: underline; }
-        .btn-seekitar { background-color: var(--seekitar-green); color: #fff; }
-        .btn-seekitar:hover { background-color: #11703c; color: #fff; }
-        /* 11px adalah batas terkecil yang diizinkan — target pengguna 40+
-           tahun yang umumnya sudah presbiopia (BRANDING §4). */
-        .table, .form-control, .btn { font-size: 14px; }
-    </style>
+    <link href="{{ asset('css/admin.css') }}" rel="stylesheet">
     @stack('styles')
 </head>
-<body class="bg-light">
+<body>
 
-<nav class="navbar navbar-expand-lg navbar-seekitar mb-4">
-    <div class="container">
-        <a class="navbar-brand fw-bold" href="{{ route('admin.dashboard') }}">Seekitar Admin</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"
-                aria-controls="nav" aria-expanded="false" aria-label="Buka menu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="nav">
-            <ul class="navbar-nav me-auto">
-                {{-- Menu ditampilkan per-permission: admin tanpa izin tidak
-                     melihat menu yang toh akan ditolak saat diklik. --}}
-                @can('manage-users')
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"
-                           href="{{ route('admin.users.index') }}">Pengguna</a>
-                    </li>
-                @endcan
-                @can('manage-stores')
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('admin.stores.*') ? 'active' : '' }}"
-                           href="{{ route('admin.stores.index') }}">Toko</a>
-                    </li>
-                @endcan
-                @can('verify-users')
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('admin.verifications.*') ? 'active' : '' }}"
-                           href="{{ route('admin.verifications.index') }}">Verifikasi</a>
-                    </li>
-                @endcan
-                @can('manage-categories')
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}"
-                           href="{{ route('admin.categories.index') }}">Kategori</a>
-                    </li>
-                @endcan
-                @can('manage-listings')
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('admin.listings.*') ? 'active' : '' }}"
-                           href="{{ route('admin.listings.index') }}">Listing</a>
-                    </li>
-                @endcan
-                @can('manage-requests')
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('admin.requests.*') ? 'active' : '' }}"
-                           href="{{ route('admin.requests.index') }}">Permintaan</a>
-                    </li>
-                @endcan
-                @can('manage-orders')
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}"
-                           href="{{ route('admin.orders.index') }}">Pesanan</a>
-                    </li>
-                @endcan
-                @can('manage-reviews')
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}"
-                           href="{{ route('admin.reviews.index') }}">Ulasan</a>
-                    </li>
-                @endcan
-                @can('manage-disputes')
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('admin.disputes.*') ? 'active' : '' }}"
-                           href="{{ route('admin.disputes.index') }}">Laporan</a>
-                    </li>
-                @endcan
-                @can('manage-settings')
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('admin.settings*') ? 'active' : '' }}"
-                           href="{{ route('admin.settings') }}">Pengaturan</a>
-                    </li>
-                @endcan
-            </ul>
-            <div class="d-flex align-items-center gap-3">
-                <span class="navbar-text text-white">{{ auth()->user()?->name }}</span>
-                {{-- POST, bukan GET: logout mengubah state, dan tautan GET
-                     bisa dipicu prefetch browser atau <img> di halaman lain. --}}
-                <form method="POST" action="{{ route('admin.logout') }}" class="m-0">
-                    @csrf
-                    <button type="submit" class="btn btn-sm btn-outline-light">Keluar</button>
-                </form>
+{{-- Lewati navigasi: tautan pertama bagi pengguna keyboard & pembaca layar,
+     supaya tidak perlu menelusuri 12 butir menu di setiap halaman. --}}
+<a href="#konten-utama" class="visually-hidden-focusable admin-skip">Lewati ke konten</a>
+
+<div class="admin-shell">
+
+    @include('admin.partials.sidebar')
+
+    {{-- Latar gelap saat sidebar terbuka di layar kecil. Tanpa ini, sidebar
+         menutupi konten dan tidak ada cara jelas untuk menutupnya kembali. --}}
+    <div class="admin-backdrop" id="sidebarBackdrop" hidden></div>
+
+    <div class="admin-main">
+
+        <header class="admin-topbar">
+            <button class="btn btn-sm btn-outline-secondary d-lg-none" type="button"
+                    id="sidebarToggle" aria-controls="sidebar" aria-expanded="false"
+                    aria-label="Buka menu navigasi">
+                <i class="fa-solid fa-bars" aria-hidden="true"></i>
+            </button>
+
+            <div class="admin-topbar-title">
+                <h1 class="h6 mb-0">@yield('title', 'Panel Admin')</h1>
+                @hasSection('breadcrumb')
+                    <nav aria-label="Remah roti">
+                        <ol class="breadcrumb mb-0">@yield('breadcrumb')</ol>
+                    </nav>
+                @endif
             </div>
-        </div>
+
+            <div class="dropdown ms-auto">
+                <button class="btn btn-sm btn-light border d-flex align-items-center gap-2"
+                        type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
+                    <span class="d-none d-sm-inline">{{ auth()->user()?->name }}</span>
+                    <i class="fa-solid fa-chevron-down fa-xs opacity-50" aria-hidden="true"></i>
+                </button>
+
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li class="px-3 py-2">
+                        <div class="fw-semibold">{{ auth()->user()?->name }}</div>
+                        <div class="small text-muted">{{ auth()->user()?->email }}</div>
+                        <div class="mt-1">
+                            {{-- Peran ditampilkan apa adanya dari Spatie, bukan
+                                 ditebak dari daftar permission: dua admin bisa
+                                 punya izin sama tetapi peran berbeda. --}}
+                            @foreach (auth()->user()?->getRoleNames() ?? [] as $role)
+                                <span class="badge text-bg-secondary">{{ $role }}</span>
+                            @endforeach
+                        </div>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item" href="{{ route('admin.profile.edit') }}">
+                            <i class="fa-solid fa-user fa-fw me-1" aria-hidden="true"></i> Profil Saya
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="{{ route('admin.password.edit') }}">
+                            <i class="fa-solid fa-key fa-fw me-1" aria-hidden="true"></i> Ubah Kata Sandi
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        {{-- POST, bukan GET: logout mengubah state, dan tautan
+                             GET bisa dipicu prefetch browser atau <img> di
+                             halaman lain. --}}
+                        <form method="POST" action="{{ route('admin.logout') }}" class="px-3 py-1">
+                            @csrf
+                            <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+                                <i class="fa-solid fa-right-from-bracket fa-fw me-1" aria-hidden="true"></i> Keluar
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </header>
+
+        <main class="admin-content" id="konten-utama">
+
+            {{-- role="alert" agar pembaca layar mengumumkan hasil aksi; tanpa
+                 itu, pengguna non-visual tidak tahu simpannya berhasil. --}}
+            @if (session('success'))
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+                </div>
+            @endif
+
+            @if (session('error'))
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>
+                    {{ session('error') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+                </div>
+            @endif
+
+            @if ($errors->any())
+                <div class="alert alert-danger" role="alert">
+                    <ul class="mb-0 ps-3">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            @yield('content')
+        </main>
+
+        <footer class="admin-footer">
+            <span>&copy; {{ now()->year }} {{ config('seekitar.company.name') }}</span>
+            <span class="text-muted">Panel Admin Seekitar</span>
+        </footer>
     </div>
-</nav>
-
-<main class="container pb-5">
-    @hasSection('breadcrumb')
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">@yield('breadcrumb')</ol>
-        </nav>
-    @endif
-
-    @if (session('success'))
-        <div class="alert alert-success" role="alert">{{ session('success') }}</div>
-    @endif
-    @if (session('error'))
-        <div class="alert alert-danger" role="alert">{{ session('error') }}</div>
-    @endif
-    @if ($errors->any())
-        <div class="alert alert-danger">
-            <ul class="mb-0">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
-    @yield('content')
-</main>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -143,6 +146,26 @@
 <script>
     // Token CSRF dipasang sekali untuk seluruh request AJAX.
     $.ajaxSetup({ headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') } });
+
+    // Sidebar geser di layar kecil. aria-expanded ikut diperbarui — tanpa itu
+    // pembaca layar selalu melaporkan menu dalam keadaan tertutup.
+    (function () {
+        const shell    = document.querySelector('.admin-shell');
+        const toggle   = document.getElementById('sidebarToggle');
+        const backdrop = document.getElementById('sidebarBackdrop');
+        if (!shell || !toggle || !backdrop) return;
+
+        const setOpen = (open) => {
+            shell.classList.toggle('sidebar-open', open);
+            toggle.setAttribute('aria-expanded', String(open));
+            backdrop.hidden = !open;
+        };
+
+        toggle.addEventListener('click', () => setOpen(!shell.classList.contains('sidebar-open')));
+        backdrop.addEventListener('click', () => setOpen(false));
+        // Escape menutup menu: pola yang sudah diharapkan pengguna keyboard.
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') setOpen(false); });
+    })();
 </script>
 @stack('scripts')
 </body>

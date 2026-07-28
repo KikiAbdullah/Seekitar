@@ -141,6 +141,35 @@ sesinya langsung dibuang.
 > sandi produksi yang sudah diganti tidak tertimpa. Bila lupa, ubah lewat
 > tinker: `User::where('email', '...')->update(['password' => Hash::make('baru')])`.
 
+Setelah masuk, kata sandi bisa diganti sendiri lewat **menu profil → Ubah Kata
+Sandi** (`/admin/kata-sandi`). Halaman itu menuntut sandi lama, minimal 12
+karakter, dan menolak kata umum seperti `password` atau `seekitar2026`.
+Berhasil mengganti akan **mengeluarkan sesi di perangkat lain** dan mencabut
+token API akun tersebut.
+
+### Menambah menu baru di panel admin
+
+Menu dan route **wajib** memakai permission yang sama. Kalau berbeda, menu akan
+tampil lalu menolak dengan 403, atau tersembunyi padahal admin berhak — dan
+tidak ada error yang muncul di mana pun.
+
+1. Tambahkan route di `routes/admin.php` di dalam
+   `Route::middleware('permission:nama-izin')`.
+2. Tambahkan butir menu di `resources/views/admin/partials/sidebar.blade.php`
+   dibungkus `@can('nama-izin')` yang **sama persis**.
+3. Kalau halamannya memakai Datatables, endpoint `.../data`-nya juga harus
+   diberi `permission:` yang sama — kalau tidak, JSON-nya bisa ditarik langsung
+   meski menunya tersembunyi.
+4. Jalankan penjaganya:
+
+```bash
+node tools/dev/check-admin-menu.mjs
+```
+
+Checker itu membandingkan `@can` di sidebar dengan middleware hasil
+`route:list`, lalu **me-render seluruh halaman admin sebagai `admin` dan
+`super-admin`** untuk memastikan menu benar-benar berbeda per izin.
+
 Untuk memeriksa DDL yang dihasilkan migrasi **tanpa** server MySQL:
 
 ```bash

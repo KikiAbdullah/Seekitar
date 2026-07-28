@@ -21,13 +21,17 @@ use App\Services\Contracts\WhatsAppGateway;
 use App\Services\Notifications\LogNotificationSender;
 use App\Services\WhatsApp\KirimWaGateway;
 use App\Services\WhatsApp\LogWhatsAppGateway;
+use App\View\Composers\SidebarComposer;
+use Carbon\Carbon;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use RuntimeException;
 
@@ -66,6 +70,17 @@ class AppServiceProvider extends ServiceProvider
         $this->configureRateLimiting();
         $this->registerObservers();
         $this->registerEventListeners();
+        $this->registerAuthorization();
+        $this->registerViewComposers();
+
+        // Tanggal berbahasa Indonesia di seluruh antarmuka.
+        //
+        // config('app.locale') sengaja TIDAK diubah ke 'id': Laravel akan
+        // mencari berkas terjemahan lang/id/*.php yang tidak ada, dan seluruh
+        // pesan validasi bawaan berubah menjadi kunci mentah seperti
+        // "validation.required". Yang dibutuhkan hanya nama hari & bulan,
+        // dan itu milik Carbon — bukan milik locale aplikasi.
+        Carbon::setLocale('id');
 
         // Mass-assignment tak terdefinisi dan akses relasi malas ditolak di
         // pengembangan, sehingga bug ketahuan lebih awal — bukan di produksi
@@ -82,6 +97,43 @@ class AppServiceProvider extends ServiceProvider
                 ]);
             });
         }
+    }
+
+    /**
+     * Otorisasi lintas-Policy.
+     *
+     * Tanpa `Gate::before`, setiap Policy harus mengulang pengecualian untuk
+     * super-admin. Satu pintu lebih aman daripada belasan pemeriksaan yang
+     * bisa terlupa saat Policy baru ditambahkan
+     * (Server_Implementation_Guide.md §6.3).
+     */
+    private function registerAuthorization(): void
+    {
+        Gate::before(function ($user, string $ability) {
+            // WAJIB null, BUKAN false. Mengembalikan false memutus rantai:
+            // Policy tidak akan pernah dipanggil dan SEMUA orang selain
+            // super-admin ditolak, termasuk pemilik datanya sendiri.
+            //
+            // hasRole() berasal dari Spatie; pengguna API bisa saja model
+            // lain, jadi keberadaan methodnya diperiksa dulu.
+            if (! method_exists($user, 'hasRole')) {
+                return null;
+            }
+
+            return $user->hasRole('super-admin') ? true : null;
+        });
+    }
+
+    /**
+     * Data yang dibutuhkan SETIAP halaman admin.
+     *
+     * Sidebar tampil di semua halaman; mengirim angka lencananya dari tiap
+     * controller berarti 12 tempat mengulang query yang sama, dan satu yang
+     * lupa membuat lencana hilang di halaman itu saja.
+     */
+    private function registerViewComposers(): void
+    {
+        View::composer('admin.partials.sidebar', SidebarComposer::class);
     }
 
     /**

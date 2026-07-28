@@ -6,7 +6,10 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DisputeController;
 use App\Http\Controllers\Admin\ListingController;
 use App\Http\Controllers\Admin\LoginController;
+use App\Http\Controllers\Admin\OfferController;
 use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\PasswordController;
+use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\StoreController;
@@ -25,6 +28,12 @@ use Illuminate\Support\Facades\Route;
 |
 | Autentikasi memakai sesi Laravel (stateful), bukan Bearer token: panel ini
 | diakses lewat browser, bukan aplikasi mobile.
+|
+| ATURAN PENTING: setiap route di bawah harus punya permission yang SAMA
+| PERSIS dengan @can pada butir menunya di
+| resources/views/admin/partials/sidebar.blade.php. Kalau berbeda, menu akan
+| tampil lalu menolak saat diklik, atau tersembunyi padahal admin berhak.
+| Kecocokan itu ditegakkan tools/dev/check-admin-menu.mjs.
 |
 */
 
@@ -49,17 +58,42 @@ Route::middleware(['auth', 'role:admin|super-admin'])->group(function (): void {
     Route::get('dashboard/chart', [DashboardController::class, 'chartData'])->name('dashboard.chart');
 
     /*
+    | --- Akun sendiri ------------------------------------------------------
+    | TANPA permission: admin yang tidak punya `manage-users` sekalipun harus
+    | tetap bisa memperbaiki namanya dan mengganti kata sandinya sendiri.
+    | Yang membatasi cakupannya adalah controller-nya, yang hanya pernah
+    | menyentuh $request->user().
+    */
+    Route::get('profil', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('profil', [ProfileController::class, 'update'])->name('profile.update');
+    Route::get('kata-sandi', [PasswordController::class, 'edit'])->name('password.edit');
+    Route::put('kata-sandi', [PasswordController::class, 'update'])->name('password.update');
+
+    /*
     | Endpoint AJAX Datatables WAJIB didaftarkan SEBELUM route ber-parameter.
     | Kalau tidak, `users/data` tertangkap sebagai `users/{user}` dan Laravel
     | mencari pengguna ber-id "data".
+    |
+    | Masing-masing memakai permission yang sama dengan halaman induknya —
+    | tanpa itu, admin tanpa izin bisa memanggil endpoint JSON-nya langsung
+    | dan menarik seluruh tabel meski menunya tersembunyi.
     */
-    Route::get('users/data',    [UserController::class, 'data'])->name('users.data');
-    Route::get('stores/data',   [StoreController::class, 'data'])->name('stores.data');
-    Route::get('disputes/data', [DisputeController::class, 'data'])->name('disputes.data');
-    Route::get('listings/data', [ListingController::class, 'data'])->name('listings.data');
-    Route::get('orders/data',   [OrderController::class, 'data'])->name('orders.data');
-    Route::get('requests/data', [CustomerRequestController::class, 'data'])->name('requests.data');
-    Route::get('reviews/data',  [ReviewController::class, 'data'])->name('reviews.data');
+    Route::get('users/data',    [UserController::class, 'data'])
+        ->middleware('permission:manage-users')->name('users.data');
+    Route::get('stores/data',   [StoreController::class, 'data'])
+        ->middleware('permission:manage-stores')->name('stores.data');
+    Route::get('disputes/data', [DisputeController::class, 'data'])
+        ->middleware('permission:manage-disputes')->name('disputes.data');
+    Route::get('listings/data', [ListingController::class, 'data'])
+        ->middleware('permission:manage-listings')->name('listings.data');
+    Route::get('orders/data',   [OrderController::class, 'data'])
+        ->middleware('permission:manage-orders')->name('orders.data');
+    Route::get('requests/data', [CustomerRequestController::class, 'data'])
+        ->middleware('permission:manage-requests')->name('requests.data');
+    Route::get('offers/data',   [OfferController::class, 'data'])
+        ->middleware('permission:manage-offers')->name('offers.data');
+    Route::get('reviews/data',  [ReviewController::class, 'data'])
+        ->middleware('permission:manage-reviews')->name('reviews.data');
 
     // --- Pengguna -------------------------------------------------------
     Route::middleware('permission:manage-users')->group(function (): void {
@@ -69,7 +103,7 @@ Route::middleware(['auth', 'role:admin|super-admin'])->group(function (): void {
         Route::post('users/{user}/block', [UserController::class, 'block'])->name('users.block');
     });
 
-    // --- Toko & verifikasi ----------------------------------------------
+    // --- Toko -------------------------------------------------------------
     Route::get('stores', [StoreController::class, 'index'])
         ->middleware('permission:manage-stores')
         ->name('stores.index');
@@ -79,11 +113,28 @@ Route::middleware(['auth', 'role:admin|super-admin'])->group(function (): void {
         Route::post('stores/{store}/reject', [StoreController::class, 'reject'])->name('stores.reject');
     });
 
-    // --- Verifikasi KTP ---------------------------------------------------
+    /*
+    | --- Verifikasi ------------------------------------------------------
+    | DUA halaman terpisah, karena `verify-users` dan `verify-stores` adalah
+    | dua permission berbeda (§6.2). Menggabungkannya memaksa admin yang hanya
+    | punya salah satunya melihat data yang bukan haknya.
+    */
     Route::middleware('permission:verify-users')->group(function (): void {
-        Route::get('verifications', [VerificationController::class, 'index'])->name('verifications.index');
-        Route::post('verifications/users/{user}/approve', [VerificationController::class, 'approveUser'])->name('verifications.users.approve');
-        Route::post('verifications/users/{user}/reject', [VerificationController::class, 'rejectUser'])->name('verifications.users.reject');
+        Route::get('verifications/users', [VerificationController::class, 'users'])
+            ->name('verifications.users');
+        Route::post('verifications/users/{user}/approve', [VerificationController::class, 'approveUser'])
+            ->name('verifications.users.approve');
+        Route::post('verifications/users/{user}/reject', [VerificationController::class, 'rejectUser'])
+            ->name('verifications.users.reject');
+    });
+
+    Route::middleware('permission:verify-stores')->group(function (): void {
+        Route::get('verifications/stores', [VerificationController::class, 'stores'])
+            ->name('verifications.stores');
+        Route::post('verifications/stores/{store}/approve', [VerificationController::class, 'approveStore'])
+            ->name('verifications.stores.approve');
+        Route::post('verifications/stores/{store}/reject', [VerificationController::class, 'rejectStore'])
+            ->name('verifications.stores.reject');
     });
 
     // --- Kategori ---------------------------------------------------------
@@ -96,12 +147,23 @@ Route::middleware(['auth', 'role:admin|super-admin'])->group(function (): void {
         Route::resource('listings', ListingController::class)->only(['index', 'show', 'destroy']);
     });
 
-    // --- Permintaan & pesanan (hanya baca) --------------------------------
+    // --- Permintaan -------------------------------------------------------
     Route::middleware('permission:manage-requests')->group(function (): void {
         Route::resource('requests', CustomerRequestController::class)->only(['index', 'show'])
             ->parameters(['requests' => 'customerRequest']);
+
+        // Perpanjangan admin untuk permintaan yang kedaluwarsa akibat gangguan
+        // sistem, bukan karena pembeli membiarkannya (§9.7).
+        Route::post('requests/{customerRequest}/extend', [CustomerRequestController::class, 'extend'])
+            ->name('requests.extend');
     });
 
+    // --- Penawaran (hanya baca, §9.8) --------------------------------------
+    Route::get('offers', [OfferController::class, 'index'])
+        ->middleware('permission:manage-offers')
+        ->name('offers.index');
+
+    // --- Pesanan (hanya baca) ---------------------------------------------
     Route::middleware('permission:manage-orders')->group(function (): void {
         Route::resource('orders', OrderController::class)->only(['index', 'show']);
     });
