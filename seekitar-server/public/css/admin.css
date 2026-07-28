@@ -265,17 +265,15 @@ div.dt-container .dt-length select { width: auto; display: inline-block; }
     outline-offset: -2px;
 }
 
-/* Bilah aksi sejajar judul. min-height dipatok agar judul tidak melompat
-   naik-turun setiap tombol muncul lalu hilang. */
+/* Bilah aksi sejajar judul.
+
+   min-height WAJIB: bilahnya kosong sampai ada baris dipilih, dan tanpa
+   tinggi tetap seluruh baris judul akan melompat naik-turun setiap tombol
+   muncul lalu hilang. Nilainya menyamai tinggi .btn-sm Bootstrap. */
 .admin-rowactions {
     min-height: 31px;
     flex-wrap: wrap;
     justify-content: flex-end;
-}
-
-.admin-rowactions-hint {
-    /* 12px — masih di atas batas 11px (BRANDING §4). */
-    font-size: 12px;
 }
 
 /* Form di dalam bilah aksi tampil sebaris dengan tombol lainnya. */

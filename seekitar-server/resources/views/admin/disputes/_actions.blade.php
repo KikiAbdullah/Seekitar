@@ -3,6 +3,4 @@
     <a href="{{ route('admin.disputes.show', $dispute) }}" class="btn btn-sm btn-outline-primary">
         <i class="fa-solid fa-gavel me-1" aria-hidden="true"></i> Tinjau
     </a>
-
-    <span class="text-muted small ms-1">{{ $dispute->order?->order_number ?? '—' }}</span>
 @endcan

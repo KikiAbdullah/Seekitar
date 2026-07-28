@@ -9,23 +9,13 @@
 
 @section('content')
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
-        <div>
-            <h2 class="h5 mb-0">Kategori</h2>
-            <p class="text-muted small mb-0 mt-1">
-                Pilih baris untuk menyunting atau menghapus. Taksonomi dibatasi dua level (PRD §5.1).
-            </p>
-        </div>
+        <h2 class="h5 mb-0">Kategori</h2>
 
         <div class="d-flex align-items-center gap-2">
             {{-- Bilah aksi baris; strukturnya sama dengan partial table-page
                  supaya perilakunya konsisten di seluruh panel. --}}
             <div id="categories-table-actions" class="admin-rowactions d-flex align-items-center gap-2"
-                 aria-live="polite">
-                <span class="text-muted small admin-rowactions-hint">
-                    <i class="fa-solid fa-hand-pointer me-1" aria-hidden="true"></i>
-                    Pilih satu baris untuk melihat aksi
-                </span>
-            </div>
+                 aria-live="polite"></div>
 
             {{-- "Tambah" BUKAN aksi baris: ia tidak bergantung pilihan, jadi
                  selalu tampil dan dipisahkan garis dari bilah di atas. --}}
@@ -86,11 +76,9 @@
     const bilah = document.getElementById('categories-table-actions');
     if (!tabel || !bilah) return;
 
-    const petunjukAwal = bilah.innerHTML;
-
     function kosongkan() {
         tabel.querySelectorAll('tr.table-active').forEach(tr => tr.classList.remove('table-active'));
-        bilah.innerHTML = petunjukAwal;
+        bilah.innerHTML = '';
     }
 
     tabel.querySelectorAll('tbody tr[data-actions]').forEach(function (tr) {

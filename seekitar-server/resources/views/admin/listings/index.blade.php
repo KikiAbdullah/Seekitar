@@ -13,8 +13,7 @@
         'tableId'  => 'listings-table',
         'ajax'     => route('admin.listings.data'),
         'order'    => [[5, 'desc']],
-        'petunjuk' => 'Pilih baris untuk melihat detail atau menghapus listing bermasalah.',
-        'filter'   => view('admin.listings._filter'),
+        'filterView' => 'admin.listings._filter',
         'columns'  => [
             ['data' => 'title',        'label' => 'Judul'],
             ['data' => 'store_name',   'label' => 'Toko', 'orderable' => false],

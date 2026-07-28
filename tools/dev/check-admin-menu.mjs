@@ -487,6 +487,54 @@ if (aksiTanpaCan.length) {
   ok('semua partial aksi dibungkus @can');
 }
 
+/*
+ * HTML tidak boleh dioper antar-view sebagai nilai variabel.
+ *
+ * `@include(..., ['filter' => view('x')])` lalu menampilkannya dengan
+ * `{{ $filter }}` membuat SELURUH filter tampil sebagai teks mentah
+ * (`&lt;select&gt;…`). Penyebabnya: @include me-render sub-view menjadi
+ * string lebih dulu, dan string biasa memang di-escape `{{ }}` — objek View
+ * yang Htmlable tidak pernah sampai ke sana.
+ *
+ * Halaman tetap "berhasil dirender", jadi render harness pun tidak
+ * mengeluhkannya. Hanya pemeriksaan ini yang menangkapnya.
+ *
+ * Perbaikannya BUKAN {!! !!} (mematikan escaping — TODO_BUG #202), melainkan
+ * mengoper NAMA view lalu @includeIf.
+ */
+const viewSebagaiVariabel = [];
+for (const p of blades) {
+  const src = fs.readFileSync(p, 'utf8').replace(/\{\{--[\s\S]*?--\}\}/g, '');
+  for (const m of src.matchAll(/'(\w+)'\s*=>\s*view\(/g)) {
+    viewSebagaiVariabel.push(`${path.basename(path.dirname(p))}/${path.basename(p)}: '${m[1]}' => view(...)`);
+  }
+}
+if (viewSebagaiVariabel.length) {
+  fail(`objek view dioper sebagai variabel — akan tampil sebagai teks ter-escape:\n     ${viewSebagaiVariabel.join('\n     ')}\n     Pakai nama view + @includeIf.`);
+} else {
+  ok('tidak ada objek view yang dioper sebagai variabel');
+}
+
+// Bilah aksi harus kosong sebelum ada baris dipilih — tanpa teks petunjuk.
+const petunjukTersisa = blades.filter(p =>
+  /Pilih satu baris|admin-rowactions-hint/.test(
+    fs.readFileSync(p, 'utf8').replace(/\{\{--[\s\S]*?--\}\}/g, '')));
+if (petunjukTersisa.length) {
+  fail(`teks petunjuk masih ada di: ${petunjukTersisa.map(p => path.basename(p)).join(', ')}`);
+} else {
+  ok('bilah aksi kosong sebelum baris dipilih');
+}
+
+// Nama/judul entitas tidak lagi ditempel di sebelah tombol aksi.
+const namaDiAksi = blades
+  .filter(p => path.basename(p) === '_actions.blade.php')
+  .filter(p => /text-muted small ms-1/.test(fs.readFileSync(p, 'utf8')));
+if (namaDiAksi.length) {
+  fail(`nama entitas masih ditempel di bilah aksi: ${namaDiAksi.map(p => path.basename(path.dirname(p))).join(', ')}`);
+} else {
+  ok('bilah aksi hanya berisi tombol');
+}
+
 // Tabel yang memakai partial table-page tidak boleh lagi merakit DataTable
 // sendiri — dua implementasi berarti perilaku pemilihan bisa menyimpang.
 const daftarTabel = [

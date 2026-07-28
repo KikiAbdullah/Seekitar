@@ -151,6 +151,48 @@ class DataTableQueryTest extends TestCase
         }
     }
 
+    public function test_html_tidak_dioper_antar_view_sebagai_variabel(): void
+    {
+        /*
+         * `'filter' => view('x')` lalu ditampilkan dengan kurung-kurawal-ganda
+         * membuat SELURUH filter tampil sebagai teks mentah (&lt;select&gt;).
+         *
+         * Sebabnya @include me-render sub-view menjadi string lebih dulu;
+         * objek View yang Htmlable tidak pernah sampai ke tahap escaping,
+         * yang sampai adalah string biasa — dan string biasa memang di-escape.
+         *
+         * Halamannya tetap "berhasil dirender", jadi render harness pun tidak
+         * mengeluhkannya. Perbaikannya bukan {!! !!} (mematikan escaping,
+         * TODO_BUG #202) melainkan mengoper NAMA view lalu @includeIf.
+         */
+        foreach (glob(__DIR__.'/../../resources/views/admin/*/index.blade.php') as $view) {
+            $src = preg_replace('/\{\{--[\s\S]*?--\}\}/', '', file_get_contents($view));
+
+            $this->assertDoesNotMatchRegularExpression(
+                "/'\w+'\s*=>\s*view\(/",
+                $src,
+                basename(dirname($view)).'/index.blade.php mengoper objek view sebagai variabel.',
+            );
+        }
+    }
+
+    public function test_bilah_aksi_tanpa_teks_petunjuk_dan_nama(): void
+    {
+        $partial = file_get_contents(__DIR__.'/../../resources/views/admin/partials/table-page.blade.php');
+
+        // Bilah aksi kosong sampai ada baris dipilih; tingginya dijaga CSS.
+        $this->assertStringNotContainsString('Pilih satu baris', $partial);
+
+        // Nama entitas tidak ditempel di samping tombol.
+        foreach (glob(__DIR__.'/../../resources/views/admin/*/_actions.blade.php') as $aksi) {
+            $this->assertStringNotContainsString(
+                'text-muted small ms-1',
+                file_get_contents($aksi),
+                basename(dirname($aksi)).'/_actions.blade.php masih menempelkan nama entitas.',
+            );
+        }
+    }
+
     public function test_kolom_offers_count_dijamin_ada_nilainya(): void
     {
         $src = $this->tanpaKomentar(__DIR__.'/../../app/DataTables/CustomerRequestsDataTable.php');

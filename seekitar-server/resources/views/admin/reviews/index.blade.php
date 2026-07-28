@@ -18,8 +18,7 @@
         'tableId'  => 'reviews-table',
         'ajax'     => route('admin.reviews.data'),
         'order'    => [[5, 'desc']],
-        'petunjuk' => 'Pilih baris untuk menghapus ulasan yang melanggar.',
-        'filter'   => view('admin.reviews._filter'),
+        'filterView' => 'admin.reviews._filter',
         'columns'  => [
             ['data' => 'store_name',    'label' => 'Toko', 'orderable' => false],
             ['data' => 'reviewer_name', 'label' => 'Pengulas', 'orderable' => false],

@@ -14,8 +14,7 @@
         // Default: yang paling dekat melewati SLA lebih dulu.
         'order'    => [[3, 'asc']],
         'ajax'     => route('admin.disputes.data'),
-        'petunjuk' => 'Pilih baris untuk meninjau dan menyelesaikan laporan. Urutan default: batas SLA terdekat.',
-        'filter'   => view('admin.disputes._filter'),
+        'filterView' => 'admin.disputes._filter',
         'columns'  => [
             ['data' => 'order_number',      'label' => 'Pesanan', 'orderable' => false],
             ['data' => 'reason',            'label' => 'Alasan'],

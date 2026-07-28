@@ -13,8 +13,7 @@
         'tableId'  => 'stores-table',
         'ajax'     => route('admin.stores.data'),
         'order'    => [[5, 'desc']],
-        'petunjuk' => 'Pilih baris untuk menyetujui atau menolak pengajuan toko.',
-        'filter'   => view('admin.stores._filter'),
+        'filterView' => 'admin.stores._filter',
         'columns'  => [
             ['data' => 'name',                'label' => 'Nama'],
             ['data' => 'owner',               'label' => 'Pemilik', 'orderable' => false],

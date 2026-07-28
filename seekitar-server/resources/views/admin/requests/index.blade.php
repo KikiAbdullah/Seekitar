@@ -13,8 +13,7 @@
         'tableId'  => 'requests-table',
         'ajax'     => route('admin.requests.data'),
         'order'    => [[5, 'desc']],
-        'petunjuk' => 'Pilih baris untuk melihat penawaran yang masuk atau memperpanjang masa berlaku.',
-        'filter'   => view('admin.requests._filter'),
+        'filterView' => 'admin.requests._filter',
         'columns'  => [
             ['data' => 'title',        'label' => 'Judul'],
             ['data' => 'buyer',        'label' => 'Pembeli', 'orderable' => false],

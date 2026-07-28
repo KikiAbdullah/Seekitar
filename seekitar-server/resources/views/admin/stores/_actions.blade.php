@@ -29,7 +29,3 @@
         </button>
     @endif
 @endcan
-
-@can('manage-stores')
-    <span class="text-muted small ms-1">{{ $store->name }}</span>
-@endcan

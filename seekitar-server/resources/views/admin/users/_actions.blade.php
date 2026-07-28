@@ -22,6 +22,4 @@
             {{ $user->is_blocked ? 'Buka Blokir' : 'Blokir' }}
         </button>
     </form>
-
-    <span class="text-muted small ms-1">{{ $user->name }}</span>
 @endcan

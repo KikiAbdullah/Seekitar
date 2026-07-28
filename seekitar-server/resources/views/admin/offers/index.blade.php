@@ -23,7 +23,7 @@
         'tableId' => 'offers-table',
         'ajax'    => route('admin.offers.data'),
         'order'   => [[7, 'desc']],
-        'filter'  => view('admin.offers._filter'),
+        'filterView' => 'admin.offers._filter',
         'columns' => [
             ['data' => 'request_title',   'label' => 'Permintaan'],
             ['data' => 'store_name',      'label' => 'Toko', 'orderable' => false],

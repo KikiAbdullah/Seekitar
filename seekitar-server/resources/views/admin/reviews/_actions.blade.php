@@ -8,6 +8,4 @@
             <i class="fa-solid fa-trash me-1" aria-hidden="true"></i> Hapus
         </button>
     </form>
-
-    <span class="text-muted small ms-1">{{ $review->rating }}★ · {{ $review->store?->name ?? '—' }}</span>
 @endcan

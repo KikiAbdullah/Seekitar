@@ -13,8 +13,7 @@
         'tableId'  => 'orders-table',
         'ajax'     => route('admin.orders.data'),
         'order'    => [[5, 'desc']],
-        'petunjuk' => 'Pilih baris untuk melihat detail. Admin tidak mengubah status pesanan dari sini.',
-        'filter'   => view('admin.orders._filter'),
+        'filterView' => 'admin.orders._filter',
         'columns'  => [
             ['data' => 'order_number', 'label' => 'Nomor'],
             ['data' => 'store_name',   'label' => 'Toko', 'orderable' => false],

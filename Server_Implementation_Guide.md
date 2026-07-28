@@ -167,13 +167,34 @@ Seluruhnya terpusat di `resources/views/admin/partials/table-page.blade.php`:
 
 ```blade
 @include('admin.partials.table-page', [
-    'judul'   => 'Toko',
-    'tableId' => 'stores-table',
-    'ajax'    => route('admin.stores.data'),
-    'filter'  => view('admin.stores._filter'),
-    'columns' => [ ['data' => 'name', 'label' => 'Nama'], ... ],
+    'judul'      => 'Toko',
+    'tableId'    => 'stores-table',
+    'ajax'       => route('admin.stores.data'),
+    'filterView' => 'admin.stores._filter',   // NAMA view, bukan view()
+    'columns'    => [ ['data' => 'name', 'label' => 'Nama'], ... ],
 ])
 ```
+
+> ⚠️ **Jangan pernah mengoper objek view sebagai nilai variabel.**
+>
+> `'filter' => view('admin.stores._filter')` yang ditampilkan dengan
+> `{{ $filter }}` membuat seluruh filter tampil sebagai **teks mentah**
+> (`&lt;select&gt;…`) alih-alih elemen form. Ini sudah pernah terjadi di
+> kedelapan halaman tabel sekaligus.
+>
+> Sebabnya halus: `@include` me-**render** sub-view menjadi string sebelum
+> mengopernya. Objek `View` sendiri `Htmlable` sehingga `e()` akan
+> melewatkannya — tetapi yang sampai ke `{{ }}` sudah berupa string biasa,
+> dan string biasa memang di-escape. Diverifikasi langsung: `e($view)` tidak
+> meng-escape, `e($view->render())` meng-escape.
+>
+> Perbaikannya **bukan** `{!! !!}` — itu mematikan escaping dan justru membuka
+> XSS (penolakan TODO_BUG #202). Yang benar: oper **nama** view lalu
+> `@includeIf($filterView)`, sehingga tidak ada HTML yang pernah menjadi nilai
+> variabel.
+>
+> Halaman tetap "berhasil dirender" dalam keadaan ini, jadi render harness pun
+> tidak mengeluhkannya — hanya `check-admin-menu.mjs` yang menangkapnya.
 
 Catatan penerapan:
 
@@ -192,6 +213,10 @@ Catatan penerapan:
   `.js-tolak-toko` baru dibuat setiap kali baris dipilih.
 - Baris diberi `tabindex` dan menanggapi Enter/Spasi; Escape membatalkan
   pilihan (WCAG 2.1.1).
+- **Bilah aksi kosong** sebelum ada baris dipilih — tanpa teks petunjuk dan
+  tanpa nama entitas di samping tombol. Tingginya dipatok
+  `.admin-rowactions { min-height }` supaya baris judul tidak melompat
+  naik-turun saat tombol muncul lalu hilang.
 
 #### ⚠️ Dua jebakan query yang hanya muncul di browser
 

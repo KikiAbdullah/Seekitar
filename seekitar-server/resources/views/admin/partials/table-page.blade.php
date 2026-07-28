@@ -5,10 +5,26 @@
       $judul     : teks judul halaman
       $tableId   : id elemen <table>
       $ajax      : URL endpoint Datatables
-      $columns   : [['data' => 'name', 'label' => 'Nama', 'orderable' => false], ...]
-      $order     : (opsional) [[index, 'asc'|'desc']]
-      $petunjuk  : (opsional) kalimat di bawah judul
-      $filter    : (opsional) slot HTML filter, dirender di atas tabel
+      $columns    : [['data' => 'name', 'label' => 'Nama', 'orderable' => false], ...]
+      $order      : (opsional) [[index, 'asc'|'desc']]
+      $petunjuk   : (opsional) kalimat di bawah judul
+      $filterView : (opsional) NAMA view filter, mis. 'admin.stores._filter'
+
+    ⚠️ $filterView adalah NAMA view (string), BUKAN objek view atau HTML.
+
+    Versi sebelumnya mengoper `view('admin.stores._filter')` lalu menampilkannya
+    dengan `{{ $filter }}`, dan seluruh filter tampil sebagai teks mentah
+    (`&lt;select&gt;…`) alih-alih elemen form.
+
+    Sebabnya: @include me-RENDER sub-view menjadi string sebelum mengopernya.
+    Objek View sendiri bersifat Htmlable sehingga e() akan melewatkannya —
+    tetapi yang sampai ke `{{ }}` sudah berupa string biasa, dan string biasa
+    memang di-escape. Diverifikasi langsung: e($view) tidak meng-escape,
+    e($view->render()) meng-escape.
+
+    Perbaikannya BUKAN {!! !!} — itu mematikan escaping dan justru membuka XSS
+    (lihat penolakan TODO_BUG #202). Yang dipakai @includeIf dengan nama view,
+    sehingga tidak ada HTML yang pernah dioper sebagai nilai variabel.
 
     KENAPA TOMBOL AKSI TIDAK LAGI JADI KOLOM
     ----------------------------------------
@@ -40,33 +56,33 @@
 @endphp
 
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
-    <div>
-        <h2 class="h5 mb-0">{{ $judul }}</h2>
-        @isset($petunjuk)
-            <p class="text-muted small mb-0 mt-1">{{ $petunjuk }}</p>
-        @endisset
-    </div>
+    <h2 class="h5 mb-0">{{ $judul }}</h2>
 
     {{--
         Bilah aksi — sejajar judul, rata kanan.
+
+        Sengaja KOSONG saat belum ada baris terpilih: bilahnya hanya diisi
+        tombol, tanpa teks petunjuk. Tingginya tetap dipatok lewat CSS
+        (.admin-rowactions min-height) supaya judul tidak melompat naik-turun
+        ketika tombol muncul lalu hilang.
 
         aria-live="polite" supaya pembaca layar mengumumkan tombol yang baru
         muncul; tanpa itu pengguna non-visual tidak tahu ada aksi tersedia
         setelah memilih baris.
     --}}
     <div id="{{ $tableId }}-actions" class="admin-rowactions d-flex align-items-center gap-2"
-         aria-live="polite">
-        <span class="text-muted small admin-rowactions-hint">
-            <i class="fa-solid fa-hand-pointer me-1" aria-hidden="true"></i>
-            Pilih satu baris untuk melihat aksi
-        </span>
-    </div>
+         aria-live="polite"></div>
 </div>
 
 <div class="card">
     <div class="card-body">
-        @isset($filter)
-            <div class="mb-3">{{ $filter }}</div>
+        @isset($filterView)
+            {{-- @includeIf, bukan {{ $filter }}: direktif ini menggemakan
+                 keluaran view apa adanya, sehingga tidak ada tahap escaping
+                 yang bisa mengubah <select> menjadi teks. --}}
+            <div class="mb-3">
+                @includeIf($filterView)
+            </div>
         @endisset
 
         <table id="{{ $tableId }}" class="table table-striped table-hover w-100 admin-selectable">
@@ -112,13 +128,12 @@
     });
 
     const bilah = document.getElementById(tableId + '-actions');
-    const petunjukAwal = bilah.innerHTML;
 
     function kosongkan() {
         // $() milik Datatables, bukan jQuery global: ia mencakup baris di
         // SEMUA halaman tabel, bukan hanya yang sedang tampak.
         tabel.$('tr.table-active').removeClass('table-active');
-        bilah.innerHTML = petunjukAwal;
+        bilah.innerHTML = '';
     }
 
     function pilih(tr, data) {
@@ -130,7 +145,10 @@
         // Server sudah mengirim HTML tombol lengkap dengan @csrf dan
         // pemeriksaan izin. Merakitnya ulang di sini berarti menduplikasi
         // logika otorisasi ke tempat yang tidak bisa diuji.
-        bilah.innerHTML = data.action || petunjukAwal;
+        //
+        // Bila admin tidak punya izin apa pun atas baris ini, partial _actions
+        // menghasilkan string kosong — bilahnya memang harus tetap kosong.
+        bilah.innerHTML = data.action || '';
     }
 
     $('#' + tableId + ' tbody').on('click', 'tr', function () {

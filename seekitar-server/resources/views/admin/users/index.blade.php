@@ -13,8 +13,7 @@
         'tableId'  => 'users-table',
         'ajax'     => route('admin.users.data'),
         'order'    => [[4, 'desc']],
-        'petunjuk' => 'Pilih baris untuk menyunting atau memblokir pengguna.',
-        'filter'   => view('admin.users._filter'),
+        'filterView' => 'admin.users._filter',
         'columns'  => [
             ['data' => 'name',               'label' => 'Nama'],
             ['data' => 'phone',              'label' => 'Telepon'],

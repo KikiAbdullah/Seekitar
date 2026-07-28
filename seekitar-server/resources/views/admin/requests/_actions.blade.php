@@ -15,6 +15,4 @@
             </button>
         </form>
     @endif
-
-    <span class="text-muted small ms-1">{{ Str::limit($request->title, 26) }}</span>
 @endcan
