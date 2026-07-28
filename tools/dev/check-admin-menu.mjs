@@ -359,6 +359,65 @@ if (angkaInggris.length) {
   ok('semua angka memakai format Indonesia (4.812, bukan 4,812)');
 }
 
+/*
+ * Berkas bahasa Datatables WAJIB di-host sendiri.
+ *
+ * Riwayatnya: seluruh tabel admin memuat
+ * `cdn.datatables.net/plug-ins/2.1.8/i18n/id.json` dan selalu gagal dengan
+ * "i18n file loading error". Sebabnya 2.1.8 adalah versi CORE Datatables,
+ * sedangkan repo Plugins punya penomoran sendiri dan tidak pernah punya tag
+ * itu — URL-nya 404.
+ *
+ * Menaikkan nomor versinya bukan perbaikan: nomor itu akan basi lagi pada
+ * rilis berikutnya. Karena itu yang ditegakkan di sini adalah TIDAK ADA
+ * rujukan i18n ke CDN sama sekali.
+ */
+const I18N_LOKAL = 'seekitar-server/public/vendor/datatables/id.json';
+
+if (!exists(I18N_LOKAL)) {
+  fail(`${I18N_LOKAL} tidak ada — tabel admin akan memakai bahasa Inggris atau gagal memuat i18n`);
+} else {
+  let bahasa = null;
+  try {
+    bahasa = JSON.parse(read(I18N_LOKAL));
+  } catch (e) {
+    fail(`${I18N_LOKAL} bukan JSON yang sah: ${e.message} — Datatables akan melaporkan i18n error`);
+  }
+
+  if (bahasa) {
+    // Kunci yang benar-benar dibaca Datatables 2.x dan tampil di layar.
+    const WAJIB = ['emptyTable', 'info', 'lengthMenu', 'processing', 'search', 'zeroRecords'];
+    const kurang = WAJIB.filter(k => typeof bahasa[k] !== 'string');
+    if (kurang.length) fail(`berkas i18n kurang kunci: ${kurang.join(', ')}`);
+    else ok(`berkas i18n Indonesia lengkap (${WAJIB.length} kunci inti)`);
+  }
+}
+
+const i18nCdn = [];
+for (const p of blades) {
+  const src = fs.readFileSync(p, 'utf8').replace(/\{\{--[\s\S]*?--\}\}/g, '');
+  // Komentar JS penjelas ikut dibuang: catatan yang MENERANGKAN kenapa CDN
+  // ditinggalkan justru harus menyebut URL-nya.
+  const tanpaKomentar = src.replace(/^\s*(\/\/|\*).*$/gm, '');
+  if (/cdn\.datatables\.net\/plug-ins/.test(tanpaKomentar)) {
+    i18nCdn.push(path.basename(p));
+  }
+}
+if (i18nCdn.length) {
+  fail(`i18n Datatables masih dari CDN di: ${i18nCdn.join(', ')} — jalur plug-ins memakai penomoran berbeda dan mudah 404`);
+} else {
+  ok('i18n Datatables di-host sendiri, bukan dari CDN');
+}
+
+// Konfigurasi bahasa disetel SEKALI di layout; lima tabel yang masing-masing
+// menulis ulang URL-nya adalah lima tempat yang bisa menyimpang.
+const layoutSrc = read('seekitar-server/resources/views/admin/layout.blade.php');
+if (!/dataTable\.defaults[\s\S]{0,200}vendor\/datatables\/id\.json/.test(layoutSrc)) {
+  fail('layout admin tidak menyetel $.fn.dataTable.defaults.language — tiap tabel harus mengulangnya sendiri');
+} else {
+  ok('bahasa Datatables disetel sekali di layout');
+}
+
 // Ikon FontAwesome wajib punya aria-hidden: pembaca layar tidak boleh
 // membacakan glyph dekoratif sebagai teks acak.
 const ikonTanpaAria = [];

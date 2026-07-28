@@ -147,6 +147,31 @@
     // Token CSRF dipasang sekali untuk seluruh request AJAX.
     $.ajaxSetup({ headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') } });
 
+    /*
+     * Bahasa Datatables — disetel SEKALI untuk seluruh panel.
+     *
+     * KENAPA BERKAS SENDIRI, BUKAN CDN
+     * --------------------------------
+     * Sebelumnya tiap tabel memuat
+     * `cdn.datatables.net/plug-ins/2.1.8/i18n/id.json` dan SELALU gagal dengan
+     * "i18n file loading error". Sebabnya: 2.1.8 adalah versi CORE Datatables,
+     * sedangkan repo Plugins punya penomoran sendiri (2.1.4, 2.3.6, 3.0.0 …)
+     * dan tidak pernah punya tag 2.1.8 — URL-nya 404, dan Datatables
+     * melaporkannya sebagai galat i18n.
+     *
+     * Menaikkan nomor versinya saja hanya memindahkan masalah: nomor itu akan
+     * basi lagi pada rilis berikutnya, dan tabel admin ikut rusak setiap kali
+     * pihak ketiga mengubah jalurnya. Berkasnya 800 byte, jadi di-host sendiri
+     * di public/vendor/datatables/id.json (terjemahan resmi, lisensi MIT).
+     *
+     * DataTable.defaults.language, bukan opsi per-tabel: lima tabel yang
+     * masing-masing menulis ulang URL-nya adalah lima tempat yang bisa
+     * menyimpang. Tabel tetap boleh menimpanya bila perlu.
+     */
+    $.extend(true, $.fn.dataTable.defaults, {
+        language: { url: @js(asset('vendor/datatables/id.json')) },
+    });
+
     // Sidebar geser di layar kecil. aria-expanded ikut diperbarui — tanpa itu
     // pembaca layar selalu melaporkan menu dalam keadaan tertutup.
     (function () {

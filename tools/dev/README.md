@@ -41,7 +41,7 @@ green, and the app served over HTTP (`/` and `/up` both return 200).
 | `node tools/dev/check-seeders.mjs` | Asserts seeders match the docs: 24 categories, 12 permissions, 8 settings keys, idempotency, UUID morph key for Spatie. |
 | `node tools/dev/check-services.mjs` | Asserts service-layer guarantees: OTP hashing/TTL/attempt limit, two-way broadcast matching, state-machine finality, phone masking in logs. |
 | `node tools/dev/check-http.mjs` | Asserts every documented endpoint has a route, auth/throttle middleware is applied, resources do not leak private columns, and Blade escaping stays on. |
-| `node tools/dev/check-admin-menu.mjs` | Asserts every `@can` in the admin sidebar matches the `permission:` middleware on the route it links to, that Datatables JSON endpoints are guarded too, and renders every admin page as both `admin` and `super-admin`. |
+| `node tools/dev/check-admin-menu.mjs` | Asserts every `@can` in the admin sidebar matches the `permission:` middleware on the route it links to, that Datatables JSON endpoints are guarded too, that the Datatables i18n file is self-hosted and valid, and renders every admin page as both `admin` and `super-admin`. |
 | `./tools/dev/php tools/dev/render-admin.php` | Renders all admin Blade pages under two permission sets without MySQL. Catches missing route names, missing view variables, and menu items that leak across roles. |
 
 All checkers exit non-zero on failure, so they work as CI/pre-commit steps:

@@ -56,7 +56,6 @@
             { data: 'created_at' },
             { data: 'action', orderable: false, searchable: false },
         ],
-        language: { url: 'https://cdn.datatables.net/plug-ins/2.1.8/i18n/id.json' },
     });
 
     $('#filter-status').on('change', () => table.ajax.reload());

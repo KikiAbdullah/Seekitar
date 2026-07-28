@@ -148,6 +148,40 @@ composer require yajra/laravel-datatables-buttons:^13.0
 
 **Konfigurasi:** Tidak ada file konfig khusus. Langsung gunakan facade `DataTables`.
 
+#### ⚠️ Berkas bahasa Datatables di-host sendiri, JANGAN dari CDN
+
+Terjemahan Indonesia berada di `public/vendor/datatables/id.json` dan disetel
+**sekali** di `resources/views/admin/layout.blade.php`:
+
+```js
+$.extend(true, $.fn.dataTable.defaults, {
+    language: { url: @js(asset('vendor/datatables/id.json')) },
+});
+```
+
+Sebelumnya tiap tabel memuatnya dari
+`https://cdn.datatables.net/plug-ins/2.1.8/i18n/id.json`, dan **setiap** halaman
+tabel memunculkan:
+
+```
+DataTables warning: table id=requests-table - i18n file loading error
+```
+
+**Sebabnya bukan salah ketik nomor versi.** `2.1.8` adalah versi **core**
+Datatables, sedangkan repo `DataTables/Plugins` punya penomoran sendiri —
+tag yang ada hanya `2.1.4`, `2.2.x`, `2.3.x`, `3.0.0`; **tidak pernah ada
+`2.1.8`**. URL itu 404, dan Datatables melaporkannya sebagai galat i18n.
+
+Menaikkan nomornya ke `2.3.6` hanya memindahkan masalah: nomor itu basi lagi
+pada rilis berikutnya, dan seluruh tabel admin ikut rusak setiap kali pihak
+ketiga mengubah jalurnya. Berkasnya hanya ±800 byte, jadi di-host sendiri —
+panel admin juga tetap berbahasa Indonesia saat jaringan keluar diblokir,
+yang lazim pada deployment intranet.
+
+> Ditegakkan `tools/dev/check-admin-menu.mjs`: rujukan `cdn.datatables.net/plug-ins`
+> di view mana pun akan menggagalkan pemeriksaan, begitu pula berkas i18n yang
+> hilang, rusak, atau kehilangan kunci intinya.
+
 ### 3.2 Spatie Laravel Permission
 
 ```bash

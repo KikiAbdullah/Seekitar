@@ -44,7 +44,6 @@
             ajax: @js($ajax),
             order: @json($order ?? [[0, 'desc']]),
             columns: columns,
-            language: { url: 'https://cdn.datatables.net/plug-ins/2.1.8/i18n/id.json' },
         });
     })();
 </script>

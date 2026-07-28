@@ -71,7 +71,6 @@
             { data: 'expires_at' },
             { data: 'created_at' },
         ],
-        language: { url: 'https://cdn.datatables.net/plug-ins/2.1.8/i18n/id.json' },
     });
 
     $('#filter-status').on('change', () => tabelPenawaran.ajax.reload());
