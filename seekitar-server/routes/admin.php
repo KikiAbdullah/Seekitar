@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\StoreController;
+use App\Http\Controllers\Admin\StoreMapController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VerificationController;
 use Illuminate\Support\Facades\Route;
@@ -107,6 +108,20 @@ Route::middleware(['auth', 'role:admin|super-admin'])->group(function (): void {
     Route::get('stores', [StoreController::class, 'index'])
         ->middleware('permission:manage-stores')
         ->name('stores.index');
+
+    /*
+    | --- Peta sebaran toko ------------------------------------------------
+    | Memakai permission yang sama dengan daftar toko: isinya data toko yang
+    | sama, hanya digambar sebagai titik. Memberinya izin sendiri berarti
+    | admin bisa melihat sebaran toko tanpa boleh melihat tokonya.
+    |
+    | Endpoint GeoJSON-nya ikut dijaga — tanpa itu siapa pun yang tahu URL-nya
+    | bisa menarik koordinat seluruh toko meski menunya tersembunyi.
+    */
+    Route::middleware('permission:manage-stores')->group(function (): void {
+        Route::get('maps/stores', [StoreMapController::class, 'index'])->name('maps.stores');
+        Route::get('maps/stores/data', [StoreMapController::class, 'data'])->name('maps.stores.data');
+    });
 
     Route::middleware('permission:verify-stores')->group(function (): void {
         Route::post('stores/{store}/approve', [StoreController::class, 'approve'])->name('stores.approve');

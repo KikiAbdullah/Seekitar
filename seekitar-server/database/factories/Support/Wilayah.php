@@ -27,30 +27,46 @@ final class Wilayah
     public const PUSAT_LNG = 112.8203;
 
     /**
-     * Kecamatan => [lat, lng].
+     * Ke-24 kecamatan Kabupaten Pasuruan => [lat, lng].
+     *
+     * Daftarnya LENGKAP dan sesuai kode wilayah Kemendagri 35.14.01–35.14.24.
+     * Kelengkapan itu ditegakkan `tools/dev/check-wilayah.mjs`; peta toko di
+     * panel admin memakai konstanta ini sebagai satu-satunya sumber titik,
+     * sehingga kecamatan yang hilang di sini berarti wilayah yang tidak
+     * pernah muncul di peta sama sekali.
      *
      * @var array<string, array{0: float, 1: float}>
      */
     public const KECAMATAN = [
-        'Bangil'      => [-7.5966, 112.8203],
-        'Rembang'     => [-7.6183, 112.7761],
-        'Kraton'      => [-7.6489, 112.8712],
-        'Pohjentrek'  => [-7.6708, 112.9089],
-        'Gondangwetan'=> [-7.6822, 112.9394],
-        'Rejoso'      => [-7.6553, 112.9847],
-        'Winongan'    => [-7.7169, 112.9331],
-        'Grati'       => [-7.7003, 113.0192],
-        'Nguling'     => [-7.6931, 113.0894],
-        'Beji'        => [-7.5731, 112.7503],
-        'Bangil Kota' => [-7.6031, 112.8156],
-        'Pandaan'     => [-7.6528, 112.6942],
-        'Sukorejo'    => [-7.7089, 112.7175],
-        'Purwosari'   => [-7.7431, 112.7089],
-        'Prigen'      => [-7.7000, 112.6167],
-        'Gempol'      => [-7.5497, 112.6994],
-        'Kejayan'     => [-7.7469, 112.8386],
-        'Wonorejo'    => [-7.7331, 112.7797],
-        'Purwodadi'   => [-7.7936, 112.7364],
+        // Dataran rendah / pesisir utara
+        'Bangil'       => [-7.5966, 112.8203],
+        'Beji'         => [-7.5731, 112.7503],
+        'Gempol'       => [-7.5497, 112.6994],
+        'Rembang'      => [-7.6183, 112.7761],
+        'Kraton'       => [-7.6489, 112.8712],
+        'Pohjentrek'   => [-7.6708, 112.9089],
+        'Gondangwetan' => [-7.6822, 112.9394],
+        'Rejoso'       => [-7.6553, 112.9847],
+        'Winongan'     => [-7.7169, 112.9331],
+        'Grati'        => [-7.7003, 113.0192],
+        'Lekok'        => [-7.67722, 113.00972],
+        'Nguling'      => [-7.6931, 113.0894],
+
+        // Tengah
+        'Kejayan'      => [-7.7469, 112.8386],
+        'Wonorejo'     => [-7.7331, 112.7797],
+        'Pandaan'      => [-7.6528, 112.6942],
+        'Sukorejo'     => [-7.7089, 112.7175],
+        'Purwosari'    => [-7.7431, 112.7089],
+
+        // Dataran tinggi selatan & barat (lereng Arjuno–Welirang & Bromo)
+        'Prigen'       => [-7.7000, 112.6167],
+        'Purwodadi'    => [-7.7936, 112.7364],
+        'Pasrepan'     => [-7.78861, 112.87639],
+        'Lumbang'      => [-7.78494, 112.97874],
+        'Puspo'        => [-7.83472, 112.87250],
+        'Tutur'        => [-7.89806, 112.81583],
+        'Tosari'       => [-7.89667, 112.89806],
     ];
 
     /**

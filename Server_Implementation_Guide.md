@@ -247,6 +247,66 @@ Semuanya diukur di Chromium, bukan disimpulkan dari membaca CSS:
 > itu mencari deklarasi `font-size:Npx`, sedangkan ukurannya datang dari
 > **kelas utilitas**. `check-admin-menu.mjs` kini menolak `.fs-1` di sidebar.
 
+#### §9.2 Peta Toko (Leaflet + OpenStreetMap)
+
+Halaman `admin/maps/stores` menggambar seluruh toko berkoordinat sebagai titik.
+Terpisah dari `/admin/stores` karena menjawab pertanyaan berbeda: tabel
+menjawab *"toko mana yang perlu saya tindak"*, peta menjawab *"wilayah mana
+yang belum terlayani"* — dan pola sebaran tidak terlihat di tabel berpaginasi.
+
+| Hal | Nilai |
+| :-- | :-- |
+| Pustaka | **Leaflet 1.9.4** (BSD-2-Clause), di-host sendiri di `public/vendor/leaflet/` (188 KB) |
+| Ubin | `tile.openstreetmap.org` — gratis, **wajib atribusi** |
+| Izin | `manage-stores` (halaman **dan** endpoint GeoJSON) |
+| Data | `GET admin/maps/stores/data` → GeoJSON FeatureCollection |
+| Penjaga | `tools/dev/check-peta.mjs` (15 pemeriksaan) |
+
+##### Kenapa Leaflet, bukan Google Maps
+
+Google Maps JS API **mewajibkan penagihan aktif** sejak Juni 2018; tanpa kartu
+kredit, petanya ditimpa tulisan *"for development purposes only"*. Leaflet
+gratis penuh dan tanpa kunci API.
+
+##### Empat jebakan yang dijaga checker
+
+Semuanya **gagal diam-diam** — tidak satu pun memunculkan error:
+
+1. **Wadah tanpa tinggi CSS.** Leaflet menggambar ke div berposisi absolut;
+   tanpa tinggi eksplisit hasilnya elemen 0px dan peta "tidak muncul".
+2. **Atribusi OSM dihapus.** Melanggar
+   [Tile Usage Policy](https://operations.osmfoundation.org/policies/tiles/)
+   tanpa peringatan apa pun dari peramban.
+3. **Nama toko dirangkai ke HTML popup → XSS.** Nama & alamat diisi pemilik
+   toko. **Dibuktikan nyata di Chromium:** `<img src=x onerror=...>` benar-benar
+   dieksekusi lewat `bindPopup(\`<strong>${nama}</strong>\`)`, dan tidak
+   dieksekusi setelah diganti `textContent`. Leaflet **tidak** punya pelolos
+   HTML bawaan — `L.Util.escapeHtml` tidak ada (dicari di `leaflet.js`: 0 hasil).
+4. **`location` NULL lolos ke Leaflet.** Melempar `Invalid LatLng` yang
+   mematikan **seluruh** peta, bukan satu titik. Disaring di SQL, bukan PHP.
+
+##### Data: 50 toko, 24 kecamatan
+
+`StoreMapSeeder` menempatkan tepat **50 toko** dan menjamin setiap kecamatan
+kebagian minimal satu lebih dulu, baru sisanya dibagi ke kecamatan padat.
+`DemoDataSeeder` memakai `Wilayah::acak()` yang wajar meninggalkan kecamatan
+kosong — dan peta bolong membuat orang menyimpulkan *"belum ada toko di
+Tosari"* padahal itu sekadar hasil undian.
+
+> ⚠️ **`Wilayah::KECAMATAN` sempat salah.** Versi sebelumnya memuat **19**
+> entri, salah satunya `Bangil Kota` yang **bukan kecamatan**, dan enam
+> kecamatan resmi hilang (Lekok, Lumbang, Pasrepan, Puspo, Tosari, Tutur).
+> Kini lengkap 24 sesuai kode Kemendagri 35.14.01–35.14.24, dengan koordinat
+> terverifikasi. Kelengkapan itu ditegakkan `check-peta.mjs`, yang menyimpan
+> daftar resminya **sendiri** — membacanya dari berkas yang diuji akan
+> membuat checker selalu lulus apa pun isinya.
+
+> ⚠️ **Geseran titik dijepit ke batas kabupaten.** Gempol berpusat di lintang
+> `-7,5497` sedangkan batas utara `-7,5428` — selisih 0,0069°. Geseran acak
+> ±0,010° melempar toko **343 m ke luar wilayah**, mengambang di Kabupaten
+> Sidoarjo. Ditemukan dengan menjalankan seeder terhadap `Wilayah::KECAMATAN`
+> sungguhan lewat refleksi, bukan terhadap salinan di skrip uji.
+
 ##### Dasbor
 
 Mengikuti `package/html/main/index2.html`:

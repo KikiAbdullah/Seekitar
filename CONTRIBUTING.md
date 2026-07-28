@@ -164,6 +164,7 @@ tidak ada error yang muncul di mana pun.
 
 ```bash
 node tools/dev/check-admin-menu.mjs
+node tools/dev/check-peta.mjs
 ```
 
 Checker itu membandingkan `@can` di sidebar dengan middleware hasil

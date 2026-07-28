@@ -138,6 +138,11 @@ $halaman = [
     ],
     'admin.users.index'          => [],
     'admin.stores.index'         => [],
+    'admin.maps.stores'          => [
+        'pusat'  => [-7.5966, 112.8203],
+        'batas'  => ['sw' => [-8.5056, 112.5653], 'ne' => [-7.5428, 113.5103]],
+        'status' => App\Enums\VerificationStatus::cases(),
+    ],
     'admin.listings.index'       => [],
     'admin.orders.index'         => [],
     'admin.requests.index'       => [],

@@ -126,6 +126,14 @@
                             <span class="hide-menu">Toko</span>
                         </a>
                     </li>
+
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('admin.maps.*') ? 'active' : '' }}"
+                           href="{{ route('admin.maps.stores') }}" aria-expanded="false">
+                            <span class="d-flex"><i class="ti ti-map-2" aria-hidden="true"></i></span>
+                            <span class="hide-menu">Peta Toko</span>
+                        </a>
+                    </li>
                 @endcan
 
                 @can('manage-listings')

@@ -33,6 +33,7 @@ class DatabaseSeeder extends Seeder
                 AdminUserSeeder::class,   // akun contoh tiap peran
                 DummyDataSeeder::class,   // data kecil & DETERMINISTIK
                 DemoDataSeeder::class,    // ratusan baris untuk semua tabel
+                StoreMapSeeder::class,    // 50 toko bertitik pasti untuk Peta Toko
             ]);
         }
     }

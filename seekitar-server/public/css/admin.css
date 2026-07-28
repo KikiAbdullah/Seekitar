@@ -492,6 +492,36 @@ a:focus-visible {
     width: 1%;
 }
 
+/* --------------------------------------------------------------- Peta toko */
+
+/*
+ * Leaflet MENUNTUT tinggi eksplisit pada wadah peta.
+ *
+ * Elemen peta berisi div berposisi absolut, jadi tingginya nol kalau tidak
+ * dipatok — hasilnya peta "tidak muncul" tanpa satu pun error di konsol.
+ * Memakai clamp() dengan alasan yang sama seperti .admin-grafik: 500px tetap
+ * memakan 65% tinggi layar laptop 1366x768.
+ */
+.admin-peta {
+    height: clamp(320px, 58vh, 620px);
+    border-radius: 7px;
+    z-index: 1;   /* di bawah dropdown Select2 (1060) & modal (1055) */
+}
+
+/* Titik legenda — menyamai circleMarker di peta. */
+.admin-peta-titik {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px rgba(31, 41, 51, 0.15);
+}
+
+/* Popup Leaflet mengikuti tipografi panel, bukan bawaan peta. */
+.leaflet-popup-content { font-size: 13px; margin: 10px 12px; }
+.leaflet-container { font-family: inherit; }
+
 /* -------------------------------------------------------------- Datatables */
 
 .table, .form-control, .form-select, .btn { font-size: 14px; }
