@@ -98,6 +98,30 @@ CREATE DATABASE seekitar_testing
 > menolak berjalan jika tidak — `migrate:fresh` men-DROP semua tabel, dan salah
 > konfigurasi akan menghapus data pengembangan tanpa peringatan.
 
+### Masuk ke panel admin
+
+```bash
+php artisan key:generate      # WAJIB — lihat catatan di bawah
+php artisan migrate --seed
+```
+
+Buka `/admin/login`, lalu masuk dengan kredensial dari `.env`:
+
+| Kunci | Default |
+| :-- | :-- |
+| `SEEKITAR_SUPER_ADMIN_EMAIL` | `admin@seekitar.test` |
+| `SEEKITAR_SUPER_ADMIN_PASSWORD` | `password` |
+
+> ⚠️ **`APP_KEY` kosong = login selalu gagal, tanpa pesan error.** Sesi tidak
+> bisa dienkripsi, sehingga browser dilempar kembali ke halaman masuk seolah
+> kredensialnya salah. Ini penyebab paling umum "sudah di-seed tapi tidak
+> bisa masuk". `./tools/dev/setup` kini menolak selesai bila APP_KEY kosong.
+
+> ⚠️ Kata sandi hanya disetel saat akun **baru dibuat**. Menjalankan
+> `db:seed` ulang tidak mengembalikannya ke default — itu disengaja, supaya
+> sandi produksi yang sudah diganti tidak tertimpa. Bila lupa, ubah lewat
+> tinker: `User::where('email', '...')->update(['password' => Hash::make('baru')])`.
+
 Untuk memeriksa DDL yang dihasilkan migrasi **tanpa** server MySQL:
 
 ```bash

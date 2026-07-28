@@ -41,6 +41,15 @@ else
   echo "    APP_KEY already set"
 fi
 
+# Verifikasi hasilnya, jangan berasumsi. APP_KEY kosong tidak memunculkan
+# error saat boot — tetapi sesi tidak bisa dienkripsi, sehingga login web
+# selalu terlempar kembali ke halaman masuk tanpa pesan apa pun.
+if ! grep -qE '^APP_KEY=base64:.+' "$SERVER_DIR/.env"; then
+  echo "    ERROR: APP_KEY masih kosong. Login panel admin tidak akan berfungsi." >&2
+  echo "           Jalankan: ./tools/dev/artisan key:generate" >&2
+  exit 1
+fi
+
 echo
 echo "Ready. Try:"
 echo "  ./tools/dev/ddl              # MySQL DDL from the migrations (no server needed)"

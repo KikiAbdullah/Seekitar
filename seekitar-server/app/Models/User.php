@@ -52,7 +52,12 @@ class User extends Authenticatable
      */
     public function canAccessAdminPanel(): bool
     {
-        return $this->password !== null
+        // getAttributes(), bukan $this->password: strict mode aktif di luar
+        // produksi dan melempar MissingAttributeException bila kolomnya
+        // tidak ikut ter-SELECT. Login tidak boleh gagal karena bentuk query.
+        $hasPassword = ($this->getAttributes()['password'] ?? null) !== null;
+
+        return $hasPassword
             && ! $this->is_blocked
             && $this->hasAnyRole(['admin', 'super-admin']);
     }

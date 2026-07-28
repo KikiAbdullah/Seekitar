@@ -118,7 +118,14 @@ class RolesAndPermissionsSeeder extends Seeder
         // Kata sandi hanya disetel saat akun BARU dibuat. Menimpanya setiap
         // deploy akan mengembalikan sandi yang sudah diganti admin ke nilai
         // default — dan nilai default itu ada di berkas .env.example.
-        if ($user->wasRecentlyCreated || $user->password === null) {
+        //
+        // getAttributes(), BUKAN $user->password: Model::shouldBeStrict()
+        // aktif di semua environment non-produksi, dan membaca properti yang
+        // tidak ikut ter-SELECT melempar MissingAttributeException. Membaca
+        // dari array atribut mentah aman apa pun bentuk query-nya.
+        $existingPassword = $user->getAttributes()['password'] ?? null;
+
+        if ($user->wasRecentlyCreated || $existingPassword === null) {
             $user->password = $password;   // cast 'hashed' meng-hash otomatis
         }
 
