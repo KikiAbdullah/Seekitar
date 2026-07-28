@@ -102,19 +102,19 @@
 
             {{-- Statistik ringkas aktivitasnya. --}}
             <div class="row">
-                <div class="col-sm-4">
+                <div class="col-4">
                     <div class="card"><div class="card-body py-3 text-center">
                         <div class="fs-7 fw-bold">{{ $user->stores_count }}</div>
                         <div class="text-muted fs-2">Toko</div>
                     </div></div>
                 </div>
-                <div class="col-sm-4">
+                <div class="col-4">
                     <div class="card"><div class="card-body py-3 text-center">
                         <div class="fs-7 fw-bold">{{ $user->customer_requests_count }}</div>
                         <div class="text-muted fs-2">Permintaan</div>
                     </div></div>
                 </div>
-                <div class="col-sm-4">
+                <div class="col-4">
                     <div class="card"><div class="card-body py-3 text-center">
                         <div class="fs-7 fw-bold">{{ $user->orders_count }}</div>
                         <div class="text-muted fs-2">Pesanan</div>

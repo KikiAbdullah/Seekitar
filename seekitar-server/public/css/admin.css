@@ -529,6 +529,55 @@ a:focus-visible {
 div.dt-container .dt-search input { min-width: 200px; }
 div.dt-container .dt-length select { width: auto; display: inline-block; }
 
+/* ------------------------------------------------------- Halaman detail */
+
+/*
+ * Baris label–nilai pada kartu ringkasan (list-group flush di halaman
+ * detail toko/pengguna/listing/pesanan).
+ *
+ * Nilai panjang — alamat, tautan nama, koordinat monospace — HARUS
+ * membungkus di layar sempit, bukan meluber keluar kartu. Item flex
+ * bawaan `min-width: auto` menolak menyusut di bawah lebar kontennya,
+ * jadi tanpa `min-width: 0` `overflow-wrap` tidak akan pernah bekerja.
+ * (Penyakit yang sama pernah terjadi pada kartu KPI dasbor — lihat
+ * .min-w-0 di atas.)
+ */
+.list-group-item.d-flex > :last-child {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+/* Label di kiri tidak ikut menyusut. */
+.list-group-item.d-flex > .text-muted {
+    flex-shrink: 0;
+}
+
+/*
+ * Peta konteks pada halaman detail (toko, titik siar, tujuan antar).
+ *
+ * Alasan clamp() sama seperti .admin-peta & .admin-grafik: tinggi tetap
+ * 300px memakan >40% layar ponsel, sedangkan di monitor lebar petanya
+ * terlihat kerdil. Versi ini lebih pendek dari .admin-peta karena di
+ * halaman detail peta adalah KONTEKS, bukan fokus utama.
+ */
+.admin-peta-detail {
+    height: clamp(200px, 32vh, 300px);
+    border-radius: 7px;
+    z-index: 1;   /* di bawah dropdown Select2 (1060) & modal (1055) */
+}
+
+/*
+ * Nominal uang pada kartu statistik kecil (omzet, total penawaran).
+ *
+ * Tingginya batas presbiopia 11px; clamp() ini mengecil hanya di layar
+ * sempit supaya kartu tetap sebaris tanpa angka meluber, dan kembali ke
+ * 1rem (fs-6) di layar normal. Tanpa ini, "Rp 99.999.999" memaksa kartu
+ * stat tiga-kolom patah baris di ponsel 360px.
+ */
+.admin-stat-nominal {
+    font-size: clamp(0.75rem, 2.8vw, 1rem);
+}
+
 /* --------------------------------------------------------------- Responsif */
 
 /* Hormati preferensi sistem: animasi geser bisa memicu mual pada sebagian

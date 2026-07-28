@@ -133,25 +133,25 @@
 
             {{-- Statistik performa listing. --}}
             <div class="row">
-                <div class="col-sm-3">
+                <div class="col-6 col-lg-3">
                     <div class="card"><div class="card-body py-3 text-center">
                         <div class="fs-7 fw-bold">{{ (int) $statistik->total }}</div>
                         <div class="text-muted fs-2">Pesanan</div>
                     </div></div>
                 </div>
-                <div class="col-sm-3">
+                <div class="col-6 col-lg-3">
                     <div class="card"><div class="card-body py-3 text-center">
                         <div class="fs-7 fw-bold">{{ (int) $statistik->selesai }}</div>
                         <div class="text-muted fs-2">Selesai</div>
                     </div></div>
                 </div>
-                <div class="col-sm-3">
-                    <div class="card"><div class="card-body py-3 text-center">
-                        <div class="fs-6 fw-bold">Rp {{ number_format((int) $statistik->omzet, 0, ',', '.') }}</div>
+                <div class="col-6 col-lg-3">
+                    <div class="card"><div class="card-body py-3 px-2 text-center">
+                        <div class="admin-stat-nominal fw-bold text-nowrap">Rp {{ number_format((int) $statistik->omzet, 0, ',', '.') }}</div>
                         <div class="text-muted fs-2">Omzet Selesai</div>
                     </div></div>
                 </div>
-                <div class="col-sm-3">
+                <div class="col-6 col-lg-3">
                     <div class="card"><div class="card-body py-3 text-center">
                         <div class="fs-7 fw-bold">{{ $favorit }}</div>
                         <div class="text-muted fs-2">Difavoritkan</div>
@@ -179,9 +179,9 @@
                                     <th>No. Pesanan</th>
                                     <th>Pembeli</th>
                                     <th class="text-center">Jml</th>
-                                    <th>Total</th>
+                                    <th class="text-nowrap">Total</th>
                                     <th>Status</th>
-                                    <th>Waktu</th>
+                                    <th class="text-nowrap">Waktu</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -206,9 +206,9 @@
                                             @endif
                                         </td>
                                         <td class="text-center">× {{ $order->quantity }}</td>
-                                        <td>Rp {{ number_format((int) $order->total_amount, 0, ',', '.') }}</td>
+                                        <td class="text-nowrap">Rp {{ number_format((int) $order->total_amount, 0, ',', '.') }}</td>
                                         <td>@include('admin.partials._order_badge', ['order' => $order])</td>
-                                        <td>{{ $order->created_at->format('d M Y H:i') }}</td>
+                                        <td class="text-nowrap">{{ $order->created_at->format('d M Y H:i') }}</td>
                                     </tr>
                                 @empty
                                     <tr>

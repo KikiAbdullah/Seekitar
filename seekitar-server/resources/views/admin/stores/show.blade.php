@@ -154,25 +154,25 @@
 
             {{-- Statistik aktivitas toko. --}}
             <div class="row">
-                <div class="col-sm-3">
+                <div class="col-6 col-lg-3">
                     <div class="card"><div class="card-body py-3 text-center">
                         <div class="fs-7 fw-bold">{{ $store->listings_count }}</div>
                         <div class="text-muted fs-2">Listing</div>
                     </div></div>
                 </div>
-                <div class="col-sm-3">
+                <div class="col-6 col-lg-3">
                     <div class="card"><div class="card-body py-3 text-center">
                         <div class="fs-7 fw-bold">{{ $store->offers_count }}</div>
                         <div class="text-muted fs-2">Penawaran</div>
                     </div></div>
                 </div>
-                <div class="col-sm-3">
+                <div class="col-6 col-lg-3">
                     <div class="card"><div class="card-body py-3 text-center">
                         <div class="fs-7 fw-bold">{{ $store->orders_count }}</div>
                         <div class="text-muted fs-2">Pesanan</div>
                     </div></div>
                 </div>
-                <div class="col-sm-3">
+                <div class="col-6 col-lg-3">
                     <div class="card"><div class="card-body py-3 text-center">
                         <div class="fs-7 fw-bold">{{ $store->reviews_count }}</div>
                         <div class="text-muted fs-2">Ulasan</div>
@@ -259,7 +259,7 @@
                     </a>
                 </div>
                 <div class="card-body">
-                    <div id="petaDetailToko" class="rounded border" style="height: 300px; width: 100%;"
+                    <div id="petaDetailToko" class="rounded border admin-peta-detail"
                          role="img" aria-label="Peta lokasi {{ $store->name }}"></div>
                 </div>
             </div>

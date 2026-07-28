@@ -253,7 +253,7 @@
                         </a>
                     </div>
                     <div class="card-body">
-                        <div id="petaTujuanAntar" class="rounded border" style="height: 220px; width: 100%;"
+                        <div id="petaTujuanAntar" class="rounded border admin-peta-detail"
                              role="img" aria-label="Peta tujuan antar {{ $order->order_number }}"></div>
                         <div class="text-muted fs-2 mt-2 font-monospace">
                             {{ number_format((float) $order->latitude, 6) }}, {{ number_format((float) $order->longitude, 6) }}
@@ -289,7 +289,7 @@
                                                 <span class="badge bg-success-subtle text-success">{{ $dispute->status?->label() }}</span>
                                             @endif
                                         </td>
-                                        <td>{{ $dispute->created_at?->format('d M Y H:i') }}</td>
+                                        <td class="text-nowrap">{{ $dispute->created_at?->format('d M Y H:i') }}</td>
                                         <td class="text-end">
                                             @can('manage-disputes')
                                                 <a href="{{ route('admin.disputes.show', $dispute) }}"

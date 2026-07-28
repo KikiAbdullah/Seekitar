@@ -149,21 +149,21 @@
             {{-- Statistik ringkas penawaran. --}}
             @if ($request->offers->isNotEmpty())
                 <div class="row">
-                    <div class="col-sm-4">
-                        <div class="card"><div class="card-body py-3 text-center">
+                    <div class="col-4">
+                        <div class="card"><div class="card-body py-3 px-2 text-center">
                             <div class="fs-7 fw-bold">{{ $request->offers->count() }}</div>
                             <div class="text-muted fs-2">Penawaran Masuk</div>
                         </div></div>
                     </div>
-                    <div class="col-sm-4">
-                        <div class="card"><div class="card-body py-3 text-center">
-                            <div class="fs-6 fw-bold">Rp {{ number_format((int) $request->offers->min('total_amount'), 0, ',', '.') }}</div>
+                    <div class="col-4">
+                        <div class="card"><div class="card-body py-3 px-2 text-center">
+                            <div class="admin-stat-nominal fw-bold text-nowrap">Rp {{ number_format((int) $request->offers->min('total_amount'), 0, ',', '.') }}</div>
                             <div class="text-muted fs-2">Total Termurah</div>
                         </div></div>
                     </div>
-                    <div class="col-sm-4">
-                        <div class="card"><div class="card-body py-3 text-center">
-                            <div class="fs-6 fw-bold">Rp {{ number_format((int) $request->offers->max('total_amount'), 0, ',', '.') }}</div>
+                    <div class="col-4">
+                        <div class="card"><div class="card-body py-3 px-2 text-center">
+                            <div class="admin-stat-nominal fw-bold text-nowrap">Rp {{ number_format((int) $request->offers->max('total_amount'), 0, ',', '.') }}</div>
                             <div class="text-muted fs-2">Total Termahal</div>
                         </div></div>
                     </div>
@@ -189,7 +189,7 @@
                     </a>
                 </div>
                 <div class="card-body">
-                    <div id="petaLokasiSiar" class="rounded border" style="height: 260px; width: 100%;"
+                    <div id="petaLokasiSiar" class="rounded border admin-peta-detail"
                          role="img" aria-label="Peta lokasi siar {{ $request->title }}"></div>
                     <div class="text-muted fs-2 mt-2">
                         Lingkaran = radius siar {{ (float) $request->radius_km }} km — hanya toko di dalamnya
@@ -230,7 +230,7 @@
                                             @endcan
                                         </td>
                                         <td>
-                                            <span class="fw-semibold">
+                                            <span class="fw-semibold text-nowrap">
                                                 Rp {{ number_format((int) $offer->total_amount, 0, ',', '.') }}
                                             </span>
                                             <div class="text-muted" style="font-size: 11px;">
