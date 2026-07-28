@@ -29,6 +29,35 @@ class UserController extends Controller
         return view('admin.users.edit', ['user' => $user]);
     }
 
+    /**
+     * Detail satu pengguna.
+     *
+     * Jejak verifikasi (siapa & kapan tiap tahap) dan toko miliknya dimuat
+     * sekaligus — halaman ini adalah satu-satunya tempat admin melihat
+     * riwayat lengkap satu akun tanpa berpindah-pindah layar.
+     *
+     * Berkas KTP/selfie TIDAK dimuat di sini: izin halaman ini `manage-users`,
+     * sedangkan berkas identitas adalah hak `verify-users`. Blade menampilkan
+     * bagian itu hanya bila izinnya ada (route media pun memagarainya).
+     */
+    public function show(User $user): View
+    {
+        return view('admin.users.show', [
+            // withCoordinates(): latitude/longitude dibaca dari kolom POINT
+            // lewat ST_Latitude/ST_Longitude — properti biasa isinya WKB
+            // biner, dan strict mode melempar error bila kolomnya tak dipilih.
+            'user' => User::query()
+                ->withCoordinates()
+                ->with([
+                    'verified1By:id,name',
+                    'verified2By:id,name',
+                    'stores:id,user_id,name,photo,verification_status,is_active,created_at',
+                ])
+                ->withCount(['stores', 'customerRequests', 'orders'])
+                ->findOrFail($user->getKey()),
+        ]);
+    }
+
     public function update(Request $request, User $user): RedirectResponse
     {
         $data = $request->validate([

@@ -99,6 +99,7 @@ Route::middleware(['auth', 'role:admin|super-admin'])->group(function (): void {
     // --- Pengguna -------------------------------------------------------
     Route::middleware('permission:manage-users')->group(function (): void {
         Route::get('users', [UserController::class, 'index'])->name('users.index');
+        Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
         Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
         Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::post('users/{user}/block', [UserController::class, 'block'])->name('users.block');

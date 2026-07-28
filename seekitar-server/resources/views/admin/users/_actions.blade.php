@@ -1,4 +1,8 @@
 @can('manage-users')
+    <a href="{{ route('admin.users.show', $user) }}" class="btn btn-sm btn-outline-primary">
+        <i class="ti ti-eye me-1" aria-hidden="true"></i> Detail
+    </a>
+
     <a href="{{ route('admin.users.edit', $user) }}" class="btn btn-sm btn-outline-secondary">
         <i class="ti ti-pencil me-1" aria-hidden="true"></i> Sunting
     </a>
