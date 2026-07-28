@@ -24,9 +24,13 @@
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-body">
-            <form method="POST" action="{{ route('admin.users.update', $user) }}">
+    {{-- Lebar form dibatasi di layar besar: isian selebar monitor penuh
+         sulit dipindai mata dan terasa "kosong". --}}
+    <div class="row">
+        <div class="col-lg-7 col-xl-6">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" action="{{ route('admin.users.update', $user) }}">
                 @csrf
                 @method('PUT')
 
@@ -53,9 +57,11 @@
                     </select>
                 </div>
 
-                <button type="submit" class="btn btn-seekitar">Simpan</button>
-                <a href="{{ route('admin.users.index') }}" class="btn btn-link">Batal</a>
-            </form>
+                        <button type="submit" class="btn btn-seekitar">Simpan</button>
+                        <a href="{{ route('admin.users.index') }}" class="btn btn-link">Batal</a>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 @endsection

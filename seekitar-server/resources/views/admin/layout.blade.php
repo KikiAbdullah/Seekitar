@@ -7,6 +7,12 @@
     <meta name="robots" content="noindex, nofollow">
     <title>@yield('title', 'Panel Admin') — Seekitar Admin</title>
 
+    {{-- Handshake TLS ke CDN/Tiles dimulai lebih awal; header & ubin peta
+         merupakan satu-satunya sumber daya eksternal panel ini. --}}
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://cdn.datatables.net" crossorigin>
+    <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
+
     <link rel="stylesheet" href="{{ asset('vendor/modernize/css/icons/tabler-icons/tabler-icons.min.css') }}">
     <link id="themeColors" rel="stylesheet" href="{{ asset('vendor/modernize/css/style.min.css') }}">
 

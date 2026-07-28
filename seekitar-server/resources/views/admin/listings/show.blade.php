@@ -44,7 +44,7 @@
                                         class="btn p-0 border rounded overflow-hidden {{ $loop->first ? 'border-primary' : '' }}"
                                         style="width: 52px; height: 52px;"
                                         aria-label="Tampilkan foto {{ $loop->iteration }}">
-                                    <img src="{{ $url }}" alt="" style="width: 100%; height: 100%; object-fit: cover;">
+                                    <img loading="lazy" decoding="async" src="{{ $url }}" alt="" style="width: 100%; height: 100%; object-fit: cover;">
                                 </button>
                             @endforeach
                         </div>
@@ -81,7 +81,7 @@
                         <span class="text-end">
                             @if ($listing->store)
                                 @if ($listing->store->photo)
-                                    <img src="{{ $listing->store->photo }}" alt="" class="rounded me-1"
+                                    <img loading="lazy" decoding="async" src="{{ $listing->store->photo }}" alt="" class="rounded me-1"
                                          style="width: 28px; height: 28px; object-fit: cover;">
                                 @endif
                                 @can('manage-stores')

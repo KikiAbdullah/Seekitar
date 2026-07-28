@@ -70,7 +70,7 @@
                         <td>
                             <div class="d-flex align-items-center gap-3">
                                 @if ($store->photo)
-                                    <img src="{{ $store->photo }}" alt="Foto {{ $store->name }}"
+                                    <img loading="lazy" decoding="async" src="{{ $store->photo }}" alt="Foto {{ $store->name }}"
                                          width="52" height="40" class="rounded border flex-shrink-0"
                                          style="object-fit: cover;">
                                 @else

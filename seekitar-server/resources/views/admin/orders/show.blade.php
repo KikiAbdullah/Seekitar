@@ -72,7 +72,7 @@
                         <span class="text-muted">Toko</span>
                         <span class="text-end">
                             @if ($order->store?->photo)
-                                <img src="{{ $order->store->photo }}" alt="" class="rounded me-1"
+                                <img loading="lazy" decoding="async" src="{{ $order->store->photo }}" alt="" class="rounded me-1"
                                      style="width: 28px; height: 28px; object-fit: cover;">
                             @endif
                             @can('manage-stores')
@@ -230,7 +230,7 @@
                             @if ($order->payment_proof_url)
                                 <a href="{{ $order->payment_proof_url }}" target="_blank" rel="noopener"
                                    title="Buka ukuran penuh di tab baru">
-                                    <img src="{{ $order->payment_proof_url }}" alt="Bukti pembayaran {{ $order->order_number }}"
+                                    <img loading="lazy" decoding="async" src="{{ $order->payment_proof_url }}" alt="Bukti pembayaran {{ $order->order_number }}"
                                          class="rounded border w-100" style="max-height: 180px; object-fit: cover;">
                                 </a>
                             @else

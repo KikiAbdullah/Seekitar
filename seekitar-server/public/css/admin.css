@@ -529,6 +529,20 @@ a:focus-visible {
 div.dt-container .dt-search input { min-width: 200px; }
 div.dt-container .dt-length select { width: auto; display: inline-block; }
 
+/*
+ * Tabel datatables bergeser MENDATAR di layar sempit, bukan meluber.
+ *
+ * Tabel halaman index memakai `text-nowrap` (lihat partial table-page),
+ * jadi selembar ponsel kolom-kolomnya tidak mau membungkus — tanpa
+ * penggeser ini seluruh kartu ikut meluber keluar layar. .dt-layout-table
+ * adalah pembungkus resmi DataTables v2 khusus untuk tabelnya, sehingga
+ * baris cari & paginasi di atas-bawahnya tetap selebar kartu dan halaman
+ * tidak berubah tata letaknya sama sekali di layar lebar.
+ */
+div.dt-container .dt-layout-table {
+    overflow-x: auto;
+}
+
 /* ------------------------------------------------------- Halaman detail */
 
 /*

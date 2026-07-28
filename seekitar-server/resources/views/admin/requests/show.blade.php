@@ -134,7 +134,7 @@
                             @foreach ($request->images as $url)
                                 <a href="{{ $url }}" target="_blank" rel="noopener"
                                    title="Buka ukuran penuh di tab baru">
-                                    <img src="{{ $url }}" alt="Lampiran {{ $request->title }}"
+                                    <img loading="lazy" decoding="async" src="{{ $url }}" alt="Lampiran {{ $request->title }}"
                                          class="rounded border" style="width: 84px; height: 84px; object-fit: cover;">
                                 </a>
                             @endforeach
@@ -219,7 +219,7 @@
                                     <tr class="{{ $offer->status?->value === 'accepted' ? 'table-success' : '' }}">
                                         <td>
                                             @if ($offer->store?->photo)
-                                                <img src="{{ $offer->store->photo }}" alt="" class="rounded me-1"
+                                                <img loading="lazy" decoding="async" src="{{ $offer->store->photo }}" alt="" class="rounded me-1"
                                                      style="width: 28px; height: 28px; object-fit: cover;">
                                             @endif
                                             @can('manage-stores')

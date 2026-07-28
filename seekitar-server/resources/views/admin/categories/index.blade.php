@@ -36,6 +36,7 @@
 
     <div class="card">
         <div class="card-body p-0">
+            <div class="table-responsive">
             <table id="categories-table" class="table table-hover mb-0 align-middle admin-selectable">
                 <thead>
                     <tr>
@@ -71,6 +72,7 @@
                 @endforelse
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 @endsection

@@ -174,7 +174,7 @@
                                 <div class="text-muted fw-semibold mb-1" style="font-size: 11px;">FOTO ORANG (SELFIE)</div>
                                 @if ($user->selfie_image)
                                     <a href="{{ route('admin.verifications.users.media', [$user, 'selfie']) }}" target="_blank" rel="noopener">
-                                        <img src="{{ route('admin.verifications.users.media', [$user, 'selfie']) }}"
+                                        <img loading="lazy" decoding="async" src="{{ route('admin.verifications.users.media', [$user, 'selfie']) }}"
                                              alt="Selfie {{ $user->name }}" class="img-fluid rounded border"
                                              style="max-height: 160px; object-fit: cover;">
                                     </a>
@@ -186,7 +186,7 @@
                                 <div class="text-muted fw-semibold mb-1" style="font-size: 11px;">FOTO KTP</div>
                                 @if ($user->ktp_image)
                                     <a href="{{ route('admin.verifications.users.media', [$user, 'ktp']) }}" target="_blank" rel="noopener">
-                                        <img src="{{ route('admin.verifications.users.media', [$user, 'ktp']) }}"
+                                        <img loading="lazy" decoding="async" src="{{ route('admin.verifications.users.media', [$user, 'ktp']) }}"
                                              alt="KTP {{ $user->name }}" class="img-fluid rounded border"
                                              style="max-height: 160px; object-fit: cover;">
                                     </a>
@@ -217,7 +217,7 @@
                     <tr>
                         <td style="width: 72px;">
                             @if ($store->photo)
-                                <img src="{{ $store->photo }}" alt="" width="56" height="42"
+                                <img loading="lazy" decoding="async" src="{{ $store->photo }}" alt="" width="56" height="42"
                                      class="rounded border" style="object-fit: cover;">
                             @else
                                 <span class="rounded bg-light-primary text-primary d-inline-flex align-items-center justify-content-center"
