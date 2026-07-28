@@ -84,6 +84,21 @@
     place-items: center;
     font-weight: 700;
     font-size: 14px;
+    flex: 0 0 auto;
+}
+
+/* Avatar besar di kepala dropdown profil, mengikuti ukuran foto template. */
+.admin-avatar-lg {
+    width: 80px;
+    height: 80px;
+    font-size: 32px;
+}
+
+/* Pembungkus avatar di navbar. Kelas ini dipakai markup Modernize tetapi
+   tidak ada di style.min.css yang disalin. */
+.user-profile-img {
+    position: relative;
+    display: inline-flex;
 }
 
 .admin-skip {

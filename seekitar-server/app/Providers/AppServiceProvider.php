@@ -133,7 +133,10 @@ class AppServiceProvider extends ServiceProvider
      */
     private function registerViewComposers(): void
     {
-        View::composer('admin.partials.sidebar', SidebarComposer::class);
+        View::composer(
+            ['admin.partials.sidebar', 'admin.partials.header'],
+            SidebarComposer::class,
+        );
     }
 
     /**

@@ -779,6 +779,30 @@ if (tanpaHeader.length) {
   ok('semua halaman memakai kartu judul + remah roti Modernize');
 }
 
+
+/*
+ * Setiap partial yang MEMAKAI variabel lencana harus terdaftar di
+ * View::composer. Kalau tidak, variabelnya tidak pernah terisi dan seluruh
+ * lencana hilang tanpa error — `$x ?? 0` membuatnya gagal secara diam-diam.
+ */
+const composerSrc = read('seekitar-server/app/Providers/AppServiceProvider.php');
+const butuhComposer = [];
+for (const p of blades) {
+  const src = fs.readFileSync(p, 'utf8');
+  if (!/laporanLewatSla|pendingVerifikasi/.test(src)) continue;
+
+  const nama = 'admin.' + path.relative(viewDir, p)
+    .replace(/\.blade\.php$/, '')
+    .replace(/\//g, '.');
+
+  if (!composerSrc.includes(`'${nama}'`)) butuhComposer.push(nama);
+}
+if (butuhComposer.length) {
+  fail(`view memakai variabel lencana tetapi tidak terdaftar di View::composer: ${butuhComposer.join(', ')}`);
+} else {
+  ok('semua view berlencana terdaftar di View::composer');
+}
+
 // ─────────────────────────────────── 6. Query DataTables
 console.log('\nQuery & relasi DataTables');
 
