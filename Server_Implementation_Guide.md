@@ -148,6 +148,50 @@ composer require yajra/laravel-datatables-buttons:^13.0
 
 **Konfigurasi:** Tidak ada file konfig khusus. Langsung gunakan facade `DataTables`.
 
+#### ⚠️ Dua jebakan query yang hanya muncul di browser
+
+Keduanya lolos `php -l`, lolos test statis, dan bahkan lolos `toSql()`.
+
+**1. `select()` HARUS mendahului `withCount()`**
+
+```php
+// SALAH — subquery hitungnya terhapus, tanpa error apa pun
+CustomerRequest::query()->withCount('offers')->select(['id', 'title']);
+// SQL: select `id`, `title` from `customer_requests`
+
+// BENAR
+CustomerRequest::query()->select(['id', 'title'])->withCount('offers');
+// SQL: select `id`, `title`, (select count(*) …) as `offers_count` …
+```
+
+`select()` menimpa **seluruh** daftar SELECT, termasuk subquery yang baru
+ditambahkan `withCount()`. SQL-nya tetap sah, jadi tidak ada yang gagal — kolom
+itu hanya tidak pernah ada. Gejalanya muncul di sisi klien:
+
+```
+DataTables warning: table id=requests-table -
+Requested unknown parameter 'offers_count' for row 0, column 3
+```
+
+**2. Nama relasi tidak diperiksa sampai baris diambil**
+
+`Store` punya kolom `user_id`, tetapi relasinya bernama **`owner()`** — bukan
+`user()`. Menulis `with('user')` menghasilkan:
+
+```
+Call to undefined relationship [user] on model [App\Models\Store].
+```
+
+Eager loading bersifat **malas**: `toSql()` tetap berhasil dan tidak
+menunjukkan apa-apa. Exception-nya baru dilempar saat `get()`/`paginate()`
+dijalankan — artinya bug ini melewati semua pemeriksaan yang tidak menyentuh
+basis data.
+
+> Ditegakkan dua skrip: `tools/dev/check-relations.php` memverifikasi setiap
+> relasi yang di-eager-load benar-benar terdefinisi lewat refleksi model, dan
+> `tools/dev/check-datatables.php` merakit tiap query lalu mencocokkan kolom
+> yang diminta view. Keduanya dipanggil `check-admin-menu.mjs`.
+
 #### ⚠️ Berkas bahasa Datatables di-host sendiri, JANGAN dari CDN
 
 Terjemahan Indonesia berada di `public/vendor/datatables/id.json` dan disetel

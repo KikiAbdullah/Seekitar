@@ -433,7 +433,44 @@ if (ikonTanpaAria.length) {
   ok('semua ikon dekoratif memakai aria-hidden');
 }
 
+// ─────────────────────────────────── 6. Query DataTables
+console.log('\nQuery & relasi DataTables');
+
+/*
+ * Dua kelas bug yang lolos semua pemeriksaan statis dan hanya muncul di
+ * browser, keduanya pernah terjadi:
+ *
+ *   - with('user') pada model yang relasinya owner()
+ *       → "Call to undefined relationship [user] on model [Store]"
+ *   - withCount() ditimpa select()
+ *       → "Requested unknown parameter 'offers_count'"
+ *
+ * Keduanya butuh memuat Laravel sungguhan, jadi dijalankan lewat skrip PHP.
+ * Kode keluar diabaikan: pembungkus php-wasm selalu mengembalikan 0.
+ */
+for (const [skrip, judul] of [
+  ['tools/dev/check-relations.php', 'relasi eager-load'],
+  ['tools/dev/check-datatables.php', 'kolom & urutan query DataTables'],
+]) {
+  let keluaran = '';
+  try {
+    keluaran = execFileSync(path.join(ROOT, 'tools/dev/php'), [path.join(ROOT, skrip)],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  } catch (e) {
+    keluaran = (e.stdout?.toString() ?? '') + (e.stderr?.toString() ?? '');
+  }
+
+  const jumlah = Number(keluaran.match(/(\d+) masalah/)?.[1] ?? -1);
+
+  if (jumlah === 0) {
+    ok(judul);
+  } else {
+    const rincian = keluaran.split('\n').filter(l => /GAGAL|tidak punya|Yang ada/.test(l));
+    fail(`${judul}:\n     ${rincian.join('\n     ') || keluaran.trim() || 'tidak ada keluaran'}`);
+  }
+}
+
 console.log(problems === 0
-  ? '\n✅ Panel admin konsisten: menu, izin, route, dan render.'
+  ? '\n✅ Panel admin konsisten: menu, izin, route, render, dan query.'
   : `\n❌ ${problems} masalah ditemukan.`);
 if (problems) process.exitCode = 1;

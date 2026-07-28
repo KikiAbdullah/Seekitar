@@ -44,7 +44,8 @@ class VerificationController extends Controller
     {
         return view('admin.verifications.stores', [
             'pending' => Store::query()
-                ->with('user:id,name,phone')
+                // Relasi pemilik toko bernama owner(), bukan user().
+                ->with('owner:id,name,phone')
                 ->select(['id', 'user_id', 'name', 'regency', 'store_type', 'address',
                           'verification_status', 'created_at'])
                 ->where('verification_status', VerificationStatus::Pending)

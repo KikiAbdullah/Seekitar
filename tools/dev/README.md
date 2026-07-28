@@ -43,6 +43,8 @@ green, and the app served over HTTP (`/` and `/up` both return 200).
 | `node tools/dev/check-http.mjs` | Asserts every documented endpoint has a route, auth/throttle middleware is applied, resources do not leak private columns, and Blade escaping stays on. |
 | `node tools/dev/check-admin-menu.mjs` | Asserts every `@can` in the admin sidebar matches the `permission:` middleware on the route it links to, that Datatables JSON endpoints are guarded too, that the Datatables i18n file is self-hosted and valid, and renders every admin page as both `admin` and `super-admin`. |
 | `./tools/dev/php tools/dev/render-admin.php` | Renders all admin Blade pages under two permission sets without MySQL. Catches missing route names, missing view variables, and menu items that leak across roles. |
+| `./tools/dev/php tools/dev/check-relations.php` | Verifies every eager-loaded relation (`with`/`withCount`/`load`) actually exists on its model. Eager loading is lazy, so `with('user')` on a model whose relation is `owner()` throws only when rows are fetched — `toSql()` will not reveal it. |
+| `./tools/dev/php tools/dev/check-datatables.php` | Builds each DataTables query for real and checks that every column the Blade view requests exists in the SELECT list or as `addColumn`/`editColumn`. Also enforces `select()` before `withCount()`. |
 
 All checkers exit non-zero on failure, so they work as CI/pre-commit steps:
 

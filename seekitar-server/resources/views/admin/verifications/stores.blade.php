@@ -44,8 +44,8 @@
                             </div>
                         </td>
                         <td>
-                            {{ $store->user?->name ?? '—' }}
-                            <div class="text-muted" style="font-size: 12px;">{{ $store->user?->phone }}</div>
+                            {{ $store->owner?->name ?? '—' }}
+                            <div class="text-muted" style="font-size: 12px;">{{ $store->owner?->phone }}</div>
                         </td>
                         <td>
                             {{-- store_type adalah SET MySQL — satu toko bisa
