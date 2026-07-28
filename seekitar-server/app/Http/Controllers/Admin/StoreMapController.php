@@ -61,14 +61,19 @@ class StoreMapController extends Controller
      * Membacanya sebagai properti biasa hanya menghasilkan WKB biner yang
      * tidak berguna di PHP, dan itu gagal DIAM-DIAM: JSON tetap terbentuk,
      * hanya saja koordinatnya sampah.
+     *
+     * URUTAN select() WAJIB sebelum withCoordinates(): select() MENIMPA
+     * seluruh daftar kolom, jadi menuliskannya setelah scope akan membuang
+     * latitude/longitude yang baru ditambahkan — geometry jadi null dan
+     * tak satu pun titik tergambar di peta (lihat docblock HasLocation).
      */
     public function data(Request $request): JsonResponse
     {
         $status = $request->string('status')->toString();
 
         $stores = Store::query()
-            ->withCoordinates()
             ->select(['id', 'name', 'address', 'verification_status', 'is_active', 'location'])
+            ->withCoordinates()
             /*
              * Toko tanpa koordinat DIBUANG di SQL, bukan disaring di PHP.
              * Menyaringnya belakangan berarti membawa baris yang pasti
