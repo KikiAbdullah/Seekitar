@@ -26,8 +26,13 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Data contoh HANYA untuk pengembangan — jangan pernah di produksi.
+        // AdminUserSeeder membuat akun dengan kata sandi yang tertulis di
+        // repositori, jadi penjagaannya diulang di dalam seeder itu sendiri.
         if (app()->environment('local', 'testing')) {
-            $this->call(DummyDataSeeder::class);
+            $this->call([
+                AdminUserSeeder::class,   // akun contoh tiap peran
+                DummyDataSeeder::class,   // toko, listing, permintaan contoh
+            ]);
         }
     }
 }

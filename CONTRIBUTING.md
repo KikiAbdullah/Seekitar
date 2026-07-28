@@ -105,12 +105,31 @@ php artisan key:generate      # WAJIB — lihat catatan di bawah
 php artisan migrate --seed
 ```
 
-Buka `/admin/login`, lalu masuk dengan kredensial dari `.env`:
+Buka `/admin/login`. Ada dua kelompok akun:
+
+**1. Akun pemilik** — dibuat di semua environment, kredensial dari `.env`:
 
 | Kunci | Default |
 | :-- | :-- |
 | `SEEKITAR_SUPER_ADMIN_EMAIL` | `admin@seekitar.test` |
 | `SEEKITAR_SUPER_ADMIN_PASSWORD` | `password` |
+
+**2. Akun contoh per peran** — HANYA `local`/`testing`, sandi semuanya
+`password`:
+
+| Peran | Email | Akses panel |
+| :-- | :-- | :-- |
+| `super-admin` | `superadmin@seekitar.test` | ya — 12 permission |
+| `admin` | `admin.staf@seekitar.test` | ya — 10 permission |
+| `user` | `warga@seekitar.test` | **ditolak** (akun kontrol) |
+
+Perbedaan `super-admin` dan `admin`: hanya super-admin yang punya
+`manage-users` dan `manage-settings`. Admin biasa tidak bisa mengubah sesama
+admin atau menyentuh pengaturan sistem — menunya pun tidak muncul.
+
+Akun `warga@seekitar.test` sengaja ada untuk **membuktikan penolakan
+bekerja**: kredensialnya benar, tetapi `canAccessAdminPanel()` menolaknya dan
+sesinya langsung dibuang.
 
 > ⚠️ **`APP_KEY` kosong = login selalu gagal, tanpa pesan error.** Sesi tidak
 > bisa dienkripsi, sehingga browser dilempar kembali ke halaman masuk seolah

@@ -21,6 +21,7 @@ import path from 'node:path';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
 const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
+const exists = f => fs.existsSync(path.join(ROOT, f));
 const SEEDERS = 'seekitar-server/database/seeders';
 
 let problems = 0;
@@ -29,7 +30,8 @@ const ok = m => console.log(`  ✅ ${m}`);
 
 // ───────────────────────────────────────────── 1. Berkas wajib ada
 console.log('Berkas seeder');
-const REQUIRED = ['DatabaseSeeder', 'CategorySeeder', 'RolesAndPermissionsSeeder', 'SettingSeeder', 'DummyDataSeeder'];
+const REQUIRED = ['DatabaseSeeder', 'CategorySeeder', 'RolesAndPermissionsSeeder',
+                  'SettingSeeder', 'DummyDataSeeder', 'AdminUserSeeder'];
 for (const name of REQUIRED) {
   if (!fs.existsSync(path.join(ROOT, SEEDERS, `${name}.php`))) fail(`${name}.php tidak ada`);
 }
@@ -142,6 +144,40 @@ for (const name of ['CategorySeeder', 'RolesAndPermissionsSeeder', 'SettingSeede
 }
 if (bareCreate === 0) ok('seeder produksi memakai firstOrCreate/updateOrCreate');
 
+// ───────────────────────────────────────────── 5b. Akun contoh per peran
+console.log('\nAdminUserSeeder');
+if (exists(`${SEEDERS}/AdminUserSeeder.php`)) {
+  const src = read(`${SEEDERS}/AdminUserSeeder.php`);
+
+  // Akun ini memakai kata sandi yang tertulis di repositori.
+  if (!/environment\('local', 'testing'\)/.test(src)) {
+    fail('AdminUserSeeder tanpa penjagaan environment — kata sandi di repo bisa aktif di produksi');
+  } else ok('dibatasi local/testing');
+
+  // assignRole() menumpuk peran tiap kali seeder dijalankan ulang.
+  if (/->assignRole\(/.test(src)) {
+    fail('memakai assignRole() — peran menumpuk saat seeder dijalankan ulang; pakai syncRoles()');
+  } else ok('memakai syncRoles (idempoten)');
+
+  const roles = [...src.matchAll(/'role'\s*=>\s*'([a-z-]+)'/g)].map(m => m[1]);
+  const expected = ['super-admin', 'admin', 'user'];
+  const missing = expected.filter(r => !roles.includes(r));
+  if (missing.length) fail(`peran tanpa akun contoh: ${missing.join(', ')}`);
+  else ok(`${roles.length} akun contoh (${roles.join(', ')})`);
+
+  // Tanpa akun yang seharusnya DITOLAK, pembatasan peran tidak teruji.
+  if (!/'panel'\s*=>\s*false/.test(src)) {
+    fail("tidak ada akun kontrol ('panel' => false) untuk menguji penolakan");
+  } else ok('menyertakan akun kontrol yang harus ditolak');
+
+  // Bentrok nomor dengan akun pemilik akan menimpa perannya lewat syncRoles.
+  const mainPhone = read('seekitar-server/config/seekitar.php')
+    .match(/'super_admin_phone'\s*=>\s*env\([^,]+,\s*'(\d+)'\)/)?.[1];
+  if (mainPhone && src.includes(`'${mainPhone}'`)) {
+    fail(`nomor ${mainPhone} bentrok dengan akun super-admin utama`);
+  } else ok('nomor tidak bentrok dengan akun pemilik');
+}
+
 // ───────────────────────────────────────────── 6. DatabaseSeeder
 console.log('\nDatabaseSeeder');
 const dbSrc = read(`${SEEDERS}/DatabaseSeeder.php`);
@@ -153,6 +189,12 @@ const iSet = dbSrc.indexOf('SettingSeeder');
 if (iRole === -1 || iCat === -1 || iSet === -1) fail('DatabaseSeeder tidak memanggil ketiga seeder produksi');
 else if (!(iRole < iCat && iCat < iSet)) fail('urutan seeder salah — role harus lebih dulu (§19.2)');
 else ok('urutan: Roles → Category → Setting');
+
+// Akun contoh harus dibuat SETELAH perannya ada.
+const iAdminUser = dbSrc.indexOf('AdminUserSeeder');
+if (iAdminUser !== -1 && iRole > iAdminUser) {
+  fail('AdminUserSeeder dipanggil sebelum RolesAndPermissionsSeeder — assignRole akan gagal');
+} else if (iAdminUser !== -1) ok('akun contoh dibuat setelah peran');
 
 // Data contoh tidak boleh ikut di produksi.
 if (dbSrc.includes('DummyDataSeeder') && !/environment\('local', 'testing'\)/.test(dbSrc)) {
