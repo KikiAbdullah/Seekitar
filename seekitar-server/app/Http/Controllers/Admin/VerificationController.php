@@ -60,9 +60,12 @@ class VerificationController extends Controller
         return view('admin.verifications.stores', [
             'pending' => Store::query()
                 // Relasi pemilik toko bernama owner(), bukan user().
-                ->with('owner:id,name,phone')
-                ->select(['id', 'user_id', 'name', 'regency', 'store_type', 'address',
-                          'verification_status', 'created_at'])
+                // verification_level pemilik ikut dimuat: syarat mengajukan
+                // toko adalah KTP level 2, dan admin perlu memastikannya.
+                ->with('owner:id,name,phone,verification_level')
+                // latitude/longitude untuk peta kecil pada modal — kolom
+                // POINT mentah berupa biner WKB yang tidak berguna di Blade.
+                ->withCoordinates()
                 ->where('verification_status', VerificationStatus::Pending)
                 ->orderBy('created_at')
                 ->paginate(20)
@@ -155,11 +158,12 @@ class VerificationController extends Controller
         return back()->with('success', "Verifikasi {$user->name} ditolak.");
     }
 
-    public function approveStore(Store $store): RedirectResponse
+    public function approveStore(Request $request, Store $store): RedirectResponse
     {
         $store->verification_status = VerificationStatus::Verified;
         $store->rejected_reason     = null;
         $store->verified_at         = now();
+        $store->verified_by         = $request->user()->id;
         $store->save();
 
         return back()->with('success', "Toko {$store->name} disetujui.");

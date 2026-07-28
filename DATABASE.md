@@ -243,6 +243,7 @@ dan stempelnya — siapa (`_by`) + kapan (`_at`) — tidak pernah ditimpa.
 | `id`                  | CHAR(36)                                                | PK, UUID.                                                                      |
 | `user_id`             | CHAR(36)                                                | FK ke `users.id`. Pemilik toko. Satu user bisa punya banyak toko.              |
 | `name`                | VARCHAR(100)                                            | Nama lapak, unik per kabupaten (`regency`). Lihat catatan uniqueness.          |
+| `photo`               | VARCHAR(500) NULL                                       | URL foto etalase toko. **Publik** seperti `avatar_url` — tampil di hasil pencarian dan diperiksa admin saat verifikasi. |
 | `regency`             | VARCHAR(100)                                            | Kabupaten/kota tempat toko berada. Diisi dari reverse geocoding saat pinpoint. |
 | `regency_code`        | CHAR(4) NULL                                            | Kode wilayah BPS (mis. `3578`). Sumber kebenaran untuk geofencing.             |
 | `npwp`                | VARCHAR(20) NULL                                        | NPWP usaha (opsional). Syarat pendukung verifikasi Level 3 (PRD §5.3.2).       |
@@ -261,7 +262,8 @@ dan stempelnya — siapa (`_by`) + kapan (`_at`) — tidak pernah ditimpa.
 | `is_active`           | TINYINT(1) DEFAULT 1                                    | Toko nonaktif tidak muncul di pencarian.                                       |
 | `verification_status` | ENUM('pending','verified','rejected') DEFAULT 'pending' | Status verifikasi admin.                                                       |
 | `rejected_reason`     | TEXT NULL                                               | Alasan penolakan admin. Wajib diisi saat status `rejected`.                    |
-| `verified_at`         | TIMESTAMP NULL                                          | Kapan toko disetujui — untuk audit & SLA.                                      |
+| `verified_at`         | TIMESTAMP NULL                                          | Kapan toko disetujui — untuk audit & SLA. Merangkap bendera "terverifikasi": NULL berarti belum. |
+| `verified_by`         | CHAR(36) NULL FK → `users.id`                           | Admin yang menyetujui. Selalu diisi berpasangan dengan `verified_at`. ON DELETE SET NULL. |
 | `deleted_at`          | TIMESTAMP NULL                                          | Soft delete.                                                                   |
 | `created_at`          | TIMESTAMP                                               | –                                                                              |
 | `updated_at`          | TIMESTAMP                                               | –                                                                              |
@@ -270,10 +272,26 @@ dan stempelnya — siapa (`_by`) + kapan (`_at`) — tidak pernah ditimpa.
 
 - PRIMARY KEY (`id`)
 - FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+- FOREIGN KEY (`verified_by`) REFERENCES `users`(`id`) ON DELETE SET NULL —
+  admin yang menyetujui; akun admin dihapus permanen tidak menghapus tokonya.
 - INDEX `stores_user_id_idx` (`user_id`)
 - INDEX `stores_deleted_at_idx` (`deleted_at`)
 - SPATIAL INDEX `stores_location_spatial` (`location`)
 - INDEX `stores_is_active_idx` (`is_active`) — mempercepat query toko aktif.
+
+**SOP verifikasi toko di panel admin** — tiga langkah sebelum `verified_by`/`verified_at`
+diisi, dan modal antrian menyusun berkas persis dalam urutan ini:
+
+1. **Alamat & kabupaten** dicocokkan dengan berkas (`address`, `regency`).
+2. **Foto toko** (`photo`) dipastikan jelas memperlihatkan tempat usaha.
+3. **Koordinat** (`location`) dicocokkan dengan Google Maps lewat tautan
+   langsung `google.com/maps/search/?api=1&query=lat,lng` yang disediakan
+   modal — format resmi Google, tanpa API key.
+
+Tombol persetujuan terkunci sampai ketiganya dicentang. Hasil ketiga
+pemeriksaan tidak disimpan sebagai kolom terpisah: stempel
+`verified_by` + `verified_at` sudah menyatakan seluruhnya lolos — kolom
+`is_address_valid` dan sejenisnya hanya akan menduplikasi makna tersebut.
 
 > **Catatan: `service_radius_km` DEFAULT 5.00 sudah benar — jangan diubah ke 15.**
 > Ada dua radius berbeda di sistem ini dan keduanya sering tertukar:

@@ -17,6 +17,10 @@ return new class extends Migration
             $table->foreignUuid('user_id')->constrained()->cascadeOnDelete();
             $table->string('name', 100);
 
+            // Foto etalase toko. PUBLIK seperti avatar_url — bukan data
+            // pribadi, dan akan tampil di hasil pencarian aplikasi.
+            $table->string('photo', 500)->nullable();
+
             // Lingkup uniqueness nama toko + geofencing (DATABASE.md §4.2).
             $table->string('regency', 100);
             $table->char('regency_code', 4)->nullable();
@@ -45,6 +49,12 @@ return new class extends Migration
             $table->enum('verification_status', VerificationStatus::values())->default(VerificationStatus::Pending->value);
             $table->text('rejected_reason')->nullable();
             $table->timestamp('verified_at')->nullable();
+
+            // Admin yang menyetujui — pasangan verified_at (DATABASE.md §4.2).
+            // nullOnDelete aman: users soft-delete, FK baru menyala saat
+            // admin benar-benar dihapus permanen.
+            $table->foreignUuid('verified_by')->nullable()
+                ->constrained('users')->nullOnDelete();
 
             $table->softDeletes();
             $table->timestamps();

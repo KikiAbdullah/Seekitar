@@ -23,11 +23,12 @@ class StoreController extends Controller
         return $table->json($request);
     }
 
-    public function approve(Store $store): RedirectResponse
+    public function approve(Request $request, Store $store): RedirectResponse
     {
         $store->verification_status = VerificationStatus::Verified;
         $store->rejected_reason     = null;
         $store->verified_at         = now();
+        $store->verified_by         = $request->user()->id;
         $store->save();
 
         return back()->with('success', "Toko {$store->name} disetujui.");

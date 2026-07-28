@@ -19,10 +19,10 @@ class Store extends Model
     use HasFactory, HasLocation, HasUuids, SerializesDatesAsUtc, SoftDeletes;
 
     protected $fillable = [
-        'user_id', 'name', 'regency', 'regency_code', 'store_type', 'category_ids',
+        'user_id', 'name', 'photo', 'regency', 'regency_code', 'store_type', 'category_ids',
         'address', 'service_radius_km', 'accepts_cod', 'offers_delivery',
         'allows_pickup', 'operating_hours', 'npwp', 'bank_account',
-        'is_active', 'verification_status', 'rejected_reason', 'verified_at',
+        'is_active', 'verification_status', 'rejected_reason', 'verified_at', 'verified_by',
     ];
 
     protected $hidden = ['npwp'];
@@ -74,6 +74,12 @@ class Store extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /** Admin yang menyetujui toko ini (pasangan verified_at). */
+    public function verifiedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified_by');
     }
 
     public function listings(): HasMany
