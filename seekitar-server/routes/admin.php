@@ -109,6 +109,9 @@ Route::middleware(['auth', 'role:admin|super-admin'])->group(function (): void {
     Route::get('stores', [StoreController::class, 'index'])
         ->middleware('permission:manage-stores')
         ->name('stores.index');
+    Route::get('stores/{store}', [StoreController::class, 'show'])
+        ->middleware('permission:manage-stores')
+        ->name('stores.show');
 
     /*
     | --- Peta sebaran toko ------------------------------------------------

@@ -227,7 +227,15 @@
                             @endif
                         </td>
                         <td>
-                            <div class="fw-semibold">{{ $store->name }}</div>
+                            <div class="fw-semibold">
+                                @can('manage-stores')
+                                    <a href="{{ route('admin.stores.show', $store) }}" class="text-decoration-none">
+                                        {{ $store->name }}
+                                    </a>
+                                @else
+                                    {{ $store->name }}
+                                @endcan
+                            </div>
                             @if ((int) $store->total_reviews > 0)
                                 @include('admin.partials._stars', [
                                     'rating' => $store->rating_avg,

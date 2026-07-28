@@ -1,3 +1,9 @@
+@can('manage-stores')
+    <a href="{{ route('admin.stores.show', $store) }}" class="btn btn-sm btn-outline-primary">
+        <i class="ti ti-eye me-1" aria-hidden="true"></i> Detail
+    </a>
+@endcan
+
 @can('verify-stores')
     @if ($store->verification_status !== \App\Enums\VerificationStatus::Verified)
         <form action="{{ route('admin.stores.approve', $store) }}" method="POST" class="d-inline">

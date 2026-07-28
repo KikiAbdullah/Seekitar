@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\DataTables\StoresDataTable;
 use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Store;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -21,6 +22,36 @@ class StoreController extends Controller
     public function data(Request $request, StoresDataTable $table): JsonResponse
     {
         return $table->json($request);
+    }
+
+    /**
+     * Detail satu toko.
+     *
+     * Seluruh konteks keputusan ada di satu layar: identitas & status KTP
+     * pemilik, jejak audit persetujuan (verified_by/at), rating bintang,
+     * serta peta lokasi + lingkaran radius — tanpa berpindah antarmenu.
+     */
+    public function show(Store $store): View
+    {
+        $toko = Store::query()
+            // latitude/longitude dari kolom POINT lewat ST_Latitude/
+            // ST_Longitude — properti biasa berisi WKB biner (HasLocation).
+            ->withCoordinates()
+            ->with([
+                'owner:id,name,phone,verification_level',
+                'verifiedBy:id,name',
+            ])
+            ->withCount(['listings', 'offers', 'orders', 'reviews'])
+            ->findOrFail($store->getKey());
+
+        return view('admin.stores.show', [
+            'store'    => $toko,
+            // Nama kategori di-resolve dari category_ids (JSON array id).
+            'kategori' => Category::query()
+                ->whereIn('id', $toko->category_ids ?? [])
+                ->orderBy('name')
+                ->pluck('name'),
+        ]);
     }
 
     public function approve(Request $request, Store $store): RedirectResponse
