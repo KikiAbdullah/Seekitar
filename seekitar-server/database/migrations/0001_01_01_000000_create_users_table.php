@@ -29,7 +29,16 @@ return new class extends Migration
 
         Schema::create('sessions', function (Blueprint $table) {
             $table->string('id')->primary();
-            $table->foreignId('user_id')->nullable()->index();
+
+            /*
+             * UUID, BUKAN foreignId (bigint): tabel users Seekitar memakai
+             * UUID (lihat 2026_07_27_100000_extend_users_table.php) dan
+             * SESSION_DRIVER=database. Dengan bigint, setiap login admin
+             * gagal total — framework mencoba menulis string UUID ke kolom
+             * integer dan MySQL menolaknya tanpa pesan yang jelas.
+             */
+            $table->uuid('user_id')->nullable()->index();
+
             $table->string('ip_address', 45)->nullable();
             $table->text('user_agent')->nullable();
             $table->longText('payload');

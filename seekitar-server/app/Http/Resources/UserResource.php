@@ -26,6 +26,11 @@ class UserResource extends JsonResource
             'address'            => $this->address,
             'verification_level' => $this->verification_level?->value,
 
+            // Reputasi sebagai PEMBELI — dari ulasan store_to_buyer (cermin
+            // toko↔pembeli; ReviewObserver yang menjaga angkanya).
+            'rating_avg'    => (float) $this->rating_avg,
+            'total_reviews' => (int) $this->total_reviews,
+
             // GeoJSON [longitude, latitude] — urutannya terbalik dari
             // kebiasaan menulis "lat, lng" (API §12.3, RFC 7946).
             'location'   => $this->coordinates(),

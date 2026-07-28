@@ -7,11 +7,9 @@ use Illuminate\Auth\Events\Lockout;
 use App\Events\CustomerRequestCreated;
 use App\Events\OfferAccepted;
 use App\Events\OrderStatusChanged;
-use App\Events\ReviewSubmitted;
 use App\Listeners\DispatchRequestBroadcast;
 use App\Listeners\SendOfferAcceptedNotification;
 use App\Listeners\SendOrderStatusNotification;
-use App\Listeners\UpdateStoreRatingOnReview;
 use App\Models\Order;
 use App\Models\Review;
 use App\Observers\OrderObserver;
@@ -30,6 +28,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
+use Laravel\Sanctum\Sanctum;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -63,6 +62,13 @@ class AppServiceProvider extends ServiceProvider
         // catatan di LogNotificationSender; kontraknya sudah tetap sehingga
         // penggantinya cukup di-bind di sini.
         $this->app->bind(NotificationSender::class, LogNotificationSender::class);
+
+        /*
+         * Migrasi bawaan Sanctum memakai tokenable_id BIGINT — tidak cocok
+         * dengan users UUID. Versi lokal (uuidMorphs) menggantikannya; lihat
+         * 2026_07_27_100050_create_personal_access_tokens_table.php.
+         */
+        Sanctum::ignoreMigrations();
     }
 
     public function boot(): void
@@ -167,10 +173,15 @@ class AppServiceProvider extends ServiceProvider
             ]);
         });
 
+        /*
+         * Rating DITANGANI ReviewObserver secara sinkron — jangan tambahkan
+         * listener rating di sini. Event ReviewSubmitted beserta job-nya
+         * pernah menghitung rating kedua kalinya secara asinkron, dan
+         * event itu sendiri tidak pernah dipancarkan dari mana pun.
+         */
         Event::listen(CustomerRequestCreated::class, DispatchRequestBroadcast::class);
         Event::listen(OfferAccepted::class, SendOfferAcceptedNotification::class);
         Event::listen(OrderStatusChanged::class, SendOrderStatusNotification::class);
-        Event::listen(ReviewSubmitted::class, UpdateStoreRatingOnReview::class);
     }
 
     /**

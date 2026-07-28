@@ -74,9 +74,22 @@ class AuthController extends Controller
 
         /** @var array{0: User, 1: bool} $result */
         $result = DB::transaction(function () use ($phone): array {
-            $user = User::where('phone', $phone)->first();
+            /*
+             * withTrashed() WAJIB di sini: kolom phone unik di basis data,
+             * dan akun yang di-soft-delete tetap memegang nomornya. Tanpa
+             * ini, User::create() untuk nomor tersebut meledak dengan
+             * IntegrityConstraintViolation (HTTP 500) — padahal jawaban
+             * yang benar adalah memulihkan akunnya.
+             */
+            $user = User::withTrashed()->where('phone', $phone)->first();
 
             if ($user) {
+                // Akun yang kembali lewat OTP dipulihkan; kalau ia memang
+                // diblokir, gerbang is_blocked di bawah tetap menahannya.
+                if ($user->trashed()) {
+                    $user->restore();
+                }
+
                 return [$user, false];
             }
 

@@ -28,6 +28,12 @@ return new class extends Migration
             $table->index('store_id', 'listings_store_id_idx');
             $table->index('deleted_at', 'listings_deleted_at_idx');
             $table->index('status', 'listings_status_idx');
+
+            // Dipakai whereFullText pada pencarian keyword (API §9,
+            // DATABASE.md §7.2). TANPA indeks ini MySQL melempar error 1191
+            // "Can't find FULLTEXT index" — dan sengaja dibuat sejak dini:
+            // menambah fulltext pada tabel besar kelak berarti rebuild lama.
+            $table->fullText(['title', 'description'], 'listings_fulltext');
         });
 
         // CHECK ditegakkan engine, bukan hanya divalidasi aplikasi: data bisa

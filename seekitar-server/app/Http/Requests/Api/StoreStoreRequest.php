@@ -38,6 +38,10 @@ class StoreStoreRequest extends FormRequest
             'longitude' => ['required', 'numeric', 'between:-180,180'],
             'address'   => ['sometimes', 'nullable', 'string', 'max:255'],
 
+            // Foto etalase — bahan utama admin mencocokkan toko dengan
+            // kondisi aslinya saat verifikasi (SOP: alamat → foto → peta).
+            'photo'     => ['sometimes', 'image', 'mimes:jpeg,png,webp', 'max:5120'],
+
             // Radius toko, BUKAN radius permintaan. Default 5 km
             // (DATABASE.md §4.2) — jangan tertukar dengan 15 km milik request.
             'service_radius_km' => ['sometimes', 'numeric', 'min:0.1', 'max:50'],

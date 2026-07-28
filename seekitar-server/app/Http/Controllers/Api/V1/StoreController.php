@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\VerificationStatus;
 use App\Http\Concerns\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreStoreRequest;
@@ -11,6 +12,7 @@ use App\Models\Store;
 use App\Services\SettingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class StoreController extends Controller
 {
@@ -39,6 +41,10 @@ class StoreController extends Controller
         $query = Store::query()
             ->withCoordinates()
             ->where('is_active', true)
+            // Publik hanya boleh melihat toko yang SUDAH diverifikasi admin —
+            // toko pending/ditolak tidak pernah tayang, apa pun jaraknya.
+            // Cermin Store::isVisible().
+            ->where('verification_status', VerificationStatus::Verified->value)
             ->nearby((float) $data['lat'], (float) $data['lng'], $radius)
             ->withDistance((float) $data['lat'], (float) $data['lng'])
             ->orderByDistance();
@@ -53,8 +59,15 @@ class StoreController extends Controller
     }
 
     /** GET /stores/{store} */
-    public function show(Store $store): JsonResponse
+    public function show(Request $request, Store $store): JsonResponse
     {
+        // Toko yang belum tayang (pending/ditolak/nonaktif) tidak bisa
+        // dilihat publik via URL tebakan — tetapi PEMILIKNYA tetap boleh
+        // membukanya, mis. untuk memeriksa status peninjauan.
+        if (! $store->isVisible() && $store->user_id !== $request->user()->id) {
+            abort(404);
+        }
+
         $store = Store::withCoordinates()->whereKey($store->getKey())->firstOrFail();
 
         return $this->ok(['store' => new StoreResource($store)]);
@@ -67,10 +80,18 @@ class StoreController extends Controller
 
         $user = $request->user();
 
-        $store = new Store($request->safe()->except(['latitude', 'longitude']));
+        $store = new Store($request->safe()->except(['latitude', 'longitude', 'photo']));
         $store->user_id      = $user->id;
         $store->regency      = config('seekitar.regency');
         $store->regency_code = config('seekitar.regency_code');
+
+        if ($request->hasFile('photo')) {
+            // Foto etalase PUBLIK seperti avatar (bukan data pribadi): akan
+            // tampil di hasil pencarian — dan admin mencocokkannya dengan
+            // kondisi asli saat verifikasi toko.
+            $path = $request->file('photo')->store('stores', 'public');
+            $store->photo = Storage::disk('public')->url($path);
+        }
 
         $store->setLocation(
             (float) $request->validated('latitude'),

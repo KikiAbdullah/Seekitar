@@ -1134,6 +1134,28 @@ CREATE TABLE settings (
 > `request_expiry_hours` tidak memperpendek permintaan yang sudah berjalan —
 > `expires_at` sudah dihitung saat baris dibuat.
 
+### 4.9d Tabel kerangka: `sessions` & `personal_access_tokens`
+
+Dua tabel bawaan Laravel **diubah dari skema default-nya** karena `users.id`
+Seekitar adalah UUID, bukan BIGINT:
+
+| Tabel | Kolom | Default Laravel | Milik Seekitar |
+|---|---|---|---|
+| `sessions` | `user_id` | `foreignId` (BIGINT) | `CHAR(36)` UUID |
+| `personal_access_tokens` | `tokenable_id` | `morphs` (BIGINT) | `uuidMorphs` (CHAR 36) |
+
+Tanpa penyesuaian ini, **login admin gagal total** (session driver
+`database` menulis UUID ke kolom integer) dan **`createToken()` API gagal
+total** dengan error integer 1366 yang tidak menunjuk sebab sebenarnya.
+
+Migrasi Sanctum bawaan dinonaktifkan (`Sanctum::ignoreMigrations()` di
+`AppServiceProvider`) dan digantikan versi lokal
+`2026_07_27_100050_create_personal_access_tokens_table.php` — kolom lain
+identik dengan skema paket agar perilaku Sanctum tidak berubah.
+
+> ⚠️ Jangan pernah "mengembalikan" dua kolom ini ke BIGINT — itu akan
+> memutus login panel dan API sekaligus.
+
 ### 4.10 `service_slots` (Fase 2)
 
 PRD §5.1.3 menyebut pemesanan jasa memilih **slot waktu**, dan §5.1.1 menyebut

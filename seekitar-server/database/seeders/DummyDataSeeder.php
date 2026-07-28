@@ -105,6 +105,13 @@ class DummyDataSeeder extends Seeder
     {
         $store = Store::firstOrNew(['name' => $name, 'regency' => config('seekitar.regency')]);
 
+        /*
+         * verified_by ikut diisi: kontrak pasangan verified_at/verified_by
+         * berlaku juga untuk data contoh — kalau tidak, halaman detail toko
+         * menampilkan tanggal setuju tanpa penyetuju (DATABASE.md §4.2).
+         */
+        $admin = User::role('super-admin')->first() ?? $owner;
+
         $store->fill([
             'user_id'             => $owner->id,
             'regency_code'        => config('seekitar.regency_code'),
@@ -116,6 +123,7 @@ class DummyDataSeeder extends Seeder
             'allows_pickup'       => true,
             'verification_status' => VerificationStatus::Verified,
             'verified_at'         => now(),
+            'verified_by'         => $admin->id,
         ]);
 
         // Kolom POINT tidak bisa mass-assign; setLocation() memastikan opsi

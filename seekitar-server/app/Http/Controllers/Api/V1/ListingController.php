@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\ListingStatus;
+use App\Enums\VerificationStatus;
 use App\Http\Concerns\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreListingRequest;
@@ -49,7 +50,11 @@ class ListingController extends Controller
             ->with('store')
             ->where('status', ListingStatus::Active)
             ->whereHas('store', function ($q) use ($lat, $lng, $radius): void {
-                $q->where('is_active', true)->nearby($lat, $lng, $radius);
+                // Hanya toko yang tayang — toko pending/ditolak/nonaktif
+                // menyeret listingnya keluar dari pencarian (Store::isVisible).
+                $q->where('is_active', true)
+                    ->where('verification_status', VerificationStatus::Verified->value)
+                    ->nearby($lat, $lng, $radius);
             });
 
         if (isset($data['category'])) {
@@ -90,9 +95,17 @@ class ListingController extends Controller
     }
 
     /** GET /listings/{listing} */
-    public function show(Listing $listing): JsonResponse
+    public function show(Request $request, Listing $listing): JsonResponse
     {
-        return $this->ok(['listing' => new ListingResource($listing->load('store'))]);
+        $listing->load('store');
+
+        // Listing ikut tokonya: kalau tokonya tidak tayang, listingnya pun
+        // tidak — kecuali untuk pemilik toko itu sendiri.
+        if (! $listing->store->isVisible() && $listing->store->user_id !== $request->user()->id) {
+            abort(404);
+        }
+
+        return $this->ok(['listing' => new ListingResource($listing)]);
     }
 
     /** POST /listings */

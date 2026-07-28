@@ -15,8 +15,10 @@ class StoreResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'   => $this->id,
-            'name' => $this->name,
+            'id'    => $this->id,
+            'name'  => $this->name,
+            // Foto etalase — publik oleh desain, seperti avatar pengguna.
+            'photo' => $this->photo,
 
             // Selalu array, meski satu nilai — klien tidak pernah melihat
             // bentuk SET comma-separated milik MySQL (API §3.1).
