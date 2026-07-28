@@ -1,9 +1,17 @@
 <?php
 
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\CustomerRequestController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DisputeController;
+use App\Http\Controllers\Admin\ListingController;
+use App\Http\Controllers\Admin\LoginController;
+use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\ReviewController;
+use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\StoreController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\VerificationController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -20,6 +28,21 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+/*
+| Login BERADA DI LUAR grup 'auth' — kalau di dalam, halaman login sendiri
+| menuntut login dan tidak ada yang bisa masuk sama sekali.
+*/
+Route::middleware('guest')->group(function (): void {
+    Route::get('login', [LoginController::class, 'create'])->name('login');
+    Route::post('login', [LoginController::class, 'store'])
+        ->middleware('throttle:admin-login')
+        ->name('login.store');
+});
+
+Route::post('logout', [LoginController::class, 'destroy'])
+    ->middleware('auth')
+    ->name('logout');
+
 Route::middleware(['auth', 'role:admin|super-admin'])->group(function (): void {
 
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
@@ -33,6 +56,10 @@ Route::middleware(['auth', 'role:admin|super-admin'])->group(function (): void {
     Route::get('users/data',    [UserController::class, 'data'])->name('users.data');
     Route::get('stores/data',   [StoreController::class, 'data'])->name('stores.data');
     Route::get('disputes/data', [DisputeController::class, 'data'])->name('disputes.data');
+    Route::get('listings/data', [ListingController::class, 'data'])->name('listings.data');
+    Route::get('orders/data',   [OrderController::class, 'data'])->name('orders.data');
+    Route::get('requests/data', [CustomerRequestController::class, 'data'])->name('requests.data');
+    Route::get('reviews/data',  [ReviewController::class, 'data'])->name('reviews.data');
 
     // --- Pengguna -------------------------------------------------------
     Route::middleware('permission:manage-users')->group(function (): void {
@@ -50,6 +77,44 @@ Route::middleware(['auth', 'role:admin|super-admin'])->group(function (): void {
     Route::middleware('permission:verify-stores')->group(function (): void {
         Route::post('stores/{store}/approve', [StoreController::class, 'approve'])->name('stores.approve');
         Route::post('stores/{store}/reject', [StoreController::class, 'reject'])->name('stores.reject');
+    });
+
+    // --- Verifikasi KTP ---------------------------------------------------
+    Route::middleware('permission:verify-users')->group(function (): void {
+        Route::get('verifications', [VerificationController::class, 'index'])->name('verifications.index');
+        Route::post('verifications/users/{user}/approve', [VerificationController::class, 'approveUser'])->name('verifications.users.approve');
+        Route::post('verifications/users/{user}/reject', [VerificationController::class, 'rejectUser'])->name('verifications.users.reject');
+    });
+
+    // --- Kategori ---------------------------------------------------------
+    Route::middleware('permission:manage-categories')->group(function (): void {
+        Route::resource('categories', CategoryController::class)->except(['show']);
+    });
+
+    // --- Listing ----------------------------------------------------------
+    Route::middleware('permission:manage-listings')->group(function (): void {
+        Route::resource('listings', ListingController::class)->only(['index', 'show', 'destroy']);
+    });
+
+    // --- Permintaan & pesanan (hanya baca) --------------------------------
+    Route::middleware('permission:manage-requests')->group(function (): void {
+        Route::resource('requests', CustomerRequestController::class)->only(['index', 'show'])
+            ->parameters(['requests' => 'customerRequest']);
+    });
+
+    Route::middleware('permission:manage-orders')->group(function (): void {
+        Route::resource('orders', OrderController::class)->only(['index', 'show']);
+    });
+
+    // --- Ulasan -----------------------------------------------------------
+    Route::middleware('permission:manage-reviews')->group(function (): void {
+        Route::resource('reviews', ReviewController::class)->only(['index', 'destroy']);
+    });
+
+    // --- Pengaturan sistem (hanya super-admin lewat permission) -----------
+    Route::middleware('permission:manage-settings')->group(function (): void {
+        Route::get('settings', [SettingController::class, 'index'])->name('settings');
+        Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
     });
 
     // --- Laporan masalah -------------------------------------------------

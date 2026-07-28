@@ -94,6 +94,28 @@ if (routes) {
     fail('PATCH /auth/profile memakai profile.complete — pengguna baru akan terkunci');
   } else ok('PATCH /auth/profile bebas dari profile.complete');
 
+  // --- Login panel admin ---------------------------------------------
+  // Halaman login WAJIB di luar grup 'auth'; kalau di dalam, halaman itu
+  // menuntut login dan tidak ada yang bisa masuk sama sekali.
+  const loginGet = routes.find(r => r.uri === 'admin/login' && r.method.includes('GET'));
+  const loginPost = routes.find(r => r.uri === 'admin/login' && r.method.includes('POST'));
+
+  if (!loginGet || !loginPost) fail('halaman login admin tidak ada — panel tidak bisa diakses');
+  else {
+    const authed = m => /Authenticate\b/.test(m) && !/RedirectIfAuthenticated/.test(m);
+    if (loginGet.middleware.some(authed)) fail('GET admin/login berada di balik auth — tidak ada yang bisa masuk');
+    else ok('halaman login di luar grup auth');
+
+    // Kata sandi adalah sasaran tebak-paksa; throttle khusus wajib (§18A.5).
+    if (!loginPost.middleware.some(m => /ThrottleRequests:admin-login/.test(m))) {
+      fail('POST admin/login tanpa throttle:admin-login — terbuka untuk tebak-paksa');
+    } else ok('login admin memakai throttle:admin-login');
+  }
+
+  if (!routes.some(r => r.uri === 'admin/logout' && r.method.includes('POST'))) {
+    fail('logout admin tidak ada, atau bukan POST');
+  } else ok('logout admin memakai POST');
+
   // Nama route admin tidak boleh dobel prefix.
   const doubled = routes.filter(r => r.name?.startsWith('admin.admin.'));
   if (doubled.length) fail(`nama route dobel prefix: ${doubled.map(r => r.name).join(', ')}`);
@@ -165,6 +187,31 @@ else {
     fail(`{!! !!} dipakai di: ${unescaped.map(p => path.basename(p)).join(', ')} — mematikan escaping`);
   } else ok('tidak ada {!! !!} — escaping Blade aktif di semua view');
 
+  // Blade hanya menjadi PHP setelah dikompilasi, jadi `php -l` pada berkas
+  // .blade.php tidak membuktikan apa pun. Direktif yang salah pasang baru
+  // meledak saat halaman dibuka — dan itu tidak pernah terjadi di sandbox.
+  // Kode keluar TIDAK bisa dipakai di sini: pembungkus php-wasm selalu
+  // mengembalikan 0, apa pun exit() dari skrip PHP-nya. Jadi keputusan
+  // diambil dari isi keluaran.
+  let compileOut = '';
+  try {
+    compileOut = execFileSync(path.join(ROOT, 'tools/dev/php'),
+      [path.join(ROOT, 'tools/dev/compile-blade.php')],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  } catch (e) {
+    compileOut = (e.stdout?.toString() ?? '') + (e.stderr?.toString() ?? '');
+  }
+
+  const summary = compileOut.trim().split('\n').filter(Boolean).pop() ?? '';
+  const failedCount = Number(summary.match(/(\d+) gagal parse/)?.[1] ?? -1);
+
+  if (failedCount === 0) {
+    ok(summary);
+  } else {
+    const broken = compileOut.split('\n').filter(l => l.startsWith('RUSAK:'));
+    fail('Blade gagal dikompilasi:\n     ' + (broken.join('\n     ') || summary));
+  }
+
   // Setiap form POST butuh @csrf.
   const noCsrf = blades.filter(p => {
     const s = fs.readFileSync(p, 'utf8');
@@ -173,6 +220,29 @@ else {
   if (noCsrf.length) fail(`form tanpa @csrf: ${noCsrf.map(p => path.basename(p)).join(', ')}`);
   else ok('semua form POST memakai @csrf');
 }
+
+// ─────────────────────────────────── 5. Kredensial admin
+console.log('\nKredensial panel admin');
+const userModel = read('seekitar-server/app/Models/User.php');
+
+// Tanpa kolom password, Auth::attempt() selalu gagal dan akun super-admin
+// hasil seeder tidak akan pernah bisa masuk.
+if (!/'password'\s*=>\s*'hashed'/.test(userModel)) {
+  fail("User model tidak meng-cast 'password' => 'hashed' — sandi bisa tersimpan plaintext");
+} else ok("password di-cast 'hashed'");
+
+if (!/'password'/.test(userModel.match(/protected \$hidden = \[([\s\S]*?)\];/)?.[1] ?? '')) {
+  fail('password tidak ada di $hidden — bisa bocor lewat serialisasi model');
+} else ok('password disembunyikan dari serialisasi');
+
+const seeder = read('seekitar-server/database/seeders/RolesAndPermissionsSeeder.php');
+if (!/super_admin_password/.test(seeder)) {
+  fail('seeder tidak menyetel kata sandi super-admin — akun terbuat tapi tak bisa masuk');
+} else ok('seeder menyetel kredensial super-admin');
+
+if (!/logging\.channels\.security|'security'/.test(read('seekitar-server/config/logging.php'))) {
+  fail("kanal log 'security' belum ada (§18A.5)");
+} else ok("kanal log 'security' tersedia");
 
 console.log(problems === 0
   ? '\n✅ Lapisan HTTP konsisten dengan dokumen.'

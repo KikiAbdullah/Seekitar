@@ -47,6 +47,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(append: [
             \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
         ]);
+
+        // Tamu yang membuka halaman admin diarahkan ke login panel, bukan
+        // ke route 'login' bawaan Laravel yang tidak ada di proyek ini.
+        $middleware->redirectGuestsTo(fn () => route('admin.login'));
+
+        // Sebaliknya, admin yang sudah masuk tidak perlu melihat halaman
+        // login lagi.
+        $middleware->redirectUsersTo(fn () => route('admin.dashboard'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

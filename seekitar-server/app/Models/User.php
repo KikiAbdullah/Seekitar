@@ -18,14 +18,14 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, HasLocation, HasRoles, HasUuids, SerializesDatesAsUtc, SoftDeletes;
 
     protected $fillable = [
-        'phone', 'name', 'avatar_url', 'address', 'verification_level',
+        'phone', 'email', 'password', 'name', 'avatar_url', 'address', 'verification_level',
         'ktp_image', 'selfie_image', 'ktp_submitted_at', 'ktp_rejected_reason',
         'nik', 'nik_hash', 'is_blocked', 'blocked_reason', 'blocked_at',
     ];
 
     /** Data pribadi tidak boleh bocor lewat response API (UU PDP). */
     protected $hidden = [
-        'ktp_image', 'selfie_image', 'nik', 'nik_hash', 'remember_token',
+        'ktp_image', 'selfie_image', 'nik', 'nik_hash', 'password', 'remember_token',
     ];
 
     protected function casts(): array
@@ -36,7 +36,25 @@ class User extends Authenticatable
             'is_blocked'         => 'boolean',
             'ktp_submitted_at'   => 'datetime',
             'blocked_at'         => 'datetime',
+            'email_verified_at'  => 'datetime',
+            // Cast 'hashed' membuat password otomatis di-hash saat diisi,
+            // sehingga tidak ada jalur yang bisa menyimpannya plaintext.
+            'password'           => 'hashed',
         ];
+    }
+
+    /**
+     * Bisa masuk panel admin?
+     *
+     * Pengguna biasa tidak punya kata sandi sama sekali — mereka masuk lewat
+     * OTP di aplikasi. Hanya akun dengan kredensial DAN peran admin yang
+     * boleh melewati halaman login web.
+     */
+    public function canAccessAdminPanel(): bool
+    {
+        return $this->password !== null
+            && ! $this->is_blocked
+            && $this->hasAnyRole(['admin', 'super-admin']);
     }
 
     public function stores(): HasMany

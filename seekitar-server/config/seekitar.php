@@ -19,6 +19,18 @@ return [
     'super_admin_phone' => env('SEEKITAR_SUPER_ADMIN_PHONE', '6280000000000'),
 
     /*
+    | Kredensial login PANEL ADMIN (web).
+    |
+    | Terpisah dari OTP: panel dibuka di browser desktop, sering tanpa
+    | WhatsApp di perangkat yang sama (Server_Implementation_Guide §18A.5).
+    |
+    | ⚠️ WAJIB diganti di produksi. Kata sandi default hanya agar lingkungan
+    | pengembangan bisa langsung dipakai setelah `db:seed`.
+    */
+    'super_admin_email'    => env('SEEKITAR_SUPER_ADMIN_EMAIL', 'admin@seekitar.test'),
+    'super_admin_password' => env('SEEKITAR_SUPER_ADMIN_PASSWORD', 'password'),
+
+    /*
     |--------------------------------------------------------------------------
     | Wilayah Operasi
     |--------------------------------------------------------------------------

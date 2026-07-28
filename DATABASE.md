@@ -139,6 +139,9 @@ Setiap tabel dilengkapi penjelasan tiap kolom, alasan pemilihan tipe, dan constr
 | Kolom                | Tipe                 | Keterangan & Rasional                                                                |
 | -------------------- | -------------------- | ------------------------------------------------------------------------------------ |
 | `id`                 | CHAR(36)             | UUID v4, PRIMARY KEY. UUID dipilih agar tidak dapat ditebak, cocok untuk API publik. |
+| `email`              | VARCHAR(255) NULL UNIQUE | **Khusus admin.** Login panel web; NULL untuk pengguna biasa. |
+| `email_verified_at`  | TIMESTAMP NULL       | Bawaan Laravel; belum dipakai alur apa pun.                    |
+| `password`           | VARCHAR(255) NULL    | **Khusus admin.** Hash bcrypt. NULL = akun hanya bisa OTP.     |
 | `phone`              | VARCHAR(15)          | Nomor HP Indonesia (diawali 62), unik. Menghindari duplikasi akun.                   |
 | `name`               | VARCHAR(100)         | Nama asli pengguna, wajib diisi.                                                     |
 | `avatar_url`         | VARCHAR(500) NULL    | URL foto profil, disimpan di cloud storage. Panjang 500 cukup untuk URL pre‑signed.  |
@@ -159,9 +162,28 @@ Setiap tabel dilengkapi penjelasan tiap kolom, alasan pemilihan tipe, dan constr
 | `created_at`         | TIMESTAMP            | Otomatis diisi Laravel.                                                              |
 | `updated_at`         | TIMESTAMP            | Otomatis diisi Laravel.                                                              |
 
+> ### ⚠️ Kenapa `users` punya `email` & `password` padahal identitasnya nomor HP
+>
+> `Server_Implementation_Guide.md` §18A.5 menetapkan login panel admin memakai
+> **email + kata sandi**, sementara §6.1 menyebut panel memakai sesi Laravel
+> biasa. Tanpa kedua kolom ini, `Auth::attempt()` mustahil berhasil:
+> `EloquentUserProvider::validateCredentials()` memanggil `getAuthPassword()`
+> yang mengembalikan NULL — akun super-admin hasil seeder terbuat tetapi
+> **tidak akan pernah bisa masuk**.
+>
+> Panel admin dibuka di browser desktop, sering tanpa WhatsApp di perangkat
+> yang sama. Memaksa OTP di sana berarti admin harus meraih ponsel tiap kali
+> sesi 120 menit habis.
+>
+> Keduanya **NULL-able**: hanya segelintir akun yang punya kredensial ini.
+> Pengguna biasa tetap masuk lewat OTP dan tidak pernah punya kata sandi.
+> MySQL memperlakukan tiap NULL sebagai nilai berbeda, jadi `UNIQUE(email)`
+> tetap sah meski ribuan baris kosong.
+
 **Constraint & Indeks:**
 
 - PRIMARY KEY (`id`)
+- UNIQUE KEY `users_email_unique` (`email`) — NULL-able, hanya akun admin
 - UNIQUE KEY `users_phone_unique` (`phone`)
 - SPATIAL INDEX `users_location_spatial` (`location`)
 - INDEX `users_deleted_at_idx` (`deleted_at`) — untuk filter global scope soft delete.

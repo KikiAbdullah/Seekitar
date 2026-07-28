@@ -92,25 +92,47 @@ class RolesAndPermissionsSeeder extends Seeder
     /**
      * Akun super-admin pertama.
      *
-     * Nomornya diambil dari env agar tiap lingkungan punya pemilik yang
-     * berbeda — menanam satu nomor di kode berarti nomor yang sama menjadi
-     * super-admin di produksi.
+     * Nomor, email, dan kata sandi diambil dari env agar tiap lingkungan
+     * punya pemilik berbeda — menanamnya di kode berarti kredensial contoh
+     * yang sama menjadi super-admin di produksi.
+     *
+     * Email & kata sandi WAJIB ada: panel admin memakai login web, bukan OTP
+     * (Server_Implementation_Guide §18A.5). Tanpa keduanya, akun ini terbuat
+     * tetapi tidak akan pernah bisa masuk.
      */
     private function createSuperAdminUser(): User
     {
-        $phone = (string) config('seekitar.super_admin_phone', '6280000000000');
+        $phone    = (string) config('seekitar.super_admin_phone');
+        $email    = (string) config('seekitar.super_admin_email');
+        $password = (string) config('seekitar.super_admin_password');
 
         $user = User::withTrashed()->firstOrCreate(
             ['phone' => $phone],
             [
                 'name'               => 'Super Admin',
+                'email'              => $email,
                 'verification_level' => VerificationLevel::Pro,
             ],
         );
 
+        // Kata sandi hanya disetel saat akun BARU dibuat. Menimpanya setiap
+        // deploy akan mengembalikan sandi yang sudah diganti admin ke nilai
+        // default — dan nilai default itu ada di berkas .env.example.
+        if ($user->wasRecentlyCreated || $user->password === null) {
+            $user->password = $password;   // cast 'hashed' meng-hash otomatis
+        }
+
+        $user->email ??= $email;
+
         // Akun super-admin tidak boleh tertinggal dalam keadaan terhapus.
         if ($user->trashed()) {
-            $user->restore();
+            $user->restore();   // restore() sudah menyimpan barisnya
+        }
+
+        // WAJIB: tanpa save(), email & kata sandi di atas hanya hidup di
+        // memori dan akun yang baru dibuat tetap tidak bisa masuk.
+        if ($user->isDirty()) {
+            $user->save();
         }
 
         return $user;

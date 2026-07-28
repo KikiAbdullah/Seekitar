@@ -48,14 +48,64 @@
                            href="{{ route('admin.stores.index') }}">Toko</a>
                     </li>
                 @endcan
+                @can('verify-users')
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('admin.verifications.*') ? 'active' : '' }}"
+                           href="{{ route('admin.verifications.index') }}">Verifikasi</a>
+                    </li>
+                @endcan
+                @can('manage-categories')
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}"
+                           href="{{ route('admin.categories.index') }}">Kategori</a>
+                    </li>
+                @endcan
+                @can('manage-listings')
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('admin.listings.*') ? 'active' : '' }}"
+                           href="{{ route('admin.listings.index') }}">Listing</a>
+                    </li>
+                @endcan
+                @can('manage-requests')
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('admin.requests.*') ? 'active' : '' }}"
+                           href="{{ route('admin.requests.index') }}">Permintaan</a>
+                    </li>
+                @endcan
+                @can('manage-orders')
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}"
+                           href="{{ route('admin.orders.index') }}">Pesanan</a>
+                    </li>
+                @endcan
+                @can('manage-reviews')
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}"
+                           href="{{ route('admin.reviews.index') }}">Ulasan</a>
+                    </li>
+                @endcan
                 @can('manage-disputes')
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('admin.disputes.*') ? 'active' : '' }}"
                            href="{{ route('admin.disputes.index') }}">Laporan</a>
                     </li>
                 @endcan
+                @can('manage-settings')
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('admin.settings*') ? 'active' : '' }}"
+                           href="{{ route('admin.settings') }}">Pengaturan</a>
+                    </li>
+                @endcan
             </ul>
-            <span class="navbar-text text-white">{{ auth()->user()?->name }}</span>
+            <div class="d-flex align-items-center gap-3">
+                <span class="navbar-text text-white">{{ auth()->user()?->name }}</span>
+                {{-- POST, bukan GET: logout mengubah state, dan tautan GET
+                     bisa dipicu prefetch browser atau <img> di halaman lain. --}}
+                <form method="POST" action="{{ route('admin.logout') }}" class="m-0">
+                    @csrf
+                    <button type="submit" class="btn btn-sm btn-outline-light">Keluar</button>
+                </form>
+            </div>
         </div>
     </div>
 </nav>

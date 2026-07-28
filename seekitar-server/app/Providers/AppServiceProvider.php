@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use Illuminate\Auth\Events\Failed;
+use Illuminate\Auth\Events\Lockout;
 use App\Events\CustomerRequestCreated;
 use App\Events\OfferAccepted;
 use App\Events\OrderStatusChanged;
@@ -24,6 +26,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use RuntimeException;
@@ -94,6 +97,21 @@ class AppServiceProvider extends ServiceProvider
     /** Pemetaan event → listener (Server_Implementation_Guide §13). */
     private function registerEventListeners(): void
     {
+        // Audit login admin (§18A.5). Dicatat ke kanal terpisah supaya jejak
+        // serangan tidak tenggelam di antara log debug aplikasi.
+        Event::listen(Failed::class, function (Failed $event): void {
+            Log::channel('security')->warning('Login admin gagal', [
+                'email' => $event->credentials['email'] ?? null,
+                'ip'    => request()->ip(),
+            ]);
+        });
+
+        Event::listen(Lockout::class, function () : void {
+            Log::channel('security')->alert('Login admin diblokir sementara', [
+                'ip' => request()->ip(),
+            ]);
+        });
+
         Event::listen(CustomerRequestCreated::class, DispatchRequestBroadcast::class);
         Event::listen(OfferAccepted::class, SendOfferAcceptedNotification::class);
         Event::listen(OrderStatusChanged::class, SendOrderStatusNotification::class);
@@ -122,5 +140,16 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('offers', fn (Request $request) => Limit::perMinute(30)
             ->by('offers:'.$request->user()?->id));
+
+        // Login admin memakai kata sandi — sasaran empuk tebak-paksa, jadi
+        // dibatasi DUA sumbu (§18A.5):
+        //   - per akun+IP: menahan serangan pada satu akun
+        //   - per IP saja: menahan password spraying ke banyak akun
+        // Batas per-IP lebih longgar karena beberapa admin bisa berbagi satu
+        // IP kantor.
+        RateLimiter::for('admin-login', fn (Request $request) => [
+            Limit::perMinute(5)->by('admin-login:'.$request->input('email').'|'.$request->ip()),
+            Limit::perMinute(20)->by('admin-login-ip:'.$request->ip()),
+        ]);
     }
 }

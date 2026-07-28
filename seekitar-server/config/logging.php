@@ -58,6 +58,21 @@ return [
             'ignore_exceptions' => false,
         ],
 
+        /*
+        | Kanal audit keamanan: login admin gagal, pemblokiran sementara,
+        | dan perubahan hak akses (Server_Implementation_Guide §18A.5).
+        |
+        | Dipisah dari log aplikasi supaya jejak serangan tidak tenggelam di
+        | antara ribuan baris debug, dan retensinya bisa lebih panjang.
+        */
+        'security' => [
+            'driver' => 'daily',
+            'path'   => storage_path('logs/security.log'),
+            'level'  => 'info',
+            'days'   => env('LOG_SECURITY_DAILY_DAYS', 90),
+            'replace_placeholders' => true,
+        ],
+
         'single' => [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),

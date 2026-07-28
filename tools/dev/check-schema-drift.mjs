@@ -79,24 +79,61 @@ function docColumns(tbl) {
 const COLRE = /\$table->(?:foreignUuid|foreignId|uuid|string|text|longText|mediumText|decimal|integer|unsignedInteger|bigInteger|unsignedBigInteger|tinyInteger|unsignedTinyInteger|smallInteger|unsignedSmallInteger|boolean|json|jsonb|timestamp|date|dateTime|char|float|double|enum|set|binary|increments)\(\s*'([a-z_0-9]+)'/g;
 
 function migrationTables() {
-  const out = [];
-  for (const f of fs.readdirSync(MIG_DIR).filter(x => x.startsWith('2026_07_27_'))) {
-    const src = fs.readFileSync(path.join(MIG_DIR, f), 'utf8');
+  /**
+   * Satu tabel bisa dibentuk oleh BEBERAPA migrasi: `Schema::create` lebih
+   * dulu, lalu `Schema::table` menambahkan kolom (mis. kredensial admin
+   * ditambahkan ke `users` belakangan). Kolomnya harus DIGABUNG — kalau tiap
+   * berkas dianggap tabel tersendiri, migrasi ALTER terbaca seolah itulah
+   * seluruh isi tabel dan semua kolom asli dilaporkan "hilang".
+   *
+   * @type {Map<string, {files: string[], cols: Set<string>}>}
+   */
+  const byTable = new Map();
+
+  for (const f of fs.readdirSync(MIG_DIR).filter(x => x.startsWith('2026_07_27_')).sort()) {
+    const raw = fs.readFileSync(path.join(MIG_DIR, f), 'utf8');
+
+    // HANYA badan up(). Tanpa pemotongan ini, `dropColumn` di down() ikut
+    // terbaca dan menghapus kolom yang justru baru saja dibuat up() —
+    // migrasi kredensial admin sempat "hilang" tiga kolom karena ini.
+    const upStart = raw.indexOf('public function up()');
+    const downStart = raw.indexOf('public function down()');
+    const src = upStart === -1
+      ? raw
+      : raw.slice(upStart, downStart === -1 ? undefined : downStart);
+
     const tm = src.match(/Schema::(?:create|table)\('([a-z_]+)'/);
     if (!tm) continue;
-    const cols = new Set();
+
+    const table = tm[1];
+    if (!byTable.has(table)) byTable.set(table, { files: [], cols: new Set() });
+    const entry = byTable.get(table);
+    entry.files.push(f);
+
     let m;
-    while ((m = COLRE.exec(src)) !== null) cols.add(m[1]);
-    if (/\$table->timestamps\(\)/.test(src)) { cols.add('created_at'); cols.add('updated_at'); }
-    if (/\$table->softDeletes\(\)/.test(src)) cols.add('deleted_at');
-    if (/\$table->rememberToken\(\)/.test(src)) cols.add('remember_token');
+    COLRE.lastIndex = 0;   // regex /g berbagi state antar pemanggilan
+    while ((m = COLRE.exec(src)) !== null) entry.cols.add(m[1]);
+
+    if (/\$table->timestamps\(\)/.test(src)) { entry.cols.add('created_at'); entry.cols.add('updated_at'); }
+    if (/\$table->softDeletes\(\)/.test(src)) entry.cols.add('deleted_at');
+    if (/\$table->rememberToken\(\)/.test(src)) entry.cols.add('remember_token');
+
     // Kolom spasial ditambahkan lewat raw SQL di SpatialSchema.
     for (const sm of src.matchAll(/addLocationColumn\(\s*'[a-z_]+'[^)]*?(?:column:\s*'([a-z_0-9]+)')?\s*\)/g)) {
-      cols.add(sm[1] ?? 'location');
+      entry.cols.add(sm[1] ?? 'location');
     }
-    out.push({ file: f, table: tm[1], cols: [...cols] });
+
+    // Kolom yang dibuang migrasi berikutnya tidak boleh ikut terhitung.
+    for (const dm of src.matchAll(/dropColumn\(\[([^\]]*)\]\)/g)) {
+      for (const c of dm[1].matchAll(/'([a-z_0-9]+)'/g)) entry.cols.delete(c[1]);
+    }
   }
-  return out;
+
+  return [...byTable].map(([table, { files, cols }]) => ({
+    file: files.join(' + '),
+    table,
+    cols: [...cols],
+  }));
 }
 
 console.log('Migrasi ⇄ DATABASE.md');
