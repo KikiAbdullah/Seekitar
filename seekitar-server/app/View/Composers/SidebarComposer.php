@@ -40,37 +40,51 @@ class SidebarComposer
 
     public function compose(View $view): void
     {
+        $pengguna = $this->pendingVerifikasiPengguna();
+        $toko     = $this->pendingVerifikasiToko();
+
         $view->with([
-            'pendingVerifikasi' => $this->pendingVerifikasi(),
-            'laporanLewatSla'   => $this->laporanLewatSla(),
+            'pendingVerifikasiPengguna' => $pengguna,
+            'pendingVerifikasiToko'     => $toko,
+            // Sidebar menampilkan lencana terpisah per menu; total gabungan
+            // ini tetap dipakai lonceng notifikasi pada header.
+            'pendingVerifikasi'         => $pengguna + $toko,
+            'laporanLewatSla'           => $this->laporanLewatSla(),
         ]);
     }
 
     /**
-     * Total antrian verifikasi = KTP + toko.
+     * Antrian KTP yang menunggu verifikasi.
      *
-     * Digabung karena keduanya berada di bawah satu induk menu "Verifikasi".
-     * Admin yang hanya punya salah satu izin hanya melihat porsinya sendiri —
-     * kalau tidak, angkanya tidak cocok dengan isi halaman yang bisa dibukanya.
+     * Angka antrian adalah data: admin tanpa izin `verify-users` tidak boleh
+     * melihat volume pengajuannya, jadi query-nya pun tidak dijalankan —
+     * bukan sekadar disembunyikan di Blade.
      */
-    private function pendingVerifikasi(): int
+    private function pendingVerifikasiPengguna(): int
     {
-        $total = 0;
-
-        if ($this->gate->allows('verify-users')) {
-            $total += $this->remember('sidebar.pending_ktp', fn (): int => User::query()
-                ->whereNotNull('ktp_submitted_at')
-                ->where('verification_level', VerificationLevel::Basic)
-                ->count());
+        if (! $this->gate->allows('verify-users')) {
+            return 0;
         }
 
-        if ($this->gate->allows('verify-stores')) {
-            $total += $this->remember('sidebar.pending_stores', fn (): int => Store::query()
-                ->where('verification_status', VerificationStatus::Pending)
-                ->count());
+        return $this->remember('sidebar.pending_ktp', fn (): int => User::query()
+            ->whereNotNull('ktp_submitted_at')
+            ->where('verification_level', VerificationLevel::Basic)
+            ->count());
+    }
+
+    /**
+     * Antrian toko yang menunggu verifikasi. Pembatasan izinnya sama seperti
+     * {@see pendingVerifikasiPengguna()}.
+     */
+    private function pendingVerifikasiToko(): int
+    {
+        if (! $this->gate->allows('verify-stores')) {
+            return 0;
         }
 
-        return $total;
+        return $this->remember('sidebar.pending_stores', fn (): int => Store::query()
+            ->where('verification_status', VerificationStatus::Pending)
+            ->count());
     }
 
     /**

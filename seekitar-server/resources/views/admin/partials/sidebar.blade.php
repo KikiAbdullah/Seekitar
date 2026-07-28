@@ -1,12 +1,3 @@
-@php
-    /*
-     * Dihitung sekali; dipakai untuk kelas `show` pada submenu DAN untuk
-     * aria-expanded pada pemicunya. Kalau dihitung terpisah, submenu bisa
-     * terbuka secara visual sementara pembaca layar diberi tahu ia tertutup.
-     */
-    $verifikasiTerbuka = request()->routeIs('admin.verifications.*');
-@endphp
-
 <aside class="left-sidebar">
     <div>
         <div class="brand-logo d-flex align-items-center justify-content-between">
@@ -42,50 +33,47 @@
                         <i class="ti ti-dots nav-small-cap-icon fs-4" aria-hidden="true"></i>
                         <span class="hide-menu">Verifikasi</span>
                     </li>
+                @endcanany
 
+                @can('verify-users')
                     <li class="sidebar-item">
-                        <a class="sidebar-link has-arrow justify-content-between {{ $verifikasiTerbuka ? 'active' : '' }}"
-                           href="javascript:void(0)" aria-expanded="{{ $verifikasiTerbuka ? 'true' : 'false' }}">
+                        <a class="sidebar-link justify-content-between {{ request()->routeIs('admin.verifications.users') ? 'active' : '' }}"
+                           href="{{ route('admin.verifications.users') }}" aria-expanded="false"
+                           @if (request()->routeIs('admin.verifications.users')) aria-current="page" @endif>
                             <div class="d-flex align-items-center gap-3">
-                                <span class="d-flex"><i class="ti ti-checkup-list" aria-hidden="true"></i></span>
-                                <span class="hide-menu">Antrian</span>
+                                <span class="d-flex"><i class="ti ti-id" aria-hidden="true"></i></span>
+                                <span class="hide-menu">Pengguna</span>
                             </div>
-                            @if ($pendingVerifikasi ?? 0)
+                            @if ($pendingVerifikasiPengguna ?? 0)
                                 <div class="hide-menu">
                                     <span class="badge rounded-pill bg-warning-subtle text-warning fs-2 py-1 px-2">
-                                        {{ $pendingVerifikasi }}
+                                        {{ $pendingVerifikasiPengguna }}
                                     </span>
                                 </div>
                             @endif
                         </a>
-
-                        <ul aria-expanded="false" class="collapse first-level {{ $verifikasiTerbuka ? 'in' : '' }}">
-                            @can('verify-users')
-                                <li class="sidebar-item">
-                                    <a class="sidebar-link {{ request()->routeIs('admin.verifications.users') ? 'active' : '' }}"
-                                       href="{{ route('admin.verifications.users') }}">
-                                        <div class="round-16 d-flex align-items-center justify-content-center">
-                                            <i class="ti ti-id" aria-hidden="true"></i>
-                                        </div>
-                                        <span class="hide-menu">Pengguna</span>
-                                    </a>
-                                </li>
-                            @endcan
-
-                            @can('verify-stores')
-                                <li class="sidebar-item">
-                                    <a class="sidebar-link {{ request()->routeIs('admin.verifications.stores') ? 'active' : '' }}"
-                                       href="{{ route('admin.verifications.stores') }}">
-                                        <div class="round-16 d-flex align-items-center justify-content-center">
-                                            <i class="ti ti-building-store" aria-hidden="true"></i>
-                                        </div>
-                                        <span class="hide-menu">Toko</span>
-                                    </a>
-                                </li>
-                            @endcan
-                        </ul>
                     </li>
-                @endcanany
+                @endcan
+
+                @can('verify-stores')
+                    <li class="sidebar-item">
+                        <a class="sidebar-link justify-content-between {{ request()->routeIs('admin.verifications.stores') ? 'active' : '' }}"
+                           href="{{ route('admin.verifications.stores') }}" aria-expanded="false"
+                           @if (request()->routeIs('admin.verifications.stores')) aria-current="page" @endif>
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="d-flex"><i class="ti ti-building-store" aria-hidden="true"></i></span>
+                                <span class="hide-menu">Toko</span>
+                            </div>
+                            @if ($pendingVerifikasiToko ?? 0)
+                                <div class="hide-menu">
+                                    <span class="badge rounded-pill bg-warning-subtle text-warning fs-2 py-1 px-2">
+                                        {{ $pendingVerifikasiToko }}
+                                    </span>
+                                </div>
+                            @endif
+                        </a>
+                    </li>
+                @endcan
 
                 @canany([
                     'manage-users', 'manage-categories', 'manage-stores', 'manage-listings',
