@@ -1,0 +1,280 @@
+/*
+ * Gaya situs publik Seekitar (landing + halaman statis).
+ *
+ * Sebelumnya blok ini ditulis INLINE di layout dan di tiap halaman, sehingga
+ * dikirim ulang pada setiap kunjungan. Sebagai berkas terpisah ia ter-cache
+ * peramban — halaman kedua dan seterusnya tidak mengunduhnya lagi.
+ *
+ * Palet & tipografi resmi: BRANDING-GUIDELINE.md §3.5 & §4.
+ * Batas ukuran huruf terkecil 11px (target pengguna 40+, presbiopia).
+ */
+
+:root {
+    --hijau-lokal: #168A4A;
+    --hijau-gelap: #11703C;
+    --hijau-muda:  #D1FAE5;
+    --kuning:      #F5B83D;
+    --teks:        #1F2933;
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    color: var(--teks);
+}
+
+/* Tidak ada teks di bawah 11px (BRANDING §4). */
+.small, footer { font-size: 14px; }
+
+/* ------------------------------------------------------------- Kerangka */
+
+.navbar-seekitar { background: #fff; border-bottom: 1px solid #E5E7EB; }
+
+.brand-dot {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--hijau-lokal); color: #fff;
+    display: grid; place-items: center; font-weight: 700;
+}
+
+.btn-seekitar { background: var(--hijau-lokal); color: #fff; }
+.btn-seekitar:hover, .btn-seekitar:focus { background: var(--hijau-gelap); color: #fff; }
+
+footer { background: var(--teks); color: #D1D5DB; }
+footer a { color: #fff; text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+
+/* Lewati navigasi — pengguna pembaca layar tidak perlu menelusuri seluruh
+   menu di tiap halaman. */
+.skip-link {
+    position: absolute; left: -999px;
+    background: var(--hijau-lokal); color: #fff; padding: .5rem 1rem;
+}
+.skip-link:focus { left: 1rem; top: 1rem; z-index: 1080; }
+
+/* Navbar sticky menutupi judul anchor — beri ruang sebesar navbar. */
+section[id], h2[id] { scroll-margin-top: 88px; }
+
+/* ================================================= LANDING (prefiks .lp-)
+ *
+ * Mengacu template Modernize "frontend-landingpage" yang di-recolor
+ * Seekitar. Semua dekorasi murni CSS — tidak ada satu pun gambar unduhan —
+ * supaya halaman tetap ringan di koneksi lambat.
+ */
+
+/* --------------------------------------------------------------- Hero */
+.lp-hero {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg, #F0FAF4 0%, #FFFFFF 100%);
+}
+
+/* Varian pendek untuk halaman dalam (tentang, bantuan, kontak, legal):
+   bentuknya sama tetapi hanya setinggi yang dibutuhkan judul + remah. */
+.lp-hero-mini { padding: 3rem 0 2.5rem; }
+
+/* Dua blob lembut ala banner-top-left/right template. Absolut terhadap
+   hero, bukan viewport: tidak ikut bergeser saat gulir dan tidak
+   memunculkan scrollbar horizontal. */
+.lp-blob { position: absolute; border-radius: 50%; pointer-events: none; }
+.lp-blob-hijau {
+    width: 360px; height: 360px; top: -120px; left: -100px;
+    background: radial-gradient(circle at 35% 35%, #D1FAE5 0%, rgba(209, 250, 229, 0) 70%);
+}
+.lp-blob-kuning {
+    width: 420px; height: 420px; bottom: -160px; right: -120px;
+    background: radial-gradient(circle at 60% 60%, #FEF3C7 0%, rgba(254, 243, 199, 0) 70%);
+}
+.lp-hero-mini .lp-blob-kuning { bottom: auto; top: -160px; }
+
+/* Pola titik halus pengganti ornamen garis template. */
+.lp-dots {
+    position: absolute;
+    width: 200px; height: 200px;
+    background-image: radial-gradient(#B7DCC7 2px, transparent 2.2px);
+    background-size: 22px 22px;
+    opacity: .55;
+    pointer-events: none;
+}
+.lp-dots-atas { top: 48px; right: 12%; }
+.lp-dots-bawah { bottom: 40px; left: 8%; }
+@media (max-width: 991.98px) { .lp-dots { display: none; } }
+
+/* Pill pengumuman di atas judul (pola "New — …" pada template). */
+.lp-pill {
+    display: inline-flex; align-items: center; gap: .5rem;
+    background: #fff; border: 1px solid #E5E7EB; border-radius: 999px;
+    padding: .35rem .9rem; font-size: 14px; font-weight: 600;
+    color: var(--hijau-lokal);
+    box-shadow: 0 2px 10px rgba(31, 41, 51, .06);
+}
+.lp-pill::before {
+    content: ""; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--kuning);
+}
+
+/* Kicker kecil di atas judul section. */
+.lp-kicker {
+    color: var(--hijau-lokal); font-weight: 700; font-size: 13px;
+    text-transform: uppercase; letter-spacing: .08em;
+}
+
+/* Tumpukan avatar inisial + kalimat kepercayaan (panel tidak menyimpan
+   foto pengguna publik, jadi inisial menggantikan foto template). */
+.lp-avatar-stack { display: inline-flex; }
+.lp-avatar-stack span {
+    width: 42px; height: 42px; border-radius: 50%;
+    border: 2px solid #fff; display: grid; place-items: center;
+    color: #fff; font-weight: 700; font-size: 15px;
+    box-shadow: 0 2px 6px rgba(31, 41, 51, .12);
+}
+.lp-avatar-stack span + span { margin-left: -12px; }
+
+/* Bar ikon tiga layanan (pengganti baris ikon teknologi template). */
+.lp-iconbar {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: 1.25rem 2.5rem; color: #6B7280; font-weight: 600;
+}
+.lp-iconbar .ti { font-size: 22px; vertical-align: -3px; margin-right: .35rem; }
+
+/* ------------------------------------------------------- Mock antarmuka */
+.lp-kartu {
+    background: #fff; border-radius: 18px;
+    box-shadow: 0 18px 44px rgba(31, 41, 51, .10);
+    padding: 1rem 1.1rem;
+}
+.lp-kartu-melayang {
+    position: absolute; z-index: 2;
+    box-shadow: 0 22px 50px rgba(31, 41, 51, .16);
+}
+.lp-melayang-1 { right: -8px; top: -34px; width: 230px; }
+.lp-melayang-2 { left: -26px; bottom: -30px; width: 260px; }
+/* Di ponsel & tablet kartu melayang hanya menutupi teks — susun vertikal. */
+@media (max-width: 991.98px) {
+    .lp-kartu-melayang { position: static; width: 100%; margin-top: .75rem; }
+}
+
+.lp-thumb {
+    width: 44px; height: 44px; border-radius: 12px; flex: 0 0 auto;
+    display: grid; place-items: center; color: #fff; font-size: 20px;
+}
+.lp-skeleton { height: 10px; border-radius: 999px; background: #EEF2F6; }
+
+/* ------------------------------------------------------- Kartu keunggulan */
+.lp-fitur-ikon {
+    width: 52px; height: 52px; border-radius: 14px;
+    display: grid; place-items: center; font-size: 25px;
+}
+.lp-tone-hijau  { background: #D1FAE5; color: var(--hijau-lokal); }
+.lp-tone-kuning { background: #FEF3C7; color: #B45309; }
+.lp-tone-biru   { background: #DBEAFE; color: #2563EB; }
+.lp-tone-merah  { background: #FEE2E2; color: #DC2626; }
+.lp-tone-abu    { background: #F3F4F6; color: #4B5563; }
+
+.lp-kartu-fitur {
+    height: 100%; background: #fff; border: 1px solid #E5E7EB;
+    border-radius: 18px; padding: 1.5rem;
+    transition: box-shadow .18s ease-in-out, transform .18s ease-in-out;
+}
+.lp-kartu-fitur:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 34px rgba(31, 41, 51, .10);
+}
+@media (prefers-reduced-motion: reduce) {
+    .lp-kartu-fitur, .lp-kartu-fitur:hover { transition: none; transform: none; }
+}
+
+/* ------------------------------------------------------------ Cara kerja */
+.lp-langkah-no {
+    width: 34px; height: 34px; border-radius: 50%; flex: 0 0 auto;
+    display: grid; place-items: center; font-weight: 700; font-size: 15px;
+    background: var(--hijau-muda); color: var(--hijau-lokal);
+}
+
+/* -------------------------------------------------------- Pita statistik */
+.lp-stats {
+    background: linear-gradient(135deg, #11703C 0%, #0B5A30 100%);
+    color: #fff;
+}
+.lp-stats .lp-angka { font-size: clamp(1.6rem, 4vw, 2.4rem); font-weight: 800; }
+.lp-stats .lp-label { color: rgba(255, 255, 255, .78); }
+
+/* ------------------------------------------------------------------- CTA */
+.lp-cta {
+    position: relative; overflow: hidden;
+    background: var(--hijau-muda); border-radius: 24px;
+}
+.lp-cta::before {
+    content: ""; position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(22, 138, 74, .16) 2px, transparent 2.2px);
+    background-size: 24px 24px;
+    pointer-events: none;
+}
+
+/* ======================================================= Halaman dalam */
+
+/* Kanal kontak: seluruh kartu adalah tautan (stretched-link), jadi hover
+   harus terasa — sama alasannya dengan .lp-kartu-fitur. */
+.lp-kanal {
+    height: 100%; background: #fff; border: 1px solid #E5E7EB;
+    border-radius: 18px; padding: 1.5rem; position: relative;
+    transition: box-shadow .18s ease-in-out, transform .18s ease-in-out;
+}
+.lp-kanal:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 34px rgba(31, 41, 51, .10);
+}
+@media (prefers-reduced-motion: reduce) {
+    .lp-kanal, .lp-kanal:hover { transition: none; transform: none; }
+}
+
+/* Dokumen legal: kontainer baca dengan lebar kalimat nyaman (~70 karakter),
+   judul bagian yang bisa ditaut, dan daftar yang lega. */
+.lp-doc {
+    background: #fff; border: 1px solid #E5E7EB; border-radius: 24px;
+    padding: clamp(1.5rem, 4vw, 3rem);
+}
+.lp-doc h2 { scroll-margin-top: 88px; }
+.lp-doc li { margin-bottom: .5rem; }
+
+/* Daftar isi pil — ringkas di atas dokumen; pada layar kecil ia membungkus
+   alami sehingga tidak perlu versi sidebar terpisah. */
+.lp-toc {
+    display: flex; flex-wrap: wrap; gap: .5rem;
+}
+.lp-toc a {
+    display: inline-flex; align-items: center; gap: .35rem;
+    border: 1px solid #E5E7EB; border-radius: 999px; background: #fff;
+    padding: .35rem .9rem; font-size: 14px; font-weight: 600;
+    color: var(--teks); text-decoration: none;
+}
+.lp-toc a:hover, .lp-toc a:focus {
+    border-color: var(--hijau-lokal); color: var(--hijau-lokal);
+}
+.lp-toc a .lp-no {
+    color: var(--hijau-lokal); font-weight: 700;
+}
+
+/* Accordion FAQ yang dikartukan: tiap butir terlihat sebagai kartu
+   terpisah, bukan strip tabel — lebih mudah dipindai di pembaca layar
+   maupun layar kecil. */
+.accordion-seekitar .accordion-item {
+    border: 1px solid #E5E7EB; border-radius: 16px !important;
+    overflow: hidden; margin-bottom: .75rem;
+    background: #fff;
+}
+.accordion-seekitar .accordion-button {
+    font-weight: 600; padding: 1.1rem 1.25rem;
+}
+.accordion-seekitar .accordion-button:not(.collapsed) {
+    background: var(--hijau-muda); color: var(--hijau-gelap);
+    box-shadow: none;
+}
+.accordion-seekitar .accordion-button:focus {
+    box-shadow: 0 0 0 .2rem rgba(22, 138, 74, .18);
+    border-color: var(--hijau-lokal);
+    z-index: 3;
+}
+.accordion-seekitar .accordion-button::after {
+    /* Chevron hijau alih-alih panah abu bawaan — konsisten merek. */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23168A4A'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+}
+.accordion-seekitar .accordion-body { color: #374151; }

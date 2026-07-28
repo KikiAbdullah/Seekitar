@@ -4,58 +4,83 @@
 @section('description', 'Kanal pengaduan resmi Seekitar beserta tenggat tanggapannya.')
 
 @section('content')
-<div class="container py-5" style="max-width: 860px">
-    <h1 class="h2 fw-bold mb-3">Kontak &amp; Pengaduan</h1>
-    <p class="text-secondary mb-4">
-        Setiap kanal punya tenggat tanggapan yang mengikat. Sebutkan nomor
-        pesanan bila laporanmu terkait transaksi.
-    </p>
 
-    <div class="table-responsive">
-        <table class="table align-middle">
-            <thead>
-                <tr><th scope="col">Keperluan</th><th scope="col">Alamat</th><th scope="col">Tenggat</th></tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Pengaduan umum</td>
-                    <td><a href="mailto:{{ config('seekitar.contacts.complaint') }}">{{ config('seekitar.contacts.complaint') }}</a></td>
-                    <td>2×24 jam</td>
-                </tr>
-                <tr>
-                    <td>Pelaporan konten ilegal</td>
-                    <td><a href="mailto:{{ config('seekitar.contacts.abuse') }}">{{ config('seekitar.contacts.abuse') }}</a></td>
-                    <td>1×24 jam</td>
-                </tr>
-                <tr>
-                    <td>Permintaan data pribadi (UU PDP)</td>
-                    <td><a href="mailto:{{ config('seekitar.contacts.privacy') }}">{{ config('seekitar.contacts.privacy') }}</a></td>
-                    <td>3×24 jam</td>
-                </tr>
-                <tr>
-                    <td>Laporan celah keamanan</td>
-                    <td><a href="mailto:{{ config('seekitar.contacts.security') }}">{{ config('seekitar.contacts.security') }}</a></td>
-                    <td>1×24 jam</td>
-                </tr>
-                <tr>
-                    <td>Sengketa transaksi</td>
-                    <td>Lewat aplikasi: buka pesanan → Laporkan Masalah</td>
-                    <td>1×24 jam</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+    @include('web.partials._hero', [
+        'kicker'   => 'Kontak & Pengaduan',
+        'judul'    => 'Kontak & Pengaduan',
+        'subjudul' => 'Setiap kanal punya tenggat tanggapan yang mengikat. Sebutkan nomor pesanan bila laporanmu terkait transaksi.',
+    ])
 
-    <div class="alert alert-warning mt-4">
-        <strong>Sengketa transaksi sebaiknya dilaporkan lewat aplikasi</strong>,
-        bukan email. Laporan dari aplikasi otomatis membekukan pesanan
-        sehingga statusnya tidak bisa berubah sampai admin memutuskan.
-    </div>
+    <section class="py-5">
+        <div class="container" style="max-width: 960px;">
 
-    <h2 class="h5 fw-bold mt-5">Penyelenggara</h2>
-    <p class="mb-0">
-        {{ config('seekitar.company.name') }}<br>
-        {{ config('seekitar.company.address') }}
-    </p>
-</div>
+            {{-- Empat kanal email. Seluruh kartu bisa diklik (stretched-link):
+                 target sentuh lebih besar dari sekadar teks alamatnya. --}}
+            <div class="row g-4 mb-4">
+                @foreach ([
+                    ['ti ti-mail', 'hijau', 'Pengaduan umum', 'complaint', '2×24 jam'],
+                    ['ti ti-flag', 'merah', 'Pelaporan konten ilegal', 'abuse', '1×24 jam'],
+                    ['ti ti-lock', 'biru', 'Data pribadi (UU PDP)', 'privacy', '3×24 jam'],
+                    ['ti ti-shield', 'kuning', 'Celah keamanan', 'security', '1×24 jam'],
+                ] as [$ikon, $tone, $keperluan, $kunci, $tenggat])
+                    <div class="col-md-6">
+                        <div class="lp-kanal">
+                            <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
+                                <span class="lp-fitur-ikon lp-tone-{{ $tone }}" aria-hidden="true">
+                                    <i class="{{ $ikon }}"></i>
+                                </span>
+                                <span class="badge text-bg-light border">≤ {{ $tenggat }}</span>
+                            </div>
+                            <h2 class="h6 fw-bold mb-1">{{ $keperluan }}</h2>
+                            <a href="mailto:{{ config('seekitar.contacts.' . $kunci) }}"
+                               class="stretched-link text-decoration-none fw-semibold"
+                               style="color: var(--hijau-lokal); word-break: break-all;">
+                                {{ config('seekitar.contacts.' . $kunci) }}
+                            </a>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
+            {{-- Sengketa transaksi: BUKAN email — lewat aplikasi agar pesanan
+                 langsung membeku. Ditampilkan menonjol karena paling sering
+                 keliru dikirim ke email. --}}
+            <div class="lp-kanal mb-4" style="border-color: var(--kuning); background: #FFFBEB;">
+                <div class="d-flex gap-3">
+                    <span class="lp-fitur-ikon lp-tone-kuning flex-shrink-0" aria-hidden="true">
+                        <i class="ti ti-gavel"></i>
+                    </span>
+                    <div>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                            <h2 class="h6 fw-bold mb-0">Sengketa transaksi</h2>
+                            <span class="badge text-bg-light border">≤ 1×24 jam</span>
+                        </div>
+                        <p class="mb-0">
+                            <strong>Laporkan lewat aplikasi: buka pesanan → Laporkan Masalah.</strong>
+                            Sebaiknya bukan lewat email — laporan dari aplikasi otomatis membekukan
+                            pesanan, sehingga statusnya tidak bisa berubah sampai admin memutuskan.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Penyelenggara (wajib tercantum untuk PSE). --}}
+            <div class="lp-kanal">
+                <div class="d-flex gap-3">
+                    <span class="lp-fitur-ikon lp-tone-abu flex-shrink-0" aria-hidden="true">
+                        <i class="ti ti-building"></i>
+                    </span>
+                    <div>
+                        <h2 class="h6 fw-bold mb-1">Penyelenggara</h2>
+                        <p class="mb-0">
+                            {{ config('seekitar.company.name') }}<br>
+                            {{ config('seekitar.company.address') }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
 @endsection

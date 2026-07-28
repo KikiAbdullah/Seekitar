@@ -32,47 +32,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 
-    <style>
-        /* Palet & tipografi resmi (BRANDING-GUIDELINE.md §3.5, §4) */
-        :root {
-            --hijau-lokal: #168A4A;
-            --hijau-muda:  #D1FAE5;
-            --kuning:      #F5B83D;
-            --teks:        #1F2933;
-        }
-        body {
-            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-            color: var(--teks);
-        }
-        /* Tidak ada teks di bawah 11px — target pengguna 40+ tahun yang
-           umumnya sudah presbiopia (BRANDING §4). */
-        .small, footer { font-size: 14px; }
+    {{-- Ikon Tabler — berkas yang sama dengan panel admin, sudah lokal. --}}
+    <link rel="stylesheet" href="{{ asset('vendor/modernize/css/icons/tabler-icons/tabler-icons.min.css') }}">
 
-        .navbar-seekitar { background: #fff; border-bottom: 1px solid #E5E7EB; }
-        .brand-dot {
-            width: 36px; height: 36px; border-radius: 50%;
-            background: var(--hijau-lokal); color: #fff;
-            display: grid; place-items: center; font-weight: 700;
-        }
-        .btn-seekitar { background: var(--hijau-lokal); color: #fff; }
-        .btn-seekitar:hover { background: #11703C; color: #fff; }
-        .hero { background: var(--hijau-muda); }
-        .fitur-ikon {
-            width: 56px; height: 56px; border-radius: 16px;
-            background: var(--hijau-muda); color: var(--hijau-lokal);
-            display: grid; place-items: center; font-size: 24px;
-        }
-        footer { background: var(--teks); color: #D1D5DB; }
-        footer a { color: #fff; text-decoration: none; }
-        footer a:hover { text-decoration: underline; }
-        /* Lewati navigasi — pengguna pembaca layar tidak perlu menelusuri
-           seluruh menu di tiap halaman. */
-        .skip-link {
-            position: absolute; left: -999px;
-            background: var(--hijau-lokal); color: #fff; padding: .5rem 1rem;
-        }
-        .skip-link:focus { left: 1rem; top: 1rem; z-index: 1080; }
-    </style>
+    {{-- Seluruh gaya situs publik. Berkas terpisah (bukan <style> inline)
+         supaya ter-cache peramban dan tidak dikirim ulang tiap halaman. --}}
+    <link rel="stylesheet" href="{{ asset('css/web.css') }}">
     @stack('head')
 </head>
 <body>
