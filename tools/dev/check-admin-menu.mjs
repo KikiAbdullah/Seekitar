@@ -204,6 +204,75 @@ if (!exists(SIDEBAR)) {
   }
 }
 
+// ─────────────────────────────────── 5d. Dasbor
+console.log('\nDasbor (pola index2 template)');
+
+{
+  const DASH = 'seekitar-server/resources/views/admin/dashboard.blade.php';
+  const dash = read(DASH);
+
+  /*
+   * `align-items-strech` — ejaan yang salah, kurang huruf t.
+   *
+   * JUJUR SOAL DAMPAKNYA: ini BUKAN bug visual. Diuji langsung di Chromium
+   * dengan dua kolom flex berdampingan — `align-items:normal` menghasilkan
+   * tinggi yang IDENTIK dengan `align-items:stretch` (200px vs 200px), karena
+   * `normal` memang berperilaku sebagai `stretch` pada flex container. Kelas
+   * yang salah eja itu sekadar tidak ada di CSS, jadi tidak berefek apa pun.
+   *
+   * Tetap ditolak karena menyesatkan: pembaca berikutnya mengira tinggi kartu
+   * disamakan oleh kelas itu, lalu menghapusnya saat merapikan — dan baru
+   * saat itu tata letaknya benar-benar berubah.
+   */
+  const salahEja = (dash.match(/align-items-strech/g) || []).length;
+  if (salahEja) {
+    fail(`${salahEja} kemunculan "align-items-strech" (salah eja, kelasnya tidak ada di CSS) — tulis align-items-stretch`);
+  } else {
+    ok('tidak ada kelas Bootstrap yang salah eja');
+  }
+
+  /*
+   * Tabel ringkas dasbor punya 4 kolom dan sel yang panjang (judul permintaan,
+   * nama toko, rupiah). Pada col-lg-6 = 489px, kolom terakhir "Status"
+   * terpotong di 1440px, 1280px, dan 992px sekaligus — terukur meluber sampai
+   * 262px. Template menaruh tabel selebar ini di kolom lebar (col-lg-8),
+   * bukan dua tabel bersebelahan.
+   */
+  const tabelSempit = [...dash.matchAll(/<div class="col-lg-6 d-flex[^"]*">\s*<div class="card w-100">[\s\S]{0,900}?<table/g)].length;
+  if (tabelSempit) {
+    fail(`${tabelSempit} tabel ringkas di kolom col-lg-6 — kolom terakhir terpotong (terukur meluber s.d. 262px di 992px)`);
+  } else {
+    ok('tabel ringkas dasbor tidak dijepit di kolom setengah lebar');
+  }
+
+  /*
+   * Setiap variabel yang dipakai dasbor harus benar-benar dikirim controller.
+   * `$sorotan` sempat dipakai di Blade sebelum controllernya menyediakan —
+   * render harness menangkapnya, tetapi hanya karena fixture-nya diperbarui.
+   * Pemeriksaan ini membandingkan langsung ke sumbernya.
+   */
+  const ctrl = read('seekitar-server/app/Http/Controllers/Admin/DashboardController.php');
+  const dikirim = new Set(
+    [...ctrl.matchAll(/'(\w+)'\s*=>\s*\$this->/g)].map(m => m[1]),
+  );
+
+  // Variabel tingkat atas yang dirujuk view, tanpa yang berasal dari @foreach
+  // atau helper global.
+  const LOKAL = new Set(['card', 'item', 'role', 'offer', 'hari', 'label', 'loop']);
+  const dipakai = new Set(
+    [...dash.matchAll(/\$(\w+)\s*\[/g)].map(m => m[1])
+      .concat([...dash.matchAll(/\{\{\s*\\?\$(\w+)\b/g)].map(m => m[1]))
+      .filter(v => !LOKAL.has(v) && v !== 'errors'),
+  );
+
+  const takDikirim = [...dipakai].filter(v => !dikirim.has(v));
+  if (takDikirim.length) {
+    fail(`dasbor memakai variabel yang tidak dikirim DashboardController: ${takDikirim.join(', ')}`);
+  } else {
+    ok(`${dikirim.size} variabel dasbor semuanya disediakan controller`);
+  }
+}
+
 // ─────────────────────────────────── 2. @can sidebar ⇄ middleware route
 console.log('\nIzin menu ⇄ izin route');
 
@@ -899,7 +968,13 @@ for (const p of blades) {
   const src = fs.readFileSync(p, 'utf8');
   if (!/@extends\('admin\.layout'\)/.test(src)) continue;
   if (/admin\.partials\.table-page/.test(src)) continue;   // sudah dari partial
-  if (!/card bg-light-primary/.test(src)) {
+  /*
+   * Pencocokan harfiah `card bg-light-primary` terlalu ketat: kartu sambutan
+   * dasbor memakai `card w-100 bg-light-primary` mengikuti pola index2, dan
+   * urutan kelas Bootstrap tidak bermakna. Yang benar-benar diuji adalah
+   * ADANYA kartu bernada primary sebagai kepala halaman, bukan urutan kata.
+   */
+  if (!/class="[^"]*\bcard\b[^"]*\bbg-light-primary\b/.test(src)) {
     tanpaHeader.push(path.basename(path.dirname(p)) + '/' + path.basename(p));
   }
 }

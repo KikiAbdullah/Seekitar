@@ -131,6 +131,7 @@ $paginatorKosong = new Illuminate\Pagination\LengthAwarePaginator([], 0, 20, 1, 
 $halaman = [
     'admin.dashboard' => [
         'stats'     => [],
+        'sorotan'   => ['label' => 'Total Pengguna', 'nilai' => 0],
         'antrian'   => [],
         'ringkas'   => ['requests' => collect(), 'offers' => collect()],
         'chartHari' => 14,

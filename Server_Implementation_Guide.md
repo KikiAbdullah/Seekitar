@@ -247,6 +247,31 @@ Semuanya diukur di Chromium, bukan disimpulkan dari membaca CSS:
 > itu mencari deklarasi `font-size:Npx`, sedangkan ukurannya datang dari
 > **kelas utilitas**. `check-admin-menu.mjs` kini menolak `.fs-1` di sidebar.
 
+##### Dasbor
+
+Mengikuti `package/html/main/index2.html`:
+
+| Blok | Pola template yang dipakai |
+| :-- | :-- |
+| Kartu sambutan | `col-lg-8` + `card bg-light-primary` + ilustrasi `.welcome-bg-img` |
+| Peran & wilayah | `col-lg-4`, daftar ikon kotak `p-6 bg-light-* rounded-2` (pola *Payment Gateways*) |
+| Antrian kerja | Baris ikon + angka + label (pola *Payment Gateways*) |
+| Kartu KPI | `card-title mb-9` + angka `h4` + ikon kotak (pola *Monthly Earnings*) |
+| Tabel ringkas | `table align-middle text-nowrap` + `thead tr.text-muted fw-semibold` + `tbody.border-top` |
+
+Dua penyimpangan **disengaja**, keduanya berdasar ukuran:
+
+1. **Tabel ringkas memakai `col-12`, bukan `col-lg-6`.** Tabelnya 4 kolom
+   dengan sel panjang (judul permintaan, nama toko, rupiah). Pada `col-lg-6`
+   (489px) kolom terakhir **Status terpotong** di 1440px, 1280px, dan 992px —
+   terukur meluber sampai 262px. Template sendiri menaruh tabel selebar ini di
+   `col-lg-8`, bukan berdampingan.
+2. **Ilustrasi sambutan tanpa `mb-n7`.** Aset template aslinya punya ruang
+   kosong di bagian bawah sehingga aman "menembus" tepi kartu.
+   `welcome-bg2.png` **tidak** — diperiksa piksel demi piksel: baris konten
+   terakhir ada di `y=195` dari tinggi 196, jadi ruang kosongnya **0px**.
+   Dengan `mb-n7` gambarnya terpotong 30px.
+
 ##### Tiga cacat template yang diperbaiki di `admin.css`
 
 Ketiganya hanya terlihat saat halaman dirender di peramban sungguhan, dan

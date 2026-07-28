@@ -45,12 +45,41 @@ class DashboardController extends Controller
 
     public function index(): View
     {
+        $stats = $this->stats();
+
         return view('admin.dashboard', [
-            'stats'      => $this->stats(),
+            'stats'      => $stats,
+            'sorotan'    => $this->sorotan($stats),
             'antrian'    => $this->antrian(),
             'ringkas'    => $this->ringkas(),
             'chartHari'  => $this->chartRange(),
         ]);
+    }
+
+    /**
+     * Satu angka untuk kartu sambutan.
+     *
+     * Kartu itu selalu tampil, termasuk bagi admin yang izinnya sedikit, jadi
+     * angkanya TIDAK boleh dipatok ke satu metrik tertentu — `stats()` bisa
+     * saja kosong sama sekali. Yang dipakai adalah KPI pertama yang memang
+     * berhak dilihat pengguna ini; kalau tidak ada satu pun, kartu tetap utuh
+     * dengan nilai nol dan label netral, bukan variabel yang tidak terdefinisi.
+     *
+     * Dihitung di sini, bukan di Blade, supaya view tidak perlu tahu urutan
+     * prioritas KPI.
+     *
+     * @param  array<string, array{label: string, value: int, icon: string, tone: string, hint: string, url: string|null}>  $stats
+     * @return array{label: string, nilai: int}
+     */
+    private function sorotan(array $stats): array
+    {
+        $pertama = reset($stats);
+
+        if ($pertama === false) {
+            return ['label' => 'Belum ada data', 'nilai' => 0];
+        }
+
+        return ['label' => $pertama['label'], 'nilai' => $pertama['value']];
     }
 
     /**

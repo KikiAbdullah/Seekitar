@@ -3,19 +3,75 @@
 
 @section('content')
 
-    <div class="card bg-light-primary shadow-none position-relative overflow-hidden mb-4">
-        <div class="card-body px-4 py-3">
-            <div class="row align-items-center">
-                <div class="col-sm-8">
-                    <h4 class="fw-semibold mb-1">Selamat datang, {{ auth()->user()?->name }}</h4>
-                    <p class="mb-0 fs-3 text-muted">
-                        {{ now()->translatedFormat('l, d F Y') }} &middot; {{ config('seekitar.regency') }}
-                    </p>
+    <div class="row">
+        <div class="col-lg-8 d-flex align-items-stretch">
+            <div class="card w-100 bg-light-primary overflow-hidden shadow-none">
+                <div class="card-body position-relative">
+                    <div class="row">
+                        <div class="col-sm-7">
+                            <div class="d-flex align-items-center mb-7">
+                                <span class="admin-avatar me-6" aria-hidden="true">
+                                    {{ Str::upper(Str::substr(auth()->user()?->name ?? '?', 0, 1)) }}
+                                </span>
+                                <h5 class="fw-semibold mb-0 fs-5">
+                                    Selamat datang, {{ auth()->user()?->name }}
+                                </h5>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <div class="border-end pe-4 border-muted border-opacity-10">
+                                    <h3 class="mb-1 fw-semibold fs-8">{{ \App\Support\Angka::bulat($sorotan['nilai']) }}</h3>
+                                    <p class="mb-0 text-dark">{{ $sorotan['label'] }}</p>
+                                </div>
+                                <div class="ps-4">
+                                    <h3 class="mb-1 fw-semibold fs-8">{{ now()->translatedFormat('d M') }}</h3>
+                                    <p class="mb-0 text-dark">{{ config('seekitar.regency') }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-5">
+                            <div class="welcome-bg-img text-end">
+                                <img src="{{ asset('vendor/modernize/images/backgrounds/welcome-bg2.png') }}"
+                                     alt="" class="img-fluid" width="282" height="196">
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-sm-4 text-sm-end mt-3 mt-sm-0">
-                    @foreach (auth()->user()?->getRoleNames() ?? [] as $role)
-                        <span class="badge bg-primary-subtle text-primary fs-2 px-3 py-2">{{ $role }}</span>
-                    @endforeach
+            </div>
+        </div>
+
+        <div class="col-lg-4 d-flex align-items-stretch">
+            <div class="card w-100">
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h5 class="card-title fw-semibold">Peran &amp; Wilayah</h5>
+                        <p class="card-subtitle mb-0">Hak akses akun Anda</p>
+                    </div>
+
+                    <div class="d-flex align-items-center justify-content-between mb-4">
+                        <div class="d-flex">
+                            <div class="p-6 bg-light-primary rounded-2 me-6 d-flex align-items-center justify-content-center">
+                                <i class="ti ti-shield-check text-primary fs-6" aria-hidden="true"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1 fs-4 fw-semibold">Peran</h6>
+                                <p class="fs-3 mb-0 text-muted">
+                                    {{ (auth()->user()?->getRoleNames() ?? collect())->join(', ') ?: '—' }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex">
+                            <div class="p-6 bg-light-secondary rounded-2 me-6 d-flex align-items-center justify-content-center">
+                                <i class="ti ti-map-pin text-secondary fs-6" aria-hidden="true"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1 fs-4 fw-semibold">{{ config('seekitar.regency') }}</h6>
+                                <p class="fs-3 mb-0 text-muted">Kode BPS {{ config('seekitar.regency_code') }}</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -23,43 +79,60 @@
 
     @if (count($antrian) > 0)
         <div class="row">
-            @foreach ($antrian as $item)
-                <div class="col-6 col-lg-3">
-                    <a href="{{ $item['url'] }}"
-                       class="card border-0 zoom-in bg-light-{{ $item['tone'] }} shadow-none text-decoration-none">
-                        <div class="card-body">
-                            <div class="text-center">
-                                <span class="round-40 d-inline-flex align-items-center justify-content-center rounded-circle bg-{{ $item['tone'] }} text-white mb-3">
-                                    <i class="ti {{ $item['icon'] }} fs-6" aria-hidden="true"></i>
-                                </span>
-                                <h5 class="fw-semibold text-{{ $item['tone'] }} mb-1">
-                                    {{ \App\Support\Angka::bulat($item['value']) }}
-                                </h5>
-                                <p class="fw-semibold fs-3 text-{{ $item['tone'] }} mb-0">{{ $item['label'] }}</p>
-                            </div>
+            <div class="col-12">
+                <div class="card w-100">
+                    <div class="card-body">
+                        <div class="mb-7">
+                            <h5 class="card-title fw-semibold">Antrian Kerja</h5>
+                            <p class="card-subtitle mb-0">Hal yang menunggu tindakan Anda</p>
                         </div>
-                    </a>
+
+                        <div class="row">
+                            @foreach ($antrian as $item)
+                                <div class="col-md-6 col-xl-3">
+                                    <a href="{{ $item['url'] }}"
+                                       class="d-flex align-items-center justify-content-between mb-4 text-decoration-none">
+                                        <div class="d-flex">
+                                            <div class="p-8 bg-light-{{ $item['tone'] }} rounded-2 d-flex align-items-center justify-content-center me-6">
+                                                <i class="ti {{ $item['icon'] }} text-{{ $item['tone'] }} fs-6" aria-hidden="true"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-1 fs-4 fw-semibold text-dark">
+                                                    {{ \App\Support\Angka::bulat($item['value']) }}
+                                                </h6>
+                                                <p class="fs-3 mb-0 text-muted">{{ $item['label'] }}</p>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
                 </div>
-            @endforeach
+            </div>
         </div>
     @endif
 
     @if (count($stats) > 0)
         <div class="row">
             @foreach ($stats as $card)
-                <div class="col-sm-6 col-xl-3">
+                <div class="col-sm-6 col-xl-3 d-flex align-items-stretch">
                     <div class="card w-100">
                         <div class="card-body">
                             <div class="row align-items-start">
                                 <div class="col-8">
-                                    <h5 class="card-title mb-3 fw-semibold">{{ $card['label'] }}</h5>
-                                    <h4 class="fw-semibold mb-3">{{ \App\Support\Angka::bulat($card['value']) }}</h4>
+                                    <h5 class="card-title mb-9 fw-semibold">{{ $card['label'] }}</h5>
+                                    <div class="d-flex align-items-center mb-3">
+                                        <h4 class="fw-semibold mb-0 me-8">
+                                            {{ \App\Support\Angka::bulat($card['value']) }}
+                                        </h4>
+                                    </div>
                                     <p class="fs-3 mb-0 text-muted">{{ $card['hint'] }}</p>
                                 </div>
                                 <div class="col-4">
                                     <div class="d-flex justify-content-end">
-                                        <div class="text-white bg-{{ $card['tone'] }} rounded-circle p-6 d-flex align-items-center justify-content-center">
-                                            <i class="ti {{ $card['icon'] }} fs-6" aria-hidden="true"></i>
+                                        <div class="p-6 bg-light-{{ $card['tone'] }} rounded-2 d-flex align-items-center justify-content-center">
+                                            <i class="ti {{ $card['icon'] }} text-{{ $card['tone'] }} fs-6" aria-hidden="true"></i>
                                         </div>
                                     </div>
                                 </div>
@@ -110,7 +183,7 @@
     <div class="row">
 
         @can('manage-requests')
-            <div class="col-lg-6 d-flex align-items-strech">
+            <div class="col-12 d-flex align-items-stretch">
                 <div class="card w-100">
                     <div class="card-body">
                         <div class="d-sm-flex d-block align-items-center justify-content-between mb-4">
@@ -165,7 +238,7 @@
         @endcan
 
         @can('manage-offers')
-            <div class="col-lg-6 d-flex align-items-strech">
+            <div class="col-12 d-flex align-items-stretch">
                 <div class="card w-100">
                     <div class="card-body">
                         <div class="d-sm-flex d-block align-items-center justify-content-between mb-4">
