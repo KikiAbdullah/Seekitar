@@ -83,6 +83,88 @@ if (!exists(SIDEBAR)) {
   } else {
     ok('induk dropdown Verifikasi memakai @canany');
   }
+
+  /*
+   * Ukuran huruf terkecil di sidebar: fs-1 = .625rem = 10px.
+   *
+   * Ini di bawah batas 11px (BRANDING §4, penolakan TODO_BUG #135), tetapi
+   * pemeriksaan font yang sudah ada TIDAK menangkapnya: ia mencari deklarasi
+   * `font-size:Npx`, sedangkan di sini ukurannya datang dari KELAS utilitas.
+   * Terbukti lewat getComputedStyle di Chromium — tiga elemen sidebar
+   * (dua lencana + kode BPS) merender 10px dan lolos semua checker.
+   */
+  const fs1 = [...bersih.matchAll(/class="[^"]*\bfs-1\b[^"]*"/g)].map(m => m[0].slice(0, 60));
+  if (fs1.length) {
+    fail(`sidebar memakai .fs-1 (= 10px, di bawah batas 11px BRANDING §4): ${fs1.join(', ')}`);
+  } else {
+    ok('sidebar tidak memakai .fs-1 (10px)');
+  }
+
+  /*
+   * Kartu wilayah di kaki sidebar memakai pola .sidebar-ad milik template.
+   * Kelas itu bukan hiasan: template menyembunyikannya otomatis saat
+   * mini-sidebar lewat aturan `[data-sidebartype=mini-sidebar] .sidebar-ad
+   * {display:none}`. Tanpa kelasnya, kartu tetap tampil di sidebar selebar
+   * 87px dan teksnya terpotong.
+   */
+  if (!/class="[^"]*\bsidebar-ad\b/.test(bersih)) {
+    fail('kartu kaki sidebar tidak memakai .sidebar-ad — tidak akan tersembunyi saat mini-sidebar');
+  } else {
+    ok('kartu kaki sidebar memakai pola .sidebar-ad template');
+  }
+}
+
+/*
+ * Backdrop gelap saat sidebar terbuka di layar kecil.
+ *
+ * Template menyediakan `<div class="dark-transparent sidebartoggler">` di luar
+ * .page-wrapper, dan app.min.js memasang penutup pada SETIAP .sidebartoggler.
+ * Tanpa elemen ini, di ponsel sidebar menutupi konten tanpa peredupan dan
+ * satu-satunya cara menutupnya adalah menemukan tombol X — mengetuk di luar
+ * tidak melakukan apa pun. Diverifikasi di Chromium 390px: sebelum perbaikan
+ * `.dark-transparent` tidak ada sama sekali.
+ */
+{
+  const layout = read('seekitar-server/resources/views/admin/layout.blade.php');
+  const adaBackdrop = /class="dark-transparent[^"]*sidebartoggler/.test(layout);
+
+  if (!adaBackdrop) {
+    fail('layout tanpa <div class="dark-transparent sidebartoggler"> — sidebar ponsel tanpa peredupan & tidak bisa ditutup dari luar');
+  } else {
+    ok('backdrop sidebar ponsel ada & terhubung ke sidebartoggler');
+  }
+}
+
+/*
+ * Dua cacat tata letak sidebar yang diukur di peramban, bukan dibaca.
+ *
+ * 1. Lencana menabrak panah .has-arrow. Panah digambar ::after yang
+ *    diposisikan absolut, jadi tidak menempati ruang layout dan lencana di
+ *    ujung baris menimpanya. Terukur: panah x 213–220, lencana 208,6–235.
+ *
+ * 2. Kartu kaki sidebar jatuh di bawah lipatan. Template memberi
+ *    .scroll-sidebar tinggi calc(100vh - 80px) sementara .brand-logo sudah
+ *    memakai 70px — hanya 10px tersisa untuk kartu setinggi 83px.
+ *    Perbaikannya flex, bukan angka calc() baru yang akan salah lagi.
+ */
+{
+  const adminCss = read('seekitar-server/public/css/admin.css')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+
+  if (!/\.sidebar-link\.has-arrow\s*>\s*\.hide-menu:last-child\s*\{[^}]*margin-right/.test(adminCss)) {
+    fail('lencana pada menu bersubmenu tidak diberi ruang — akan menabrak panah .has-arrow');
+  } else {
+    ok('lencana sidebar tidak menabrak panah submenu');
+  }
+
+  const flexKolom = /\.left-sidebar\s*>\s*div\s*\{[^}]*flex-direction:\s*column/.test(adminCss);
+  const gulirFleks = /\.left-sidebar\s+\.scroll-sidebar\s*\{[^}]*min-height:\s*0/.test(adminCss);
+
+  if (!flexKolom || !gulirFleks) {
+    fail('kaki sidebar tidak memakai tata letak flex — kartu wilayah jatuh di bawah lipatan (template menyisakan 10px untuk kartu 83px)');
+  } else {
+    ok('kaki sidebar memakai flex — kartu wilayah selalu terlihat');
+  }
 }
 
 // ─────────────────────────────────── 2. @can sidebar ⇄ middleware route

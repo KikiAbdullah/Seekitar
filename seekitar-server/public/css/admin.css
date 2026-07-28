@@ -59,6 +59,60 @@
     color: #fff;
 }
 
+/*
+ * Lencana pada menu bersubmenu tidak boleh menabrak panah .has-arrow.
+ *
+ * Template menggambar panah lewat ::after yang diposisikan absolut pada
+ * `left: 15px` dari tepi KANAN link (right: auto). Panah itu tidak menempati
+ * ruang layout sama sekali, sehingga lencana di ujung baris menimpanya.
+ * Terbukti di Chromium: panah menempati x 213–220, lencana 208,6–235 — tumpang
+ * tindih 7px penuh, dan angkanya tertutup garis panah.
+ *
+ * Ruang untuk panah disediakan lewat margin pada pembungkus lencana, bukan
+ * dengan menggeser panahnya: menggeser ::after akan merusak semua menu
+ * bersubmenu yang TIDAK punya lencana.
+ *
+ * 28px = 15px jarak panah dari tepi kanan + 7px lebar panah + 6px sela.
+ * Angka ini diukur di peramban, bukan dikira-kira: percobaan pertama dengan
+ * 18px masih menyisakan tumpang tindih 10px.
+ */
+.sidebar-nav .sidebar-link.has-arrow > .hide-menu:last-child {
+    margin-right: 28px;
+}
+
+/*
+ * Kartu wilayah di kaki sidebar harus ikut terlihat.
+ *
+ * Template menaruh .sidebar-ad SETELAH </nav> — sama seperti di sini — tetapi
+ * tinggi yang disediakannya tidak cukup untuk apa pun:
+ *
+ *     .brand-logo      min-height 70px
+ *   + .scroll-sidebar  calc(100vh - 80px)
+ *   ------------------------------------
+ *   = 100vh - 10px, menyisakan 10px untuk kartu setinggi 83px.
+ *
+ * Diukur di Chromium pada viewport 1100px: total 1173px, kartu mulai di y=1106
+ * — 73px di bawah lipatan, jadi tidak pernah terlihat. Ini cacat template,
+ * bukan salah tulis di sini.
+ *
+ * Diperbaiki dengan flex, bukan dengan mengurangi tinggi calc() secara manual:
+ * angka tetap akan salah lagi begitu isi kartu berubah. Dengan flex, area
+ * gulir mengambil sisa ruang berapa pun tinggi kartunya.
+ */
+.left-sidebar > div {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.left-sidebar .scroll-sidebar {
+    flex: 1 1 auto;
+    min-height: 0;       /* tanpa ini flex item menolak menyusut */
+    height: auto;        /* menimpa calc(100vh - 80px) milik template */
+}
+
+.left-sidebar .sidebar-ad { flex: 0 0 auto; }
+
 /* ----------------------------------------------------------- Identitas */
 
 .admin-brand-dot {

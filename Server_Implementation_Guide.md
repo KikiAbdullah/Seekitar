@@ -213,6 +213,33 @@ dan tautan mati membuat admin mengira panelnya rusak:
 Ketiganya ditegakkan `check-admin-menu.mjs`; tautan lupa kata sandi baru boleh
 ditambahkan setelah route-nya benar-benar terdaftar.
 
+##### Sidebar
+
+Mengikuti `<aside class="left-sidebar">` di `package/html/main/index.html`:
+`.brand-logo` → `nav.sidebar-nav.scroll-sidebar > ul#sidebarnav`, lalu kartu
+`.fixed-profile.sidebar-ad` **di luar** `</nav>` (posisi yang sama dengan
+template). Kelas `.sidebar-ad` wajib: template memakainya untuk menyembunyikan
+kartu otomatis saat mini-sidebar.
+
+Backdrop `<div class="dark-transparent sidebartoggler">` ada di `layout.blade.php`,
+di luar `.page-wrapper`. Tanpa elemen itu sidebar ponsel terbuka tanpa
+peredupan dan mengetuk di luar tidak menutupnya — `app.min.js` memasang
+penutup pada setiap `.sidebartoggler`, termasuk backdrop ini.
+
+##### Tiga cacat tata letak sidebar yang diperbaiki
+
+Semuanya diukur di Chromium, bukan disimpulkan dari membaca CSS:
+
+| Cacat | Bukti | Perbaikan |
+| :-- | :-- | :-- |
+| Lencana menabrak panah `.has-arrow` | Panah `x 213–220`, lencana `208,6–235` — tumpang tindih penuh | `margin-right: 28px` pada pembungkus lencana (15px jarak panah + 7px lebar + 6px sela) |
+| Kartu wilayah jatuh di bawah lipatan | `.brand-logo` 70px + `.scroll-sidebar` `calc(100vh - 80px)` = `100vh - 10px`, tersisa 10px untuk kartu 83px | Tata letak **flex** pada `.left-sidebar > div`, bukan angka `calc()` baru yang akan salah lagi |
+| Tiga elemen sidebar merender **10px** | `.fs-1` = `.625rem`; `getComputedStyle` → `10px` | Diganti `.fs-2` (12px) |
+
+> ⚠️ Yang terakhir lolos dari pemeriksaan font yang sudah ada karena checker
+> itu mencari deklarasi `font-size:Npx`, sedangkan ukurannya datang dari
+> **kelas utilitas**. `check-admin-menu.mjs` kini menolak `.fs-1` di sidebar.
+
 ##### Tiga cacat template yang diperbaiki di `admin.css`
 
 Ketiganya hanya terlihat saat halaman dirender di peramban sungguhan, dan

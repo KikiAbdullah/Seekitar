@@ -14,8 +14,9 @@
                 <span class="admin-brand-dot" aria-hidden="true">S</span>
                 <span class="fw-bold fs-5 text-dark">Seekitar</span>
             </a>
-            <div class="close-btn d-xl-none d-block sidebartoggler cursor-pointer" id="sidebarCollapse">
-                <i class="ti ti-x fs-6" aria-hidden="true"></i>
+            <div class="close-btn d-xl-none d-block sidebartoggler cursor-pointer" id="sidebarCollapse"
+                 role="button" tabindex="0" aria-label="Tutup menu">
+                <i class="ti ti-x fs-8 text-muted" aria-hidden="true"></i>
             </div>
         </div>
 
@@ -50,9 +51,11 @@
                                 <span class="hide-menu">Antrian</span>
                             </div>
                             @if ($pendingVerifikasi ?? 0)
-                                <span class="hide-menu badge rounded-pill bg-warning-subtle text-warning fs-1 py-1">
-                                    {{ $pendingVerifikasi }}
-                                </span>
+                                <div class="hide-menu">
+                                    <span class="badge rounded-pill bg-warning-subtle text-warning fs-2 py-1 px-2">
+                                        {{ $pendingVerifikasi }}
+                                    </span>
+                                </div>
                             @endif
                         </a>
 
@@ -174,9 +177,11 @@
                                 <span class="hide-menu">Laporan</span>
                             </div>
                             @if ($laporanLewatSla ?? 0)
-                                <span class="hide-menu badge rounded-pill bg-danger-subtle text-danger fs-1 py-1">
-                                    {{ $laporanLewatSla }}
-                                </span>
+                                <div class="hide-menu">
+                                    <span class="badge rounded-pill bg-danger-subtle text-danger fs-2 py-1 px-2">
+                                        {{ $laporanLewatSla }}
+                                    </span>
+                                </div>
                             @endif
                         </a>
                     </li>
@@ -207,11 +212,18 @@
                     </li>
                 @endcan
             </ul>
-
-            <div class="px-4 py-3 mt-2">
-                <div class="fs-2 text-muted">{{ config('seekitar.regency') }}</div>
-                <div class="fs-1 text-muted opacity-75">Kode BPS {{ config('seekitar.regency_code') }}</div>
-            </div>
         </nav>
+
+        <div class="fixed-profile p-3 bg-light-primary rounded sidebar-ad mt-3 hide-menu">
+            <div class="hstack gap-3">
+                <span class="admin-brand-dot" aria-hidden="true">
+                    <i class="ti ti-map-pin fs-4" aria-hidden="true"></i>
+                </span>
+                <div class="lh-sm">
+                    <h6 class="mb-0 fs-3 fw-semibold">{{ config('seekitar.regency') }}</h6>
+                    <span class="fs-2 text-muted">Kode BPS {{ config('seekitar.regency_code') }}</span>
+                </div>
+            </div>
+        </div>
     </div>
 </aside>
