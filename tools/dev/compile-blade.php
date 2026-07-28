@@ -42,4 +42,37 @@ foreach ($files as $f) {
 }
 echo count($files), " blade dikompilasi, {$bad} gagal parse\n";
 
+/*
+ * Kompilasi saja TIDAK cukup.
+ *
+ * `@php` yang ditulis di dalam komentar {{-- --}} tetap dibaca sebagai
+ * direktif dan membuka blok yang tak pernah tertutup. Hasil kompilasinya
+ * masih PHP yang sah, jadi lolos pemeriksaan sintaks — tetapi meledak dengan
+ * "Cannot end a section without first starting one" begitu di-render.
+ *
+ * Karena itu halaman publik ikut benar-benar di-render di sini.
+ */
+$renderable = [
+    'web.home'    => ['categories' => collect()],
+    'web.about'   => [],
+    'web.help'    => [],
+    'web.contact' => [],
+    'web.privacy' => [],
+    'web.terms'   => [],
+    'web.sitemap' => ['pages' => [['loc' => 'https://seekitar.id/', 'freq' => 'daily', 'priority' => '1.0']]],
+];
+
+$renderFailed = 0;
+foreach ($renderable as $view => $data) {
+    try {
+        Illuminate\Support\Facades\View::make($view, $data)->render();
+    } catch (Throwable $e) {
+        echo 'GAGAL RENDER: ', $view, ' -> ', $e->getMessage(), PHP_EOL;
+        $renderFailed++;
+    }
+}
+echo count($renderable), " halaman dirender, {$renderFailed} gagal render\n";
+
+$bad += $renderFailed;
+
 exit($bad === 0 ? 0 : 1);

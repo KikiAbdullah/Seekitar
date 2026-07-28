@@ -202,14 +202,18 @@ else {
     compileOut = (e.stdout?.toString() ?? '') + (e.stderr?.toString() ?? '');
   }
 
-  const summary = compileOut.trim().split('\n').filter(Boolean).pop() ?? '';
-  const failedCount = Number(summary.match(/(\d+) gagal parse/)?.[1] ?? -1);
+  const parseFailed  = Number(compileOut.match(/(\d+) gagal parse/)?.[1] ?? -1);
+  const renderFailed = Number(compileOut.match(/(\d+) gagal render/)?.[1] ?? -1);
+  const lines = compileOut.trim().split('\n').filter(Boolean);
 
-  if (failedCount === 0) {
-    ok(summary);
+  if (parseFailed === 0 && renderFailed === 0) {
+    // Dua angka: kompilasi DAN render. Kompilasi saja tidak cukup —
+    // @php di dalam komentar Blade tetap menghasilkan PHP yang sah tapi
+    // meledak saat di-render.
+    ok(lines.slice(-2).join(' · '));
   } else {
-    const broken = compileOut.split('\n').filter(l => l.startsWith('RUSAK:'));
-    fail('Blade gagal dikompilasi:\n     ' + (broken.join('\n     ') || summary));
+    const broken = compileOut.split('\n').filter(l => /^(RUSAK|GAGAL RENDER):/.test(l));
+    fail('Blade bermasalah:\n     ' + (broken.join('\n     ') || lines.pop()));
   }
 
   // Setiap form POST butuh @csrf.
