@@ -235,6 +235,13 @@ Semuanya diukur di Chromium, bukan disimpulkan dari membaca CSS:
 | Lencana menabrak panah `.has-arrow` | Panah `x 213–220`, lencana `208,6–235` — tumpang tindih penuh | `margin-right: 28px` pada pembungkus lencana (15px jarak panah + 7px lebar + 6px sela) |
 | Kartu wilayah jatuh di bawah lipatan | `.brand-logo` 70px + `.scroll-sidebar` `calc(100vh - 80px)` = `100vh - 10px`, tersisa 10px untuk kartu 83px | Tata letak **flex** pada `.left-sidebar > div`, bukan angka `calc()` baru yang akan salah lagi |
 | Tiga elemen sidebar merender **10px** | `.fs-1` = `.625rem`; `getComputedStyle` → `10px` | Diganti `.fs-2` (12px) |
+| Ikon submenu merender **7px** | Template mengunci `.first-level .ti` ke `7px`; menu induk 21px | Dinaikkan ke **16px** = ukuran kotak `.round-16` pembungkusnya |
+| Submenu aktif hanya dibedakan **warna** | Hijau `#168A4A` di atas putih = **4,40:1** (AA butuh 4.5); beda dengan non-aktif 2,81:1 pada bobot sama | Latar `--bs-primary-bg-subtle` + `font-weight: 600`, teks `#11703C` → **4,93:1** |
+
+> Kenapa 7px wajar di template tetapi tidak di sini: **seluruh 98 ikon submenu**
+> template adalah `ti-circle` — titik penanda daftar, bukan lambang yang perlu
+> dikenali. Seekitar memakai ikon bermakna (`ti-id`, `ti-building-store`), yang
+> pada 7px menyusut jadi bintik tak terbedakan.
 
 > ⚠️ Yang terakhir lolos dari pemeriksaan font yang sudah ada karena checker
 > itu mencari deklarasi `font-size:Npx`, sedangkan ukurannya datang dari

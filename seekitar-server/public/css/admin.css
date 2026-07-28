@@ -113,6 +113,49 @@
 
 .left-sidebar .sidebar-ad { flex: 0 0 auto; }
 
+/*
+ * Ikon submenu harus terbaca.
+ *
+ * Template mengunci ikon di dalam .first-level ke `font-size: 7px`. Angka itu
+ * masuk akal DI SANA: seluruh 98 ikon submenu di template adalah `ti-circle`
+ * — titik bulat penanda daftar, bukan lambang yang perlu dikenali. Seekitar
+ * memakai ikon bermakna (`ti-id` untuk Pengguna, `ti-building-store` untuk
+ * Toko), dan pada 7px keduanya menyusut jadi bintik abu-abu yang tidak bisa
+ * dibedakan satu sama lain.
+ *
+ * Diukur di Chromium: 7×7 px, sementara ikon menu induk 21×21 px.
+ *
+ * 16px dipilih karena itu tepat ukuran kotak .round-16 pembungkusnya —
+ * ikonnya mengisi penuh tanpa meluber, dan tetap lebih kecil dari induknya
+ * sehingga hierarki menu masih terbaca.
+ */
+.sidebar-nav ul .sidebar-item .first-level .sidebar-link .ti {
+    font-size: 16px;
+}
+
+/*
+ * Submenu aktif harus bisa dikenali tanpa mengandalkan warna saja.
+ *
+ * Template menandai submenu aktif HANYA dengan mengubah warna teks menjadi
+ * hijau, dengan latar dipaksa transparan (`background-color:transparent
+ * !important`). Dua masalah terukur:
+ *
+ *   - Hijau #168A4A di atas putih = 4,40:1 — DI BAWAH ambang WCAG AA 4.5:1
+ *     untuk teks normal. Justru butir terpenting yang paling sulit dibaca.
+ *   - Beda hijau vs abu #2A3547 hanya 2,81:1, dan bobot hurufnya sama (400).
+ *     Bagi pengguna buta warna merah-hijau, butir aktif praktis tidak
+ *     berbeda dari yang lain — melanggar WCAG 1.4.1 (Use of Color).
+ *
+ * Diperbaiki dengan latar hijau lembut + bobot 600: penanda aktif tidak lagi
+ * bergantung pada warna semata, dan teksnya memakai hijau gelap yang lolos
+ * ambang kontras. `!important` wajib — aturan template memakainya.
+ */
+.sidebar-nav ul .sidebar-item .first-level .sidebar-item .sidebar-link.active {
+    background-color: var(--bs-primary-bg-subtle) !important;
+    color: var(--seekitar-green-dark) !important;
+    font-weight: 600;
+}
+
 /* ----------------------------------------------------------- Identitas */
 
 .admin-brand-dot {

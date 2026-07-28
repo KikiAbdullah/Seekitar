@@ -165,6 +165,43 @@ if (!exists(SIDEBAR)) {
   } else {
     ok('kaki sidebar memakai flex — kartu wilayah selalu terlihat');
   }
+
+  /*
+   * Ikon submenu tidak boleh tertinggal di 7px.
+   *
+   * Template mengunci `.first-level .sidebar-link .ti` ke font-size 7px, dan
+   * itu wajar di sana: SEMUA 98 ikon submenu template adalah `ti-circle`,
+   * sekadar titik penanda daftar. Seekitar memakai ikon bermakna, yang pada
+   * 7px menyusut jadi bintik tak terbedakan. Diukur di Chromium: 7×7 px
+   * berbanding 21×21 px milik menu induk.
+   */
+  const ikonSub = adminCss.match(/\.first-level\s+\.sidebar-link\s+\.ti\s*\{[^}]*\}/s)?.[0] ?? '';
+  const ukuran = parseFloat(ikonSub.match(/font-size:\s*(\d+(?:\.\d+)?)px/)?.[1] ?? '0');
+
+  if (ukuran < 12) {
+    fail('ikon submenu tidak diperbesar dari 7px bawaan template — ikon bermakna menyusut jadi bintik');
+  } else {
+    ok(`ikon submenu terbaca (${ukuran}px, bukan 7px bawaan template)`);
+  }
+
+  /*
+   * Submenu aktif tidak boleh dibedakan HANYA lewat warna.
+   *
+   * Template menandainya dengan mengubah teks jadi hijau saja, latar dipaksa
+   * transparan. Terukur: hijau #168A4A di atas putih = 4,40:1 — di bawah
+   * ambang WCAG AA 4.5:1; dan bedanya dengan butir non-aktif hanya 2,81:1
+   * pada bobot huruf yang sama, sehingga tidak terlihat oleh pengguna buta
+   * warna merah-hijau (WCAG 1.4.1).
+   */
+  const aktifSub = adminCss.match(/\.first-level[^{]*\.sidebar-link\.active\s*\{[^}]*\}/s)?.[0] ?? '';
+  const adaLatar = /background-color:\s*var\(--bs-primary-bg-subtle\)/.test(aktifSub);
+  const adaBobot = /font-weight:\s*[6-9]\d\d/.test(aktifSub);
+
+  if (!adaLatar || !adaBobot) {
+    fail('submenu aktif hanya dibedakan warna — butuh latar + bobot huruf (WCAG 1.4.1, kontras template 4,40:1 < 4.5:1)');
+  } else {
+    ok('submenu aktif punya penanda non-warna (latar + bobot)');
+  }
 }
 
 // ─────────────────────────────────── 2. @can sidebar ⇄ middleware route
@@ -405,7 +442,18 @@ const sumberGaya = [...blades, path.join(ROOT, 'seekitar-server/public/css/admin
 const fontKecil = [];
 for (const p of sumberGaya) {
   if (!fs.existsSync(p)) continue;
-  const src = fs.readFileSync(p, 'utf8');
+
+  /*
+   * Komentar dibuang dulu. Catatan yang MENJELASKAN kenapa sebuah ukuran
+   * ditolak sering menyebut angkanya — misalnya "template mengunci ikon ke
+   * font-size: 7px" — dan tanpa pembuangan ini checker melaporkan
+   * penjelasannya sendiri sebagai pelanggaran. Persis jebakan yang sama
+   * dengan prosa di komentar CSS pada pemeriksaan fokus isian.
+   */
+  const src = fs.readFileSync(p, 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')        // komentar CSS & PHP blok
+    .replace(/\{\{--[\s\S]*?--\}\}/g, '');   // komentar Blade
+
   for (const m of src.matchAll(/font-size:\s*(\d+(?:\.\d+)?)px/g)) {
     if (parseFloat(m[1]) < 11) fontKecil.push(`${path.basename(p)}: ${m[0]}`);
   }
