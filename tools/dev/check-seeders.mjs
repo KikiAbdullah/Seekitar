@@ -18,6 +18,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
 const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
@@ -228,6 +229,43 @@ if (!permMig) {
 const userSrc = read('seekitar-server/app/Models/User.php');
 if (!/use .*\bHasRoles\b/.test(userSrc)) fail('User model tidak memakai trait HasRoles');
 else ok('User memakai HasRoles');
+
+// ───────────────────────────────────────────── N. Jalankan seeder sungguhan
+console.log('\nMenjalankan seluruh seeder (SQLite in-memory)');
+
+/*
+ * Pemeriksaan statis TIDAK bisa membuktikan seeder berjalan. Kesalahan yang
+ * paling sering terjadi di lapisan ini — relasi salah nama, kolom wajib tak
+ * terisi, UNIQUE tertabrak di baris ke-300, factory yang menyentuh basis data
+ * di definition() — semuanya baru muncul saat benar-benar dieksekusi.
+ *
+ * Kode keluar diabaikan: pembungkus php-wasm SELALU mengembalikan 0, apa pun
+ * exit() dari skrip PHP-nya. Keputusan diambil dari isi keluaran.
+ */
+let seedOut = '';
+try {
+  seedOut = execFileSync(path.join(ROOT, 'tools/dev/php'),
+    [path.join(ROOT, 'tools/dev/run-seeders.php')],
+    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 600000 });
+} catch (e) {
+  seedOut = (e.stdout?.toString() ?? '') + (e.stderr?.toString() ?? '');
+}
+
+const seedCocok = seedOut.match(/(\d+) masalah/);
+const seedMasalah = seedCocok ? Number(seedCocok[1]) : -1;
+
+if (seedMasalah === 0) {
+  const jumlahTabel = seedOut.split('\n').filter(l => /^ {2}\w+ +\d+/.test(l)).length;
+  ok(`seeder berjalan penuh — ${jumlahTabel} tabel terisi`);
+} else if (seedMasalah < 0) {
+  // Tidak ada baris ringkasan sama sekali = skripnya mati di tengah jalan.
+  fail('seeder tidak selesai:\n     ' + (seedOut.trim().split('\n').slice(-6).join('\n     ') || '(tanpa keluaran)'));
+} else {
+  const rincian = seedOut.split('\n')
+    .filter(l => /GAGAL|KOSONG/.test(l))
+    .slice(0, 8);
+  fail(`seeder bermasalah (${seedMasalah}):\n     ` + rincian.join('\n     '));
+}
 
 console.log(problems === 0
   ? '\n✅ Migrasi & seeder konsisten dengan dokumen.'

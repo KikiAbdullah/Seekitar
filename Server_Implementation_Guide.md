@@ -3298,6 +3298,55 @@ php artisan db:seed --class=CategorySeeder   # satu saja
 
 ---
 
+
+#### 19.2a Factory & data demo bervolume
+
+Selain seeder produksi, tersedia **12 factory** dan `DemoDataSeeder` yang
+mengisi SELURUH tabel dengan ratusan baris realistis (local/testing saja).
+
+| Berkas | Isi |
+| :-- | :-- |
+| `database/factories/Support/Wilayah.php` | 19 titik kecamatan nyata di Kabupaten Pasuruan |
+| `UserFactory` | state `basic`, `verified`, `pro`, `menungguKtp`, `diblokir` |
+| `StoreFactory` | `terverifikasi`, `menunggu`, `ditolak`, `nonaktif`, `tipe()`, `diTitik()` |
+| `ListingFactory` | `produk`, `jasa`, `sewa`, `stokHabis` — 36 judul katalog nyata |
+| `CustomerRequestFactory` | `terbuka`, `ditutup`, `kedaluwarsa`, `diperpanjang`, `mendesak` |
+| `OfferFactory` | `menunggu`, `diterima`, `ditolak`, `lewatWaktu`, `denganHarga()` |
+| `OrderFactory` | tiap status ENUM + `diantar`/`diambil`, `cod`/`transfer` |
+| `ReviewFactory` | `keToko()`, `kePembeli()`, `bintang()` |
+| `DisputeFactory` | `terbuka`, `lewatSla`, `direspons`, `selesai` |
+| `UserDeviceFactory`, `FavoriteFactory`, `CategoryFactory` | pelengkap |
+
+Volume default `DemoDataSeeder` menghasilkan ±1.300 baris; bisa diskalakan
+lewat `SEEKITAR_DEMO_SCALE=0.1 php artisan db:seed`.
+
+**Semua koordinat berada di Kabupaten Pasuruan.** Titik acak sedunia membuat
+`scopeNearby()` tidak pernah mengembalikan apa pun — fitur utama produk justru
+tidak bisa dicoba dengan data contohnya sendiri.
+
+> ⚠️ **Jangan mengacak status dengan `$i % n`.** Pola itu tampak rapi tetapi
+> diam-diam rapuh: dengan 11 baris, `$i % 11 === 0` hanya benar sekali, dan
+> bila indeks itu sudah diambil cabang lain, statusnya **tidak pernah lahir**.
+> Nyata terjadi — status `closed` dan `pending` hilang sama sekali pada volume
+> kecil, membuat filter panel admin selalu kosong. Dipakai
+> `alokasiStatus()` yang menjamin tiap keadaan muncul minimal satu kali.
+
+> ⚠️ **Kolom POINT tidak bisa diisi lewat `definition()`.** Isinya harus
+> ekspresi `ST_GeomFromText(..., 'axis-order=long-lat')`, jadi factory
+> memakai `afterMaking()` yang memanggil `setLocation()`. Menaruh koordinat
+> sebagai atribut semu (`_lat`) **gagal**: factory membuat model lewat
+> `new Model($attributes)` yang menghormati `$fillable`, dan atribut di luar
+> daftar itu melempar `MassAssignmentException` — bukan diabaikan.
+
+**Verifikasi:** `tools/dev/run-seeders.php` benar-benar MENJALANKAN seluruh
+seeder terhadap SQLite in-memory dan memeriksa 18 hal — termasuk apakah setiap
+nilai ENUM terwakili, `rating_avg` cocok dengan ulasannya, dan setiap WKT
+memuat `axis-order=long-lat`. Dipanggil otomatis oleh `check-seeders.mjs`.
+
+SQLite tidak punya CHECK bergaya MySQL, jadi pelanggarannya diperiksa manual
+lewat query di skrip itu. Perilaku constraint sesungguhnya tetap harus
+diverifikasi di MySQL 8.
+
 ## 20. TESTING
 
 Target minimum sebelum rilis: **seluruh endpoint API punya feature test**, dan

@@ -31,7 +31,8 @@ class DatabaseSeeder extends Seeder
         if (app()->environment('local', 'testing')) {
             $this->call([
                 AdminUserSeeder::class,   // akun contoh tiap peran
-                DummyDataSeeder::class,   // toko, listing, permintaan contoh
+                DummyDataSeeder::class,   // data kecil & DETERMINISTIK
+                DemoDataSeeder::class,    // ratusan baris untuk semua tabel
             ]);
         }
     }

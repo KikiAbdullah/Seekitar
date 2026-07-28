@@ -6,6 +6,7 @@ use App\Enums\DeliveryMethod;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
+use App\Models\Concerns\HasLocation;
 use App\Models\Concerns\SerializesDatesAsUtc;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,7 +16,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Order extends Model
 {
-    use HasFactory, HasUuids, SerializesDatesAsUtc;
+    /*
+     * HasLocation dibutuhkan kolom `shipping_location` (POINT SRID 4326).
+     *
+     * Sebelumnya trait ini TIDAK dipasang meski kolomnya ada di migrasi,
+     * sehingga `setLocation(..., 'shipping_location')` melempar
+     * "Call to undefined method App\Models\Order::setLocation()" — dan tidak
+     * ada satu pun jalur yang bisa mengisi titik tujuan antar. Kesalahan yang
+     * sama pernah terjadi pada `users.location`.
+     */
+    use HasFactory, HasLocation, HasUuids, SerializesDatesAsUtc;
 
     protected $fillable = [
         'order_number', 'buyer_id', 'store_id', 'offer_id', 'listing_id',
