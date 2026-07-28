@@ -30,7 +30,7 @@
 
                 <div class="mb-3">
                     <label for="verification_level" class="form-label">Level Verifikasi</label>
-                    <select id="verification_level" name="verification_level" class="form-select">
+                    <select id="verification_level" name="verification_level" class="form-select js-select2">
                         @foreach (\App\Enums\VerificationLevel::cases() as $level)
                             <option value="{{ $level->value }}"
                                 @selected(old('verification_level', $user->verification_level?->value) == $level->value)>

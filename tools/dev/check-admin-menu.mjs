@@ -535,6 +535,70 @@ if (namaDiAksi.length) {
   ok('bilah aksi hanya berisi tombol');
 }
 
+// ── Select2 ────────────────────────────────────────────────────────────
+/*
+ * Setiap <select> panel wajib memakai Select2 agar bisa dicari, dan
+ * pemasangannya harus lewat kelas `.js-select2` — bukan selektor `select`
+ * global, yang akan ikut membungkus pemilih "Tampilkan N entri" milik
+ * Datatables dan membuatnya hilang setiap tabel digambar ulang.
+ */
+const selectTanpaKelas = [];
+for (const p of blades) {
+  /*
+   * Ekspresi Blade dibuang lebih dulu.
+   *
+   * Versi pertama memakai `<select\b[^>]*>` dan langsung salah: tag seperti
+   *   <select id="setting-{{ $s->key }}" ... class="form-select js-select2">
+   * membuat regex berhenti pada `>` MILIK `{{ }}`, sehingga atribut class
+   * yang berada sesudahnya tak pernah terbaca dan berkas yang sudah benar
+   * dilaporkan melanggar. Bug di checker sendiri, ketahuan saat mengujinya.
+   */
+  const src = fs.readFileSync(p, 'utf8')
+    .replace(/\{\{--[\s\S]*?--\}\}/g, '')
+    .replace(/\{\{[\s\S]*?\}\}/g, 'X')
+    .replace(/@\w+\([^)]*\)/g, 'X');
+
+  for (const m of src.matchAll(/<select\b[^>]*?>/g)) {
+    if (!/js-select2/.test(m[0])) {
+      selectTanpaKelas.push(`${path.basename(path.dirname(p))}/${path.basename(p)}`);
+    }
+  }
+}
+if (selectTanpaKelas.length) {
+  fail(`<select> tanpa kelas js-select2: ${[...new Set(selectTanpaKelas)].join(', ')}`);
+} else {
+  ok('semua <select> memakai Select2');
+}
+
+/*
+ * Filter tabel WAJIB memakai jQuery .on('change'), BUKAN addEventListener.
+ *
+ * Select2 mengganti nilai lewat `$el.trigger('change')` jQuery, dan event
+ * sintetis itu tidak menyentuh listener native. Diverifikasi di jsdom:
+ * addEventListener terpanggil 0 kali, jQuery .on 1 kali. Memakai yang salah
+ * membuat SELURUH filter berhenti bekerja tanpa satu pun pesan error.
+ */
+const partialSrc = fs.existsSync(path.join(viewDir, 'partials/table-page.blade.php'))
+  ? fs.readFileSync(path.join(viewDir, 'partials/table-page.blade.php'), 'utf8')
+  : '';
+if (/addEventListener\('change'/.test(partialSrc.replace(/\{\{--[\s\S]*?--\}\}/g, ''))) {
+  fail("filter memakai addEventListener('change') — Select2 memicu event jQuery, filter akan mati diam-diam");
+} else if (!/\$\('\[data-dt-filter/.test(partialSrc)) {
+  fail('filter tabel tidak terpasang listener change apa pun');
+} else {
+  ok("filter memakai jQuery .on('change') — kompatibel dengan Select2");
+}
+
+// Berkas Select2 & temanya harus dimuat layout.
+for (const [aset, label] of [
+  ['select2@4.1.0/dist/js/select2.full.min.js', 'Select2 (varian full, agar i18n bisa didaftarkan)'],
+  ['select2@4.1.0/dist/js/i18n/id.js', 'terjemahan Indonesia Select2'],
+  ['select2-bootstrap-5-theme', 'tema Bootstrap 5 Select2'],
+]) {
+  if (!layoutSrc.includes(aset)) fail(`layout tidak memuat ${label}`);
+}
+ok('aset Select2 lengkap di layout');
+
 // Tabel yang memakai partial table-page tidak boleh lagi merakit DataTable
 // sendiri — dua implementasi berarti perilaku pemilihan bisa menyimpang.
 const daftarTabel = [

@@ -33,8 +33,8 @@
                             </label>
                             <div class="col-sm-7">
                                 @if ($setting->type === 'boolean')
-                                    <select id="setting-{{ $setting->key }}"
-                                            name="settings[{{ $setting->key }}]" class="form-select">
+                                    <select id="setting-{{ $setting->key }}" data-min-search="20"
+                                            name="settings[{{ $setting->key }}]" class="form-select js-select2">
                                         <option value="1" @selected($setting->typedValue())>Aktif</option>
                                         <option value="0" @selected(! $setting->typedValue())>Nonaktif</option>
                                     </select>

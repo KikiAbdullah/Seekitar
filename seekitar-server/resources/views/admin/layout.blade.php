@@ -16,6 +16,11 @@
          rapi karena ketebalan garisnya berbeda (BRANDING §3.7.1). --}}
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/2.1.8/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    {{-- Select2 4.1.0 + tema Bootstrap 5. Tema terpisah wajib: tanpa itu
+         kotak Select2 tidak sejajar tinggi & border dengan .form-control
+         Bootstrap di sebelahnya. --}}
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
     <link href="{{ asset('css/admin.css') }}" rel="stylesheet">
     @stack('styles')
 </head>
@@ -143,6 +148,11 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/2.1.8/js/dataTables.bootstrap5.min.js"></script>
+{{-- select2.full: varian ini sudah memuat modul terjemahan, sehingga berkas
+     i18n/id.js di bawah bisa mendaftarkan dirinya. Varian select2.min biasa
+     TIDAK memuatnya dan bahasa Indonesia diam-diam diabaikan. --}}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/i18n/id.js"></script>
 <script>
     // Token CSRF dipasang sekali untuk seluruh request AJAX.
     $.ajaxSetup({ headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') } });
@@ -171,6 +181,51 @@
     $.extend(true, $.fn.dataTable.defaults, {
         language: { url: @js(asset('vendor/datatables/id.json')) },
     });
+
+    /*
+     * Select2 untuk SEMUA dropdown panel — disetel sekali di sini.
+     *
+     * Dipasang ke `.js-select2`, bukan ke seluruh `select`: kotak centang
+     * palsu, input tersembunyi, atau select bawaan pihak ketiga (mis. pemilih
+     * "Tampilkan N entri" milik Datatables) tidak boleh ikut berubah.
+     * Datatables merender pemilihnya sendiri setiap kali tabel digambar
+     * ulang, dan membungkusnya dengan Select2 membuat kontrol itu hilang
+     * setelah sortir.
+     */
+    window.seekitarSelect2 = function (scope) {
+        const $target = $(scope || document).find('.js-select2');
+        if (!$target.length || typeof $.fn.select2 !== 'function') return;
+
+        $target.each(function () {
+            const $el = $(this);
+
+            // Idempoten: memanggil select2() dua kali pada elemen yang sama
+            // menumpuk kontainer dan menyisakan kotak kosong di bawahnya.
+            if ($el.hasClass('select2-hidden-accessible')) return;
+
+            $el.select2({
+                theme: 'bootstrap-5',
+                language: 'id',
+                width: $el.data('width') || 'style',
+
+                // Placeholder diambil dari opsi kosong bila ada, sehingga
+                // tiap dropdown tidak perlu menuliskannya dua kali.
+                placeholder: $el.data('placeholder') || $el.find('option[value=""]').text() || 'Pilih…',
+
+                // Opsi kosong berfungsi sebagai "hapus pilihan" — tanpa ini,
+                // filter yang sudah dipilih tidak bisa dikembalikan ke Semua
+                // selain lewat daftar.
+                allowClear: $el.find('option[value=""]').length > 0 && !$el.prop('required'),
+
+                // Kotak pencarian disembunyikan pada daftar pendek: untuk 3
+                // pilihan, kolom cari hanya menambah satu langkah tanpa guna.
+                minimumResultsForSearch: Number($el.data('min-search') ?? 8),
+            });
+        });
+    };
+
+    seekitarSelect2();
+
 
     // Sidebar geser di layar kecil. aria-expanded ikut diperbarui — tanpa itu
     // pembaca layar selalu melaporkan menu dalam keadaan tertutup.

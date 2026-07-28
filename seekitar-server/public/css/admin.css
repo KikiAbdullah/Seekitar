@@ -282,6 +282,66 @@ div.dt-container .dt-length select { width: auto; display: inline-block; }
     margin: 0;
 }
 
+/* ----------------------------------------------------------------- Select2 */
+
+/*
+ * Penyelarasan Select2 dengan Bootstrap 5.
+ *
+ * Tema resmi sudah menyamakan warna & border, tetapi tiga hal berikut tetap
+ * perlu ditangani sendiri.
+ */
+
+/* 1. Lebar. `width: 'style'` membuat Select2 mewarisi lebar inline elemen
+      aslinya; untuk <select> tanpa gaya inline hasilnya menciut ke 0 di
+      dalam flexbox. Lebar minimum menjaga kotaknya tetap terbaca. */
+.select2-container { min-width: 190px; }
+
+/* Di dalam form bertata kolom, biarkan Select2 mengisi kolomnya penuh. */
+.col-12 > .select2-container,
+.mb-3 > .select2-container { width: 100% !important; }
+
+/* 2. Tinggi. Select2 memakai padding sendiri sehingga kotaknya beberapa
+      piksel lebih pendek dari .form-control di sebelahnya — perbedaan yang
+      langsung terlihat saat keduanya sebaris. */
+.select2-container--bootstrap-5 .select2-selection {
+    min-height: 38px;
+    font-size: 14px;
+}
+
+.select2-container--bootstrap-5 .select2-selection--single {
+    display: flex;
+    align-items: center;
+}
+
+/* 3. Daftar hasil & kotak cari mengikuti ukuran huruf panel (batas 11px,
+      BRANDING §4). */
+.select2-container--bootstrap-5 .select2-results__option,
+.select2-container--bootstrap-5 .select2-search__field { font-size: 14px; }
+
+/* Pilihan yang sedang disorot memakai hijau merek, bukan biru bawaan. */
+.select2-container--bootstrap-5 .select2-results__option--highlighted[aria-selected] {
+    background-color: var(--seekitar-green);
+    color: #fff;
+}
+
+.select2-container--bootstrap-5 .select2-results__option[aria-selected="true"] {
+    background-color: rgba(22, 138, 74, 0.12);
+    color: var(--seekitar-ink);
+}
+
+/*
+ * Select2 di dalam modal.
+ *
+ * Modal Bootstrap ber-z-index 1055; dropdown Select2 default 1051 sehingga
+ * daftarnya tampil DI BAWAH modal dan tidak bisa diklik sama sekali.
+ */
+.select2-container--open { z-index: 1060; }
+
+/* Kotak pencarian di dalam dropdown perlu jarak agar tidak menempel tepi. */
+.select2-container--bootstrap-5 .select2-dropdown .select2-search {
+    padding: 0.4rem;
+}
+
 /* --------------------------------------------------------------- Responsif */
 
 @media (max-width: 991.98px) {

@@ -148,6 +148,47 @@ composer require yajra/laravel-datatables-buttons:^13.0
 
 **Konfigurasi:** Tidak ada file konfig khusus. Langsung gunakan facade `DataTables`.
 
+#### Select2 untuk semua dropdown
+
+Seluruh `<select>` panel memakai **Select2 4.1.0** + tema Bootstrap 5, dengan
+kotak pencarian dan terjemahan Indonesia. Dipasang sekali di
+`layout.blade.php` lewat helper `seekitarSelect2()`.
+
+```blade
+<select name="status" class="form-select js-select2" data-dt-filter="orders-table">
+```
+
+Keputusan penerapan:
+
+- **Dipasang ke kelas `.js-select2`, bukan selektor `select` global.**
+  Datatables merender pemilih "Tampilkan N entri" miliknya sendiri setiap
+  tabel digambar ulang; membungkusnya dengan Select2 membuat kontrol itu
+  hilang setelah sortir atau ganti halaman.
+- **Varian `select2.full.min.js`, bukan `select2.min.js`.** Hanya varian full
+  yang memuat modul terjemahan, sehingga `i18n/id.js` bisa mendaftarkan diri.
+  Dengan varian biasa, `language: 'id'` diabaikan diam-diam.
+- **`minimumResultsForSearch`** default 8, bisa ditimpa `data-min-search`.
+  Untuk daftar 2–3 pilihan (Aktif/Nonaktif), kotak cari hanya menambah satu
+  langkah tanpa manfaat.
+- **Helper bersifat idempoten** (`select2-hidden-accessible` diperiksa dulu):
+  memanggilnya dua kali pada elemen yang sama menumpuk kontainer dan
+  menyisakan kotak kosong.
+- **`z-index: 1060`** untuk `.select2-container--open`. Modal Bootstrap
+  ber-z-index 1055 sedangkan dropdown Select2 default 1051, sehingga daftarnya
+  tampil di bawah modal dan tidak bisa diklik.
+
+> ⚠️ **Filter tabel WAJIB memakai jQuery `.on('change')`, bukan
+> `addEventListener('change')`.**
+>
+> Select2 mengganti nilai lewat `$el.trigger('change')` milik jQuery. Event
+> sintetis itu **tidak menyentuh listener native** — diverifikasi langsung di
+> jsdom dengan Select2 4.1.0 sungguhan: listener `addEventListener` terpanggil
+> **0 kali**, listener jQuery **1 kali**.
+>
+> Kalau ini terlewat, SELURUH filter tabel berhenti bekerja tanpa satu pun
+> pesan error: dropdown-nya berubah, tabelnya tidak. Ditegakkan
+> `check-admin-menu.mjs`.
+
 #### Pola tabel admin: pilih baris, bukan kolom tombol
 
 Tabel admin **tidak memakai kolom aksi**. Baris dipilih (satu saja), lalu

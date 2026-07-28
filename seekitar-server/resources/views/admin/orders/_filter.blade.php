@@ -2,7 +2,7 @@
 <label for="filter-order-status" class="form-label">Status</label>
 
 <select id="filter-order-status" name="status"
-        class="form-select w-auto d-inline-block" data-dt-filter="orders-table">
+        class="form-select w-auto d-inline-block js-select2" data-dt-filter="orders-table">
     <option value="">Semua</option>
     @foreach (\App\Enums\OrderStatus::cases() as $status)
         {{-- label() dasar, bukan contextualLabel(): filter menyaring NILAI

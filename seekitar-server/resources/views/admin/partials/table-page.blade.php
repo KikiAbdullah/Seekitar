@@ -120,11 +120,19 @@
         columns: columns,
     });
 
-    // Mengubah filter memuat ulang tabel. Tanpa ini, elemen filter terkirim
-    // di request berikutnya saja — pengguna harus menyortir atau berpindah
-    // halaman dulu sebelum pilihannya berlaku.
-    document.querySelectorAll('[data-dt-filter="' + tableId + '"]').forEach(function (el) {
-        el.addEventListener('change', function () { tabel.ajax.reload(); });
+    /*
+     * Mengubah filter memuat ulang tabel.
+     *
+     * WAJIB memakai jQuery `.on('change')`, BUKAN addEventListener.
+     *
+     * Select2 mengganti nilai lewat `$el.trigger('change')` milik jQuery, dan
+     * event sintetis itu TIDAK menyentuh listener native — diverifikasi
+     * langsung di jsdom: listener addEventListener terpanggil 0 kali,
+     * listener jQuery 1 kali. Dengan addEventListener, seluruh filter
+     * berhenti bekerja tanpa satu pun pesan error.
+     */
+    $('[data-dt-filter="' + tableId + '"]').on('change', function () {
+        tabel.ajax.reload();
     });
 
     const bilah = document.getElementById(tableId + '-actions');

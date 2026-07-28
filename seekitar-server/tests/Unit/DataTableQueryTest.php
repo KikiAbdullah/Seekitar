@@ -193,6 +193,54 @@ class DataTableQueryTest extends TestCase
         }
     }
 
+    public function test_semua_select_memakai_select2(): void
+    {
+        $berkas = array_merge(
+            glob(__DIR__.'/../../resources/views/admin/*/*.blade.php') ?: [],
+            glob(__DIR__.'/../../resources/views/admin/*.blade.php') ?: [],
+        );
+
+        foreach ($berkas as $view) {
+            $src = preg_replace(
+                ['/\{\{--[\s\S]*?--\}\}/', '/\{\{[\s\S]*?\}\}/', '/@\w+\([^)]*\)/'],
+                ['', 'X', 'X'],
+                file_get_contents($view),
+            );
+
+            preg_match_all('/<select\b[^>]*?>/', $src, $cocok);
+
+            foreach ($cocok[0] as $tag) {
+                $this->assertStringContainsString(
+                    'js-select2',
+                    $tag,
+                    basename(dirname($view)).'/'.basename($view).' punya <select> tanpa kelas js-select2.',
+                );
+            }
+        }
+    }
+
+    public function test_filter_tabel_memakai_listener_jquery(): void
+    {
+        $partial = $this->tanpaKomentar(
+            __DIR__.'/../../resources/views/admin/partials/table-page.blade.php'
+        );
+
+        /*
+         * Select2 mengganti nilai lewat `$el.trigger('change')` milik jQuery,
+         * dan event sintetis itu TIDAK menyentuh listener native.
+         * Diverifikasi di jsdom: addEventListener terpanggil 0 kali, jQuery
+         * .on 1 kali. Memakai yang salah membuat seluruh filter tabel berhenti
+         * bekerja tanpa satu pun pesan error.
+         */
+        $this->assertStringNotContainsString(
+            "addEventListener('change'",
+            $partial,
+            'Filter memakai listener native — Select2 tidak akan memicunya.',
+        );
+
+        $this->assertStringContainsString("data-dt-filter", $partial);
+    }
+
     public function test_kolom_offers_count_dijamin_ada_nilainya(): void
     {
         $src = $this->tanpaKomentar(__DIR__.'/../../app/DataTables/CustomerRequestsDataTable.php');

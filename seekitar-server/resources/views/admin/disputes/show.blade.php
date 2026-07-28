@@ -45,7 +45,7 @@
                             @csrf
                             <div class="mb-3">
                                 <label for="resolution" class="form-label">Hasil</label>
-                                <select id="resolution" name="resolution" class="form-select" required>
+                                <select id="resolution" data-min-search="20" name="resolution" class="form-select js-select2" required>
                                     <option value="selesai">Teruskan sebagai selesai</option>
                                     <option value="dibatalkan">Batalkan pesanan</option>
                                 </select>
