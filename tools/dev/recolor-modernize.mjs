@@ -111,6 +111,46 @@ if (fs.existsSync(TI)) {
   }
 }
 
+/*
+ * Ilustrasi halaman masuk.
+ *
+ * `login-security.svg` menggambar celana dan jendela peramban dengan biru-ungu
+ * yang serasi dengan tema asli template, bukan dengan hijau Seekitar. Warnanya
+ * ditulis sebagai atribut fill di dalam SVG, jadi CSS tidak bisa
+ * menjangkaunya — satu-satunya cara adalah mengganti nilainya di berkas.
+ *
+ * Dilakukan lewat skrip yang sama, dan bukan dengan tangan, supaya menyalin
+ * ulang aset dari repositori template tetap menghasilkan gambar hijau.
+ */
+const SVG = path.join(ROOT, 'seekitar-server/public/vendor/modernize/images/backgrounds/login-security.svg');
+
+const PETA_SVG = {
+  '#8d95ff': '#3FA46E',   // celana — ungu ke hijau sedang
+  '#757bff': '#2E8F5C',   // bayangan celana
+  '#ccd2ff': '#BFE3CE',   // bidang jendela peramban
+  '#e1e5ff': '#DFF1E7',   // latar avatar & kolom sandi
+  '#112544': '#1F2933',   // garis luar -> Tinta Malam (BRANDING §3.5)
+};
+
+if (fs.existsSync(SVG)) {
+  let svg = fs.readFileSync(SVG, 'utf8');
+  const asli = svg;
+  let nSvg = 0;
+
+  for (const [dari, ke] of Object.entries(PETA_SVG)) {
+    const bagian = svg.split(dari);
+    if (bagian.length > 1) {
+      nSvg += bagian.length - 1;
+      svg = bagian.join(ke);
+    }
+  }
+
+  if (svg !== asli) {
+    fs.writeFileSync(SVG, svg);
+    console.log(`  login-security.svg -> ${nSvg} penggantian warna`);
+  }
+}
+
 fs.writeFileSync(CSS, css);
 
 const total = Object.values(hitung).reduce((a, b) => a + b, 0);

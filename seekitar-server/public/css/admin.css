@@ -227,6 +227,72 @@
     padding: 0.4rem;
 }
 
+/* ------------------------------------------------------- Halaman masuk */
+
+/*
+ * `.radial-gradient` template memanggil `animation: ... running gradient`,
+ * tetapi @keyframes gradient TIDAK ADA di style.min.css maupun di seluruh
+ * varian tema di repositori sumber (style.css, style-green.css, dst.).
+ * Animasi yang menunjuk nama tak dikenal diabaikan browser tanpa peringatan,
+ * jadi latarnya diam di posisi 0% 0% — pojok kiri atas gradasi 400%, nyaris
+ * satu warna. Keyframes-nya didefinisikan di sini agar gradasi benar-benar
+ * bergerak seperti yang jelas dimaksud template.
+ */
+@keyframes gradient {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Pastel biru-ungu bawaan diganti hijau-toska sesuai palet Seekitar. */
+.radial-gradient::before {
+    background: radial-gradient(#d7f0e2, #cfeae0, #d9edf3) 0 0 / 400% 400%;
+}
+
+/* Tinggi kolom ilustrasi = layar dikurangi tinggi baris logo (80px). */
+.admin-login-art { height: calc(100vh - 80px); }
+
+/* ------------------------------------------------------ Fokus isian form */
+
+/*
+ * Dua cacat template yang hanya terlihat saat halaman benar-benar dirender,
+ * keduanya terbukti lewat getComputedStyle di Chromium:
+ *
+ * 1. `.form-control:focus` memakai border #aec3ff — BIRU. Nilai itu lolos dari
+ *    tools/dev/recolor-modernize.mjs karena petanya hanya memuat #5D87FF dan
+ *    turunannya. Akibatnya setiap kotak isian di seluruh panel berkedip biru
+ *    di atas antarmuka hijau.
+ *
+ * 2. Template memasang `:focus{outline:0;box-shadow:none!important}` untuk
+ *    SEMUA elemen. Aturan itu membunuh cincin fokus hijau yang ditulisnya
+ *    sendiri satu baris di bawahnya, sehingga satu-satunya penanda fokus yang
+ *    tersisa adalah perubahan border #dfe5ef -> #aec3ff — kontras terlalu
+ *    tipis untuk dilihat, dan melanggar WCAG 2.4.7 (Focus Visible).
+ *
+ * `!important` di sini WAJIB: tanpa itu aturan global template menang.
+ */
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+    border-color: var(--seekitar-green);
+    box-shadow: 0 0 0 0.25rem rgba(22, 138, 74, 0.25) !important;
+}
+
+/* Isian yang ditolak validasi tetap merah saat difokus — kalau ikut hijau,
+   pesan galat di bawahnya kehilangan penanda visualnya. */
+.form-control.is-invalid:focus {
+    border-color: var(--seekitar-danger);
+    box-shadow: 0 0 0 0.25rem rgba(220, 38, 38, 0.25) !important;
+}
+
+/* Tombol & tautan juga kehilangan cincin fokusnya karena aturan global yang
+   sama; tanpa ini navigasi keyboard tidak terlihat sama sekali. */
+.btn:focus-visible,
+a:focus-visible {
+    outline: 2px solid var(--seekitar-green);
+    outline-offset: 2px;
+}
+
 /* -------------------------------------------------------------- Datatables */
 
 .table, .form-control, .form-select, .btn { font-size: 14px; }
@@ -241,6 +307,9 @@ div.dt-container .dt-length select { width: auto; display: inline-block; }
 @media (prefers-reduced-motion: reduce) {
     .left-sidebar,
     .sidebar-nav .sidebar-link { transition: none !important; }
+
+    /* Gradasi 15 detik di halaman masuk ikut dihentikan. */
+    .radial-gradient::before { animation: none !important; }
 }
 
 @media print {

@@ -14,6 +14,9 @@ Sumber template: `github.com/KikiAbdullah/mordenize-template-bs` → `package/`
 | Warna hijau Seekitar | ✅ 164 penggantian, idempoten |
 | Ikon Tabler | ✅ 40 ikon terverifikasi |
 | Komponen kartu & tabel dasbor | ✅ Sesuai pola asli |
+| Halaman masuk | ✅ Pola dua kolom `authentication-login.html` |
+| ~~Fokus isian form~~ | ✅ **Diperbaiki** — biru `#aec3ff` & cincin fokus hilang |
+| ~~Animasi latar `.radial-gradient`~~ | ✅ **Diperbaiki** — `@keyframes` tidak ada di template |
 | **Paginasi Laravel** | ❌ **Rusak — markup Tailwind, tanpa gaya** |
 | **Tabel responsif** | ⚠️ **2 tabel bisa meluber di ponsel** |
 | Halaman error (403/404/500) | ⚠️ Belum ada, template menyediakan |
@@ -22,6 +25,7 @@ Sumber template: `github.com/KikiAbdullah/mordenize-template-bs` → `package/`
 | Dark mode / RTL / style-switcher | ℹ️ Sengaja tidak dipakai |
 
 **Temuan yang perlu ditindak: 2 bug + 2 halaman hilang.**
+**Sudah ditindak sejak audit ini: 3 cacat template (§5).**
 
 ---
 
@@ -92,6 +96,30 @@ server.
 
 > Catatan: ini butuh keputusan produk lebih dulu — pemulihan lewat email
 > mensyaratkan konfigurasi SMTP yang belum ada di `.env` produksi.
+
+> ⚠️ Tautannya **sengaja belum dipasang** di halaman masuk, meski template
+> menyediakannya. `route('admin.password.request')` yang belum terdaftar
+> melempar `RouteNotFoundException` saat Blade dirender — bukan tautan mati,
+> melainkan **halaman masuk yang mati total** dan panel tidak bisa diakses
+> sama sekali. Dibuktikan dengan memanggil `route()` sungguhan, dan dijaga
+> `check-admin-menu.mjs`.
+
+---
+
+## ✅ 5. Tiga cacat template yang sudah diperbaiki
+
+Ditemukan dengan merender halaman di **Chromium sungguhan** lalu membaca
+`getComputedStyle` — bukan dari membaca berkas. Tidak satu pun memunculkan
+error, dan ketiganya lolos seluruh pemeriksaan statis sebelumnya.
+
+| # | Cacat | Bukti | Perbaikan |
+| :-- | :-- | :-- | :-- |
+| 1 | `.radial-gradient::before` memanggil `animation: … gradient`, tetapi `@keyframes gradient` **tidak ada** di `style.min.css` maupun `style.css` di seluruh varian tema | `grep -c '@keyframes gradient'` → `0` pada berkas sumber yang belum diminifikasi | Keyframes didefinisikan di `admin.css` |
+| 2 | `.form-control:focus` memakai border biru `#aec3ff` — lolos dari `recolor-modernize.mjs` yang petanya hanya memuat `#5D87FF` | `getComputedStyle` → `rgb(174, 195, 255)` | Dipaksa `var(--seekitar-green)` |
+| 3 | `:focus{outline:0;box-shadow:none!important}` global membunuh cincin fokus milik template sendiri (**WCAG 2.4.7**) | `box-shadow` → `none` saat elemen difokus | Cincin hijau dengan `!important` |
+
+Cacat 2 dan 3 **tidak terbatas pada halaman masuk** — keduanya berlaku untuk
+setiap isian form di seluruh panel.
 
 ---
 

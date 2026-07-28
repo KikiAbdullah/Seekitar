@@ -189,6 +189,53 @@ node tools/dev/recolor-modernize.mjs   # 164 penggantian, idempoten
 Skrip itu **wajib dijalankan ulang** setiap kali berkas vendor diperbarui.
 `check-admin-menu.mjs` menolak build yang CSS-nya masih biru.
 
+Skrip yang sama juga mewarnai **`images/backgrounds/login-security.svg`**.
+Warna di dalam SVG ditulis sebagai atribut `fill`, jadi CSS tidak
+menjangkaunya sama sekali — satu-satunya cara adalah mengganti nilainya di
+dalam berkas.
+
+##### Halaman masuk
+
+Mengikuti `package/html/main/authentication-login.html`: dua kolom
+(`col-xl-7` ilustrasi + `col-xl-5` formulir) di atas latar `.radial-gradient`.
+Di bawah 1200px kolom ilustrasi disembunyikan (`d-none d-xl-flex`) dan
+formulirnya menjadi satu kolom penuh.
+
+Tiga elemen template **sengaja tidak disalin**, karena backend-nya tidak ada
+dan tautan mati membuat admin mengira panelnya rusak:
+
+| Elemen template | Alasan dilewati |
+| :-- | :-- |
+| Tombol "Sign in with Google / FB" | Socialite tidak dipasang (`composer.json`) |
+| "New to Modernize? Create an account" | Akun admin dibuat seeder, bukan pendaftaran mandiri |
+| "Forgot Password ?" | Route `password.request` belum ada — memakainya melempar `RouteNotFoundException` dan **mematikan halaman masuk sepenuhnya** |
+
+Ketiganya ditegakkan `check-admin-menu.mjs`; tautan lupa kata sandi baru boleh
+ditambahkan setelah route-nya benar-benar terdaftar.
+
+##### Tiga cacat template yang diperbaiki di `admin.css`
+
+Ketiganya hanya terlihat saat halaman dirender di peramban sungguhan, dan
+tidak satu pun memunculkan error:
+
+1. **`@keyframes gradient` tidak ada.** `.radial-gradient::before` memanggil
+   `animation: … running gradient`, tetapi nama itu tidak terdefinisi di
+   `style.min.css` **maupun** di `style.css` yang belum diminifikasi, di
+   seluruh varian tema repositori sumber. Animasi yang menunjuk nama tak
+   dikenal diabaikan peramban tanpa peringatan, sehingga latarnya membeku.
+   Keyframes-nya didefinisikan di `admin.css`.
+2. **Border fokus biru `#aec3ff`.** Nilai itu tidak ada di peta
+   `recolor-modernize.mjs` (yang hanya memuat `#5D87FF` dan turunannya),
+   jadi ia selamat dari pewarnaan — setiap kotak isian di **seluruh panel**
+   berkedip biru di atas antarmuka hijau.
+3. **Cincin fokus dimatikan template sendiri.** `:focus{outline:0;box-shadow:
+   none!important}` berlaku global dan membunuh cincin fokus yang ditulis
+   template satu baris di bawahnya. Penanda fokus tersisa hanyalah perubahan
+   border tipis — melanggar **WCAG 2.4.7 (Focus Visible)**. Karena itu
+   perbaikannya **wajib** memakai `!important`.
+
+Ditemukan lewat `getComputedStyle` di Chromium, bukan dengan membaca berkas.
+
 ##### Pola halaman
 
 Setiap halaman admin memakai susunan yang sama:

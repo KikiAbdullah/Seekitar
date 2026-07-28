@@ -803,6 +803,184 @@ if (butuhComposer.length) {
   ok('semua view berlencana terdaftar di View::composer');
 }
 
+// ─────────────────────────────────── 5c. Halaman masuk
+console.log('\nHalaman masuk (pola authentication-login template)');
+
+const LOGIN = 'seekitar-server/resources/views/admin/auth/login.blade.php';
+
+if (!exists(LOGIN)) {
+  fail(`${LOGIN} tidak ada`);
+} else {
+  const login = read(LOGIN);
+
+  /*
+   * Struktur dua kolom dari package/html/main/authentication-login.html.
+   *
+   * Kelasnya BUKAN hiasan: `.radial-gradient` dan `.z-index-5` didefinisikan
+   * di style.min.css, dan `col-xl-7` + `col-xl-5` yang berpasangan itulah yang
+   * membuat ilustrasi dan formulir berdampingan. Mengganti salah satunya
+   * membuat halaman kembali menjadi kartu tengah — tanpa error apa pun.
+   */
+  const WAJIB = [
+    ['radial-gradient', 'latar gradasi'],
+    ['z-index-5', 'lapisan konten di atas gradasi'],
+    ['col-xl-7 col-xxl-8', 'kolom ilustrasi'],
+    ['col-xl-5 col-xxl-4', 'kolom formulir'],
+    ['authentication-login', 'panel formulir'],
+    ['min-vh-100', 'tinggi penuh layar'],
+    ['form-check-input primary', 'kotak centang bertema'],
+    ['btn btn-primary w-100 py-8', 'tombol masuk'],
+  ];
+
+  const hilang = WAJIB.filter(([kelas]) => !login.includes(kelas));
+  if (hilang.length) {
+    fail(`halaman masuk kehilangan penanda template: ${hilang.map(([k, ket]) => `${k} (${ket})`).join(', ')}`);
+  } else {
+    ok(`halaman masuk memakai pola template (${WAJIB.length}/${WAJIB.length} penanda)`);
+  }
+
+  /*
+   * Ilustrasi harus benar-benar ada DAN sudah hijau.
+   *
+   * Warna di SVG ditulis sebagai atribut fill, jadi CSS tidak menjangkaunya.
+   * Kalau berkasnya disalin ulang dari template tanpa menjalankan
+   * recolor-modernize.mjs, ilustrasinya kembali ungu di samping formulir hijau
+   * dan tidak ada satu pun pemeriksaan lain yang mengeluh.
+   */
+  const ART = 'seekitar-server/public/vendor/modernize/images/backgrounds/login-security.svg';
+  if (!login.includes('login-security.svg')) {
+    fail('halaman masuk tidak menampilkan ilustrasi login-security.svg');
+  } else if (!exists(ART)) {
+    fail(`ilustrasi dirujuk tetapi berkasnya tidak ada: ${ART}`);
+  } else {
+    const svg = read(ART);
+    const ungu = ['#8d95ff', '#757bff', '#ccd2ff', '#e1e5ff'].filter(w => svg.includes(w));
+
+    if (ungu.length) {
+      fail(`ilustrasi masuk masih ungu bawaan template (${ungu.join(', ')}) — jalankan: node tools/dev/recolor-modernize.mjs`);
+    } else if (!svg.includes('#3FA46E')) {
+      fail('ilustrasi masuk tidak memuat hijau Seekitar — pewarnaan belum dijalankan');
+    } else {
+      ok('ilustrasi masuk sudah diwarnai hijau');
+    }
+  }
+
+  /*
+   * `@keyframes gradient` TIDAK ADA di style.min.css maupun di berkas tema
+   * mana pun di repositori template — sudah diperiksa langsung di style.css
+   * yang belum diminifikasi. Animasi yang menunjuk nama tak dikenal diabaikan
+   * browser diam-diam, jadi gradasinya membeku di satu warna. Definisinya ada
+   * di admin.css; kalau hilang, latarnya diam lagi tanpa peringatan apa pun.
+   */
+  const adminCss = read('seekitar-server/public/css/admin.css');
+  const vendorPunyaKeyframe = read(`${V}/css/style.min.css`).includes('@keyframes gradient');
+
+  if (!vendorPunyaKeyframe && !/@keyframes\s+gradient\b/.test(adminCss)) {
+    fail('.radial-gradient memanggil animasi "gradient" yang tidak didefinisikan di mana pun — latar akan diam');
+  } else {
+    ok('animasi gradasi latar terdefinisi');
+  }
+
+  /*
+   * Elemen template yang TIDAK boleh ikut tersalin.
+   *
+   * Tombol "Sign in with Google/FB" menuntut OAuth yang tidak dipasang
+   * (composer.json tidak memuat Socialite), dan "Create an account" tidak
+   * berlaku: akun admin dibuat lewat seeder, bukan pendaftaran mandiri.
+   * Tautan mati di halaman masuk membuat admin mengira panelnya rusak.
+   */
+  const PALSU = [
+    ['google-icon', 'tombol Google (OAuth tidak dipasang)'],
+    ['facebook-icon', 'tombol Facebook (OAuth tidak dipasang)'],
+    ['Create an account', 'tautan daftar (akun admin dibuat seeder)'],
+    ['Buat akun', 'tautan daftar (akun admin dibuat seeder)'],
+  ];
+  const adaPalsu = PALSU.filter(([t]) => login.includes(t));
+  if (adaPalsu.length) {
+    fail(`halaman masuk memuat elemen tanpa backend: ${adaPalsu.map(([, k]) => k).join(', ')}`);
+  } else {
+    ok('tidak ada tombol/tautan tanpa backend di halaman masuk');
+  }
+
+  /*
+   * "Lupa Kata Sandi" hanya boleh tampil kalau route-nya benar-benar ada.
+   * Template menyediakan tautannya; menyalinnya tanpa route membuat Blade
+   * melempar RouteNotFoundException dan halaman masuk mati total — panel
+   * tidak bisa diakses sama sekali.
+   */
+  const adaRouteLupa = /name\('password\.request'\)|name\('password\.email'\)/.test(read('seekitar-server/routes/admin.php'));
+  const adaTautanLupa = /Lupa [Kk]ata [Ss]andi|Forgot Password/.test(login);
+
+  if (adaTautanLupa && !adaRouteLupa) {
+    fail('tautan "Lupa Kata Sandi" ada tetapi route password.request belum dibuat — halaman masuk akan melempar RouteNotFoundException');
+  } else {
+    ok(adaTautanLupa
+      ? 'tautan lupa kata sandi punya route'
+      : 'tidak ada tautan lupa kata sandi (route-nya memang belum ada)');
+  }
+
+  // Panel memakai satu stylesheet; halaman masuk tidak boleh memuat CDN
+  // Bootstrap/jQuery yang tidak dipakainya (formulirnya HTML murni).
+  const cdnTakTerpakai = ['code.jquery.com', 'bootstrap@5'].filter(c => login.includes(c));
+  if (cdnTakTerpakai.length) {
+    fail(`halaman masuk memuat skrip yang tidak dipakainya: ${cdnTakTerpakai.join(', ')}`);
+  } else {
+    ok('halaman masuk tidak memuat skrip yang tidak dipakai');
+  }
+}
+
+/*
+ * Fokus isian form: hijau, dan benar-benar terlihat.
+ *
+ * Dua cacat template yang HANYA muncul saat halaman dirender sungguhan —
+ * keduanya ditemukan lewat getComputedStyle di Chromium, bukan dengan membaca
+ * berkas:
+ *
+ *   - `.form-control:focus` memakai border #aec3ff (biru). Nilai itu tidak
+ *     ada di peta recolor-modernize.mjs, jadi ia selamat dari pewarnaan dan
+ *     membuat setiap kotak isian berkedip biru di panel hijau.
+ *   - `:focus{outline:0;box-shadow:none!important}` yang berlaku global
+ *     membunuh cincin fokus milik template sendiri — pengguna keyboard
+ *     kehilangan satu-satunya penanda posisi (WCAG 2.4.7).
+ *
+ * Perbaikannya di admin.css. Kalau berkas itu ditata ulang dan aturannya
+ * hilang, tidak ada error apa pun: fokus hanya diam-diam menjadi tak terlihat.
+ */
+{
+  /*
+   * Komentar CSS dibuang DULU, dan itu bukan kerapian belaka.
+   *
+   * Versi pertama pemeriksaan ini mencocokkan pola langsung ke berkas mentah
+   * dan lulus karena mengenai PROSA di dalam komentar yang menjelaskan aturan
+   * — bukan aturannya. Terbukti saat regresi "hapus !important" disuntikkan:
+   * checker tetap hijau. Jebakan yang sama pernah terjadi di
+   * check-datatables.php, waktu kata "withCount" di komentar terbaca sebagai
+   * kode.
+   */
+  const adminCss = read('seekitar-server/public/css/admin.css')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
+
+  const aturanFokus = adminCss.match(/\.form-control:focus[^{]*\{[^}]*\}/s)?.[0] ?? '';
+  const adaFokusHijau = /box-shadow:[^;}]*!important/.test(aturanFokus);
+  const adaBorderHijau = /border-color:\s*var\(--seekitar-green\)/.test(aturanFokus);
+
+  if (!adaBorderHijau) {
+    fail('.form-control:focus tidak dipaksa hijau — template memakai border biru #aec3ff yang lolos pewarnaan');
+  } else if (!adaFokusHijau) {
+    fail('cincin fokus tanpa !important — aturan global :focus{box-shadow:none!important} template akan menang dan fokus jadi tak terlihat (WCAG 2.4.7)');
+  } else {
+    ok('fokus isian hijau & terlihat (mengalahkan :focus{box-shadow:none!important} template)');
+  }
+
+  // Isian bermasalah harus TETAP merah saat difokus; kalau ikut hijau, penanda
+  // galatnya hilang justru pada saat pengguna sedang membetulkannya.
+  if (!/\.form-control\.is-invalid:focus/.test(adminCss)) {
+    fail('.form-control.is-invalid:focus tidak diatur — isian bermasalah berubah hijau saat difokus');
+  } else {
+    ok('isian bermasalah tetap merah saat difokus');
+  }
+}
+
 // ─────────────────────────────────── 6. Query DataTables
 console.log('\nQuery & relasi DataTables');
 

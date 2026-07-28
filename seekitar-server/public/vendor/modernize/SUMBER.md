@@ -27,6 +27,14 @@ tidak menyertakan berkas lisensi apa pun.
 | `js/custom.js` | `dist/js/custom.js` | Inisialisasi tooltip & popover |
 | `js/seekitar.init.js` | **buatan sendiri** | Pengganti `app.init.js` |
 | `images/svgs/`, `images/backgrounds/` | `dist/images/` | Hanya yang dirujuk CSS |
+| `images/backgrounds/login-security.svg` | `dist/images/backgrounds/` | Ilustrasi halaman masuk — **sudah diwarnai hijau** |
+
+> ⚠️ `login-security.svg` **bukan berkas vendor apa adanya**. Ungu bawaannya
+> diganti hijau Seekitar oleh `tools/dev/recolor-modernize.mjs`, karena warna
+> di dalam SVG ditulis sebagai atribut `fill` yang tidak bisa dijangkau CSS.
+> Menyalin ulang berkas ini dari repositori template **tanpa** menjalankan
+> skrip itu akan mengembalikan ilustrasinya menjadi ungu di samping formulir
+> hijau — `check-admin-menu.mjs` menolaknya.
 
 **Tidak disalin** (repo aslinya 328 MB, yang dipakai hanya ~1,6 MB):
 
