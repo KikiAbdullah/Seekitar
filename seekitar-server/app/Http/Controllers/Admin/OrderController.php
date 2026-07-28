@@ -30,8 +30,18 @@ class OrderController extends Controller
      */
     public function show(Order $order): View
     {
-        return view('admin.orders.show', [
-            'order' => $order->load(['store', 'listing', 'disputes']),
-        ]);
+        /*
+         * Muat ulang lewat query agar titik tujuan antar (kolom POINT
+         * biner) terbaca sebagai latitude/longitude biasa, dan seluruh
+         * relasi yang ditampilkan diambil sekaligus (anti N+1). Titik
+         * bisa NULL — pesanan ambil-di-tempat tidak punya tujuan antar.
+         */
+        $order = Order::query()
+            ->withCoordinates('shipping_location')
+            ->with(['buyer', 'store', 'listing', 'offer.request', 'disputes',
+                    'reviews.reviewer', 'cancelledBy', 'disputes.reporter'])
+            ->findOrFail($order->id);
+
+        return view('admin.orders.show', compact('order'));
     }
 }

@@ -25,9 +25,16 @@ class CustomerRequestController extends Controller
 
     public function show(CustomerRequest $customerRequest): View
     {
-        return view('admin.requests.show', [
-            'request' => $customerRequest->load(['user', 'category', 'offers.store']),
-        ]);
+        /*
+         * withCoordinates() membaca titik siar (POINT biner) sebagai
+         * latitude/longitude agar peta lokasi permintaan bisa digambar.
+         */
+        $request = CustomerRequest::query()
+            ->withCoordinates()
+            ->with(['user', 'category', 'offers.store', 'acceptedOffer'])
+            ->findOrFail($customerRequest->id);
+
+        return view('admin.requests.show', compact('request'));
     }
 
     /**

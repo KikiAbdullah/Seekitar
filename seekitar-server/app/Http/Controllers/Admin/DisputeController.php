@@ -31,9 +31,11 @@ class DisputeController extends Controller
 
     public function show(Dispute $dispute): View
     {
-        return view('admin.disputes.show', [
-            'dispute' => $dispute->load('order.store'),
-        ]);
+        // Konteks penuh untuk memutuskan: pesanan beserta kedua pihaknya,
+        // pelapor, dan admin yang menangani — semuanya satu perjalanan.
+        $dispute->load(['order.buyer', 'order.store', 'reporter', 'assignee']);
+
+        return view('admin.disputes.show', compact('dispute'));
     }
 
     public function resolve(Request $request, Dispute $dispute): RedirectResponse

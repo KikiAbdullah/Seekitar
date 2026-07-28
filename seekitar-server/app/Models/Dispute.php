@@ -46,6 +46,12 @@ class Dispute extends Model
         return $this->belongsTo(User::class, 'reported_by');
     }
 
+    /** Admin yang memutuskan; NULL selama laporan belum diselesaikan. */
+    public function assignee(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
+    }
+
     /** SLA terlewat = belum direspons DAN sudah lewat tenggat. */
     public function isOverdue(): bool
     {

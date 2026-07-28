@@ -80,6 +80,12 @@ class Order extends Model
         return $this->hasMany(Review::class);
     }
 
+    /** Siapa yang membatalkan; NULL bila dibatalkan sistem atau belum batal. */
+    public function cancelledBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
+    }
+
     public function disputes(): HasMany
     {
         return $this->hasMany(Dispute::class);

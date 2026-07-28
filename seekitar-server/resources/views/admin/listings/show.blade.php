@@ -207,15 +207,7 @@
                                         </td>
                                         <td class="text-center">× {{ $order->quantity }}</td>
                                         <td>Rp {{ number_format((int) $order->total_amount, 0, ',', '.') }}</td>
-                                        <td>
-                                            {{-- Warna dari OrderStatus::color() (BRANDING-GUIDELINE §3.5.3);
-                                                 latar kuning butuh teks gelap agar tetap terbaca. --}}
-                                            <span class="badge"
-                                                  style="background-color: {{ $order->status->color() }};
-                                                         color: {{ $order->status->value === 'menunggu_konfirmasi' ? '#3f3f46' : '#ffffff' }}">
-                                                {{ $order->statusLabel() }}
-                                            </span>
-                                        </td>
+                                        <td>@include('admin.partials._order_badge', ['order' => $order])</td>
                                         <td>{{ $order->created_at->format('d M Y H:i') }}</td>
                                     </tr>
                                 @empty
