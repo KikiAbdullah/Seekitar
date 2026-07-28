@@ -6220,6 +6220,52 @@
                 }
             ],
             "time": "2026-04-26T05:33:54+00:00"
+        },
+        {
+            "name": "yajra/laravel-datatables-oracle",
+            "version": "v13.1.5",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/yajra/laravel-datatables.git",
+                "reference": "299c07a7dae380e565bd328104965b6e02286c2f"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/yajra/laravel-datatables/zipball/299c07a7dae380e565bd328104965b6e02286c2f",
+                "reference": "299c07a7dae380e565bd328104965b6e02286c2f"
+            },
+            "require": {
+                "php": "^8.3",
+                "illuminate/database": "^13",
+                "illuminate/filesystem": "^13",
+                "illuminate/http": "^13",
+                "illuminate/support": "^13",
+                "illuminate/view": "^13"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Yajra\\DataTables\\": "src/"
+                },
+                "files": [
+                    "src/helper.php"
+                ]
+            },
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Yajra\\DataTables\\DataTablesServiceProvider"
+                    ],
+                    "aliases": {
+                        "DataTables": "Yajra\\DataTables\\Facades\\DataTables"
+                    }
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "yajra/laravel-datatables-oracle"
         }
     ],
     "packages-dev": [

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\StoreType;
 use App\Enums\VerificationStatus;
 use App\Models\Concerns\HasLocation;
+use App\Models\Concerns\SerializesDatesAsUtc;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Store extends Model
 {
-    use HasFactory, HasLocation, HasUuids, SoftDeletes;
+    use HasFactory, HasLocation, HasUuids, SerializesDatesAsUtc, SoftDeletes;
 
     protected $fillable = [
         'user_id', 'name', 'regency', 'regency_code', 'store_type', 'category_ids',

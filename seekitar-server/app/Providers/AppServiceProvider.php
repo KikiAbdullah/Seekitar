@@ -2,11 +2,29 @@
 
 namespace App\Providers;
 
+use App\Events\CustomerRequestCreated;
+use App\Events\OfferAccepted;
+use App\Events\OrderStatusChanged;
+use App\Events\ReviewSubmitted;
+use App\Listeners\DispatchRequestBroadcast;
+use App\Listeners\SendOfferAcceptedNotification;
+use App\Listeners\SendOrderStatusNotification;
+use App\Listeners\UpdateStoreRatingOnReview;
+use App\Models\Order;
+use App\Models\Review;
+use App\Observers\OrderObserver;
+use App\Observers\ReviewObserver;
+use App\Services\Contracts\NotificationSender;
 use App\Services\Contracts\WhatsAppGateway;
+use App\Services\Notifications\LogNotificationSender;
 use App\Services\WhatsApp\KirimWaGateway;
 use App\Services\WhatsApp\LogWhatsAppGateway;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use RuntimeException;
 
@@ -33,10 +51,19 @@ class AppServiceProvider extends ServiceProvider
 
             return new KirimWaGateway();
         });
+
+        // Pengirim notifikasi. Implementasi FCM sungguhan belum ada — lihat
+        // catatan di LogNotificationSender; kontraknya sudah tetap sehingga
+        // penggantinya cukup di-bind di sini.
+        $this->app->bind(NotificationSender::class, LogNotificationSender::class);
     }
 
     public function boot(): void
     {
+        $this->configureRateLimiting();
+        $this->registerObservers();
+        $this->registerEventListeners();
+
         // Mass-assignment tak terdefinisi dan akses relasi malas ditolak di
         // pengembangan, sehingga bug ketahuan lebih awal — bukan di produksi
         // sebagai query N+1 yang diam-diam memperlambat.
@@ -52,5 +79,48 @@ class AppServiceProvider extends ServiceProvider
                 ]);
             });
         }
+    }
+
+    /**
+     * Observer dipakai untuk efek samping yang SELALU terjadi, apa pun jalur
+     * masuknya — API, panel admin, seeder, atau tinker.
+     */
+    private function registerObservers(): void
+    {
+        Order::observe(OrderObserver::class);
+        Review::observe(ReviewObserver::class);
+    }
+
+    /** Pemetaan event → listener (Server_Implementation_Guide §13). */
+    private function registerEventListeners(): void
+    {
+        Event::listen(CustomerRequestCreated::class, DispatchRequestBroadcast::class);
+        Event::listen(OfferAccepted::class, SendOfferAcceptedNotification::class);
+        Event::listen(OrderStatusChanged::class, SendOrderStatusNotification::class);
+        Event::listen(ReviewSubmitted::class, UpdateStoreRatingOnReview::class);
+    }
+
+    /**
+     * Batas laju sesuai API_DOCUMENTATION.md §1.
+     *
+     * OTP dibatasi PER NOMOR, bukan per IP: kalau per IP, satu orang bisa
+     * memanen OTP dengan berganti jaringan, dan sebaliknya pengguna satu
+     * WiFi kantor akan saling memblokir.
+     */
+    private function configureRateLimiting(): void
+    {
+        RateLimiter::for('api', fn (Request $request) => Limit::perMinute(60)
+            ->by($request->user()?->id ?: $request->ip()));
+
+        RateLimiter::for('otp', fn (Request $request) => [
+            Limit::perMinute(3)->by('otp:'.$request->input('phone')),
+            Limit::perDay(10)->by('otp-daily:'.$request->input('phone')),
+        ]);
+
+        RateLimiter::for('otp-verify', fn (Request $request) => Limit::perMinute(5)
+            ->by('otp-verify:'.$request->input('phone')));
+
+        RateLimiter::for('offers', fn (Request $request) => Limit::perMinute(30)
+            ->by('offers:'.$request->user()?->id));
     }
 }

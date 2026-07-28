@@ -1,21 +1,99 @@
 <?php
 
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        web: __DIR__.'/../routes/web.php',
+        web:      __DIR__.'/../routes/web.php',
+        api:      __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
-        health: '/up',
+        health:   '/up',
+        then: function (): void {
+            // Route admin dipisah agar prefix & middleware-nya tidak
+            // tercampur dengan web publik.
+            Route::middleware('web')
+                ->prefix('admin')
+                ->name('admin.')
+                ->group(base_path('routes/admin.php'));
+        },
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Alias Spatie — inilah yang membuat 'permission:manage-users'
+        // bisa dipakai langsung di definisi route.
+        $middleware->alias([
+            'role'               => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permission'         => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'store.owner'        => \App\Http\Middleware\EnsureStoreOwner::class,
+            'profile.complete'   => \App\Http\Middleware\EnsureProfileComplete::class,
+        ]);
+
+        // Autentikasi berbasis cookie HANYA untuk domain di
+        // SANCTUM_STATEFUL_DOMAINS (web admin). Aplikasi mobile memakai
+        // Bearer token dan TIDAK boleh masuk daftar itu — kalau masuk,
+        // Sanctum menuntut CSRF token dan request gagal dengan 419.
+        $middleware->statefulApi();
+
+        $middleware->api(append: [
+            \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*'),
+            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        /*
+         * Semua error API memakai amplop yang sama seperti respons sukses
+         * (API_DOCUMENTATION.md §1). Tanpa ini, klien harus menangani dua
+         * bentuk berbeda: milik aplikasi dan milik Laravel.
+         */
+        $exceptions->render(function (Throwable $e, Request $request) {
+            if (! $request->is('api/*')) {
+                return null;   // biarkan web admin memakai halaman error biasa
+            }
+
+            [$status, $message, $errors] = match (true) {
+                $e instanceof ValidationException => [
+                    422, 'Data yang dikirim tidak valid.', $e->errors(),
+                ],
+                $e instanceof AuthenticationException => [
+                    401, 'Silakan masuk terlebih dahulu.', null,
+                ],
+                $e instanceof AuthorizationException => [
+                    403, $e->getMessage() ?: 'Anda tidak berhak melakukan tindakan ini.', null,
+                ],
+                // Model tidak ditemukan tampil sebagai 404 biasa; membocorkan
+                // nama kelas model tidak berguna bagi klien.
+                $e instanceof ModelNotFoundException,
+                $e instanceof NotFoundHttpException => [
+                    404, 'Data tidak ditemukan.', null,
+                ],
+                $e instanceof HttpExceptionInterface => [
+                    $e->getStatusCode(), $e->getMessage() ?: 'Permintaan gagal diproses.', null,
+                ],
+                default => [500, 'Terjadi kesalahan pada server.', null],
+            };
+
+            // Detail kesalahan tak terduga hanya dibuka di luar produksi.
+            if ($status === 500 && ! app()->isProduction()) {
+                $errors = ['exception' => [$e::class.': '.$e->getMessage()]];
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => $message,
+                'errors'  => $errors,
+            ], $status);
+        });
     })->create();

@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\SerializesDatesAsUtc;
 use Illuminate\Database\Eloquent\Model;
 
 class Setting extends Model
 {
+    use SerializesDatesAsUtc;
+
     protected $primaryKey = 'key';
     public $incrementing = false;
     protected $keyType = 'string';

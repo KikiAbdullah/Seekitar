@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\DisputeReason;
 use App\Enums\DisputeStatus;
+use App\Models\Concerns\SerializesDatesAsUtc;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Dispute extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, SerializesDatesAsUtc;
 
     protected $fillable = [
         'order_id', 'reported_by', 'reason', 'description', 'status',

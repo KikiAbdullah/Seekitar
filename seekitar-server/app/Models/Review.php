@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ReviewDirection;
+use App\Models\Concerns\SerializesDatesAsUtc;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Review extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, SerializesDatesAsUtc;
 
     /**
      * Ulasan tidak bisa disunting setelah dikirim (API_DOCUMENTATION.md §8),

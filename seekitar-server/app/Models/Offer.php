@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\OfferStatus;
+use App\Models\Concerns\SerializesDatesAsUtc;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Offer extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, SerializesDatesAsUtc;
 
     protected $fillable = [
         'request_id', 'store_id', 'price', 'additional_cost',

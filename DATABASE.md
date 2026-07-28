@@ -28,6 +28,7 @@
    - 4.9 `disputes`
    - 4.9a `user_devices`
    - 4.9b `settings`
+   - 4.9c `favorites`
    - 4.10 `service_slots` (Fase 2)
    - 4.11 `subscriptions` (Fase 2)
 5. [Strategi Foreign Key & Cascading](#5-strategi-foreign-key--cascading)
@@ -1019,6 +1020,34 @@ CREATE TABLE user_devices (
 > dari tabel ini — lihat `Server_Implementation_Guide.md` §15.1. Tanpa
 > pembersihan, antrian terus mencoba mengirim ke perangkat yang aplikasinya
 > sudah dihapus.
+
+### 4.9c `favorites`
+
+Wishlist pribadi pengguna — mendukung aksi "Masukkan ke Wishlist" (PRD §5.1)
+dan tiga endpoint di [`API_DOCUMENTATION.md`](API_DOCUMENTATION.md) §4.4.
+
+| Kolom        | Tipe     | Keterangan                        |
+| ------------ | -------- | --------------------------------- |
+| `id`         | CHAR(36) | PK, UUID.                         |
+| `user_id`    | CHAR(36) | FK ke `users`. ON DELETE CASCADE. |
+| `listing_id` | CHAR(36) | FK ke `listings`. ON DELETE CASCADE. |
+| `created_at` | TIMESTAMP | Urutan tampil: terbaru dulu.     |
+| `updated_at` | TIMESTAMP | –                                 |
+
+**Constraint & Indeks:**
+
+- UNIQUE KEY `favorites_user_listing_unique` (`user_id`, `listing_id`)
+- INDEX `favorites_user_created_idx` (`user_id`, `created_at`)
+
+> ⚠️ **UNIQUE-nya bukan sekadar kerapian.** API §4.4 menjanjikan `POST`
+> bersifat **idempoten**: memfavoritkan listing yang sudah difavoritkan tetap
+> mengembalikan `200`, bukan `409`. Tombol *toggle* di klien bisa mengirim
+> ulang karena jaringan tidak stabil, dan constraint inilah yang memastikan
+> pengiriman ulang tidak menghasilkan baris ganda.
+>
+> `CASCADE` di kedua FK disengaja: favorit tidak punya nilai sendiri. Saat
+> listing dihapus, entri wishlist-nya ikut hilang — berbeda dari `orders`
+> yang memakai `RESTRICT` karena merupakan bukti transaksi.
 
 ### 4.9b `settings`
 

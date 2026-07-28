@@ -119,11 +119,11 @@ flutter run --dart-define-from-file=config/dev.json
 
 ## Menjaga Konsistensi Dokumen
 
-Dokumen saling merujuk secara ketat. Tujuh belas pemeriksa otomatis menjaga agar
+Dokumen saling merujuk secara ketat. Delapan belas pemeriksa otomatis menjaga agar
 perubahan di satu berkas tidak diam-diam membuat berkas lain keliru:
 
 ```bash
-for c in versions structure datamodel api backend mobile brand prd terms security deploy dbperf docs schema-drift mysql seeders services; do
+for c in versions structure datamodel api backend mobile brand prd terms security deploy dbperf docs schema-drift mysql seeders services http; do
   node tools/dev/check-$c.mjs || exit 1
 done
 ```

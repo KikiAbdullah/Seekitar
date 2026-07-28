@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\SerializesDatesAsUtc;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Category extends Model
 {
+    use SerializesDatesAsUtc;
+
     protected $fillable = ['name', 'slug', 'parent_id', 'icon', 'sort_order'];
 
     public function parent(): BelongsTo
