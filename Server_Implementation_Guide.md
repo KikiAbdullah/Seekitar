@@ -559,7 +559,7 @@ Seluruhnya terpusat di `resources/views/admin/partials/table-page.blade.php`:
 > meng-escape, `e($view->render())` meng-escape.
 >
 > Perbaikannya **bukan** `{!! !!}` — itu mematikan escaping dan justru membuka
-> XSS (penolakan TODO_BUG #202). Yang benar: oper **nama** view lalu
+> XSS. Yang benar: oper **nama** view lalu
 > `@includeIf($filterView)`, sehingga tidak ada HTML yang pernah menjadi nilai
 > variabel.
 >

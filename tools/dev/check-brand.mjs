@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Penjaga kelengkapan BRANDING-GUIDELINE.md (TODO_BUG bagian G).
+ * Penjaga kelengkapan BRANDING-GUIDELINE.md.
  *
  * Jalankan:  node tools/dev/check-brand.mjs
  */

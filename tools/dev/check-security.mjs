@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Penjaga implementasi keamanan (TODO_BUG bagian J).
+ * Penjaga implementasi keamanan.
  *
  * Prinsipnya: setiap janji keamanan di PRD §11 harus punya padanan
  * implementasi di Server_Implementation_Guide.md §18A.

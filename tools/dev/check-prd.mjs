@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Penjaga konsistensi PRD.md (TODO_BUG bagian H).
+ * Penjaga konsistensi PRD.md.
  *
  * Fokusnya: PRD tidak boleh menjanjikan hal yang tidak ada di skema/API,
  * dan angka-angkanya harus selaras dengan dokumen lain.

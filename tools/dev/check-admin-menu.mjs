@@ -87,7 +87,7 @@ if (!exists(SIDEBAR)) {
   /*
    * Ukuran huruf terkecil di sidebar: fs-1 = .625rem = 10px.
    *
-   * Ini di bawah batas 11px (BRANDING §4, penolakan TODO_BUG #135), tetapi
+   * Ini di bawah batas 11px (BRANDING-GUIDELINE §4; usulan 8–10px pernah ditolak), tetapi
    * pemeriksaan font yang sudah ada TIDAK menangkapnya: ia mencari deklarasi
    * `font-size:Npx`, sedangkan di sini ukurannya datang dari KELAS utilitas.
    * Terbukti lewat getComputedStyle di Chromium — tiga elemen sidebar
@@ -564,7 +564,7 @@ if (jsKomentar.length) {
 }
 
 // Ukuran huruf di bawah 11px ditolak: target pengguna 40+ yang umumnya sudah
-// presbiopia (BRANDING-GUIDELINE.md §4, penolakan TODO_BUG #135).
+// presbiopia (BRANDING-GUIDELINE.md §4; usulan 8–10px pernah ditolak).
 const sumberGaya = [...blades, path.join(ROOT, 'seekitar-server/public/css/admin.css')];
 const fontKecil = [];
 for (const p of sumberGaya) {
@@ -856,7 +856,7 @@ if (aksiTanpaCan.length) {
  * Halaman tetap "berhasil dirender", jadi render harness pun tidak
  * mengeluhkannya. Hanya pemeriksaan ini yang menangkapnya.
  *
- * Perbaikannya BUKAN {!! !!} (mematikan escaping — TODO_BUG #202), melainkan
+ * Perbaikannya BUKAN {!! !!} (mematikan escaping), melainkan
  * mengoper NAMA view lalu @includeIf.
  */
 const viewSebagaiVariabel = [];

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Penjaga konsistensi terminologi & penamaan (TODO_BUG bagian I).
+ * Penjaga konsistensi terminologi & penamaan.
  *
  * Sumber kebenaran: TECH_STACK.md §6 (Glosarium Lintas Lapisan).
  *

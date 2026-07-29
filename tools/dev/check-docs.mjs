@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Penjaga UI/UX, queue, testing, notifikasi, event, response, geospasial,
- * dan format dokumen (TODO_BUG bagian M–T).
+ * dan format dokumen.
  *
  * Jalankan:  node tools/dev/check-docs.mjs
  */

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Penjaga kelengkapan panduan deployment & operasional (TODO_BUG bagian K).
+ * Penjaga kelengkapan panduan deployment & operasional.
  *
  * Jalankan:  node tools/dev/check-deploy.mjs
  */

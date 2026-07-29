@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Penjaga kelengkapan Mobile_Implementation_Guide.md (TODO_BUG bagian F).
+ * Penjaga kelengkapan Mobile_Implementation_Guide.md.
  *
  * Jalankan:  node tools/dev/check-mobile.mjs
  */

@@ -36,7 +36,6 @@ Dokumen dibaca sebagai **satu himpunan** — semuanya pada versi **2.2**.
 | [`Server_Implementation_Guide.md`](Server_Implementation_Guide.md) | Laravel: struktur, keamanan, job, deployment | Mengerjakan backend |
 | [`Mobile_Implementation_Guide.md`](Mobile_Implementation_Guide.md) | Flutter: Riverpod 3, routing, FCM | Mengerjakan mobile |
 | [`BRANDING-GUIDELINE.md`](BRANDING-GUIDELINE.md) | Identitas visual & verbal | Menyentuh UI atau materi publik |
-| [`TODO_BUG.md`](TODO_BUG.md) | Daftar audit temuan | Melacak sisa pekerjaan |
 
 ## Tech Stack
 

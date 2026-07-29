@@ -162,8 +162,8 @@ class DataTableQueryTest extends TestCase
          * yang sampai adalah string biasa — dan string biasa memang di-escape.
          *
          * Halamannya tetap "berhasil dirender", jadi render harness pun tidak
-         * mengeluhkannya. Perbaikannya bukan {!! !!} (mematikan escaping,
-         * TODO_BUG #202) melainkan mengoper NAMA view lalu @includeIf.
+         * mengeluhkannya. Perbaikannya bukan {!! !!} (mematikan escaping)
+         * melainkan mengoper NAMA view lalu @includeIf.
          */
         foreach (glob(__DIR__.'/../../resources/views/admin/*/index.blade.php') as $view) {
             $src = preg_replace('/\{\{--[\s\S]*?--\}\}/', '', file_get_contents($view));

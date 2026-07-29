@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Penjaga konsistensi MODEL DATA (TODO_BUG.md bagian C).
+ * Penjaga konsistensi MODEL DATA.
  *
  * Memastikan perbaikan skema tidak diam-diam hilang, dan kontrak API tetap
  * sejalan dengan DATABASE.md.

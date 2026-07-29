@@ -53,6 +53,13 @@ Jika sebuah pemeriksa gagal, ada dua kemungkinan: perubahan Anda memang
 membuat dokumen tidak konsisten, **atau** aturan pemeriksanya sudah usang.
 Perbaiki penyebabnya — jangan menghapus aturannya.
 
+> ℹ️ Label `(#NNN)` pada butir-butir pemeriksa adalah **ID aturan yang
+> stabil**, warisan ledger audit awal (`TODO_BUG.md`) yang kini sudah dihapus
+> setelah seluruh temuannya terselesaikan. Angkanya sengaja dipertahankan
+> supaya diskusi dan riwayat commit tetap bisa menunjuk aturan yang sama;
+> pemahamannya ada pada komentar WHY di sebelah tiap aturan, bukan pada
+> dokumen eksternal mana pun.
+
 ### Yang mudah terlewat
 
 | Hal | Kenapa penting |

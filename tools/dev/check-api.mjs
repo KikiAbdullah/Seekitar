@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Penjaga kelengkapan & konsistensi API_DOCUMENTATION.md (TODO_BUG bagian D).
+ * Penjaga kelengkapan & konsistensi API_DOCUMENTATION.md.
  *
  * Jalankan:  node tools/dev/check-api.mjs
  */
@@ -29,7 +29,7 @@ check('registrasi FCM token (#69)', ['POST /auth/fcm-token', 'DELETE /auth/fcm-t
 check('upload gambar terpisah (#52)', ['POST /uploads/images']);
 check('wishlist / favorit (#70)', ['/favorite', 'GET /favorites']);
 // Admin API memang diringkas: panel web yang mengelola stores, listings,
-// requests, offers, orders, dan reviews (TODO_BUG #64, resolusi akhir).
+// requests, offers, orders, dan reviews — itu resolusi akhirnya.
 // Yang bertahan di API: daftar pengguna + blokirnya.
 check('admin resource di API (#64)', ['GET /admin/users']);
 check('admin settings (#65)', ['/admin/settings', 'super-admin']);

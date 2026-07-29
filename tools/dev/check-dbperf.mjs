@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Penjaga performa & indeks database (TODO_BUG bagian L).
+ * Penjaga performa & indeks database.
  *
  * Jalankan:  node tools/dev/check-dbperf.mjs
  */

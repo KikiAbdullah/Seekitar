@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Penjaga kelengkapan Server_Implementation_Guide.md (TODO_BUG bagian E).
+ * Penjaga kelengkapan Server_Implementation_Guide.md.
  *
  * Jalankan:  node tools/dev/check-backend.mjs
  */
