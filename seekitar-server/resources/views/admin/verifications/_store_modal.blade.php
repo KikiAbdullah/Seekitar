@@ -181,6 +181,15 @@
                     </div>
                 </div>
 
+                {{-- Konsekuensi persetujuan harus terlihat SEBELUM tombol
+                     ditekan: klik ini bukan hanya mengubah status toko,
+                     melainkan juga lencana pemiliknya. --}}
+                <div class="text-muted fs-3 mt-2">
+                    <i class="ti ti-rosette" aria-hidden="true"></i>
+                    Menyetujui juga menaikkan pemilik ke
+                    <strong>Level 3 · Usaha Terverifikasi</strong> secara otomatis.
+                </div>
+
                 {{-- Form tolak (collapse — bukan modal di dalam modal). --}}
                 <div class="collapse mt-3" id="tolakToko{{ $index }}">
                     <form method="POST" action="{{ route('admin.verifications.stores.reject', $store) }}"

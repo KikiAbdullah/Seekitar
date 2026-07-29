@@ -10,7 +10,7 @@
     $levelInfo = [
         1 => ['ti ti-device-mobile', 'Dapat bertransaksi: membeli dan memasang kebutuhan.'],
         2 => ['ti ti-id',            'Identitas KTP ditinjau admin — syarat membuka toko.'],
-        3 => ['ti ti-rosette',       'Usaha tervalidasi — prioritas siaran penawaran lebih tinggi.'],
+        3 => ['ti ti-rosette',       'Lencana Pro — normalnya naik otomatis saat tokonya disetujui.'],
     ];
     $levelAktif = $user->verification_level?->value ?? 1;
 @endphp
@@ -223,9 +223,30 @@
                                 <span class="text-muted fs-3">Belum ada catatan.</span>
                             @endif
                         </li>
+                        {{-- Level 3 tidak di-stempel di users — jejaknya adalah
+                             persetujuan toko pertamanya, dimuat controller sebagai $tokoPro. --}}
+                        <li class="list-group-item">
+                            <div class="text-muted fs-3 mb-1">LEVEL 3 — USAHA (TOKO)</div>
+                            @if ($tokoPro)
+                                <span class="fs-3">
+                                    <i class="ti ti-circle-check text-success" aria-hidden="true"></i>
+                                    @if ($tokoPro->verified_at)
+                                        {{ $tokoPro->verified_at->translatedFormat('d M Y H:i') }}
+                                    @endif
+                                    @if ($tokoPro->verifiedBy)
+                                        <span class="text-muted">oleh {{ $tokoPro->verifiedBy->name }}</span>
+                                    @endif
+                                    <span class="text-muted d-block">Toko {{ $tokoPro->name }} disetujui</span>
+                                </span>
+                            @elseif ($levelAktif === 3)
+                                <span class="text-muted fs-3">Ditetapkan manual — tak ada toko tervalidasi yang tercatat.</span>
+                            @else
+                                <span class="text-muted fs-3">Belum ada — naik otomatis saat tokonya disetujui.</span>
+                            @endif
+                        </li>
                     </ul>
                     <div class="card-body border-top fs-3 text-muted">
-                        Mengubah level lewat formulir ini tidak menulis jejak dua tahap di atas.
+                        Mengubah level lewat formulir ini tidak menulis jejak apa pun pada tiga baris di atas.
                     </div>
                 </div>
 

@@ -7,6 +7,10 @@ use App\Enums\Concerns\HasValues;
 /**
  * Level verifikasi pengguna (DATABASE.md §4.1). Hanya 1-3.
  * TIDAK ADA level 0 dan tidak ada level 4 di MVP.
+ *
+ * Jalur kenaikannya: 1 diperoleh lewat OTP, 2 lewat antrian Verifikasi
+ * Pengguna, dan 3 OTOMATIS saat salah satu tokonya disetujui admin di
+ * antrian Verifikasi Toko — tidak ada formulir pengajuan Pro tersendiri.
  */
 enum VerificationLevel: int
 {

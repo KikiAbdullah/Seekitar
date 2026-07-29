@@ -158,15 +158,55 @@ class VerificationController extends Controller
         return back()->with('success', "Verifikasi {$user->name} ditolak.");
     }
 
+    /**
+     * Menyetujui pengajuan toko SEKALIGUS menaikkan pemiliknya ke Level 3.
+     *
+     * Level 3 "Usaha Terverifikasi" artinya usahanya lolos tinjauan — persis
+     * yang disahkan klik ini (foto tempat usaha + koordinat, PRD §5.3.2).
+     * Tanpa kenaikan otomatis di sini TIDAK ADA alur apa pun yang menghasilkan
+     * Level 3: antrian pengguna berhenti di Level 2, sehingga lencana Pro di
+     * halaman pengguna tidak pernah benar-benar muncul dari data.
+     *
+     * Kenaikannya SATU ARAH — penolakan toko sesudahnya tidak menurunkan
+     * level. Alasannya: Pro yang diberikan manual (Sunting Pengguna) tak bisa
+     * dibedakan dari Pro hasil persetujuan toko tanpa kolom penanda tambahan,
+     * jadi pencabutan dibiarkan sebagai keputusan manusia, bukan heuristik
+     * mesin yang berisiko mencabut lencana yang salah.
+     */
     public function approveStore(Request $request, Store $store): RedirectResponse
     {
-        $store->verification_status = VerificationStatus::Verified;
-        $store->rejected_reason     = null;
-        $store->verified_at         = now();
-        $store->verified_by         = $request->user()->id;
-        $store->save();
+        $pemilikNaik = DB::transaction(function () use ($store, $request): bool {
+            // Baris dikunci sebelum ditulis: dua admin bisa menekan Setujui
+            // nyaris bersamaan, dan keduanya harus berakhir di kondisi yang
+            // sama — bukan saling menimpa stempel.
+            $toko = Store::lockForUpdate()->findOrFail($store->id);
 
-        return back()->with('success', "Toko {$store->name} disetujui.");
+            $toko->verification_status = VerificationStatus::Verified;
+            $toko->rejected_reason     = null;
+            $toko->verified_at         = now();
+            $toko->verified_by         = $request->user()->id;
+            $toko->save();
+
+            $pemilik = User::lockForUpdate()->find($toko->user_id);
+
+            // !== Pro berarti levelnya 1 atau 2 (rentangnya memang hanya
+            // 1–3), jadi penulisan ini tidak pernah menurunkan siapa pun.
+            if ($pemilik !== null && $pemilik->verification_level !== VerificationLevel::Pro) {
+                $pemilik->verification_level = VerificationLevel::Pro;
+                $pemilik->save();
+
+                return true;
+            }
+
+            return false;
+        });
+
+        $pesan = "Toko {$store->name} disetujui.";
+        if ($pemilikNaik) {
+            $pesan .= ' Pemilik naik ke Level 3 · Usaha Terverifikasi.';
+        }
+
+        return back()->with('success', $pesan);
     }
 
     public function rejectStore(RejectVerificationRequest $request, Store $store): RedirectResponse

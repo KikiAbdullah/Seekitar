@@ -160,6 +160,16 @@
                 </tbody>
             </table>
         </div>
+
+        {{-- Batas kewenangan antrian ini: admin sering mencari Level 3 di
+             sini karena labelnya "verifikasi pengguna" — padahal Level 3
+             lahir dari persetujuan TOKO, bukan dari berkas pengguna. --}}
+        <div class="card-body border-top fs-3 text-muted">
+            <i class="ti ti-info-circle" aria-hidden="true"></i>
+            Antrian ini mengesahkan sampai <strong>Level 2 · Identitas Terverifikasi</strong>.
+            <strong>Level 3 · Usaha Terverifikasi</strong> naik otomatis saat toko miliknya
+            disetujui di menu Verifikasi Toko.
+        </div>
     </div>
 
     <div class="mt-3">{{ $pending->links() }}</div>

@@ -147,7 +147,7 @@ Setiap tabel dilengkapi penjelasan tiap kolom, alasan pemilihan tipe, dan constr
 | `avatar_url`         | VARCHAR(500) NULL    | URL foto profil, disimpan di cloud storage. Panjang 500 cukup untuk URL pre‑signed.  |
 | `location`           | POINT SRID 4326 NULL | Lokasi default pengguna (misal rumah). NULL hanya saat onboarding belum selesai.     |
 | `address`            | VARCHAR(255) NULL    | Alamat teks hasil reverse geocoding. Untuk ditampilkan, bukan untuk query.           |
-| `verification_level` | TINYINT DEFAULT 1    | 1 = nomor HP, 2 = KTP diverifikasi, 3 = Pro (usaha tervalidasi). Hanya 1–3.          |
+| `verification_level` | TINYINT DEFAULT 1    | 1 = nomor HP, 2 = KTP diverifikasi, 3 = Pro — naik otomatis saat tokonya disetujui. Hanya 1–3. |
 | `ktp_image`          | VARCHAR(500) NULL    | URL foto KTP (terenkripsi at-rest). Diisi saat pengajuan verifikasi Level 2.         |
 | `selfie_image`       | VARCHAR(500) NULL    | URL selfie memegang KTP. Wajib bersama `ktp_image`.                                  |
 | `ktp_submitted_at`   | TIMESTAMP NULL       | Kapan berkas diajukan — dipakai SLA peninjauan admin 1×24 jam.                       |
@@ -237,6 +237,15 @@ dan stempelnya — siapa (`_by`) + kapan (`_at`) — tidak pernah ditimpa.
 1. **Tahap 1 · Nomor HP** → `verified1_by` / `verified1_at`.
 2. **Tahap 2 · KTP & NIK** → `verified2_by` / `verified2_at` + level naik ke 2.
    NIK yang terbaca di foto KTP dicocokkan dengan kolom `nik`.
+
+**Level 3 (Pro) tidak lewat dua tahap di atas.** Level ini naik OTOMATIS saat
+salah satu toko miliknya disetujui admin di antrian Verifikasi Toko — jejaknya
+adalah `stores.verified_by` / `stores.verified_at`, bukan kolom stempel ketiga
+di `users` (usaha itu sendiri adalah berkasnya; menambah stempel sendiri hanya
+menduplikasi kebenaran). Kenaikannya satu arah: penolakan toko sesudahnya tidak
+menurunkan level, karena Pro hasil pemberian manual tak bisa dibedakan dari Pro
+hasil persetujuan toko — pencabutan adalah keputusan admin lewat Sunting
+Pengguna, bukan heuristik mesin.
 
 ### 4.2 `stores`
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\DataTables\UsersDataTable;
+use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
@@ -31,6 +32,13 @@ class UserController extends Controller
             // boleh memaksa admin memutuskan "buta" tanpa konteks si pengguna.
             'user' => $user->loadMissing('verified1By:id,name', 'verified2By:id,name')
                 ->loadCount(['stores', 'customerRequests', 'orders']),
+            // Jejak Level 3 tidak punya kolom stempel sendiri di users —
+            // sumbernya adalah persetujuan toko PERTAMA miliknya.
+            'tokoPro' => $user->stores()
+                ->where('verification_status', VerificationStatus::Verified)
+                ->oldest('verified_at')
+                ->with('verifiedBy:id,name')
+                ->first(),
         ]);
     }
 
@@ -56,7 +64,11 @@ class UserController extends Controller
                 ->with([
                     'verified1By:id,name',
                     'verified2By:id,name',
-                    'stores:id,user_id,name,photo,verification_status,is_active,rating_avg,total_reviews,created_at',
+                    // verified_at/verified_by ikut dipilih: jejak Level 3
+                    // pengguna dibaca dari persetujuan tokonya, bukan dari
+                    // kolom stempel di tabel users.
+                    'stores:id,user_id,name,photo,verification_status,is_active,rating_avg,total_reviews,verified_at,verified_by,created_at',
+                    'stores.verifiedBy:id,name',
                 ])
                 ->withCount(['stores', 'customerRequests', 'orders'])
                 ->findOrFail($user->getKey()),
