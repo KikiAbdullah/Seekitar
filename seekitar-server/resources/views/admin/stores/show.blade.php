@@ -92,6 +92,7 @@
                                 @else
                                     {{ $store->owner->name }}
                                 @endcan
+                                @include('admin.partials._cek_terverifikasi', ['user' => $store->owner])
                                 <span class="font-monospace text-muted">{{ $store->owner->phone }}</span>
                                 @if ($store->owner->canOpenStore())
                                     <span class="badge bg-success-subtle text-success">KTP terverifikasi</span>

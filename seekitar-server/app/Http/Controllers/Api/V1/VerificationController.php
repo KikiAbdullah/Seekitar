@@ -7,9 +7,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 /**
- * Pengajuan verifikasi KTP — Level 1 → Level 2 (API §2.5).
+ * Pengajuan & PERUBAHAN berkas verifikasi KTP (API §2.5).
  */
 class VerificationController extends Controller
 {
@@ -19,18 +20,15 @@ class VerificationController extends Controller
     {
         $user = $request->user();
 
-        // "Sudah terverifikasi" dibaca dari stempel KTP-nya, bukan kolom
-        // level (sudah dihapus): pengiriman ulang berkas hanya berguna
-        // bagi yang belum lolos tahap 2.
-        if ($user->verified2_at !== null) {
-            return $this->fail('Akun Anda sudah terverifikasi.', 422);
-        }
-
         $request->validate([
             'ktp_image'    => ['required', 'image', 'mimes:jpeg,png', 'max:5120'],
             'selfie_image' => ['required', 'image', 'mimes:jpeg,png', 'max:5120'],
             'nik'          => ['sometimes', 'nullable', 'digits:16'],
         ]);
+
+        $sudahTerverifikasi = $user->verified2_at !== null;
+        $ktpLama            = $user->ktp_image;
+        $selfieLama         = $user->selfie_image;
 
         // Disk PRIVAT, bukan public: KTP adalah data pribadi (UU PDP) dan
         // tidak boleh bisa diakses lewat URL tebakan.
@@ -47,11 +45,32 @@ class VerificationController extends Controller
 
         $user->ktp_submitted_at    = now();
         $user->ktp_rejected_reason = null;
+
+        // Aturan 5: perubahan dari sisi PENGGUNA wajib ditinjau ulang —
+        // akun yang sebelumnya sudah lulus KTP kehilangan stempelnya saat
+        // mengganti berkas, dan antrian admin terbuka lagi. (Kebalikannya:
+        // perubahan lewat admin justru SENGAJA tidak menyentuh stempel.)
+        if ($sudahTerverifikasi) {
+            $user->verified2_at = null;
+            $user->verified2_by = null;
+        }
+
         $user->save();
+
+        // Berkas lama dibuang SETELAH save berhasil — kalau dihapus duluan
+        // dan save gagal, pengguna kehilangan satu-satunya salinan berkasnya.
+        if ($ktpLama) {
+            Storage::disk('local')->delete($ktpLama);
+        }
+        if ($selfieLama) {
+            Storage::disk('local')->delete($selfieLama);
+        }
 
         return $this->ok(
             ['user' => new UserResource($user->fresh())],
-            'Berkas verifikasi diterima. Ditinjau maksimal 1x24 jam.',
+            $sudahTerverifikasi
+                ? 'Berkas baru diterima — identitas Anda kembali menunggu peninjauan admin.'
+                : 'Berkas verifikasi diterima. Ditinjau maksimal 1x24 jam.',
         );
     }
 }

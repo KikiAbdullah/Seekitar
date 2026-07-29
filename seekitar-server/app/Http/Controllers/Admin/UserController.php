@@ -10,6 +10,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
@@ -66,20 +69,131 @@ class UserController extends Controller
     /**
      * Menyimpan suntingan profil.
      *
-     * Level verifikasi SENGAJA tidak ikut divalidasi/ditulis: level adalah
-     * turunan dari jejak verifikasi, bukan kolom yang bisa disunting manual.
-     * Menaikkan pengguna = menyetujui KTP/tokonya; menurunkan = blokir.
+     * ATURAN 5: formulir admin TIDAK PERNAH menyentuh stempel verifikasi
+     * (verified1/2_by/at). Stempel adalah fakta audit "admin X menyetujui
+     * pada waktu Y" — penyuntingan data oleh admin lain tidak membatalkan
+     * fakta itu. Kebalikannya (perubahan oleh pengguna sendiri lewat API)
+     * WAJIB verifikasi ulang: lihat Api\V1\VerificationController::uploadKtp
+     * dan AuthController::verifyPhoneChangeOtp.
+     *
+     * Nomor HP juga tidak bisa diubah di sini: nomor adalah kredensial masuk
+     * (OTP); menggantinya tanpa bukti kepemilikan = menyerahkan akun.
      */
     public function update(Request $request, User $user): RedirectResponse
     {
+        // String kosong dari input teks ≠ null — tanpa normalisasi ini,
+        // isian yang SENGAJA dikosongkan admin justru gagal di rule
+        // email/digits: kolomnya tidak pernah bisa dikosongkan lagi.
+        $request->merge(array_map(
+            fn ($nilai) => $nilai === '' ? null : $nilai,
+            $request->only(['email', 'address', 'nik']),
+        ));
+
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:100'],
+            'name'    => ['required', 'string', 'max:100'],
+            'email'   => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'address' => ['nullable', 'string', 'max:255'],
+            'nik'     => ['nullable', 'digits:16'],
+            // Avatar publik; KTP/selfie divalidasi TERPISAH di bawah —
+            // hanya pemegang izin verifikasi yang boleh menyentuhnya.
+            'avatar'  => ['nullable', 'image', 'mimes:jpeg,png', 'max:2048'],
         ], [
             'name.required' => 'Nama wajib diisi.',
             'name.max'      => 'Nama maksimal 100 karakter.',
+            'email.email'   => 'Format email tidak valid.',
+            'email.unique'  => 'Email ini sudah dipakai akun lain.',
+            'address.max'   => 'Alamat maksimal 255 karakter.',
+            'nik.digits'    => 'NIK harus tepat 16 digit angka.',
+            'avatar.image'  => 'Foto profil harus berupa gambar.',
+            'avatar.mimes'  => 'Foto profil hanya boleh JPEG atau PNG.',
+            'avatar.max'    => 'Foto profil maksimal 2 MB.',
         ]);
 
-        $user->update($data);
+        // Hanya kolom yang benar-benar DIKIRIM yang ditimpa: request
+        // sebagian (formulir apa pun, atau curl rakitan berisi name saja)
+        // tidak boleh menghapus email/alamat/NIK yang sudah ada.
+        $user->fill(collect($data)->only(['name', 'email', 'address'])->all());
+
+        if (array_key_exists('nik', $data)) {
+            if ($data['nik'] === null) {
+                $user->nik      = null;
+                $user->nik_hash = null;
+            } else {
+                // Keunikan NIK diperiksa lewat nik_hash: kolom nik-nya
+                // terenkripsi sehingga mustahil di-WHERE (DATABASE.md §4.1).
+                $hash = hash_hmac('sha256', $data['nik'], config('app.key'));
+
+                if (User::where('nik_hash', $hash)->whereKeyNot($user->id)->exists()) {
+                    throw ValidationException::withMessages([
+                        'nik' => 'NIK ini sudah terdaftar pada akun lain.',
+                    ]);
+                }
+
+                $user->nik      = $data['nik'];
+                $user->nik_hash = $hash;
+            }
+        }
+
+        $avatarLama = $user->getRawOriginal('avatar_url');
+
+        if ($request->hasFile('avatar')) {
+            // Kolomnya menyimpan URL, bukan path (mengikuti updateProfile
+            // API) — keduanya harus setuju agar penghapusan file lama benar.
+            $path = $request->file('avatar')->store('avatars', 'public');
+            $user->avatar_url = Storage::disk('public')->url($path);
+        }
+
+        /*
+         * Berkas identitas adalah hak `verify-users`, bukan `manage-users`
+         * (UU PDP) — field-nya memang disembunyikan di blade tanpa izin itu,
+         * tetapi "tidak terlihat" bukan kontrol akses: request palsu mudah
+         * dibuat, jadi gerbang sebenarnya di sini.
+         */
+        $ktpLama    = null;
+        $selfieLama = null;
+
+        if ($request->user()->can('verify-users')) {
+            $request->validate([
+                'ktp_image'    => ['nullable', 'image', 'mimes:jpeg,png', 'max:5120'],
+                'selfie_image' => ['nullable', 'image', 'mimes:jpeg,png', 'max:5120'],
+            ], [
+                'ktp_image.image'      => 'Foto KTP harus berupa gambar.',
+                'ktp_image.max'        => 'Foto KTP maksimal 5 MB.',
+                'selfie_image.image'   => 'Foto wajah harus berupa gambar.',
+                'selfie_image.max'     => 'Foto wajah maksimal 5 MB.',
+            ]);
+
+            $ktpLama    = $user->ktp_image;
+            $selfieLama = $user->selfie_image;
+
+            // Disk PRIVAT (bukan public): KTP tidak boleh bisa diakses
+            // lewat URL tebakan.
+            if ($request->hasFile('ktp_image')) {
+                $user->ktp_image = $request->file('ktp_image')->store("ktp/{$user->id}", 'local');
+            }
+            if ($request->hasFile('selfie_image')) {
+                $user->selfie_image = $request->file('selfie_image')->store("ktp/{$user->id}", 'local');
+            }
+        }
+
+        $user->save();
+
+        // Berkas lama baru dibuang SETELAH save berhasil — kalau dihapus
+        // duluan dan save gagal, satu-satunya salinan berkas ikut hilang.
+        if ($ktpLama && $ktpLama !== $user->ktp_image) {
+            Storage::disk('local')->delete($ktpLama);
+        }
+        if ($selfieLama && $selfieLama !== $user->selfie_image) {
+            Storage::disk('local')->delete($selfieLama);
+        }
+        if ($avatarLama && $avatarLama !== $user->avatar_url) {
+            // Hanya hapus bila URL-nya menunjuk file LOKAL: avatar bisa
+            // berisi URL placeholder luar, yang bukan milik disk kita.
+            $prefixLokal = Storage::disk('public')->url('');
+            if (str_starts_with($avatarLama, $prefixLokal)) {
+                Storage::disk('public')->delete(substr($avatarLama, strlen($prefixLokal)));
+            }
+        }
 
         // Kembali ke detail, bukan daftar: admin biasanya ingin memastikan
         // hasil suntingannya tampil benar tepat setelah menyimpan.

@@ -95,7 +95,12 @@
                              terlihat dari tabel daripada ketahuan di dalam modal. --}}
                         <td>
                             <div class="lh-sm">
-                                <div class="fw-semibold mb-1">{{ $store->owner?->name ?? '—' }}</div>
+                                <div class="fw-semibold mb-1 d-inline-flex align-items-center">
+                                    {{ $store->owner?->name ?? '—' }}
+                                    @if ($store->owner)
+                                        @include('admin.partials._cek_terverifikasi', ['user' => $store->owner])
+                                    @endif
+                                </div>
                                 <div class="text-muted font-monospace" style="font-size: 12px;">{{ $store->owner?->phone }}</div>
                                 @if ($store->owner?->canOpenStore())
                                     <span class="badge bg-success-subtle text-success mt-1" style="font-size: 11px;">
@@ -232,26 +237,9 @@
                 }
             });
         });
-
-        /*
-         * Tombol "Verifikasi Toko" terkunci sampai ketiga konfirmasi SOP
-         * dicentang. Satu listener di document (delegasi) supaya berlaku
-         * untuk SEMUA modal tanpa mendaftarkan handler per baris.
-         */
-        document.addEventListener('change', function (event) {
-            const checklist = event.target.closest('[data-checklist]');
-            if (!checklist) return;
-
-            const modal   = checklist.closest('.modal');
-            const tombol  = modal.querySelector('[data-tombol-verifikasi]');
-            const centang = checklist.querySelectorAll('input[type="checkbox"]');
-
-            let lengkap = true;
-            centang.forEach(function (cb) { if (!cb.checked) lengkap = false; });
-
-            tombol.disabled = !lengkap;
-            tombol.title = lengkap ? '' : 'Centang ketiga konfirmasi pemeriksaan dulu';
-        });
     });
 </script>
+{{-- Gerbang checklist SOP dipakai bersama antrian pengguna (lihat
+     public/js/checklist-gate.js — jangan duplikasi logikanya di sini). --}}
+<script src="{{ asset('js/checklist-gate.js') }}"></script>
 @endpush

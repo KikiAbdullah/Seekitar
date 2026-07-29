@@ -13,7 +13,11 @@
             ['data' => 'phone',      'label' => 'Telepon'],
             ['data' => 'rating',     'label' => 'Rating', 'orderable' => false, 'searchable' => false],
             ['data' => 'status',     'label' => 'Status', 'orderable' => false, 'searchable' => false],
+            // created_at TETAP kolom ke-5: urutan default ('order' di atas)
+            // menunjuk indeks kolom, bukan nama.
             ['data' => 'created_at', 'label' => 'Terdaftar'],
+            ['data' => 'email',      'label' => 'Email'],
+            ['data' => 'address',    'label' => 'Alamat'],
         ],
     ])
 @endsection

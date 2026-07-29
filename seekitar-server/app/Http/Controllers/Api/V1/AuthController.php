@@ -98,6 +98,19 @@ class AuthController extends Controller
 
         [$user, $isNew] = $result;
 
+        /*
+         * OTP yang cocok ADALAH bukti kepemilikan nomor — stempel tahap 1
+         * ditulis sistem di sini (verified1_by sengaja NULL). Meminta admin
+         * "memverifikasi" nomor HP secara visual tidak menambah sinyal apa
+         * pun; antrian pengguna jadi hanya meninjau yang benar-benar butuh
+         * mata manusia: berkas KTP.
+         * Tulis-sekali: login OTP berikutnya tidak mengubah apa pun.
+         */
+        if ($user->verified1_at === null) {
+            $user->verified1_at = now();
+            $user->save();
+        }
+
         if ($user->is_blocked) {
             return $this->fail('Akun Anda diblokir. Hubungi dukungan Seekitar.', 423);
         }
@@ -117,6 +130,81 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         return $this->ok(['user' => new UserResource($request->user())]);
+    }
+
+    /**
+     * POST /auth/phone/request-otp — kirim OTP ke NOMOR BARU (ganti HP).
+     *
+     * Nomor adalah kredensial masuk satu-satunya, jadi pergantian TIDAK
+     * boleh berjalan hanya karena sesi kebetulan aktif: pemilik baru harus
+     * membuktikan memegang nomor tujuan lewat OTP (aturan 5 — perubahan
+     * dari sisi pengguna wajib verifikasi ulang).
+     */
+    public function requestPhoneChangeOtp(RequestOtpRequest $request): JsonResponse
+    {
+        $phone = $request->phone();
+
+        // Termasuk akun ter-soft-delete: kolom phone unik tanpa memandang
+        // deleted_at — memeriksa yang hidup saja menyiapkan 500 saat
+        // pergantian benar-benar disimpan.
+        if (User::withTrashed()->where('phone', $phone)->exists()) {
+            return $this->fail('Nomor ini sudah dipakai akun lain.', 422, [
+                'phone' => ['Nomor ini sudah dipakai akun lain.'],
+            ]);
+        }
+
+        $code = $this->otp->generate($phone);
+
+        try {
+            $this->whatsapp->sendOtp($phone, $code);
+        } catch (OtpDeliveryException $e) {
+            $this->otp->forget($phone);
+            report($e);
+
+            return $this->fail('Gagal mengirim OTP. Coba lagi sesaat lagi.', 503);
+        }
+
+        return $this->ok(null, 'OTP telah dikirim ke nomor baru Anda.');
+    }
+
+    /**
+     * POST /auth/phone/verify-otp — nomor DIGANTI hanya setelah OTP-nya cocok.
+     *
+     * Stempel tahap 1 ditulis ulang oleh sistem (& adminnya dikosongkan):
+     * stempel lama dibuat atas bukti nomor LAMA, dan membiarkannya menggantung
+     * akan membuat jejak audit berbohong tentang nomor yang sekarang.
+     */
+    public function verifyPhoneChangeOtp(VerifyOtpRequest $request): JsonResponse
+    {
+        $phone = $request->phone();
+
+        if (! $this->otp->verify($phone, $request->otp())) {
+            return $this->fail('Kode OTP salah atau sudah kedaluwarsa.', 422, [
+                'otp' => ['Kode OTP salah atau sudah kedaluwarsa.'],
+            ]);
+        }
+
+        $tersedia = ! User::withTrashed()
+            ->where('phone', $phone)
+            ->whereKeyNot($request->user()->id)
+            ->exists();
+
+        if (! $tersedia) {
+            // Lompat validasi: nomornya didaftarkan akun lain DI SELA
+            // menunggu OTP — OTP yang cocok tidak boleh merampas nomor orang.
+            return $this->fail('Nomor ini baru saja dipakai akun lain.', 422);
+        }
+
+        $user = $request->user();
+        $user->phone         = $phone;
+        $user->verified1_at  = now();    // OTP barusan = bukti nomor terkini
+        $user->verified1_by  = null;     // NULL berarti diverifikasi sistem
+        $user->save();
+
+        return $this->ok(
+            ['user' => new UserResource($user->fresh())],
+            'Nomor WhatsApp berhasil diganti.',
+        );
     }
 
     /**

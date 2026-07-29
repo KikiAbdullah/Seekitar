@@ -151,7 +151,7 @@ Setiap tabel dilengkapi penjelasan tiap kolom, alasan pemilihan tipe, dan constr
 | `selfie_image`       | VARCHAR(500) NULL    | URL selfie memegang KTP. Wajib bersama `ktp_image`.                                  |
 | `ktp_submitted_at`   | TIMESTAMP NULL       | Kapan berkas diajukan — dipakai SLA peninjauan admin 1×24 jam.                       |
 | `ktp_rejected_reason`| TEXT NULL            | Alasan penolakan agar pengguna tahu apa yang harus diperbaiki.                       |
-| `verified1_by`       | CHAR(36) NULL FK → `users.id` | Admin yang memverifikasi tahap 1 (nomor HP). ON DELETE SET NULL. |
+| `verified1_by`       | CHAR(36) NULL FK → `users.id` | Admin yang memverifikasi tahap 1 (nomor HP). **NULL berarti stempel ditulis SISTEM** — OTP daftar/ganti nomor yang cocok adalah bukti kepemilikan nomor itu sendiri (ditampilkan panel sebagai "Sistem (OTP)"). ON DELETE SET NULL. |
 | `verified1_at`       | TIMESTAMP NULL       | Kapan tahap 1 disetujui — untuk audit & SLA. |
 | `verified2_by`       | CHAR(36) NULL FK → `users.id` | Admin yang memverifikasi tahap 2 (KTP & NIK). ON DELETE SET NULL. |
 | `verified2_at`       | TIMESTAMP NULL       | Kapan tahap 2 disetujui — kolom inilah yang membuat pengguna ber-Level 2 (lihat penjelasan level turunan di bawah). |
@@ -241,14 +241,40 @@ pendapat ("kolom bilang 2, stempel KTP bilang belum"). Turunannya
 | 2 | Identitas Terverifikasi | `verified2_at` terisi (KTP disetujui). Syarat membuka toko: `User::canOpenStore()` membaca kolom ini LANGSUNG, bukan levelnya, supaya toko verified warisan tidak bisa mengangkat pemilik ber-KTP kosong. |
 | 3 | Usaha Terverifikasi | Memiliki minimal 1 toko `verification_status = 'verified'` — jejaknya `stores.verified_by` / `verified_at`, bukan stempel ketiga di sini (usaha itu sendiri adalah berkasnya). |
 
-**Verifikasi admin DUA TAHAP** (`verified1_*`, `verified2_*`):
-tiap tahap disetujui lewat satu klik tombol "Verifikasi" pada baris antrian,
-dan stempelnya — siapa (`_by`) + kapan (`_at`) — tidak pernah ditimpa.
+**Verifikasi DUA TAHAP** (`verified1_*`, `verified2_*`): stempelnya —
+siapa (`_by`) + kapan (`_at`) — tidak pernah ditimpa (tulis-sekali).
 
-1. **Tahap 1 · Nomor HP** → `verified1_by` / `verified1_at`.
+1. **Tahap 1 · Nomor HP** → `verified1_at`. Biasanya ditulis SISTEM saat OTP
+   pendaftaran cocok — kode OTP adalah bukti kepemilikan nomor itu sendiri,
+   jadi `verified1_by` sengaja NULL (dibaca: diverifikasi sistem, bukan
+   mata admin). Stamp admin hanya ada untuk data lama/khusus yang lolos
+   tanpa OTP. Ganti nomor HP di aplikasi menulis ulang stempel ini lewat
+   OTP ke nomor baru — nomor lama tidak boleh mewariskan buktinya ke nomor
+   yang belum terbukti.
 2. **Tahap 2 · KTP & NIK** → `verified2_by` / `verified2_at` — terisinya kolom
    inilah yang menjadikan pengguna Level 2 (turunan, bukan penulisan kedua).
    NIK yang terbaca di foto KTP dicocokkan dengan kolom `nik`.
+
+Di panel, SATU persetujuan pada antrian pengguna menyelesaikan SEMUA tahap
+yang masih menunggu (biasanya tinggal tahap 2 — tahap 1 sudah distempel
+OTP). Prinsip "periksa dulu, baru setujui" dipindah ke checklist SOP yang
+wajib dicentang sebelum tombol Setuju terbuka — pola yang sama dengan
+antrian toko.
+
+**Kontrak berjenjang pengguna → toko.** Toko hanya bisa DISETUJUI bila
+pemiliknya sudah Level 2 (`canOpenStore()`) DAN berkas tokonya memenuhi
+syarat (foto etalase asli terunggah; dibaca dari kolom mentah karena aksesor
+`Store::photo` menjatuhkan nilai kosong ke placeholder hiasan). Keduanya
+diperiksa ulang SERVER pada klik Setujui (antrian → stempel adminkan waktu
+ke waktu), bukan hanya saat pengajuan — level pemilik bisa turun selama
+menunggu antrian. Level 3 pemilik adalah KONSEKUENSI dari stempel
+`stores.verified_*` tersebut, bukan penyetujuan terpisah di profil pengguna.
+
+**Aturan perubahan data vs stempel.** Perubahan dari sisi ADMIN tidak
+pernah menyentuh stempel; perubahan dari sisi PENGGUNA WAJIB verifikasi
+ulang atas data itu: unggah ulang KTP/selfie mengosongkan `verified2_*`
+(antrian terbuka lagi), ganti nomor HP menulis ulang `verified1_at` hanya
+setelah OTP nomor baru cocok (`verified1_by` kembali NULL).
 
 Karena level murni turunan, TIDAK ADA penyuntingan level manual di panel:
 menaikkan pengguna = menyetujui KTP/tokonya lewat antrian yang berjejak;

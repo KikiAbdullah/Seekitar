@@ -48,39 +48,6 @@
 
             <main id="konten-utama">
 
-                @if (session('success'))
-                    <div class="alert alert-success bg-light-success text-success border-0 alert-dismissible fade show d-flex align-items-start gap-3"
-                         role="alert">
-                        <i class="ti ti-circle-check fs-6 mt-1" aria-hidden="true"></i>
-                        <p class="mb-0 fs-3">{{ session('success') }}</p>
-                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Tutup"></button>
-                    </div>
-                @endif
-
-                @if (session('error'))
-                    <div class="alert alert-danger bg-light-danger text-danger border-0 alert-dismissible fade show d-flex align-items-start gap-3"
-                         role="alert">
-                        <i class="ti ti-alert-triangle fs-6 mt-1" aria-hidden="true"></i>
-                        <p class="mb-0 fs-3">{{ session('error') }}</p>
-                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Tutup"></button>
-                    </div>
-                @endif
-
-                @if ($errors->any())
-                    <div class="alert alert-danger bg-light-danger text-danger border-0 d-flex align-items-start gap-3"
-                         role="alert">
-                        <i class="ti ti-alert-circle fs-6 mt-1" aria-hidden="true"></i>
-                        <div>
-                            <p class="mb-1 fs-3 fw-semibold">Periksa kembali isian berikut:</p>
-                            <ul class="mb-0 ps-3 fs-3">
-                                @foreach ($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    </div>
-                @endif
-
                 @yield('content')
             </main>
 
@@ -95,6 +62,18 @@
 
     <div class="dark-transparent sidebartoggler" aria-hidden="true"></div>
 </div>
+
+{{-- Flash diubah jadi DATA, bukan markup: SweetAlert2 (vendor) dan
+     seekitar-flash.js yang merender toast/dialognya. --}}
+<script>
+    window.seekitarFlash = {
+        sukses:   @json(session('success')),
+        gagal:    @json(session('error')),
+        validasi: @json($errors->all()),
+    };
+</script>
+<script src="{{ asset('vendor/sweetalert2/sweetalert2.all.min.js') }}"></script>
+<script src="{{ asset('js/seekitar-flash.js') }}"></script>
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

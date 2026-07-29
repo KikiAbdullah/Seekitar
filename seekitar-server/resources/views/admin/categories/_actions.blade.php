@@ -7,7 +7,7 @@
         @csrf
         @method('DELETE')
         <button type="submit" class="btn btn-sm btn-outline-danger"
-                onclick="return confirm('Hapus kategori ini?')">
+                data-seekitar-confirm="Kategori ini dan seluruh isinya akan dihapus.">
             <i class="ti ti-trash me-1" aria-hidden="true"></i> Hapus
         </button>
     </form>

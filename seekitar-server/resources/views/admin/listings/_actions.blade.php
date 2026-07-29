@@ -7,7 +7,7 @@
         @csrf
         @method('DELETE')
         <button type="submit" class="btn btn-sm btn-outline-danger"
-                onclick="return confirm('Hapus listing ini? Tindakan tidak bisa dibatalkan.')">
+                data-seekitar-confirm="Listing ini akan dihapus dan tidak bisa dikembalikan.">
             <i class="ti ti-trash me-1" aria-hidden="true"></i> Hapus
         </button>
     </form>

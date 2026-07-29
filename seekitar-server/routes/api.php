@@ -58,6 +58,13 @@ Route::prefix('v1')->group(function (): void {
         // sini untuk melengkapi profilnya.
         Route::get('auth/me', [AuthController::class, 'me']);
         Route::patch('auth/profile', [AuthController::class, 'updateProfile']);
+        // Ganti nomor HP: dua langkah OTP (request ke nomor baru → verify).
+        // Throttle sama dengan OTP masuk — kode 6 digit tidak boleh bisa
+        // ditebak lewat kanal mana pun.
+        Route::post('auth/phone/request-otp', [AuthController::class, 'requestPhoneChangeOtp'])
+            ->middleware('throttle:otp');
+        Route::post('auth/phone/verify-otp', [AuthController::class, 'verifyPhoneChangeOtp'])
+            ->middleware('throttle:otp-verify');
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::post('auth/fcm-token', [DeviceController::class, 'store']);
         Route::delete('auth/fcm-token', [DeviceController::class, 'destroy']);

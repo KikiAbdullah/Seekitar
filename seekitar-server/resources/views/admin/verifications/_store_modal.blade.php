@@ -67,6 +67,9 @@
                     <dt class="col-sm-3">Pemilik</dt>
                     <dd class="col-sm-9">
                         {{ $store->owner?->name ?? '—' }}
+                        @if ($store->owner)
+                            @include('admin.partials._cek_terverifikasi', ['user' => $store->owner])
+                        @endif
                         <span class="font-monospace text-muted">{{ $store->owner?->phone }}</span>
                         @if ($pemilikTerverifikasi)
                             <span class="badge bg-success-subtle text-success ms-1">

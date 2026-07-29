@@ -52,7 +52,7 @@
                             <form action="{{ route('admin.requests.extend', $request) }}" method="POST" class="d-inline">
                                 @csrf
                                 <button type="submit" class="btn btn-outline-secondary btn-sm"
-                                        onclick="return confirm('Perpanjang permintaan ini 24 jam?')">
+                                        data-seekitar-confirm="Tenggat permintaan diperpanjang 24 jam.">
                                     <i class="ti ti-history me-1" aria-hidden="true"></i> Perpanjang 24 Jam
                                 </button>
                             </form>

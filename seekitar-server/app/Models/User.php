@@ -133,6 +133,25 @@ class User extends Authenticatable
         return $this->belongsTo(User::class, 'verified2_by');
     }
 
+    /*
+     * Nama penyetuju tahap 1 untuk DITAMPILKAN. Stempel yang ditulis sistem
+     * saat OTP cocok sengaja punya verified1_by NULL — merendernya sebagai
+     * '—' akan membuat jejak audit tampak cacat, padahal NULL justru bukti
+     * TERCATAT bahwa nomornya diverifikasi kode OTP, bukan mata manusia.
+     */
+    protected function verified1ByLabel(): Attribute
+    {
+        return Attribute::get(function (): ?string {
+            if ($this->verified1_at === null) {
+                return null;
+            }
+
+            return $this->verified1_by === null
+                ? 'Sistem (OTP)'
+                : ($this->verified1By?->name ?? '—');
+        });
+    }
+
     public function customerRequests(): HasMany
     {
         return $this->hasMany(CustomerRequest::class);
@@ -232,12 +251,13 @@ class User extends Authenticatable
     }
 
     /**
-     * Tahap verifikasi berikutnya yang menunggu admin: 1, 2, atau null
+     * Tahap verifikasi berikutnya yang belum berstempel: 1, 2, atau null
      * bila tidak ada yang bisa dikerjakan.
      *
-     * Tiap klik "Verifikasi" hanya menyelesaikan SATU tahap — admin dipaksa
-     * memeriksa ulang berkas antar-tahap, bukan menyetujui dua-duanya
-     * sekaligus tanpa melihat.
+     * Hasilnya dipakai antrian untuk MENENTUKAN isi checklist SOP modal
+     * (tahap yang masih kosong = yang harus diperiksa). Satu persetujuan
+     * admin menyelesaikan SEMUA tahap kosong sekaligus — periksa-dulu
+     * dijaga checklist, bukan lagi dengan memecah persetujuan per tahap.
      */
     public function nextVerificationStep(): ?int
     {

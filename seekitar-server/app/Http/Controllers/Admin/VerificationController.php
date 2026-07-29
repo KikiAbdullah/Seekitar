@@ -21,10 +21,11 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * terpisah (§6.2), jadi menggabungkannya dalam satu halaman akan memaksa admin
  * yang hanya punya salah satunya melihat data yang bukan haknya.
  *
- * Verifikasi pengguna DUA TAHAP, masing-masing di-stempel admin+waktu:
- *   1. nomor HP   2. KTP & NIK  (→ level Verified)
- * Tiap klik tombol "Verifikasi" hanya menyelesaikan satu tahap — admin dipaksa
- * memeriksa ulang berkas antar-tahap.
+ * Verifikasi pengguna DUA TAHAP, masing-masing di-stempel (admin+waktu,
+ * atau sistem untuk OTP): 1. nomor HP — otomatis saat OTP daftar cocok,
+ * 2. KTP & NIK. Satu klik "Verifikasi" menyelesaikan semua tahap yang
+ * masih menunggu — prinsip periksa-dulu dipindah ke checklist SOP modal
+ * (pola yang sama dengan verifikasi toko).
  *
  * SLA peninjauan 1×24 jam (PRD §5.3.2) — karena itu urutannya SELALU dari
  * pengajuan terlama, bukan terbaru: yang paling lama menunggu adalah yang
@@ -73,29 +74,34 @@ class VerificationController extends Controller
     }
 
     /**
-     * Memverifikasi SATU tahap berikutnya (1 → 2).
+     * Menyelesaikan SEMUA tahap verifikasi yang masih menunggu, sekaligus.
      *
-     * Tahapnya ditentukan SERVER dari data terkini, bukan dari tombol yang
-     * kebetulan diklik: dua admin bisa membuka baris yang sama, dan klik
-     * kedua tidak boleh menimpa stempel yang sudah ada. Karena itu baris
-     * dikunci (lockForUpdate) di dalam transaksi sebelum dibaca ulang.
+     * Dulu tiap klik hanya menyelesaikan satu tahap — tetapi modal kini
+     * memaksa admin mencentang SOP pemeriksaan tiap tahap SEBELUM tombol
+     * Setuju terbuka (pola yang sama dengan verifikasi toko), sehingga
+     * prinsip "periksa dulu, baru setujui" berpindah dari dua klik
+     * terpisah ke satu tinjauan utuh per pengguna.
+     *
+     * Stempel yang SUDAH ada tidak pernah ditimpa (tulis-sekali); baris
+     * dikunci dulu supaya dua admin yang menekan Setujui nyaris bersamaan
+     * berakhir di kondisi yang sama.
      */
     public function verifyUser(Request $request, User $user): RedirectResponse
     {
         $adminId = $request->user()->id;
 
-        $tahap = DB::transaction(function () use ($user, $adminId): ?int {
+        $tahapSelesai = DB::transaction(function () use ($user, $adminId): array {
             $antrian = User::lockForUpdate()->findOrFail($user->id);
 
-            $tahap = $antrian->nextVerificationStep();
-            if ($tahap === null) {
-                return null;
-            }
+            $selesai = [];
 
-            if ($tahap === 1) {
+            if ($antrian->verified1_at === null) {
                 $antrian->verified1_by = $adminId;
                 $antrian->verified1_at = now();
-            } else {
+                $selesai[] = 1;
+            }
+
+            if ($antrian->verified2_at === null) {
                 // Stempel tahap 2 ADALAH kenaikan levelnya: sejak kolom
                 // verification_level dihapus, "level 2" murni turunan dari
                 // verified2_at — menulis keduanya akan membuka peluang
@@ -103,21 +109,22 @@ class VerificationController extends Controller
                 $antrian->verified2_by        = $adminId;
                 $antrian->verified2_at        = now();
                 $antrian->ktp_rejected_reason = null;
+                $selesai[] = 2;
             }
 
             $antrian->save();
 
-            return $tahap;
+            return $selesai;
         });
 
-        if ($tahap === null) {
-            // Bisa terjadi bila admin lain lebih dulu menyelesaikan tahap
-            // terakhirnya — bukan kesalahan, cukup diberi tahu.
+        if ($tahapSelesai === []) {
+            // Bisa terjadi bila admin lain lebih dulu menyelesaikannya —
+            // bukan kesalahan, cukup diberi tahu.
             return back()->with('error', "Tidak ada tahap yang menunggu untuk {$user->name}.");
         }
 
         return back()->with('success',
-            "Verifikasi tahap {$tahap} (".User::verificationStepLabel($tahap).") {$user->name} berhasil.");
+            "Verifikasi {$user->name} selesai (tahap ".implode(' & ', $tahapSelesai).").");
     }
 
     /**

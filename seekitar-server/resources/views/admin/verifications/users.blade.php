@@ -107,13 +107,15 @@
                         {{-- Nomor HP: salah satu data kunci validasi KTP. --}}
                         <td class="text-nowrap font-monospace">{{ $user->phone }}</td>
 
-                        {{-- Tahap 1: nomor HP (verified1_by / verified1_at). --}}
+                        {{-- Tahap 1: nomor HP (verified1_by / verified1_at).
+                             NULL by-nya = diverifikasi sistem lewat OTP —
+                             labelnya dirakit accessor verified1_by_label. --}}
                         <td class="text-nowrap">
                             @if ($user->verified1_at)
                                 <div class="d-flex align-items-center gap-2">
                                     <i class="ti ti-circle-check text-success fs-5" aria-hidden="true"></i>
                                     <div class="lh-sm">
-                                        <div class="fw-semibold">{{ $user->verified1By?->name ?? '—' }}</div>
+                                        <div class="fw-semibold">{{ $user->verified1_by_label }}</div>
                                         <div class="text-muted" style="font-size: 12px;">{{ $user->verified1_at->format('d M Y H:i') }}</div>
                                     </div>
                                 </div>
@@ -191,3 +193,7 @@
         });
     </script>
 @endsection
+
+@push('scripts')
+    <script src="{{ asset('js/checklist-gate.js') }}"></script>
+@endpush

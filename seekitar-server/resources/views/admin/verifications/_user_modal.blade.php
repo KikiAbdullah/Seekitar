@@ -25,7 +25,7 @@
                     <h5 class="modal-title" id="verifikasiUser{{ $index }}Label">
                         Verifikasi {{ $user->name }}
                     </h5>
-                    <span class="badge text-bg-secondary">Tahap {{ $tahap ?? '—' }} · Menunggu</span>
+                    <span class="badge text-bg-secondary">Menunggu persetujuan</span>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
             </div>
@@ -102,7 +102,7 @@
                             <span>
                                 <strong>Tahap 1 · Nomor HP</strong><br>
                                 @if ($user->verified1_at)
-                                    {{ $user->verified1By?->name ?? '—' }} · {{ $user->verified1_at->format('d M Y H:i') }}
+                                    {{ $user->verified1_by_label }} · {{ $user->verified1_at->format('d M Y H:i') }}
                                 @else
                                     <span class="text-muted">Menunggu verifikasi</span>
                                 @endif
@@ -121,6 +121,47 @@
                         </li>
                     </ul>
                 </div>
+
+                {{-- Konfirmasi SOP — pola yang sama dengan verifikasi toko:
+                     tombol Setuju terkunci sampai seluruh pemeriksaan yang
+                     tersisa dicentang (skrip bersama: js/checklist-gate.js).
+                     Satu klik menyelesaikan semua tahap yang belum ada
+                     stempelnya — bukan lagi satu tahap per klik. --}}
+                @if ($tahap !== null)
+                    <div class="border rounded p-3 bg-light mt-3" data-checklist>
+                        <div class="text-muted fw-semibold mb-2" style="font-size: 11px;">KONFIRMASI PEMERIKSAAN</div>
+
+                        @if ($user->verified1_at === null)
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="cekHp{{ $index }}">
+                                <label class="form-check-label fs-3" for="cekHp{{ $index }}">
+                                    Nomor HP formatnya valid dan wajar sebagai kontak pendaftar
+                                </label>
+                            </div>
+                        @endif
+
+                        @if ($user->verified2_at === null)
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="cekKtp{{ $index }}">
+                                <label class="form-check-label fs-3" for="cekKtp{{ $index }}">
+                                    Foto KTP jelas — nama, NIK, dan tanggal lahir terbaca utuh
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="cekWajah{{ $index }}">
+                                <label class="form-check-label fs-3" for="cekWajah{{ $index }}">
+                                    Wajah pada foto wajah cocok dengan foto pada KTP
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="cekNik{{ $index }}">
+                                <label class="form-check-label fs-3" for="cekNik{{ $index }}">
+                                    NIK yang terbaca di KTP sama dengan NIK yang diinput pengguna
+                                </label>
+                            </div>
+                        @endif
+                    </div>
+                @endif
 
                 {{-- Form tolak (collapse — bukan modal di dalam modal). --}}
                 @if ($user->ktp_submitted_at !== null)
@@ -157,9 +198,11 @@
                     @if ($tahap !== null)
                         <form method="POST" action="{{ route('admin.verifications.users.verify', $user) }}">
                             @csrf
-                            <button type="submit" class="btn btn-success">
+                            <button type="submit" class="btn btn-success" disabled
+                                    data-tombol-verifikasi
+                                    title="Centang seluruh konfirmasi pemeriksaan dulu">
                                 <i class="ti ti-circle-check" aria-hidden="true"></i>
-                                Verifikasi Tahap {{ $tahap }} · {{ \App\Models\User::verificationStepLabel($tahap) }}
+                                Verifikasi Pengguna
                             </button>
                         </form>
                     @else

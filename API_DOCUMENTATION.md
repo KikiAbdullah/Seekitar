@@ -30,7 +30,7 @@ environment cukup dengan mengganti host.
 ## DAFTAR ISI
 
 1. [Autentikasi & Keamanan](#1-autentikasi--keamanan)
-2. [Users](#2-users) — termasuk Logout (2.6) & FCM Token (2.7)
+2. [Users](#2-users) — termasuk Ganti Nomor HP (2.5a), Logout (2.6) & FCM Token (2.7)
 3. [Stores](#3-stores)
 4. [Listings](#4-listings) — termasuk Upload Gambar (4.0) & Wishlist (4.5)
 5. [Customer Requests](#5-customer-requests)
@@ -279,37 +279,88 @@ Semua field opsional (`PATCH` = pembaruan sebagian), tetapi `latitude` dan
 POST /auth/verification/ktp
 ```
 
-**Auth required** (verification_level < 2)
+**Auth required**
 
 **Body (multipart/form-data):**
 | Field | Tipe | Aturan validasi |
 |-------|------|-----------------|
-| `ktp_image` | file | `required\|image\|mimes:jpeg,jpg,png\|max:5120\|dimensions:min_width=600,min_height=400` |
-| `selfie_image` | file | `required\|image\|mimes:jpeg,jpg,png\|max:5120\|dimensions:min_width=600,min_height=600` |
+| `ktp_image` | file | `required\|image\|mimes:jpeg,png\|max:5120` |
+| `selfie_image` | file | `required\|image\|mimes:jpeg,png\|max:5120` |
+| `nik` | string | `sometimes\|nullable\|digits:16` |
 
-Keduanya **wajib dikirim bersamaan** — verifikasi tidak bisa diproses sebagian.
-Batas 5 MB (`max:5120`) mengakomodasi foto kamera ponsel tanpa kompresi berat,
-sedangkan batas dimensi minimum memastikan NIK masih terbaca admin.
+Kedua foto **wajib dikirim bersamaan** — verifikasi tidak bisa diproses
+sebagian. Batas 5 MB (`max:5120`) mengakomodasi foto kamera ponsel tanpa
+kompresi berat. NIK yang dikirim disimpan terenkripsi (keunikannya diperiksa
+lewat hash terpisah, tidak lewat kolom terenkripsi).
 
-**Response 200:**
+**Unggah ulang SELALU boleh** — termasuk oleh akun yang sudah terverifikasi.
+Konsekuensinya (aturan perubahan data): penggantian berkas dari sisi
+pengguna mengosongkan stempel `verified2_*`, sehingga `verification_level`
+turun kembali ke 1 dan antrian admin terbuka lagi sampai berkas baru
+disetujui. Perubahan data lewat panel admin sebaliknya tidak pernah
+menyentuh stempel.
+
+**Response 200:** (data user terkini)
 
 ```json
 {
   "success": true,
-  "message": "Verifikasi KTP sedang ditinjau oleh admin.",
-  "data": {
-    "submitted_at": "2026-07-27T10:00:00Z",
-    "estimated_review_hours": 24
-  }
+  "message": "Berkas verifikasi diterima. Ditinjau maksimal 1x24 jam.",
+  "data": { "user": { "id": "uuid", "verification_level": 2 } }
 }
 ```
 
-Verification_level akan dinaikkan ke 2 setelah disetujui admin.
+Untuk penggantian berkas pada akun yang sebelumnya terverifikasi, pesannya
+berbeda: *"Berkas baru diterima — identitas Anda kembali menunggu peninjauan
+admin."* Level 2 kembali berlaku setelah admin menyetujui berkas baru.
 
 **Error:**
 
-- `409` – Pengajuan sebelumnya masih berstatus `pending`
-- `422` – Validasi file gagal
+- `422` – Validasi file/NIK gagal
+
+### 2.5a Ganti Nomor WhatsApp (Dua Langkah OTP)
+
+Nomor HP adalah kredensial masuk satu-satunya, jadi pergantiannya **tidak
+boleh berjalan hanya karena sesi kebetulan aktif** — pemilik harus
+membuktikan memegang nomor tujuan lewat OTP (aturan yang sama dengan unggah
+ulang KTP: perubahan dari sisi pengguna wajib verifikasi ulang).
+
+**Langkah 1 — minta OTP ke nomor BARU:**
+
+```http
+POST /auth/phone/request-otp
+```
+
+| Field | Tipe | Aturan validasi |
+|-------|------|-----------------|
+| `phone` | string | `required` — format `62…` (8–13 digit setelahnya), dinormalisasi seperti OTP masuk |
+
+Throttle sama dengan `POST /auth/request-otp` (3 kali/menit, 10 kali/hari
+per nomor). Nomor yang sudah dipakai akun lain (termasuk yang terhapus
+sementara) ditolak.
+
+**Error:** `422` nomor sudah dipakai · `429` throttle · `503` gateway WhatsApp gagal.
+
+**Langkah 2 — kirim kode; nomor diganti HANYA bila OTP cocok:**
+
+```http
+POST /auth/phone/verify-otp
+```
+
+| Field | Tipe | Aturan validasi |
+|-------|------|-----------------|
+| `phone` | string | `required` — nomor baru yang sama dengan langkah 1 |
+| `otp` | string | `required` — 6 digit |
+
+Throttle 5 kali/menit per nomor. Berhasil: `phone` berubah dan stempel
+tahap 1 ditulis ulang oleh sistem (`verified1_at = sekarang`,
+`verified1_by = NULL` — NULL berarti dibuktikan OTP, bukan admin; bukti atas
+nomor lama tidak boleh mewariskan kepercayaan ke nomor baru).
+
+**Response 200:** (data user terkini)
+
+**Error:** `422` OTP salah/kedaluwarsa, atau nomor direbut akun lain di sela
+menunggu OTP.
 
 > 🔒 **Penanganan data sensitif.** `ktp_image` dan `selfie_image` adalah data
 > pribadi menurut UU PDP. Berkas disimpan di bucket privat dan **tidak pernah**

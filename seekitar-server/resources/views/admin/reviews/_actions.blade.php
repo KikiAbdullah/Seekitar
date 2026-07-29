@@ -3,7 +3,7 @@
         @csrf
         @method('DELETE')
         <button type="submit" class="btn btn-sm btn-outline-danger"
-                onclick="return confirm('Hapus ulasan ini? Rating toko akan dihitung ulang.')">
+                data-seekitar-confirm="Ulasan dihapus dan rating toko dihitung ulang.">
             <i class="ti ti-trash me-1" aria-hidden="true"></i> Hapus
         </button>
     </form>

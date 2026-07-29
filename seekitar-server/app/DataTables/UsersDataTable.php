@@ -19,9 +19,11 @@ class UsersDataTable
     {
         $query = User::query()
             ->select([
-                'id', 'phone', 'name',
+                'id', 'phone', 'name', 'email', 'address',
                 'rating_avg', 'total_reviews',
-                'is_blocked', 'ktp_submitted_at', 'created_at',
+                // verified2_at ikut dipilih hanya untuk ikon centang pada
+                // nama — bukan untuk ditampilkan sebagai kolom sendiri.
+                'is_blocked', 'ktp_submitted_at', 'verified2_at', 'created_at',
             ]);
 
         if ($request->filled('is_blocked')) {
@@ -30,6 +32,12 @@ class UsersDataTable
 
         return DataTables::eloquent($query)
             ->editColumn('created_at', fn (User $u) => $u->created_at?->format('d M Y H:i'))
+            // Nama dirender lewat Blade (bukan konkatenasi string) supaya
+            // nama tetap lolos escaping — kolom ini masuk rawColumns demi
+            // ikon centang terverifikasinya.
+            ->editColumn('name', fn (User $u) => view('admin.users._nama', ['user' => $u])->render())
+            ->editColumn('email', fn (User $u) => $u->email ?? '—')
+            ->editColumn('address', fn (User $u) => $u->address ?? '—')
             // ★ teks, bukan HTML — kolom ini lolos escaping DataTables apa adanya.
             ->addColumn('rating', fn (User $u) => (int) $u->total_reviews > 0
                 ? sprintf('★ %s (%d)', number_format((float) $u->rating_avg, 1, ',', '.'), $u->total_reviews)
@@ -38,7 +46,7 @@ class UsersDataTable
             ->addColumn('action', fn (User $u) => view('admin.users._actions', ['user' => $u])->render())
             // Kolom hasil render HTML tidak boleh di-escape ulang; sisanya
             // TETAP di-escape oleh Blade.
-            ->rawColumns(['action'])
+            ->rawColumns(['name', 'action'])
             // Kolom aksi tidak mewakili data, jadi mengurutkannya tidak
             // bermakna dan hanya menghasilkan SQL yang salah.
             ->toJson();

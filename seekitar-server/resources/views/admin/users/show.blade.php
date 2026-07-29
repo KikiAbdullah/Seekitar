@@ -40,7 +40,10 @@
                         </span>
                     @endif
 
-                    <h5 class="fw-semibold mb-1">{{ $user->name }}</h5>
+                    <h5 class="fw-semibold mb-1 d-inline-flex align-items-center">
+                        {{ $user->name }}
+                        @include('admin.partials._cek_terverifikasi', ['user' => $user])
+                    </h5>
                     <div class="font-monospace text-muted mb-2">{{ $user->phone }}</div>
 
                     <div class="d-flex flex-wrap justify-content-center gap-2 mb-2">
@@ -133,7 +136,7 @@
                             <span>
                                 <strong>Tahap 1 · Nomor HP</strong><br>
                                 @if ($user->verified1_at)
-                                    {{ $user->verified1By?->name ?? '—' }} · {{ $user->verified1_at->format('d M Y H:i') }}
+                                    {{ $user->verified1_by_label }} · {{ $user->verified1_at->format('d M Y H:i') }}
                                 @else
                                     <span class="text-muted">Belum diverifikasi</span>
                                 @endif

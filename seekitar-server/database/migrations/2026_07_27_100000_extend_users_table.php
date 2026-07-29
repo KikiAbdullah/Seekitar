@@ -48,16 +48,21 @@ return new class extends Migration
             $table->text('ktp_rejected_reason')->nullable();
 
             /*
-             * Jejak audit DUA tahap verifikasi admin (DATABASE.md §4.1):
+             * Jejak audit DUA tahap verifikasi (DATABASE.md §4.1):
              *   tahap 1 nomor HP · tahap 2 KTP & NIK
              *   (level 2 adalah TURUNAN dari stempel tahap 2 ini)
              *
-             * Kontrak penulisan (ditegakkan VerificationController::verifyUser):
-             * _by dan _at SELALU diisi berpasangan, SEKALI, dalam satu
-             * transaksi berkunci — tidak pernah ditimpa. Karena itu CHECK
-             * "keduanya NULL atau keduanya terisi" sengaja tidak dipasang:
-             * ia bertabrakan dengan nullOnDelete di bawah (hard-delete admin
-             * akan gagal total hanya karena jejak audit).
+             * Kontrak penulisan: _at ditulis SEKALI dan tidak pernah ditimpa.
+             * Tahap 1 khusus: stempelnya bisa ditulis SISTEM saat OTP daftar/
+             * ganti nomor cocok (AuthController) — dalam hal itu _by sengaja
+             * NULL, dan NULL tersebut ADALAH jejak "dibuktikan kode OTP,
+             * bukan mata admin" (ditampilkan sebagai "Sistem (OTP)").
+             * Stempel yang ditulis admin (VerificationController::verifyUser)
+             * mengisi _by+_at berpasangan dalam transaksi berkunci. Karena
+             * itu CHECK "keduanya NULL atau keduanya terisi" MUSTAHIL
+             * dipasang — sah secara kontrak justru "_at terisi, _by NULL",
+             * selain ia juga bertabrakan dengan nullOnDelete di bawah
+             * (hard-delete admin akan gagal total hanya karena jejak audit).
              *
              * nullOnDelete sendiri aman: tabel ini soft-delete, jadi FK baru
              * menyala saat admin benar-benar dihapus permanen.

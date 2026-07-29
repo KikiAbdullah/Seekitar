@@ -15,7 +15,7 @@
         @endunless
         <button type="submit"
                 class="btn btn-sm {{ $user->is_blocked ? 'btn-outline-success' : 'btn-outline-danger' }}"
-                onclick="return confirm('Yakin ubah status blokir {{ $user->name }}?')">
+                data-seekitar-confirm="Status blokir {{ $user->name }} akan diubah.">
             <i class="ti {{ $user->is_blocked ? 'ti-lock-open' : 'ti-ban' }} me-1" aria-hidden="true"></i>
             {{ $user->is_blocked ? 'Buka Blokir' : 'Blokir' }}
         </button>
