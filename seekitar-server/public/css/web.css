@@ -97,8 +97,35 @@ section[id], h2[id] { scroll-margin-top: 88px; }
     pointer-events: none;
 }
 .lp-dots-atas { top: 48px; right: 12%; }
-.lp-dots-bawah { bottom: 40px; left: 8%; }
 @media (max-width: 991.98px) { .lp-dots { display: none; } }
+
+/* ------------------------------------------------- Latar penuh beranda */
+.lp-hero-full { min-height: 0; }
+
+/* Ilustrasi memenuhi seluruh section. object-position agak ke atas supaya
+   wajah subjek tidak ikut terpotong saat rasio layar lebih lebar dari
+   gambar (3:2). */
+.lp-hero-bg {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover; object-position: center 38%;
+}
+
+/* Keterbacaan teks JANGAN bergantung pada bagian gambar mana yang kebetulan
+   berada di belakangnya: layar besar memakai gradien putih yang memudar ke
+   kanan (gambar tetap terlihat utuh), layar kecil memakai selubung merata
+   karena teks menempati seluruh lebar. */
+.lp-hero-scrim {
+    position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(90deg,
+        rgba(255, 255, 255, .95) 0%,
+        rgba(255, 255, 255, .88) 40%,
+        rgba(255, 255, 255, .45) 70%,
+        rgba(255, 255, 255, .05) 100%);
+}
+@media (max-width: 991.98px) {
+    .lp-hero-scrim { background: rgba(255, 255, 255, .82); }
+}
 
 /* Pill pengumuman di atas judul (pola "New — …" pada template). */
 .lp-pill {
@@ -136,36 +163,6 @@ section[id], h2[id] { scroll-margin-top: 88px; }
     gap: 1.25rem 2.5rem; color: #6B7280; font-weight: 600;
 }
 .lp-iconbar .ti { font-size: 22px; vertical-align: -3px; margin-right: .35rem; }
-
-/* ------------------------------------------------------- Mock antarmuka */
-.lp-kartu {
-    background: #fff; border-radius: 18px;
-    box-shadow: 0 18px 44px rgba(31, 41, 51, .10);
-    padding: 1rem 1.1rem;
-}
-.lp-kartu-melayang {
-    position: absolute; z-index: 2;
-    box-shadow: 0 22px 50px rgba(31, 41, 51, .16);
-}
-.lp-melayang-1 { right: -8px; top: -34px; width: 230px; }
-.lp-melayang-2 { left: -26px; bottom: -30px; width: 260px; }
-/* Di ponsel & tablet kartu melayang hanya menutupi teks — susun vertikal. */
-@media (max-width: 991.98px) {
-    .lp-kartu-melayang { position: static; width: 100%; margin-top: .75rem; }
-}
-
-.lp-thumb {
-    width: 44px; height: 44px; border-radius: 12px; flex: 0 0 auto;
-    display: grid; place-items: center; color: #fff; font-size: 20px;
-}
-
-/* Ilustrasi hero beranda: kanvas lembut tempat dua kartu melayang
-   menempel. Radius besar menyamakannya dengan bahasa kartu template. */
-.lp-hero-img {
-    width: 100%; display: block;
-    border-radius: 24px;
-    box-shadow: 0 18px 44px rgba(31, 41, 51, .12);
-}
 
 /* Ilustrasi pada kepala halaman dalam (tentang/bantuan/kontak): bayangan
    lebih tipis — ia hiasan pendamping judul, bukan fokus utama. */

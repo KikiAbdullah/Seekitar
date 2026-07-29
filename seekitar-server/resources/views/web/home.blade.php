@@ -35,16 +35,21 @@
 @section('content')
 
     {{-- ================================ HERO ================================ --}}
-    <section class="lp-hero pt-5 pb-4 pb-lg-5">
-        <span class="lp-blob lp-blob-hijau" aria-hidden="true"></span>
-        <span class="lp-blob lp-blob-kuning" aria-hidden="true"></span>
-        <span class="lp-dots lp-dots-atas" aria-hidden="true"></span>
-        <span class="lp-dots lp-dots-bawah" aria-hidden="true"></span>
+    {{-- Ilustrasi memenuhi SELURUH latar hero (bukan kolom terpisah): teks
+         menumpang di atasnya, dilindungi scrim putih yang memudar ke kanan
+         supaya keterbacaan tidak bergantung pada sibuk-tidaknya gambar.
+         Gradasi hijau .lp-hero tetap di belakang sebagai warna cadangan
+         selama gambar dimuat. --}}
+    <section class="lp-hero lp-hero-full pt-5 pb-4 pb-lg-5">
+        <img src="{{ asset('img/web/hero.webp') }}"
+             alt="Ilustrasi warga memakai Seekitar: barang, jasa, dan sewa dari toko sekitar dalam satu genggaman"
+             class="lp-hero-bg" width="1100" height="733"
+             fetchpriority="high" decoding="async">
+        <span class="lp-hero-scrim" aria-hidden="true"></span>
 
-        <div class="container position-relative py-lg-4">
-            <div class="row align-items-center g-5">
-
-                <div class="col-lg-7 text-center text-lg-start">
+        <div class="container position-relative py-4 py-lg-5">
+            <div class="row">
+                <div class="col-lg-7 col-xl-6 text-center text-lg-start">
                     <span class="lp-pill mb-3">Marketplace hyperlocal · {{ config('seekitar.regency') }}</span>
 
                     <h1 class="display-5 fw-bold mb-3 lh-sm">
@@ -78,54 +83,12 @@
                         </span>
                     </div>
 
-                    <div class="lp-iconbar pb-lg-2">
+                    <div class="lp-iconbar pb-lg-2 justify-content-lg-start">
                         <span><i class="ti ti-package" aria-hidden="true"></i>Barang</span>
                         <span><i class="ti ti-tools" aria-hidden="true"></i>Jasa</span>
                         <span><i class="ti ti-key" aria-hidden="true"></i>Sewa</span>
                     </div>
                 </div>
-
-                {{-- Ilustrasi hero + dua kartu contoh yang melayang di atasnya.
-                     Ini elemen LCP halaman: dimuat penuh semangat (bukan lazy)
-                     dan diberi dimensi eksplisit agar tidak ada lompatan
-                     tata letak saat gambar tiba. --}}
-                <div class="col-lg-5">
-                    <div class="position-relative mx-auto" style="max-width: 420px;">
-
-                        <img src="{{ asset('img/web/hero.webp') }}"
-                             alt="Ilustrasi warga memakai Seekitar: barang, jasa, dan sewa dari toko sekitar dalam satu genggaman"
-                             class="lp-hero-img" width="1100" height="733"
-                             fetchpriority="high" decoding="async">
-
-                        <div class="lp-kartu lp-kartu-melayang lp-melayang-1">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="lp-thumb" style="background: #2563EB; width: 38px; height: 38px;"
-                                      aria-hidden="true"><i class="ti ti-key"></i></span>
-                                <div style="min-width: 0;">
-                                    <div class="fw-bold lh-1 text-truncate">Sewa Tenda 3×3</div>
-                                    <div class="text-secondary" style="font-size: 13px;">Rp 75rb / hari</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="lp-kartu lp-kartu-melayang lp-melayang-2">
-                            <div class="d-flex align-items-center gap-2 mb-2">
-                                <span class="lp-thumb" style="background: #B45309; width: 38px; height: 38px;"
-                                      aria-hidden="true"><i class="ti ti-tools"></i></span>
-                                <div style="min-width: 0;">
-                                    <div class="fw-bold lh-1 text-truncate">Bengkel Motor Jaya</div>
-                                    <div class="text-secondary" style="font-size: 13px;">1,2 km · menawar Rp 150rb</div>
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-center justify-content-between">
-                                <span class="text-warning" aria-label="Rating 4,8 dari 5">★★★★★</span>
-                                <span class="badge bg-success-subtle text-success">Diterima</span>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
             </div>
         </div>
     </section>
