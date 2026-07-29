@@ -13,7 +13,13 @@
         <div class="card-body px-4 py-3">
             <div class="row align-items-center">
                 <div class="col-12">
-                    <h4 class="fw-semibold mb-2">{{ $order->order_number }}</h4>
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        <h4 class="fw-semibold mb-0 font-monospace">{{ $order->order_number }}</h4>
+                        @include('admin.partials._order_badge', ['order' => $order])
+                        <span class="badge bg-light-primary text-primary border">
+                            {{ $order->order_type?->label() }} · × {{ $order->quantity }}
+                        </span>
+                    </div>
                     <nav aria-label="Remah roti">
                         <ol class="breadcrumb mb-0">
                             <li class="breadcrumb-item">
@@ -58,30 +64,39 @@
                     <li class="list-group-item d-flex justify-content-between gap-3">
                         <span class="text-muted">Pembeli</span>
                         <span class="text-end">
-                            @can('manage-users')
-                                <a href="{{ route('admin.users.show', $order->buyer) }}" class="text-decoration-none">
+                            <span class="d-inline-flex align-items-center">
+                                @can('manage-users')
+                                    <a href="{{ route('admin.users.show', $order->buyer) }}" class="text-decoration-none">
+                                        {{ $order->buyer?->name }}
+                                    </a>
+                                @else
                                     {{ $order->buyer?->name }}
-                                </a>
-                            @else
-                                {{ $order->buyer?->name }}
-                            @endcan
+                                @endcan
+                                @include('admin.partials._cek_terverifikasi', ['user' => $order->buyer])
+                            </span>
                             <div class="text-muted font-monospace" style="font-size: 11px;">{{ $order->buyer?->phone }}</div>
                         </span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between gap-3">
                         <span class="text-muted">Toko</span>
                         <span class="text-end">
-                            @if ($order->store?->photo)
-                                <img loading="lazy" decoding="async" src="{{ $order->store->photo }}" alt="" class="rounded me-1"
-                                     style="width: 28px; height: 28px; object-fit: cover;">
-                            @endif
-                            @can('manage-stores')
-                                <a href="{{ route('admin.stores.show', $order->store) }}" class="text-decoration-none">
+                            <span class="d-inline-flex align-items-center">
+                                @if ($order->store?->photo)
+                                    <img loading="lazy" decoding="async" src="{{ $order->store->photo }}" alt="" class="rounded me-1"
+                                         style="width: 28px; height: 28px; object-fit: cover;">
+                                @endif
+                                @can('manage-stores')
+                                    <a href="{{ route('admin.stores.show', $order->store) }}" class="text-decoration-none">
+                                        {{ $order->store?->name }}
+                                    </a>
+                                @else
                                     {{ $order->store?->name }}
-                                </a>
-                            @else
-                                {{ $order->store?->name }}
-                            @endcan
+                                @endcan
+                                @if ($order->store?->status === \App\Enums\StoreStatus::Verified)
+                                    <i class="ti ti-circle-check-filled text-success ms-1 flex-shrink-0"
+                                       title="Toko terverifikasi" role="img" aria-label="Toko terverifikasi"></i>
+                                @endif
+                            </span>
                         </span>
                     </li>
                     {{-- Sumber pesanan: listing XOR penawaran (DATABASE.md §4.7). --}}
@@ -89,13 +104,17 @@
                         <span class="text-muted">Sumber</span>
                         <span class="text-end">
                             @if ($order->listing)
-                                @can('manage-listings')
-                                    <a href="{{ route('admin.listings.show', $order->listing) }}" class="text-decoration-none">
+                                <span class="d-inline-flex align-items-center gap-2">
+                                    <img loading="lazy" decoding="async" src="{{ $order->listing->images[0] }}" alt=""
+                                         class="rounded border" style="width: 40px; height: 40px; object-fit: cover;">
+                                    @can('manage-listings')
+                                        <a href="{{ route('admin.listings.show', $order->listing) }}" class="text-decoration-none">
+                                            {{ $order->listing->title }}
+                                        </a>
+                                    @else
                                         {{ $order->listing->title }}
-                                    </a>
-                                @else
-                                    {{ $order->listing->title }}
-                                @endcan
+                                    @endcan
+                                </span>
                             @elseif ($order->offer?->request)
                                 Penawaran untuk
                                 @can('manage-requests')
@@ -146,9 +165,12 @@
                     <div class="card h-100">
                         <div class="card-header fw-semibold">Alur Pesanan</div>
                         <div class="card-body">
-                            <ul class="list-unstyled mb-0 fs-3">
+                            {{-- Garis vertikal di belakang ikon: pseudo-flow yang bisa dibaca
+                                 sekilas dari atas ke bawah tanpa legenda. --}}
+                            <ul class="list-unstyled mb-0 fs-3 position-relative"
+                                style="padding-inline-start: .25rem; border-inline-start: 2px solid var(--bs-border-color); margin-inline-start: .55rem;">
                                 <li class="d-flex gap-2 mb-3">
-                                    <i class="ti ti-circle-check text-success mt-1" aria-hidden="true"></i>
+                                    <i class="ti ti-circle-check text-success mt-1 bg-body flex-shrink-0" style="margin-inline-start: -1.1rem;" aria-hidden="true"></i>
                                     <div>
                                         <div class="fw-semibold">Dibuat</div>
                                         <div class="text-muted" style="font-size: 11px;">
@@ -158,7 +180,7 @@
                                 </li>
                                 <li class="d-flex gap-2 mb-3">
                                     @if ($order->payment_confirmed_at)
-                                        <i class="ti ti-circle-check text-success mt-1" aria-hidden="true"></i>
+                                        <i class="ti ti-circle-check text-success mt-1 bg-body flex-shrink-0" style="margin-inline-start: -1.1rem;" aria-hidden="true"></i>
                                         <div>
                                             <div class="fw-semibold">Pembayaran dikonfirmasi</div>
                                             <div class="text-muted" style="font-size: 11px;">
@@ -166,7 +188,7 @@
                                             </div>
                                         </div>
                                     @else
-                                        <i class="ti ti-clock text-muted mt-1" aria-hidden="true"></i>
+                                        <i class="ti ti-clock text-muted mt-1 bg-body flex-shrink-0" style="margin-inline-start: -1.1rem;" aria-hidden="true"></i>
                                         <div>
                                             <div class="text-muted">Menunggu konfirmasi pembayaran</div>
                                         </div>
@@ -174,7 +196,7 @@
                                 </li>
                                 @if ($order->disputes->where('status.value', 'open')->isNotEmpty())
                                     <li class="d-flex gap-2 mb-3">
-                                        <i class="ti ti-alert-triangle text-warning mt-1" aria-hidden="true"></i>
+                                        <i class="ti ti-alert-triangle text-warning mt-1 bg-body flex-shrink-0" style="margin-inline-start: -1.1rem;" aria-hidden="true"></i>
                                         <div>
                                             <div class="fw-semibold text-warning">Ada laporan terbuka</div>
                                             <div class="text-muted" style="font-size: 11px;">
@@ -185,7 +207,7 @@
                                 @endif
                                 <li class="d-flex gap-2">
                                     @if ($order->status?->value === 'selesai')
-                                        <i class="ti ti-circle-check text-success mt-1" aria-hidden="true"></i>
+                                        <i class="ti ti-circle-check text-success mt-1 bg-body flex-shrink-0" style="margin-inline-start: -1.1rem;" aria-hidden="true"></i>
                                         <div>
                                             <div class="fw-semibold">Selesai</div>
                                             <div class="text-muted" style="font-size: 11px;">
@@ -193,7 +215,7 @@
                                             </div>
                                         </div>
                                     @elseif ($order->status?->value === 'dibatalkan')
-                                        <i class="ti ti-circle-x text-danger mt-1" aria-hidden="true"></i>
+                                        <i class="ti ti-circle-x text-danger mt-1 bg-body flex-shrink-0" style="margin-inline-start: -1.1rem;" aria-hidden="true"></i>
                                         <div>
                                             <div class="fw-semibold text-danger">Dibatalkan</div>
                                             <div class="text-muted" style="font-size: 11px;">
@@ -211,7 +233,7 @@
                                             @endif
                                         </div>
                                     @else
-                                        <i class="ti ti-clock text-muted mt-1" aria-hidden="true"></i>
+                                        <i class="ti ti-clock text-muted mt-1 bg-body flex-shrink-0" style="margin-inline-start: -1.1rem;" aria-hidden="true"></i>
                                         <div>
                                             <div class="text-muted">Dalam proses</div>
                                         </div>
@@ -234,6 +256,16 @@
                                 <img loading="lazy" decoding="async" src="{{ $order->payment_proof_url }}" alt="Bukti pembayaran {{ $order->order_number }}"
                                      class="rounded border w-100" style="max-height: 180px; object-fit: cover;">
                             </a>
+                            <div class="d-flex align-items-center justify-content-between mt-2 fs-3">
+                                <span class="text-muted">{{ $order->payment_method?->label() }}</span>
+                                @if ($order->payment_confirmed_at)
+                                    <span class="badge bg-success-subtle text-success">
+                                        dikonfirmasi {{ $order->payment_confirmed_at->format('d M Y') }}
+                                    </span>
+                                @else
+                                    <span class="badge bg-warning-subtle text-warning">menunggu konfirmasi</span>
+                                @endif
+                            </div>
                         </div>
                     </div>
                 </div>

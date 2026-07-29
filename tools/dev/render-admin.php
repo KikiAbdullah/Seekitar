@@ -243,6 +243,51 @@ $penggemarTiruan->setRelation('user', (new App\Models\User())->setRawAttributes(
     'id' => '019fa000-0000-7000-8000-0000000000e4', 'name' => 'Rina Wulandari',
 ], true));
 
+// Pesanan tiruan untuk halaman detail Pesanan — relasi penuh disuntik:
+// kedua pihak, sumber (listing), ulasan, dan koordinat tujuan antar
+// (kolom virtual withCoordinates, diisi manual di sini).
+$pembeliTiruan = (new App\Models\User())->setRawAttributes([
+    'id' => '019fa000-0000-7000-8000-0000000000e5', 'name' => 'Agus Prasetyo',
+    'phone' => '085600000002', 'verified_at' => '2026-06-01 08:00:00',
+], true);
+
+$orderTiruan = (new App\Models\Order())->setRawAttributes([
+    'id'                   => '019fa000-0000-7000-8000-0000000000c1',
+    'order_number'         => 'ORD-20260727-0007',
+    'buyer_id'             => $pembeliTiruan->getAttribute('id'),
+    'store_id'             => $tokoTiruan->getAttribute('id'),
+    'listing_id'           => $listingTiruan->getAttribute('id'),
+    'order_type'           => App\Enums\OrderType::Product->value,
+    'quantity'             => 2,
+    'total_amount'         => 136000,
+    'status'               => App\Enums\OrderStatus::Diproses->value,
+    'payment_method'       => App\Enums\PaymentMethod::Transfer->value,
+    'delivery_method'      => App\Enums\DeliveryMethod::Delivery->value,
+    'shipping_address'     => 'Perum Griya Asri Blok C-7, Bangil',
+    'payment_proof_url'    => 'https://picsum.photos/seed/bukti-1/800/500',
+    'payment_confirmed_at' => '2026-07-27 09:15:00',
+    'latitude'             => -7.60123400,
+    'longitude'            => 112.82156700,
+    'created_at'           => '2026-07-27 09:00:00',
+], true);
+$orderTiruan->setRelation('buyer', $pembeliTiruan);
+$orderTiruan->setRelation('store', $tokoTiruan);
+$orderTiruan->setRelation('listing', $listingTiruan);
+$orderTiruan->setRelation('offer', null);
+$orderTiruan->setRelation('cancelledBy', null);
+$orderTiruan->setRelation('disputes', collect());
+
+$ulasanTiruan = (new App\Models\Review())->setRawAttributes([
+    'id' => '019fa000-0000-7000-8000-0000000000d1',
+    'order_id' => $orderTiruan->getAttribute('id'),
+    'reviewer_id' => $pembeliTiruan->getAttribute('id'),
+    'direction' => App\Enums\ReviewDirection::BuyerToStore->value,
+    'rating' => 5, 'comment' => 'Beras pulen, pengiriman cepat!',
+    'created_at' => '2026-07-28 10:00:00',
+], true);
+$ulasanTiruan->setRelation('reviewer', $pembeliTiruan);
+$orderTiruan->setRelation('reviews', collect([$ulasanTiruan]));
+
 $halaman = [
     'admin.dashboard' => [
         'stats'     => [],
@@ -276,6 +321,7 @@ $halaman = [
         'penggemar' => collect([$penggemarTiruan]),
     ],
     'admin.orders.index'         => [],
+    'admin.orders.show'          => ['order' => $orderTiruan],
     'admin.requests.index'       => [],
     'admin.offers.index'         => [],
     'admin.reviews.index'        => [],
