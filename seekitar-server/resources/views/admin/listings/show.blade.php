@@ -29,9 +29,8 @@
         {{-- Galeri foto, status & aksi. --}}
         <div class="col-lg-4">
             <div class="card">
-                {{-- Aksesor Listing::images menjamin minimal satu gambar
-                     (placeholder bila belum ada unggahan), jadi galeri ini
-                     tidak punya cabang kosong. --}}
+                {{-- Listing::images menjamin minimal satu gambar (placeholder
+                     bila belum ada unggahan) — galeri ini tanpa cabang kosong. --}}
                 @php $foto = $listing->images; @endphp
                 @if ($foto)
                     <a id="tautanFotoUtama" href="{{ $foto[0] }}" target="_blank" rel="noopener"
@@ -100,11 +99,8 @@
                             {{ $listing->price === null ? '—' : 'Rp '.number_format((int) $listing->price, 0, ',', '.') }}
                         </span>
                     </li>
-                    {{--
-                        Stok vs slot saling eksklusif menurut tipe (CHECK
-                        listings_qty_slot_chk): barang/sewa pakai stok,
-                        jasa pakai slot kapasitas per hari.
-                    --}}
+                    {{-- Eksklusif menurut tipe (CHECK listings_qty_slot_chk):
+                         barang/sewa pakai stok; jasa pakai slot per hari. --}}
                     <li class="list-group-item d-flex justify-content-between gap-3">
                         <span class="text-muted">{{ $listing->listing_type?->value === 'service' ? 'Slot' : 'Stok' }}</span>
                         <span class="text-end">

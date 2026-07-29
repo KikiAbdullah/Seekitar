@@ -254,7 +254,7 @@
                         <div id="petaTujuanAntar" class="rounded border admin-peta-detail"
                              role="img" aria-label="Peta tujuan antar {{ $order->order_number }}"></div>
                         <div class="text-muted fs-2 mt-2 font-monospace">
-                            {{ number_format((float) $order->latitude, 6) }}, {{ number_format((float) $order->longitude, 6) }}
+                            {{ \App\Support\Angka::desimal($order->latitude, 6) }}, {{ \App\Support\Angka::desimal($order->longitude, 6) }}
                         </div>
                     </div>
                 </div>

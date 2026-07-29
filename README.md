@@ -25,7 +25,7 @@ assets/brand/       Aset merek yang dikendalikan versi
 
 ## Dokumentasi
 
-Dokumen dibaca sebagai **satu himpunan** — semuanya pada versi **2.1**.
+Dokumen dibaca sebagai **satu himpunan** — semuanya pada versi **2.2**.
 
 | Dokumen | Isi | Baca saat |
 | :-- | :-- | :-- |
@@ -119,14 +119,20 @@ flutter run --dart-define-from-file=config/dev.json
 
 ## Menjaga Konsistensi Dokumen
 
-Dokumen saling merujuk secara ketat. Delapan belas pemeriksa otomatis menjaga agar
+Dokumen saling merujuk secara ketat. Dua puluh pemeriksa otomatis menjaga agar
 perubahan di satu berkas tidak diam-diam membuat berkas lain keliru:
 
 ```bash
-for c in versions structure datamodel api backend mobile brand prd terms security deploy dbperf docs schema-drift mysql seeders services http; do
+for c in versions structure datamodel api backend mobile brand prd terms security deploy dbperf docs schema-drift mysql seeders services http admin-menu peta; do
   node tools/dev/check-$c.mjs || exit 1
 done
 ```
+
+Delapan belas nama pertama menjaga konsistensi **dokumen ↔ kode**; dua nama
+terakhir — `admin-menu` dan `peta` — satu lapis lebih dalam: me-render seluruh
+halaman admin sebagai `admin` dan `super-admin`, menjalankan setiap kelas
+DataTables ke basis data tiruan, dan menguji direktif peta, sehingga kelas bug
+yang hanya muncul di browser ikut tertangkap.
 
 Jalankan sebelum commit yang menyentuh dokumen. Semuanya keluar dengan status
 bukan-nol saat gagal, sehingga cocok dipakai di CI.

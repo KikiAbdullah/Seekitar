@@ -60,7 +60,7 @@ Perbaiki penyebabnya — jangan menghapus aturannya.
 | `POINT(longitude latitude)` | Terbalik dari kebiasaan "lat, lng". Salah urutan tidak memicu error, hanya hasil yang keliru |
 | Normalisasi nomor telepon | Tanpa itu, satu nomor bisa membuat beberapa akun meski kolomnya `UNIQUE` |
 | `MBRContains` sebelum `ST_Distance_Sphere` | Tanpa pra-filter, indeks spasial tidak terpakai sama sekali |
-| Semua aksi tulis pakai FormRequest | Jangan `$request->validate()` di controller |
+| Validasi tulis | FormRequest untuk alur yang dipakai ulang/kompleks (OTP, profil); validasi kecil sekali-pakai boleh `$request->validate()` di controller — yang penting pesannya berbahasa Indonesia |
 | `ref` pada Riverpod 3 | Subclass `Ref` hasil codegen sudah dihapus |
 | `if (!mounted) return;` setelah `await` | Penyebab crash paling umum di Flutter |
 
@@ -169,7 +169,11 @@ node tools/dev/check-peta.mjs
 
 Checker itu membandingkan `@can` di sidebar dengan middleware hasil
 `route:list`, lalu **me-render seluruh halaman admin sebagai `admin` dan
-`super-admin`** untuk memastikan menu benar-benar berbeda per izin.
+`super-admin`** untuk memastikan menu benar-benar berbeda per izin. Lapis
+terakhirnya **menjalankan kedelapan kelas DataTables ke basis data tiruan**
+dan mencocokkan kolom yang diminta tiap `index.blade.php` dengan kolom yang
+benar-benar tersedia di JSON — jebakan "Requested unknown parameter" yang
+tak terlihat oleh pemeriksaan sintaks mana pun.
 
 Untuk memeriksa DDL yang dihasilkan migrasi **tanpa** server MySQL:
 

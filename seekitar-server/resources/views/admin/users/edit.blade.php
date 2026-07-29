@@ -36,9 +36,8 @@
 
             <div class="col-lg-8">
 
-                {{-- Identitas yang sedang disunting: pengaman anti-salah-orang.
-                     Mengedit akun tanpa tahu persis siapa pemiliknya adalah
-                     sumber salah sasaran yang paling sering di panel admin. --}}
+                {{-- Identitas yang sedang disunting: pengaman anti-salah-orang,
+                     sumber salah sasaran paling sering di panel admin. --}}
                 <div class="card">
                     <div class="card-body d-flex align-items-center gap-3">
                         <img src="{{ $user->avatar_url }}" alt="Foto profil {{ $user->name ?? 'pengguna' }}"
@@ -82,7 +81,7 @@
                             <label for="phone" class="form-label fw-semibold">Nomor WhatsApp</label>
                             <div class="input-group">
                                 <span class="input-group-text bg-light" aria-hidden="true">
-                                    <i class="ti ti-lock"></i>
+                                    <i class="ti ti-lock" aria-hidden="true"></i>
                                 </span>
                                 <input type="text" id="phone" class="form-control" value="{{ $user->phone }}" readonly aria-describedby="phoneHelp">
                             </div>
@@ -142,10 +141,8 @@
                     </div>
                 </div>
 
-                {{-- Identitas resmi: NIK & berkas KTP. Berkasnya adalah data
-                     pribadi (UU PDP) sehingga bagian ini — seperti halaman
-                     detail & antrian verifikasi — hanya untuk pemegang izin
-                     verifikasi. Gerbang yang sama ada di controller. --}}
+                {{-- NIK & berkas KTP adalah data pribadi (UU PDP): hanya untuk
+                     pemegang izin verifikasi; gerbang yang sama di controller. --}}
                 <div class="card">
                     <div class="card-header fw-semibold">Identitas (KTP)</div>
                     <div class="card-body">

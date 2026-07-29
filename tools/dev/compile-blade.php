@@ -53,7 +53,12 @@ echo count($files), " blade dikompilasi, {$bad} gagal parse\n";
  * Karena itu halaman publik ikut benar-benar di-render di sini.
  */
 $renderable = [
-    'web.home'    => ['categories' => collect()],
+    'web.home'    => [
+        'categories' => collect(),
+        // Dua angka yang di-Cache PageController::home — tanpa ini render
+        // tiruan gagal padahal route aslinya selalu mengirimnya.
+        'statistik'  => ['toko' => 0, 'listing' => 0],
+    ],
     'web.about'   => [],
     'web.help'    => [],
     'web.contact' => [],

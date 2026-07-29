@@ -224,7 +224,7 @@ Keduanya sudah tepat dan **tidak perlu diseragamkan**:
 
 | Kolom | Tipe | Kenapa sufiksnya begitu |
 | :-- | :-- | :-- |
-| `users.verification_level` | TINYINT 1–3 | **Bertingkat** — level 3 lebih tinggi dari level 2 |
+| `users.verification_level` | Turunan 1–3 (bukan kolom) | **Bertingkat** — level 3 lebih tinggi dari level 2. Kolomnya sudah dihapus; nilainya dihitung `User::verificationLevel` dari stempel + status toko (DATABASE.md §4.1) |
 | `stores.verification_status` | ENUM | **Kategori** — `verified` bukan “lebih tinggi” dari `rejected`, sekadar berbeda |
 
 Aturannya: pakai `_level` bila nilainya berurutan dan bisa dibandingkan,

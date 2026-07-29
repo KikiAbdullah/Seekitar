@@ -1,6 +1,6 @@
 # 📱 Seekitar – Mobile Implementation Guide
 
-**Versi:** 2.1 (Production‑Ready)  
+**Versi:** 2.2 (Production‑Ready)  
 **Tanggal:** 27 Juli 2026  
 **Target:** Flutter 3.44+ (Dart 3.12+) · Android & iOS  
 **Arsitektur:** Clean Architecture + Riverpod · Dependency Injection dengan Riverpod  

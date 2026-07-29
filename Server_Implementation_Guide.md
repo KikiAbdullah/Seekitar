@@ -1,10 +1,18 @@
 # 📄 Seekitar – Server Implementation Guide
 
-**Versi:** 2.1 (Ultra‑Detailed · Production‑Ready)  
+**Versi:** 2.2 (Ultra‑Detailed · Production‑Ready)  
 **Tanggal:** 27 Juli 2026  
 **Target:** Laravel 13 + PHP 8.3+ + MySQL 8.0.34+ + Bootstrap 5.3.x + Yajra Datatables 13 + Spatie Permission 8
 
 > 📌 Versi mengacu pada [`TECH_STACK.md`](TECH_STACK.md) sebagai sumber kebenaran tunggal.
+
+> **Perubahan 2.2** — panduan diselaraskan dengan implementasi terkini:
+> antrian & logika verifikasi ditulis ulang sesuai kode (§9.3 — stempel
+> tulis-sekali, OTP men-stempel tahap 1, satu klik semua tahap, syarat
+> persetujuan toko diperiksa ulang server); manajemen pengguna mengikuti
+> `UsersDataTable` + halaman sunting lengkap (§9.4); penyimpanan berkas KTP
+> memakai disk `local` privat + route streaming berizin (§18A.3); seeder
+> men-stempel `verified*_at`, bukan kolom level.
 
 ---
 
@@ -1130,19 +1138,28 @@ orang bisa memanen OTP dengan berganti jaringan, dan sebaliknya pengguna satu
 WiFi kantor saling memblokir.
 
 ```php
-// AppServiceProvider::boot()
+// AppServiceProvider — daftar lengkap limiter aplikasi:
+RateLimiter::for('api', fn (Request $request) => Limit::perMinute(60)
+    ->by($request->user()?->id ?: $request->ip()));
+
 RateLimiter::for('otp', fn (Request $request) => [
     Limit::perMinute(3)->by('otp:'.$request->input('phone')),
     Limit::perDay(10)->by('otp-daily:'.$request->input('phone')),
 ]);
 
-RateLimiter::for('offers', fn (Request $request) =>
-    Limit::perMinute(30)->by('offers:'.$request->user()?->id)
-);
+// Verifikasi OTP dibatasi terpisah — kode 6 digit tidak boleh bisa ditebak.
+RateLimiter::for('otp-verify', fn (Request $request) => Limit::perMinute(5)
+    ->by('otp-verify:'.$request->input('phone')));
 
-RateLimiter::for('api', fn (Request $request) =>
-    Limit::perMinute(60)->by($request->user()?->id ?: $request->ip())
-);
+RateLimiter::for('offers', fn (Request $request) => Limit::perMinute(30)
+    ->by('offers:'.$request->user()?->id));
+
+// Login admin (kata sandi): dua sumbu — per akun+IP dan per IP,
+// untuk menahan tebak-paksa sekaligus password spraying.
+RateLimiter::for('admin-login', fn (Request $request) => [
+    Limit::perMinute(5)->by('admin-login:'.$request->input('email').'|'.$request->ip()),
+    Limit::perMinute(20)->by('admin-login-ip:'.$request->ip()),
+]);
 ```
 
 ### 5.4 `EnsureProfileComplete`
@@ -1155,7 +1172,9 @@ public function handle(Request $request, Closure $next): Response
 {
     $user = $request->user();
 
-    if ($user && ($user->location === null || $user->name === null)) {
+    // Satu definisi kelengkapan (User::isProfileComplete): nama + lokasi.
+    // Bila syaratnya berubah, middleware tidak ikut ketinggalan.
+    if ($user && ! $user->isProfileComplete()) {
         return response()->json([
             'success' => false,
             'message' => 'Lengkapi profil (nama & lokasi) terlebih dahulu.',
@@ -1288,8 +1307,8 @@ Seekitar sengaja memakai pembagian berikut:
 
 | Kanal | Guard | Otorisasi memakai |
 | :-- | :-- | :-- |
-| Web admin | `web` | **Spatie** role & permission (`role:admin`, `can('manage-users')`) |
-| API mobile | `sanctum` | **Token ability** (`ability:store-owner`) + Policy |
+| Web admin | `web` | **Spatie** role & permission (`role:admin\|super-admin`, lalu `permission:*` granular per route/blok) |
+| API mobile | `sanctum` | Token `['*']` + **Policy** kepemilikan (Store/Offer/Order/dsb.) + middleware `permission:*` untuk endpoint admin API |
 
 Artinya seluruh role/permission Spatie cukup dibuat untuk guard `web` saja —
 persis seperti seeder di §19.2. Pengguna biasa di aplikasi mobile tidak
@@ -1307,17 +1326,17 @@ membutuhkan baris permission sama sekali; haknya ditentukan kepemilikan data
 'defaults' => ['guard' => 'web'],
 ```
 
-> Jika suatu saat admin perlu mengakses API lewat token, **jangan** mengganti
-> guard default. Duplikasikan permission untuk guard `sanctum`:
-> ```php
-> Permission::findOrCreate('manage-users', 'sanctum');
-> ```
-> Menukar default ke `sanctum` akan mematikan seluruh otorisasi web admin.
+> Endpoint admin API **memang** memakai `permission:*` di atas token
+> Sanctum — dan itu bekerja karena model `User` tidak mendefinisikan
+> `guard_name`, sehingga Spatie mengecek role/permission guard `web`
+> (default) apa pun kanal autentikasinya. Yang perlu dicegah justru
+> mengganti guard default ke `sanctum`: itu akan mematikan seluruh
+> otorisasi web admin.
 
 ### 6.3 Gates & Policies
 
 Policies untuk API (StorePolicy, ListingPolicy, dll.) tetap sama.  
-Untuk admin web, kita bisa menggunakan `Gate::allow` berdasarkan permission. Di controller, gunakan `$this->authorize('manage-users')` atau cek dengan `if (auth()->user()->can('manage-users'))`.
+Untuk admin web, otorisasi dibaca langsung dari permission Spatie: middleware `permission:*` di route, `@can(...)` di blade, dan `$request->user()->can(...)` di controller — tanpa Gate tambahan karena permission-nya sendiri sudah granular.
 
 #### `Gate::before` untuk super-admin
 
@@ -1806,166 +1825,206 @@ terlanjur ada siklus di data lama.
 
 **Index Verifikasi Pengguna (`/admin/verifications/users`):**
 
-- Tabel pengguna yang `verification_level` = 1 (menunggu verifikasi KTP).
-- Kolom: Nama, No HP, Tanggal Daftar, Aksi.
-- Aksi: Tombol “Approve” (hijau) & “Reject” (merah) → konfirmasi, lalu kirim notifikasi ke pengguna.
+- Antriannya BUKAN filter level — satu definisi bersama
+  `User::pendingVerification()`: pengajuan KTP terbuka
+  (`ktp_submitted_at` terisi DAN `verified2_at` kosong), diurutkan dari
+  pengajuan TERLAMA (SLA peninjauan 1×24 jam — yang paling lama menunggu
+  didahulukan).
+- Kolom: Nama + status pengajuan, No HP, stempel Tahap 1 & Tahap 2
+  (siapa & kapan — tahap 1 umumnya bertuliskan "Sistem (OTP)"), Aksi.
+- Aksi: klik baris → modal berkas (KTP/selfie/NIK) → centang checklist
+  SOP → satu klik **Verifikasi Pengguna** menyelesaikan SEMUA tahap yang
+  masih kosong sekaligus. Tombol Setuju terkunci sampai seluruh checklist
+  dicentang (`public/js/checklist-gate.js`, dipakai bersama antrian toko).
+- Tolak: collapse form di dalam modal yang sama, alasan wajib — tanpa
+  alasan pengguna akan mengirim ulang berkas yang sama.
 
 **Index Verifikasi Toko (`/admin/verifications/stores`):**
 
-- Tabel toko dengan `verification_status` = ‘pending’.
-- Kolom: Nama Toko, Pemilik, Tanggal Daftar, Aksi.
-- Aksi: Approve/Reject.
+- Antrian: toko `verification_status = 'pending'`, terlama dulu; pemilik
+  ikut dimuat (`owner:id,name,phone,verified2_at`) — kelayakan pemilik
+  adalah bagian dari penilaian.
+- Modal SOP 3 langkah (alamat & pemilik → foto etalase ASLI → koordinat di
+  peta) + checklist wajib. Foto dibaca dari kolom MENTAH
+  (`getRawOriginal('photo')`): aksesor `Store::photo` menjatuhkan nilai
+  kosong ke placeholder hiasan, dan bukti tidak boleh berupa dekorasi.
 
-#### Logika Approve & Reject
+#### Logika Approve & Reject (implementasi aktual)
 
-> ⚠️ **`verification_level` tidak pernah bernilai 0.** Nilainya hanya `1`, `2`,
-> atau `3` (`DATABASE.md` §4.1). Menolak pengajuan KTP berarti pengguna
-> **tetap di Level 1**, bukan diturunkan ke 0 — Level 1 sudah berarti "hanya
-> nomor HP terverifikasi", yang persis menggambarkan kondisinya.
+**Pengguna — stempel tulis-sekali, baris dikunci, satu klik semua tahap:**
 
 ```php
-public function approveUser(User $user): RedirectResponse
+public function verifyUser(Request $request, User $user): RedirectResponse
 {
-    $this->authorize('verify-users');
+    $adminId = $request->user()->id;
 
-    DB::transaction(function () use ($user) {
-        $user->update([
-            'verification_level'  => VerificationLevel::Verified,   // 1 -> 2
-            'ktp_rejected_reason' => null,
-        ]);
+    $tahapSelesai = DB::transaction(function () use ($user, $adminId): array {
+        $antrian = User::lockForUpdate()->findOrFail($user->id);
 
-        // Berkas KTP tidak lagi diperlukan setelah disetujui (UU PDP).
-        $user->notify(new VerificationApproved());
+        $selesai = [];
+
+        // Tahap 1 biasanya SUDAH distempel sistem saat OTP daftar cocok;
+        // cabang ini hanya untuk data lama/khusus yang lolos tanpa OTP.
+        if ($antrian->verified1_at === null) {
+            $antrian->verified1_by = $adminId;
+            $antrian->verified1_at = now();
+            $selesai[] = 1;
+        }
+
+        if ($antrian->verified2_at === null) {
+            // Stempel tahap 2 ADALAH "level 2"-nya: level murni turunan,
+            // tidak ada kolom lain untuk ditulis.
+            $antrian->verified2_by        = $adminId;
+            $antrian->verified2_at        = now();
+            $antrian->ktp_rejected_reason = null;
+            $selesai[] = 2;
+        }
+
+        $antrian->save();
+
+        return $selesai;
     });
 
-    return back()->with('success', "Verifikasi {$user->name} disetujui.");
-}
+    if ($tahapSelesai === []) {
+        return back()->with('error', "Tidak ada tahap yang menunggu untuk {$user->name}.");
+    }
 
-public function rejectUser(RejectVerificationRequest $request, User $user): RedirectResponse
-{
-    $this->authorize('verify-users');
-
-    $user->update([
-        // TETAP Level 1 — tidak ada level 0.
-        'verification_level'  => VerificationLevel::Basic,
-        'ktp_rejected_reason' => $request->validated('reason'),
-        'ktp_image'           => null,   // minta unggah ulang
-        'selfie_image'        => null,
-        'ktp_submitted_at'    => null,
-    ]);
-
-    $user->notify(new VerificationRejected($request->validated('reason')));
-
-    return back()->with('success', 'Pengajuan ditolak, pengguna diberi tahu.');
+    return back()->with('success',
+        "Verifikasi {$user->name} selesai (tahap ".implode(' & ', $tahapSelesai).").");
 }
 ```
 
-**Penolakan toko** — beri alasan, dan pastikan toko tidak muncul di pencarian:
+**Pengguna — penolakan hanya membuka ulang antrian:**
 
 ```php
-public function rejectStore(RejectVerificationRequest $request, Store $store): RedirectResponse
+public function rejectUser(RejectVerificationRequest $request, User $user): RedirectResponse
 {
-    $this->authorize('verify-stores');
+    // Stempel verified_* TIDAK disentuh: penolakan berbicara tentang
+    // pengajuan yang sedang terbuka, bukan mencabut persetujuan lama.
+    $user->ktp_rejected_reason = $request->reason();
+    $user->ktp_submitted_at    = null;   // keluar antrian; unggah ulang membukanya lagi
+    $user->save();
 
-    DB::transaction(function () use ($request, $store) {
-        $store->update([
-            'verification_status' => VerificationStatus::Rejected,
-            'rejected_reason'     => $request->validated('reason'),
-            'is_active'           => false,   // hilang dari pencarian
-        ]);
-
-        $store->owner->notify(new StoreVerificationRejected($store, $request->validated('reason')));
-    });
-
-    return back()->with('success', 'Toko ditolak.');
+    return back()->with('success', "Verifikasi {$user->name} ditolak.");
 }
+```
 
-public function approveStore(Store $store): RedirectResponse
-{
-    $this->authorize('verify-stores');
+**Toko — dua syarat diperiksa ulang SERVER di titik persetujuan:**
 
-    $store->update([
-        'verification_status' => VerificationStatus::Verified,
-        'verified_at'         => now(),
-        'rejected_reason'     => null,
-        'is_active'           => true,
-    ]);
+```php
+$hasil = DB::transaction(function () use ($store, $request): string {
+    $toko = Store::lockForUpdate()->findOrFail($store->id);
 
-    $store->owner->notify(new StoreVerificationApproved($store));
+    if ($toko->verification_status !== VerificationStatus::Pending) {
+        return 'bukan-antrian';                    // stempel tulis-sekali
+    }
 
-    return back()->with('success', 'Toko disetujui.');
-}
+    // Syarat (1): pemilik terverifikasi (no HP + KTP). Level bisa turun
+    // selama menunggu antrian, jadi mengecek hanya saat pengajuan tidak cukup.
+    $pemilik = User::lockForUpdate()->find($toko->user_id);
+    if ($pemilik === null || ! $pemilik->canOpenStore()) {
+        return 'pemilik-belum-terverifikasi';
+    }
+
+    // Syarat (2): foto ASLI terunggah — baca kolom mentah, bukan aksesor.
+    if (empty($toko->getRawOriginal('photo'))) {
+        return 'foto-belum-diunggah';
+    }
+
+    $toko->verification_status = VerificationStatus::Verified;
+    $toko->rejected_reason     = null;
+    $toko->verified_at         = now();
+    $toko->verified_by         = $request->user()->id;
+    $toko->save();
+
+    return 'disetujui';
+});
+```
+
+**Toko — penolakan juga hanya sah dari antrian** (menolak toko yang sudah
+disetujui akan menyisakan stempel `verified_*` pada status `rejected` —
+keadaan kontradiktif tanpa makna alur):
+
+```php
+$toko->verification_status = VerificationStatus::Rejected;
+$toko->rejected_reason     = $request->reason();   // wajib: min 10, maks 500
+$toko->save();
 ```
 
 `reason` wajib diisi saat menolak (`RejectVerificationRequest`:
 `'reason' => 'required|string|min:10|max:500'`) — penolakan tanpa alasan
 membuat pengguna mengajukan ulang berkas yang sama.
 
+> ⚠️ **Antrian pengguna dinilai SATU KLIK, bukan dua.** Desain awal memecah
+> persetujuan menjadi dua klik terpisah (tahap 1 lalu tahap 2). Praktiknya
+> itu hanya menggandakan klik — tahap 1 sudah distempel sistem saat OTP
+> cocok, dan modal kini memagari tinjauan lewat checklist SOP. Yang tidak
+> berubah: stempel tulis-sekali dan penguncian baris.
+
 ### 9.4 Manajemen Pengguna
 
 **Index (`/admin/users`):**
 
-- Datatables: Nama, Telepon, Level Verifikasi, Role, Status, Aksi.
-- Filter: **Level Verifikasi** (select), Role (select), Status blokir (select).
-- Aksi: Edit (role, verification_level), Blokir/Buka blokir, Delete (soft delete, hanya jika tidak punya order aktif).
+- Datatables: Nama (+ ikon centang hijau bila KTP terverifikasi), Telepon,
+  Rating, Status, Terdaftar, Email, Alamat, Aksi.
+- Filter: Status blokir (select). Tidak ada filter level — level murni
+  turunan dan sengaja tidak ditampilkan sebagai kolom (DATABASE.md §4.1).
+  Untuk API admin, filter `verification_level` tetap tersedia lewat satu
+  definisi bersama `User::scopeWhereVerificationLevel()`.
+- Aksi: Detail, Sunting, Blokir/Buka blokir.
 
-**Filter Datatables server-side** — Yajra tidak otomatis membaca filter kustom;
-kirim lewat `data` di JS lalu tangkap di controller:
+**Sumber data dipisah ke kelas `App\DataTables\UsersDataTable`** supaya
+definisi kolom/filter bisa diuji tanpa lapisan HTTP. Kolom nama dirender
+lewat Blade (`admin.users._nama`) dan masuk `rawColumns(['name','action'])`
+— sisanya tetap lolos escaping DataTables:
 
 ```php
-public function data(Request $request)
-{
-    $query = User::query()->with('roles');
+$query = User::query()->select([
+    'id', 'phone', 'name', 'email', 'address',
+    'rating_avg', 'total_reviews',
+    // verified2_at ikut dipilih hanya untuk ikon centang pada nama.
+    'is_blocked', 'ktp_submitted_at', 'verified2_at', 'created_at',
+]);
 
-    $query->when($request->filled('verification_level'),
-        fn ($q) => $q->where('verification_level', $request->integer('verification_level')));
-
-    $query->when($request->filled('role'),
-        fn ($q) => $q->whereHas('roles', fn ($r) => $r->where('name', $request->string('role'))));
-
-    $query->when($request->filled('is_blocked'),
-        fn ($q) => $q->where('is_blocked', $request->boolean('is_blocked')));
-
-    return DataTables::of($query)
-        ->addColumn('level_label', fn ($u) => VerificationLevel::from($u->verification_level)->label())
-        ->addColumn('role', fn ($u) => $u->roles->pluck('name')->join(', ') ?: '-')
-        ->addColumn('action', fn ($u) => view('admin.users.actions', ['user' => $u]))
-        ->rawColumns(['action'])
-        ->make(true);
+if ($request->filled('is_blocked')) {
+    $query->where('is_blocked', $request->boolean('is_blocked'));
 }
+
+return DataTables::eloquent($query)
+    ->editColumn('name', fn (User $u) => view('admin.users._nama', ['user' => $u])->render())
+    ->addColumn('status', fn (User $u) => $u->is_blocked ? 'Diblokir' : 'Aktif')
+    ->addColumn('action', fn (User $u) => view('admin.users._actions', ['user' => $u])->render())
+    ->rawColumns(['name', 'action'])
+    ->toJson();
 ```
 
-```js
-const table = $('#usersTable').DataTable({
-  processing: true,
-  serverSide: true,
-  ajax: {
-    url: "{{ route('admin.users.data') }}",
-    data: (d) => {
-      d.verification_level = $('#filterLevel').val();
-      d.role = $('#filterRole').val();
-      d.is_blocked = $('#filterBlocked').val();
-    },
-  },
-  columns: [
-    { data: 'name' },
-    { data: 'phone' },
-    { data: 'level_label' },
-    { data: 'role' },
-    { data: 'action', orderable: false, searchable: false },
-  ],
-});
+Pola filter yang sama (nilai filter dikirim DataTables → dibaca kelas
+DataTable di server) dipakai seluruh tabel lain yang punya filter
+(toko, listing, permintaan, pesanan, dispute) — masing-masing lewat kelas
+`App\DataTables\*` miliknya.
 
-// Muat ulang tabel setiap filter berubah.
-$('#filterLevel, #filterRole, #filterBlocked').on('change', () => table.ajax.reload());
-```
+**Sunting Pengguna (`/admin/users/{user}/edit`, halaman penuh):**
 
-Pola `data:` + `ajax.reload()` yang sama dipakai untuk seluruh Datatables lain
-yang punya filter (toko, listing, permintaan, pesanan, dispute).
+- Strip identitas anti-salah-orang (avatar + nama + nomor + lencana KTP).
+- **Data Akun**: Nama; Nomor WA readonly — nomor adalah kredensial masuk
+  (OTP), penggantiannya hanya milik pemilik lewat aplikasi dengan OTP ke
+  nomor baru; Email (unik, nullable — hanya staf panel yang masuk pakai
+  email); Alamat; Foto Profil (JPEG/PNG ≤ 2 MB, disk public).
+- **Identitas (KTP)**: NIK (`digits:16`; keunikan dicek lewat `nik_hash`
+  karena kolomnya terenkripsi tidak bisa di-`WHERE`); unggah ulang berkas
+  KTP/selfie khusus pemegang izin `verify-users` — digerbang di blade
+  DAN controller, disimpan di disk privat `local` (UU PDP).
+- **Aturan 5**: penyuntingan admin TIDAK pernah menyentuh stempel
+  `verified1/2_*` — stempel adalah fakta audit "siapa menyetujui, kapan".
+  Kebalikannya, unggah ulang berkas oleh pengguna sendiri lewat API
+  mengosongkan `verified2_*` dan membuka antrian lagi.
 
-**Edit Pengguna (modal atau halaman terpisah):**
+**Blokir/Buka blokir (`/admin/users/{user}/block`):**
 
-- Form: Nama, Phone (readonly), Verification Level (dropdown), Role (dropdown, jika admin yang login adalah super-admin).
+- Memblokir WAJIB mencabut token Sanctum-nya — tanpa itu sesi yang sudah
+  berjalan tetap hidup sampai token kedaluwarsa — sekaligus menonaktifkan
+  seluruh tokonya (`is_active = false`). Alasan blokir wajib diisi dan
+  ditampilkan ke pengguna saat loginnya ditolak (respons `423`).
 
 ### 9.5 Manajemen Toko
 
@@ -2095,8 +2154,6 @@ public function extend(CustomerRequest $request): RedirectResponse
         'extended_at'     => now(),
         'extension_count' => $request->extension_count + 1,
     ]);
-
-    activity()->performedOn($request)->log('Diperpanjang admin');
 
     return back()->with('success', 'Permintaan diperpanjang 24 jam.');
 }
@@ -3282,27 +3339,19 @@ penerapannya **berbeda** untuk berkas dan untuk teks pendek.
 > `memory_limit`. Berkas terenkripsi juga tidak bisa disajikan lewat URL
 > pre-signed, sehingga setiap tampilan gambar harus melewati PHP.
 
-**Yang dipakai:**
+**Yang dipakai (implementasi repo ini):**
 
 | Data | Cara | Alasan |
 | :-- | :-- | :-- |
-| Berkas KTP & selfie | **S3 SSE-KMS**, bucket privat | Enkripsi at-rest AES-256 oleh penyedia, tanpa pembengkakan |
-| NIK & nama pada KTP | **`Crypt::encryptString()`** di kolom DB | Teks pendek; hasil 216 byte, muat di `VARCHAR(255)` |
-| Akses berkas | URL pre-signed, umur 5 menit | Tidak ada berkas KTP yang bisa diakses publik |
+| Berkas KTP & selfie | **Disk `local` (privat)** — di produksi boleh diganti bucket S3 dengan SSE-KMS | Tidak bisa diakses lewat URL tebakan; enkripsi at-rest mengikuti penyedia penyimpanan |
+| NIK | **cast `encrypted`** di kolom DB | Teks pendek; hasil 216 byte, muat di `VARCHAR(255)` |
+| Akses berkas | Route berizin yang **mengalirkan berkas lewat PHP** | Tidak ada URL publik/pre-signed yang bocor; otorisasi `verify-users` dicek setiap akses |
 
 ```php
-// Unggah ke bucket privat dengan enkripsi sisi server.
-$path = $request->file('ktp_image')->store('ktp', [
-    'disk'       => 's3-private',
-    'visibility' => 'private',
-]);
-
-Storage::disk('s3-private')->setVisibility($path, 'private');
-
-$user->update([
-    'ktp_image'        => $path,          // simpan PATH, bukan URL
-    'ktp_submitted_at' => now(),
-]);
+// Unggah ke disk privat — simpan PATH, bukan URL.
+$user->ktp_image    = $request->file('ktp_image')->store("ktp/{$user->id}", 'local');
+$user->selfie_image = $request->file('selfie_image')->store("ktp/{$user->id}", 'local');
+$user->ktp_submitted_at = now();
 ```
 
 ```php
@@ -3326,8 +3375,7 @@ simpan, terdekripsi saat baca:
 protected function casts(): array
 {
     return [
-        'nik'      => 'encrypted',   // NIK hasil pembacaan admin/OCR
-        'ktp_name' => 'encrypted',
+        'nik' => 'encrypted',   // satu-satunya kolom terenkripsi di users
     ];
 }
 ```
@@ -3337,23 +3385,29 @@ protected function casts(): array
 > duplikasi NIK, simpan `nik_hash` (`hash('sha256', $nik.config('app.key'))`)
 > sebagai kolom terpisah yang bisa diindeks.
 
-**Akses admin** selalu lewat URL berumur pendek, dan setiap aksesnya dicatat:
+**Akses admin** lewat route berizin `verify-users` yang mengalirkan berkas
+langsung dari disk privat — tanpa URL publik sama sekali, dan responsnya
+dilarang di-cache (`no-store`):
 
 ```php
-public function viewKtp(User $user): RedirectResponse
+public function media(User $user, string $kind): StreamedResponse
 {
-    $this->authorize('verify-users');
+    $path = match ($kind) {
+        'ktp'    => $user->ktp_image,
+        'selfie' => $user->selfie_image,
+    };
 
-    activity()->causedBy(auth()->user())->performedOn($user)->log('Melihat berkas KTP');
+    abort_if($path === null || ! Storage::disk('local')->exists($path), 404);
 
-    return redirect(
-        Storage::disk('s3-private')->temporaryUrl($user->ktp_image, now()->addMinutes(5))
-    );
+    return Storage::disk('local')
+        ->response($path)
+        ->header('Cache-Control', 'private, no-store');
 }
 ```
 
-**Retensi:** setelah `verification_level` naik ke 2, berkas KTP dihapus
-terjadwal (mis. 30 hari). Data yang tidak disimpan tidak bisa bocor.
+**Retensi:** setelah tahap 2 disetujui (`verified2_at` terisi), berkas KTP
+boleh dihapus sesuai kebijakan retensi — data yang tidak disimpan tidak
+bisa bocor.
 
 ### 18A.4 Proteksi XSS di Blade
 
@@ -3524,7 +3578,7 @@ private function normalizePhone(?string $input): ?string
 
 | Janji di PRD | Implementasi |
 | :-- | :-- |
-| KTP & selfie dienkripsi AES-256 | §18A.3 — S3 SSE-KMS + cast `encrypted` untuk NIK |
+| KTP & selfie disimpan privat | §18A.3 — disk `local` privat (S3 SSE-KMS di produksi) + cast `encrypted` untuk NIK |
 | Koordinat tidak ditampilkan mentah | Lokasi pembeli dibulatkan (PRD §5.2.3) |
 | Nomor telepon bertahap | Disaring di API Resource, bukan di klien |
 | HTTPS/TLS 1.3 | Konfigurasi server + `SESSION_SECURE_COOKIE=true` |
@@ -3605,13 +3659,21 @@ public function run(): void
 
         Role::firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
 
-        // Nomor dari config, BUKAN ditanam di kode — kalau tidak, nomor
-        // contoh yang sama menjadi super-admin di produksi.
-        $user = User::firstOrCreate(
+        // Nomor, email & sandi dari config, BUKAN ditanam di kode — kalau
+        // tidak, kredensial contoh yang sama menjadi super-admin di produksi.
+        $user = User::withTrashed()->firstOrCreate(
             ['phone' => config('seekitar.super_admin_phone')],
-            ['name' => 'Super Admin', 'verification_level' => VerificationLevel::Pro],
+            [
+                'name'  => 'Super Admin',
+                'email' => config('seekitar.super_admin_email'),
+                // Stempel == status "terverifikasi" (tidak ada kolom level
+                // untuk ditulis); Pro tetap turunan dari toko tervalidasi.
+                'verified1_at' => now(),
+                'verified2_at' => now(),
+            ],
         );
-        $user->assignRole($superAdmin);
+        $user->password ??= config('seekitar.super_admin_password');   // hanya saat akun baru
+        $user->syncRoles([$superAdmin->name]);
     });
 
     app(PermissionRegistrar::class)->forgetCachedPermissions();

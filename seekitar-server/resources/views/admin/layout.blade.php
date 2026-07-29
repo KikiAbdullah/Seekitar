@@ -14,9 +14,8 @@
     <link rel="preconnect" href="https://cdn.datatables.net" crossorigin>
     <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin>
 
-    {{-- Font UI tunggal seluruh halaman admin (sama dengan situs publik);
-         dimuat SEBELUM style.min.css agar berkasnya sudah tersedia saat
-         tema membaca --bs-font-sans-serif yang kita alihkan di admin.css. --}}
+    {{-- Font dimuat SEBELUM style.min.css agar siap saat tema membaca
+         --bs-font-sans-serif yang dialihkan ke font ini di admin.css. --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">

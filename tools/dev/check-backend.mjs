@@ -38,9 +38,13 @@ check('api routes konkret', ["Route::middleware('auth:sanctum')", 'profile.compl
 console.log('\nHalaman admin');
 check('chart dashboard (#76)', ['chartData', 'Chart.js', 'chart.umd.min.js']);
 check('anti-siklus kategori (#77)', ['NotADescendant', 'turunannya sendiri']);
-check('approve/reject user (#78)', ['approveUser', 'rejectUser', 'TETAP Level 1']);
+// Resolusi final #78: kolom level dihapus — persetujuan men-stempel
+// verified*_by/at (tulis-sekali, baris dikunci); penolakan membuka ulang antrian.
+check('approve/reject user (#78)', ['verifyUser', 'rejectUser', 'lockForUpdate', 'tulis-sekali']);
 check('reject toko (#79)', ['rejectStore', 'rejected_reason']);
-check('filter datatables (#80)', ['verification_level', 'ajax.reload()']);
+// Resolusi final #80: filter level hidup di API (whereVerificationLevel);
+// panel menampilkan ikon centang KTP + filter status blokir via UsersDataTable.
+check('filter datatables (#80)', ['UsersDataTable', 'verification_level', 'is_blocked']);
 check('editor operating_hours (#81)', ['operating_hours[{{ $day }}]', 'date_format:H:i']);
 check('resolve dispute ubah order (#84)', ['ResolveDisputeRequest', 'membuka kunci']);
 check('tabel settings (#85)', ["Schema::create('settings'", 'SettingService']);

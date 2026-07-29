@@ -691,8 +691,11 @@ if (!/dataTable\.defaults[\s\S]{0,200}vendor\/datatables\/id\.json/.test(layoutS
   ok('bahasa Datatables disetel sekali di layout');
 }
 
-// Ikon Tabler wajib punya aria-hidden: pembaca layar tidak boleh membacakan
-// glyph dekoratif sebagai teks acak.
+// Ikon Tabler harus Netral ATAU Bermakna bagi pembaca layar:
+//   - dekoratif ⇒ aria-hidden="true" supaya glyph-nya tidak dibacakan acak;
+//   - bermakna  ⇒ role="img" + aria-label (mis. centang "KTP terverifikasi"
+//     di _cek_terverifikasi — menyembunyikannya justru menghilangkan arti).
+// Tag tanpa keduanya tidak punya perlakuan aksesibilitas sama sekali.
 //
 // Panel memakai Tabler (`ti ti-*`) sejak beralih ke template Modernize —
 // FontAwesome tidak lagi dimuat sama sekali, jadi kelas `fa-*` yang tersisa
@@ -701,13 +704,15 @@ const ikonTanpaAria = [];
 for (const p of blades) {
   const src = fs.readFileSync(p, 'utf8');
   for (const m of src.matchAll(/<i class="ti [^"]*"(?![^>]*aria-hidden)[^>]*>/g)) {
+    // role="img" + aria-label adalah alternatif aksesibel yang SAH.
+    if (/role="img"/.test(m[0]) && /aria-label=/.test(m[0])) continue;
     ikonTanpaAria.push(`${path.basename(p)}: ${m[0].slice(0, 50)}`);
   }
 }
 if (ikonTanpaAria.length) {
-  fail(`ikon tanpa aria-hidden: ${ikonTanpaAria.join(', ')}`);
+  fail(`ikon tanpa perlakuan aksesibilitas (aria-hidden, atau role+aria-label): ${ikonTanpaAria.join(', ')}`);
 } else {
-  ok('semua ikon dekoratif memakai aria-hidden');
+  ok('semua ikon dekoratif aria-hidden; ikon bermakna punya aria-label');
 }
 
 /*
@@ -990,23 +995,31 @@ if (!fs.existsSync(partialTabel)) {
  * sulit dipindai. Alasan teknis tempatnya di controller, service, atau
  * Server_Implementation_Guide.md.
  *
- * Dokumentasi PARAMETER partial tetap boleh — itu kontrak bagi pemanggilnya.
+ * DUA pengecualian:
+ *   1. Dokumentasi PARAMETER di kepala partial — itu kontrak bagi
+ *      pemanggilnya (id/nama kontainer turunan, variabel wajib, dsb.).
+ *   2. Catatan di KEPALA berkas (sebelum cuplikan HTML pertama) yang
+ *      menjelaskan kenapa berkasnya dirakit dengan cara tertentu — dipindah
+ *      ke controller berarti memisahkannya dari markup yang justru ia
+ *      jelaskan; editor berkas inilah pembacanya, setiap kali berkas dibuka.
+ *
+ * Komentar singkat menjelang baris yang rumit dibiarkan, selama pendek —
+ * yang dilarang tetap riwayat/penjelasan berlarut-larut.
  */
-const PARTIAL_BERDOKUMEN = [
-  '_datatable.blade.php',
-  'table-page.blade.php',
-  '_reject_modal.blade.php',
-];
+const PARTIAL_KEPALA_BERDOKUMEN = /^\{\{--[\s\S]*?\$[a-zA-Z]/;
 
 const naratif = [];
 for (const p of blades) {
-  if (PARTIAL_BERDOKUMEN.some(n => path.basename(p) === n)) continue;
-
   const src = fs.readFileSync(p, 'utf8');
   for (const m of src.matchAll(/\{\{--([\s\S]*?)--\}\}/g)) {
     const isi = m[1].trim();
     const baris = isi.split('\n').length;
     const penanda = /KENAPA|Kenapa|Sebabnya|Diverifikasi|Versi sebelumnya|⚠️|TODO_BUG|jebakan|Akibatnya/.test(isi);
+
+    // Kepala berkas yang mendokumentasikan parameter = kontrak pemanggil;
+    // sebutan variabel ($index, $user, …) adalah ciri khasnya.
+    const diKepala = src.slice(0, m.index).trim() === '';
+    if (diKepala && PARTIAL_KEPALA_BERDOKUMEN.test(m[0])) continue;
 
     if (baris > 2 || penanda) {
       naratif.push(`${path.basename(path.dirname(p))}/${path.basename(p)}`);

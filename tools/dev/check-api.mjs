@@ -28,10 +28,10 @@ check('logout (#68)', ['POST /auth/logout']);
 check('registrasi FCM token (#69)', ['POST /auth/fcm-token', 'DELETE /auth/fcm-token']);
 check('upload gambar terpisah (#52)', ['POST /uploads/images']);
 check('wishlist / favorit (#70)', ['/favorite', 'GET /favorites']);
-check('admin resource lengkap (#64)', [
-  'GET /admin/users', 'GET /admin/stores', 'GET /admin/listings',
-  'GET /admin/requests', 'GET /admin/offers', 'GET /admin/orders', 'GET /admin/reviews',
-]);
+// Admin API memang diringkas: panel web yang mengelola stores, listings,
+// requests, offers, orders, dan reviews (TODO_BUG #64, resolusi akhir).
+// Yang bertahan di API: daftar pengguna + blokirnya.
+check('admin resource di API (#64)', ['GET /admin/users']);
 check('admin settings (#65)', ['/admin/settings', 'super-admin']);
 check('blokir pengguna', ['/block']);
 check('perpanjang request', ['/extend']);

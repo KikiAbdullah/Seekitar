@@ -1,7 +1,7 @@
 # 🎨 BRAND GUIDELINE — SEEKITAR
 
 **Dokumen Identitas & Panduan Merek**  
-**Versi:** 2.1 (Komprehensif & Siap Implementasi)
+**Versi:** 2.2 (Komprehensif & Siap Implementasi)
 
 | Informasi Dokumen    |                                                                                                           |
 | :------------------- | :-------------------------------------------------------------------------------------------------------- |
@@ -628,20 +628,26 @@ Kepercayaan adalah fondasi marketplace lokal. Identitas visual badge harus jelas
 
 ### 4.1 Level Verifikasi
 
-| Level | Nama Badge                  | Ikon                     | Syarat                                      | Sumber data |
-| :---- | :-------------------------- | :----------------------- | :------------------------------------------ | :---------- |
-| 1     | **Nomor Terverifikasi**     | Telepon + centang (biru) | OTP WhatsApp                                | `users.verification_level = 1` |
-| 2     | **Identitas Terverifikasi** | KTP + centang (biru)     | Unggah KTP & selfie, lolos verifikasi admin | `users.verification_level = 2` |
-| 3     | **Usaha Terverifikasi**     | Toko + centang (biru)    | Verifikasi lokasi & informasi usaha         | `users.verification_level = 3` |
+| Level | Nama Badge                  | Ikon                     | Syarat                                      | Fakta penentunya |
+| :---- | :-------------------------- | :----------------------- | :------------------------------------------ | :--------------- |
+| 1     | **Nomor Terverifikasi**     | Telepon + centang (biru) | OTP WhatsApp                                | Setiap pengguna terdaftar (masuk lewat OTP; `verified1_at` menandainya) |
+| 2     | **Identitas Terverifikasi** | KTP + centang (biru)     | Unggah KTP & selfie, lolos verifikasi admin | `verified2_at` terisi |
+| 3     | **Usaha Terverifikasi**     | Toko + centang (biru)    | Verifikasi lokasi & informasi usaha         | Memiliki ≥ 1 toko `verification_status = 'verified'` |
+
+> Level adalah **turunan murni** (`User::verificationLevel`), bukan kolom
+> di tabel — tidak ada dua sumber kebenaran yang bisa berbeda pendapat
+> (DATABASE.md §4.1). Di API, nilainya muncul sebagai field JSON
+> `verification_level` yang baca-saja.
 
 > ⚠️ **Level 4 “Keahlian Terverifikasi” dihapus dari MVP.**
 > Level tersebut sempat tercantum di sini, tetapi **tidak ada di dokumen mana
-> pun yang lain**: `DATABASE.md` §4.1 mendefinisikan `verification_level`
-> sebagai TINYINT bernilai 1–3, dan `PRD.md` §5.3.2 hanya menjelaskan tiga
-> level. Badge yang tidak punya sumber data tidak akan pernah bisa ditampilkan.
+> pun yang lain**: `DATABASE.md` §4.1 hanya mendefinisikan level 1–3, dan
+> `PRD.md` §5.3.2 hanya menjelaskan tiga level. Badge yang tidak punya fakta
+> penentu tidak akan pernah bisa ditampilkan.
 >
 > Menambahkannya kembali bukan sekadar mengubah tabel ini — perlu:
-> 1. memperluas rentang `users.verification_level` beserta enum `VerificationLevel`,
+> 1. memperluas enum `VerificationLevel` beserta aturan turunannya
+>    (stempel/fakta baru apa yang menandainya),
 > 2. alur unggah dokumen sertifikasi (kolom baru + endpoint),
 > 3. antarmuka peninjauan tersendiri di panel admin.
 >

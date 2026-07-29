@@ -117,6 +117,12 @@ function migrationTables() {
     if (/\$table->timestamps\(\)/.test(src)) { entry.cols.add('created_at'); entry.cols.add('updated_at'); }
     if (/\$table->softDeletes\(\)/.test(src)) entry.cols.add('deleted_at');
     if (/\$table->rememberToken\(\)/.test(src)) entry.cols.add('remember_token');
+    // Makro Blueprint lain yang menyembunyikan nama kolom sebenarnya.
+    if (/\$table->id\(\)/.test(src)) entry.cols.add('id');
+    for (const mm of src.matchAll(/\$table->(?:uuidMorphs|morphs)\('([a-z_0-9]+)'\)/g)) {
+      entry.cols.add(mm[1] + '_type');
+      entry.cols.add(mm[1] + '_id');
+    }
 
     // Kolom spasial ditambahkan lewat raw SQL di SpatialSchema.
     for (const sm of src.matchAll(/addLocationColumn\(\s*'[a-z_]+'[^)]*?(?:column:\s*'([a-z_0-9]+)')?\s*\)/g)) {

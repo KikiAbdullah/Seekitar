@@ -1,58 +1,95 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Seekitar Server
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Backend **Seekitar** — marketplace hyperlocal dua arah berbasis geolokasi:
+REST API untuk aplikasi Flutter (`/api/v1`) + panel admin web (`/admin`).
 
-## About Laravel
+## Tumpukan
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+| Komponen | Versi |
+| :-- | :-- |
+| Laravel | 13.x (`laravel/framework ^13.8`) |
+| PHP | 8.3+ |
+| Database | MySQL 8.0.34+ (**wajib** — `POINT SRID 4326`, `SPATIAL INDEX`, `SET`, `CHECK`) |
+| Auth API | Sanctum 4 (token Bearer, masuk via OTP WhatsApp) |
+| Panel admin | Blade + Bootstrap 5.3 (template Modernize, divendor di `public/vendor/`) + Yajra DataTables 13 + SweetAlert2 (divendor di `public/vendor/sweetalert2/`) |
+| Peran & izin | Spatie Permission 8 |
+| Queue/Cache | Redis 7 |
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
-
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Menyiapkan
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+composer install
+cp .env.example .env && php artisan key:generate
+# isi kredensial DB_* (MySQL 8.0.34+ wajib ada — Laravel tidak membuatkan basis data)
+php artisan migrate:fresh --seed
+php artisan storage:link
+php artisan serve
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+`migrate:fresh --seed` adalah jalan resmi: perubahan skema SELALU dimerge
+ke migrasi dasar (tidak ada migrasi `add_*`), jadi skema lengkap selalu
+terbentuk dari nol. Seed menjalankan, berurutan: role & permission
+satu akun super-admin (dari `config/seekitar.php`), kategori, pengaturan,
+akun contoh per peran (local/testing saja), lalu data dummy.
 
-## Contributing
+### Kredensial contoh (local/testing)
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Dicetak seeder ke console; kata sandi semuanya `password`:
 
-## Code of Conduct
+| Peran | Email | Panel |
+| :-- | :-- | :-- |
+| super-admin | `superadmin@seekitar.test` | ya |
+| admin | `admin.staf@seekitar.test` | ya |
+| user | `warga@seekitar.test` | **ditolak** (kontrol uji pembatasan peran) |
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Menjalankan test
 
-## Security Vulnerabilities
+```bash
+php artisan test
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+14 file test — kontrak seeder/factory/enum/rute/state machine diuji tanpa
+basis data (lihat `tests/Unit`), kontrak skema lewat basis data test
+(`tests/Feature`).
 
-## License
+## Peta struktur
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```
+app/
+├── DataTables/        Definisi tabel panel (sumber data DataTables, terpisah dari controller)
+├── Enums/             Vocabulary status/tipe (OrderStatus, VerificationLevel, …)
+├── Http/
+│   ├── Concerns/      ApiResponse (bentuk respons standar API)
+│   ├── Controllers/
+│   │   ├── Admin/     Panel web (Blade)
+│   │   └── Api/V1/    REST API + subfolder Admin/ (endpoint admin API)
+│   ├── Middleware/    EnsureProfileComplete, alias permission, …
+│   ├── Requests/      FormRequest validasi
+│   └── Resources/     Bentuk JSON keluar
+├── Models/            Eloquent + docblock alasan kolom/relasi
+├── Services/          OtpService, WhatsAppGateway, OrderStateMachine, BroadcastService, …
+└── Support/           PhoneNumber, PlaceholderImg, SpatialSchema, …
+```
+
+## Aturan main yang sering terlewat
+
+- **Level verifikasi adalah turunan**, bukan kolom — jangan menulis
+  `verification_level` ke `users`; tulis stempel `verified*_at/by`.
+  Lihat `DATABASE.md` §4.1.
+- **Stempel verifikasi tulis-sekali** dan hanya berubah lewat alur
+  berjejak (antrian admin / OTP / unggah ulang berkas pengguna).
+- **Foto verifikasi** (KTP/selfie) hidup di disk `local` privat dan hanya
+  disajikan lewat route berizin; jangan pernah meletakkannya di disk
+  `public` (UU PDP).
+- Aksesor foto (`avatar_url`, `Store::photo`, `Listing::images`) menjatuhkan
+  nilai kosong ke placeholder — konteks verifikasi wajib membaca
+  `getRawOriginal(...)`.
+- Komentar/docblock menjelaskan **kenapa**, bukan apa — baca sebelum
+  mengubah perilaku.
+
+## Dokumentasi
+
+Semua dokumen induk ada di root repositori: [`PRD.md`](../PRD.md),
+[`DATABASE.md`](../DATABASE.md), [`API_DOCUMENTATION.md`](../API_DOCUMENTATION.md),
+[`Server_Implementation_Guide.md`](../Server_Implementation_Guide.md),
+[`TECH_STACK.md`](../TECH_STACK.md).

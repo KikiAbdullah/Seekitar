@@ -42,7 +42,7 @@
                 @else
                     <div class="bg-light-primary text-primary d-flex align-items-center justify-content-center"
                          style="height: 160px;" aria-hidden="true">
-                        <i class="ti ti-building-store fs-10"></i>
+                        <i class="ti ti-building-store fs-10" aria-hidden="true"></i>
                     </div>
                 @endif
 
@@ -120,12 +120,12 @@
                     <li class="list-group-item d-flex justify-content-between gap-3">
                         <span class="text-muted">Koordinat</span>
                         <span class="font-monospace text-end">
-                            {{ number_format((float) $store->latitude, 6) }}, {{ number_format((float) $store->longitude, 6) }}
+                            {{ \App\Support\Angka::desimal($store->latitude, 6) }}, {{ \App\Support\Angka::desimal($store->longitude, 6) }}
                         </span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between gap-3">
                         <span class="text-muted">Radius layanan</span>
-                        <span class="text-end">{{ rtrim(rtrim(number_format((float) $store->service_radius_km, 2), '0'), '.') }} km</span>
+                        <span class="text-end">{{ rtrim(rtrim(\App\Support\Angka::desimal($store->service_radius_km, 2), '0'), ',') }} km</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between gap-3">
                         <span class="text-muted">Dibuat</span>

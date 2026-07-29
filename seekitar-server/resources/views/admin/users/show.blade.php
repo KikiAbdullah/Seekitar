@@ -83,7 +83,7 @@
                         <li class="list-group-item d-flex justify-content-between gap-3">
                             <span class="text-muted">Koordinat</span>
                             <span class="font-monospace text-end">
-                                {{ number_format((float) $user->latitude, 6) }}, {{ number_format((float) $user->longitude, 6) }}
+                                {{ \App\Support\Angka::desimal($user->latitude, 6) }}, {{ \App\Support\Angka::desimal($user->longitude, 6) }}
                             </span>
                         </li>
                     @endif
@@ -164,9 +164,8 @@
                     @endif
                 </div>
 
-                {{-- Berkas identitas adalah hak `verify-users`, bukan
-                     `manage-users`. Ditampilkan hanya bila izinnya ada;
-                     route medianya sendiri juga memagarainya (UU PDP). --}}
+                {{-- Berkas identitas = hak `verify-users` (UU PDP); route
+                     medianya sendiri juga memagari izin yang sama. --}}
                 @can('verify-users')
                     <div class="card-body border-top">
                         <dl class="row mb-3 fs-3">
@@ -226,7 +225,7 @@
                             @else
                                 <span class="rounded bg-light-primary text-primary d-inline-flex align-items-center justify-content-center"
                                       style="width: 56px; height: 42px;" aria-hidden="true">
-                                    <i class="ti ti-building-store"></i>
+                                    <i class="ti ti-building-store" aria-hidden="true"></i>
                                 </span>
                             @endif
                         </td>

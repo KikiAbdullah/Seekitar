@@ -24,9 +24,8 @@
         </div>
     </div>
 
-    {{-- SLA respons: terlewat = belum direspons DAN sudah lewat tenggat
-         (Dispute::isOverdue). Ditampilkan mencolok karena memengaruhi
-         prioritas penanganan, bukan sekadar tanggal di tabel. --}}
+    {{-- SLA respons (Dispute::isOverdue) — ditampilkan mencolok karena
+         memengaruhi prioritas penanganan, bukan sekadar tanggal di tabel. --}}
     @if ($dispute->isOverdue())
         <div class="card bg-light-danger shadow-none border-0 mb-4">
             <div class="card-body py-3 px-4">

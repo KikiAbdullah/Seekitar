@@ -34,4 +34,18 @@ final class Angka
     {
         return 'Rp '.self::bulat($nilai);
     }
+
+    /**
+     * Bilangan berkoma dengan presisi tetap: -7.2508 → "-7,250800".
+     *
+     * Dipakai untuk koordinat & radius di tampilan. Bagian DESIMALnya tidak
+     * boleh jatuh ke titik Inggris: "-7.250800" dibaca orang Indonesia sebagai
+     * tujuh ribu sekian, padahal yang dimaksud minus tujuh koma dua lima.
+     * Angka yang dioper ke JavaScript (peta, tautan Maps) TIDAK lewat sini —
+     * ia butuh titik mentahnya; pemanggil memakai $model->latitude apa adanya.
+     */
+    public static function desimal(int|float|string|null $nilai, int $presisi): string
+    {
+        return number_format((float) $nilai, $presisi, ',', '.');
+    }
 }

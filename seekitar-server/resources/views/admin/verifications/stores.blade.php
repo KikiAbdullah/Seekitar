@@ -76,7 +76,7 @@
                                 @else
                                     <span class="rounded bg-light-primary text-primary d-inline-flex align-items-center justify-content-center flex-shrink-0"
                                           style="width: 52px; height: 40px;" aria-hidden="true">
-                                        <i class="ti ti-building-store"></i>
+                                        <i class="ti ti-building-store" aria-hidden="true"></i>
                                     </span>
                                 @endif
 
@@ -89,10 +89,8 @@
                             </div>
                         </td>
 
-                        {{-- Pemilik: nama + nomor HP + status syarat. Lencana
-                             merah = baris yang TIDAK BISA disetujui (aturan 2:
-                             pemilik harus terverifikasi lebih dulu) — lebih baik
-                             terlihat dari tabel daripada ketahuan di dalam modal. --}}
+                        {{-- Lencana merah = TIDAK BISA disetujui (pemilik belum
+                             terverifikasi) — terlihat sebelum modal dibuka. --}}
                         <td>
                             <div class="lh-sm">
                                 <div class="fw-semibold mb-1 d-inline-flex align-items-center">
@@ -127,10 +125,10 @@
                             @if ($store->latitude !== null)
                                 <div class="lh-sm">
                                     <div class="font-monospace" style="font-size: 12px;">
-                                        {{ number_format((float) $store->latitude, 5) }}, {{ number_format((float) $store->longitude, 5) }}
+                                        {{ \App\Support\Angka::desimal($store->latitude, 5) }}, {{ \App\Support\Angka::desimal($store->longitude, 5) }}
                                     </div>
                                     <div class="text-muted" style="font-size: 12px;">
-                                        Radius {{ rtrim(rtrim(number_format((float) $store->service_radius_km, 2), '0'), '.') }} km · {{ $store->regency }}
+                                        Radius {{ rtrim(rtrim(\App\Support\Angka::desimal($store->service_radius_km, 2), '0'), ',') }} km · {{ $store->regency }}
                                     </div>
                                 </div>
                             @else
@@ -163,11 +161,8 @@
 
     <div class="mt-3">{{ $pending->links() }}</div>
 
-    {{--
-        Modal dirender DI LUAR tabel: elemen <tr>/<td> punya konteks
-        stacking sendiri, dan modal yang menumpuk di dalam sel bisa
-        terpotong atau tertutup baris lain.
-    --}}
+    {{-- Modal DI LUAR tabel: modal di dalam <td> bisa terpotong / tertutup
+         baris lain karena konteks stacking milik sel. --}}
     @foreach ($pending as $store)
         @include('admin.verifications._store_modal', ['store' => $store, 'index' => $loop->index])
     @endforeach

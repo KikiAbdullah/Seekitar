@@ -10,7 +10,7 @@ _“Yang kamu butuhkan, ada di sekitar.”_
 | :-------------------- | :------------------------------------------------------------------------ |
 | **Nama Produk**       | Seekitar                                                                  |
 | **Platform**          | Mobile App (Flutter) & Web App (Laravel 13 + Bootstrap 5.3.x) + Admin Dashboard |
-| **Versi Dokumen**     | 2.1 (Production Ready – MySQL)                                            |
+| **Versi Dokumen**     | 2.2 (Production Ready – MySQL)                                            |
 | **Tanggal**           | 27 Juli 2026                                                              |
 | **Penulis**           | Tim Pengembang Seekitar                                                   |
 | **Status**            | Final – Siap Implementasi                                                 |
@@ -581,11 +581,17 @@ pesanan ke `selesai`. Tidak ada nilai ENUM `dikembalikan`.
 | id | CHAR(36) | Primary Key (UUID) |
 | phone | VARCHAR(15) UNIQUE | Nomor HP (62xxx) |
 | name | VARCHAR(100) | |
-| avatar_url | TEXT | |
+| avatar_url | VARCHAR(500) NULL | |
 | location | POINT SRID 4326 | Lokasi default user |
-| verification_level | TINYINT | 1,2,3 |
+| verified1_at | TIMESTAMP NULL | Stempel tahap 1 (nomor HP) — ditulis sistem saat OTP cocok |
+| verified2_at | TIMESTAMP NULL | Stempel tahap 2 (KTP) — terisi = pengguna terverifikasi penuh |
 | created_at | TIMESTAMP | |
 | updated_at | TIMESTAMP | |
+
+> **`verification_level` (1–3) tetap dipakai sebagai KONSEP, tetapi bukan
+> kolom** — ia turunan murni dari stempel di atas + status toko:
+> 1 = terdaftar (masuk OTP), 2 = `verified2_at` terisi, 3 = memiliki toko
+> `verified`. Detailnya di DATABASE.md §4.1.
 
 **`stores`**
 | Kolom | Tipe | Keterangan |

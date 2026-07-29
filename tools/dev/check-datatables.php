@@ -39,44 +39,67 @@ $masalah = 0;
 $gagal = function (string $m) use (&$masalah): void { echo "  GAGAL: {$m}\n"; $masalah++; };
 
 /*
- * Kolom yang DIMINTA view, per tabel. Sumbernya definisi `columns:` di Blade —
- * ditulis ulang di sini karena membacanya dari JavaScript berarti mem-parse JS.
- * Kalau keduanya menyimpang, pemeriksaan di bawah akan melaporkannya.
+ * Kolom yang DIMINTA view, per tabel.
+ *
+ * Dulu daftarnya disalin tangan dari Blade ke sini — dan SELALU akhirnya
+ * menyimpang (mis. kolom verification_level sudah dihapus dari view, tapi
+ * salinannya masih menuntutnya ada → laporan palsu). Karena kolomnya di
+ * Blade ditulis sebagai literal PHP `'data' => 'nama_kolom'` — bukan di
+ * JavaScript — dibaca langsung dari berkas view-nya supaya dua sumber
+ * kebenaran tidak bisa lagi berjauhan.
  */
 $diharapkan = [
     App\DataTables\UsersDataTable::class => [
-        'model'  => App\Models\User::class,
-        'kolom'  => ['name', 'phone', 'verification_level', 'status', 'created_at'],
+        'model' => App\Models\User::class,
+        'view'  => 'admin/users/index.blade.php',
     ],
     App\DataTables\StoresDataTable::class => [
-        'model'  => App\Models\Store::class,
-        'kolom'  => ['name', 'owner', 'regency', 'verification_status', 'rating_avg', 'created_at'],
+        'model' => App\Models\Store::class,
+        'view'  => 'admin/stores/index.blade.php',
     ],
     App\DataTables\ListingsDataTable::class => [
-        'model'  => App\Models\Listing::class,
-        'kolom'  => ['title', 'store_name', 'listing_type', 'price', 'status', 'created_at'],
+        'model' => App\Models\Listing::class,
+        'view'  => 'admin/listings/index.blade.php',
     ],
     App\DataTables\OrdersDataTable::class => [
-        'model'  => App\Models\Order::class,
-        'kolom'  => ['order_number', 'store_name', 'order_type', 'total_amount', 'status_label', 'created_at'],
+        'model' => App\Models\Order::class,
+        'view'  => 'admin/orders/index.blade.php',
     ],
     App\DataTables\CustomerRequestsDataTable::class => [
-        'model'  => App\Models\CustomerRequest::class,
-        'kolom'  => ['title', 'buyer', 'status', 'offers_count', 'expires_at', 'created_at'],
+        'model' => App\Models\CustomerRequest::class,
+        'view'  => 'admin/requests/index.blade.php',
     ],
     App\DataTables\OffersDataTable::class => [
-        'model'  => App\Models\Offer::class,
-        'kolom'  => ['request_title', 'store_name', 'price', 'total', 'estimation_time', 'status', 'expires_at', 'created_at'],
+        'model' => App\Models\Offer::class,
+        'view'  => 'admin/offers/index.blade.php',
     ],
     App\DataTables\ReviewsDataTable::class => [
-        'model'  => App\Models\Review::class,
-        'kolom'  => ['store_name', 'reviewer_name', 'direction', 'rating', 'comment', 'created_at'],
+        'model' => App\Models\Review::class,
+        'view'  => 'admin/reviews/index.blade.php',
     ],
     App\DataTables\DisputesDataTable::class => [
-        'model'  => App\Models\Dispute::class,
-        'kolom'  => ['order_number', 'reason', 'status', 'response_deadline', 'overdue'],
+        'model' => App\Models\Dispute::class,
+        'view'  => 'admin/disputes/index.blade.php',
     ],
 ];
+
+/*
+ * Ubah 'view' menjadi 'kolom': daftar nama yang diambil view dari JSON.
+ * Gagal keras kalau satu pun kolom tidak terbaca — daftar kosong berarti
+ * pemeriksaan ini lolos tanpa memeriksa apa pun, dan itu lebih berbahaya
+ * daripada pemeriksaan yang tidak ada.
+ */
+foreach ($diharapkan as $kelas => &$info) {
+    $view = $root.'/resources/views/'.$info['view'];
+    preg_match_all("/'data'\\s*=>\\s*'([a-z0-9_]+)'/", file_get_contents($view), $k);
+    if (! $k[1]) {
+        $gagal(class_basename($kelas).": tidak ada kolom 'data' yang terbaca di {$info['view']}");
+        $info['kolom'] = [];
+    } else {
+        $info['kolom'] = array_values(array_unique($k[1]));
+    }
+}
+unset($info);
 
 echo "Relasi yang di-eager-load benar-benar ada\n";
 

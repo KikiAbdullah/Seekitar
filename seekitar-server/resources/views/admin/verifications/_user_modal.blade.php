@@ -122,11 +122,8 @@
                     </ul>
                 </div>
 
-                {{-- Konfirmasi SOP — pola yang sama dengan verifikasi toko:
-                     tombol Setuju terkunci sampai seluruh pemeriksaan yang
-                     tersisa dicentang (skrip bersama: js/checklist-gate.js).
-                     Satu klik menyelesaikan semua tahap yang belum ada
-                     stempelnya — bukan lagi satu tahap per klik. --}}
+                {{-- Gerbang checklist (js/checklist-gate.js): satu klik
+                     menyelesaikan semua tahap yang belum berstempel. --}}
                 @if ($tahap !== null)
                     <div class="border rounded p-3 bg-light mt-3" data-checklist>
                         <div class="text-muted fw-semibold mb-2" style="font-size: 11px;">KONFIRMASI PEMERIKSAAN</div>

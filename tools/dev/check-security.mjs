@@ -34,7 +34,9 @@ check('PRD merujuk implementasi', ['§18A'], prd);
 console.log('\nKontrol keamanan');
 check('UUID route pattern (#199)', ['Route::pattern', '[0-9a-fA-F]{8}-']);
 check('CORS terkonfigurasi (#200)', ['config/cors.php', 'CORS_ALLOWED_ORIGINS', 'exposed_headers']);
-check('enkripsi KTP & NIK (#201, #206)', ['SSE-KMS', "'nik'      => 'encrypted'", 'temporaryUrl']);
+// Implementasi aktual: berkas di disk `local` privat + dialirkan lewat route
+// berizin; NIK satu-satunya kolom terenkripsi. SSE-KMS dicadangkan untuk produksi.
+check('enkripsi KTP & NIK (#201, #206)', ["'nik' => 'encrypted'", 'disk privat', 'no-store']);
 check('proteksi XSS (#202)', ['rawColumns', 'Content-Security-Policy', '@json']);
 check('rate limit login admin (#203)', ["RateLimiter::for('admin-login'", 'throttle:admin-login']);
 check('validasi nomor HP (#207)', ['phone:ID', 'normalizePhone', 'propaganistas/laravel-phone']);

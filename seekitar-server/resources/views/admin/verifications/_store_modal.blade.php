@@ -89,7 +89,7 @@
                         @endforeach
                     </dd>
                     <dt class="col-sm-3">Radius layanan</dt>
-                    <dd class="col-sm-9">{{ rtrim(rtrim(number_format((float) $store->service_radius_km, 2), '0'), '.') }} km</dd>
+                    <dd class="col-sm-9">{{ rtrim(rtrim(\App\Support\Angka::desimal($store->service_radius_km, 2), '0'), ',') }} km</dd>
                     <dt class="col-sm-3">Rating</dt>
                     <dd class="col-sm-9">
                         @if ((int) $store->total_reviews > 0)
@@ -145,10 +145,8 @@
                     @endif
                 </div>
 
-                {{-- LANGKAH 3 — Koordinat dibandingkan dengan Google Maps.
-                     Dua tautan: titik persis (apakah ada bangunan/usaha di
-                     sana?) dan pencarian nama (apakah toko ini memang tercatat
-                     di Google?). Keduanya format resmi Google, tanpa API key. --}}
+                {{-- Dua tautan resmi Google (tanpa API key): titik persis dan
+                     pencarian nama — apakah usahanya benar-benar ada di sana. --}}
                 <div class="text-muted fw-semibold mb-1" style="font-size: 11px;">
                     LANGKAH 3 · KOORDINAT DI PETA
                 </div>
@@ -163,7 +161,7 @@
 
                     <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
                         <span class="font-monospace text-muted fs-2 me-auto">
-                            {{ number_format((float) $store->latitude, 6) }}, {{ number_format((float) $store->longitude, 6) }}
+                            {{ \App\Support\Angka::desimal($store->latitude, 6) }}, {{ \App\Support\Angka::desimal($store->longitude, 6) }}
                         </span>
                         <a class="btn btn-sm btn-outline-primary"
                            href="https://www.google.com/maps/search/?api=1&query={{ $store->latitude }},{{ $store->longitude }}"
@@ -185,10 +183,8 @@
                 <div class="border rounded p-3 bg-light" data-checklist>
                     <div class="text-muted fw-semibold mb-2" style="font-size: 11px;">KONFIRMASI PEMERIKSAAN</div>
 
-                    {{-- Syarat paling hulu BUKAN centang: status pemilik adalah
-                         fakta data, bukan penilaian admin. Ditampilkan read-only;
-                         server memeriksanya ulang saat persetujuan, jadi tidak
-                         bisa dilompat lewat DevTools. --}}
+                    {{-- Fakta data, bukan centang — diperiksa ulang server saat
+                         persetujuan, jadi tidak bisa dilompat lewat DevTools. --}}
                     <div class="d-flex align-items-center gap-2 fs-3 mb-3">
                         @if ($pemilikTerverifikasi)
                             <i class="ti ti-circle-check text-success" aria-hidden="true"></i>
@@ -254,9 +250,8 @@
                                 Verifikasi Toko
                             </button>
                         @else
-                            {{-- Terkunci permanen: sengaja TANPA atribut
-                                 data-tombol-verifikasi supaya skrip checklist
-                                 tidak pernah bisa membukanya. --}}
+                            {{-- Sengaja TANPA data-tombol-verifikasi agar skrip
+                                 checklist tidak pernah bisa membukanya. --}}
                             <button type="button" class="btn btn-success" disabled
                                     title="{{ $pemilikTerverifikasi ? 'Foto toko belum diunggah pemilik' : 'Pemilik belum terverifikasi (nomor HP + KTP)' }}">
                                 <i class="ti ti-lock" aria-hidden="true"></i>

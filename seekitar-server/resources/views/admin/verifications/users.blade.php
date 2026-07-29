@@ -107,9 +107,8 @@
                         {{-- Nomor HP: salah satu data kunci validasi KTP. --}}
                         <td class="text-nowrap font-monospace">{{ $user->phone }}</td>
 
-                        {{-- Tahap 1: nomor HP (verified1_by / verified1_at).
-                             NULL by-nya = diverifikasi sistem lewat OTP —
-                             labelnya dirakit accessor verified1_by_label. --}}
+                        {{-- Label tahap 1 dari verified1_by_label (NULL =
+                             OTP sistem); partial-nya sudah bermuat tautan. --}}
                         <td class="text-nowrap">
                             @if ($user->verified1_at)
                                 <div class="d-flex align-items-center gap-2">
@@ -166,11 +165,8 @@
 
     <div class="mt-3">{{ $pending->links() }}</div>
 
-    {{--
-        Modal dirender DI LUAR tabel: elemen <tr>/<td> punya konteks
-        stacking sendiri, dan modal yang menumpuk di dalam sel bisa
-        terpotong atau tertutup baris lain.
-    --}}
+    {{-- Modal DI LUAR tabel: modal di dalam <td> bisa terpotong / tertutup
+         baris lain karena konteks stacking milik sel. --}}
     @foreach ($pending as $user)
         @include('admin.verifications._user_modal', ['user' => $user, 'index' => $loop->index])
     @endforeach

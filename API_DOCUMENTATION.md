@@ -1,8 +1,14 @@
 # 📘 API DOCUMENTATION – SEEKITAR
 
-**Versi:** 2.1 (Production‑Ready)  
+**Versi:** 2.2 (Production‑Ready)  
 **Tanggal Publikasi:** 27 Juli 2026  
 **Backend:** Laravel 13 · PHP 8.3+ · Sanctum 4
+
+> **Perubahan 2.2** — kontrak diselaraskan dengan `seekitar-server` terkini:
+> `verification_level` di JSON adalah turunan baca-saja (§2.2); unggah ulang
+> KTP selalu boleh dan membuka peninjauan ulang (§2.5); alur ganti nomor HP
+> dua langkah OTP (§2.5a); seksi admin menuliskan endpoint yang benar-benar
+> ada beserta permission granular Spatie-nya (§10).
 
 ## BASE URL PER ENVIRONMENT
 
@@ -1424,15 +1430,21 @@ Admin wajib menanggapi dalam **1×24 jam** (PRD §5.5).
 
 ## 10. ADMIN ENDPOINTS
 
-Prefix: `/admin` dengan guard `admin` (menggunakan Laravel Gates atau Sanctum ability).
+Prefix: `/admin`. Setiap route memakai **permission granular Spatie**
+(`permission:verify-users`, `verify-stores`, `manage-users`, dll.) — bukan
+sekadar `role:admin` — sehingga peran baru bisa diberi sebagian akses tanpa
+mengubah route. Manajemen yang lebih lengkap berjalan lewat **panel web
+admin** (bukan API).
 
-### 10.1 Verifications
+### 10.1 Verifications — `permission:verify-users` / `verify-stores`
 
 ```http
 GET /admin/verifications/pending
 ```
 
-**Admin only** – Daftar user/stores yang menunggu verifikasi.
+Daftar antrian verifikasi KTP **pengguna** (`ktp_submitted_at` terisi,
+`verified2_at` kosong), diurutkan dari pengajuan terlama (SLA 1×24 jam),
+terpaginasi.
 
 ```http
 POST /admin/verifications/users/{user_id}/approve
@@ -1441,7 +1453,22 @@ POST /admin/verifications/stores/{store_id}/approve
 POST /admin/verifications/stores/{store_id}/reject
 ```
 
-### 10.2 Disputes
+Semantiknya sama dengan panel web (§DATABASE 4.1–4.2):
+
+- **Approve pengguna**: men-stempel semua tahap yang kosong
+  (`verified1_*` / `verified2_*`, tulis-sekali — yang sudah terisi tidak
+  ditimpa) dan membersihkan `ktp_rejected_reason`. "Level 2" adalah turunan
+  dari stempel ini, bukan kolom yang ditulis terpisah.
+- **Reject pengguna**: hanya mengisi `ktp_rejected_reason` (`reason` wajib)
+  dan mengosongkan `ktp_submitted_at` (keluar antrian); stempel lama tidak
+  disentuh.
+- **Approve toko**: hanya sah dari antrian `pending`, dan syarat
+  diperiksa ulang server — pemilik terverifikasi (no HP + KTP) serta foto
+  etalase asli terunggah.
+- **Reject toko**: juga hanya sah dari antrian `pending` (stempel
+  `verified_*` toko tidak pernah dibiarkan menempel pada status `rejected`).
+
+### 10.2 Disputes — `permission:manage-disputes`
 
 ```http
 GET /admin/disputes
@@ -1453,9 +1480,17 @@ Filter: `status=open`
 PATCH /admin/disputes/{dispute_id}/resolve
 ```
 
-Body: `{"resolution_note": "..."}`
+Body:
 
-### 10.3 Categories Management
+| Field | Aturan |
+| :-- | :-- |
+| `resolution` | `required\|in:selesai,dibatalkan` — status akhir pesanan |
+| `resolution_note` | `required\|string\|max:2000` |
+
+Laporan yang sudah `resolved` ditolak dengan `422`. Transisi pesanan kembali
+melewati mesin status order (`selesai`, atau `dibatalkan` dengan alasan).
+
+### 10.3 Categories Management — `permission:manage-categories`
 
 ```http
 GET /admin/categories
@@ -1469,47 +1504,44 @@ DELETE /admin/categories/{id}
 > yang berbentuk JSON dan **tidak** terlindungi FK, sehingga diperiksa aplikasi.
 > Kategori induk yang masih punya anak juga ditolak (lihat `DATABASE.md` §4.3).
 
-### 10.4 Manajemen Resource
+### 10.4 Manajemen Pengguna — `permission:manage-users`
 
-Seluruh resource memakai pola yang sama, dengan paginasi §12.2 dan guard
-`role:admin`.
+```http
+GET /admin/users
+```
 
-| Resource | Endpoint | Aksi tersedia |
-| :-- | :-- | :-- |
-| Users | `GET /admin/users`<br>`GET /admin/users/{id}` | Filter: `verification_level`, `is_blocked`, `search` |
-| | `PATCH /admin/users/{id}/block`<br>`PATCH /admin/users/{id}/unblock` | Blokir pengguna (PRD §4) |
-| Stores | `GET /admin/stores`<br>`GET /admin/stores/{id}` | Filter: `verification_status`, `is_active` |
-| | `PATCH /admin/stores/{id}/deactivate` | Nonaktifkan toko bermasalah |
-| Listings | `GET /admin/listings`<br>`DELETE /admin/listings/{id}` | Filter: `status`, `store_id`, `type` |
-| Requests | `GET /admin/requests` | Filter: `status`, `category_id` |
-| Offers | `GET /admin/offers` | Filter: `status`, `request_id` |
-| Orders | `GET /admin/orders`<br>`GET /admin/orders/{id}` | Filter: `status`, `payment_method`, rentang tanggal |
-| Reviews | `GET /admin/reviews`<br>`DELETE /admin/reviews/{id}` | Filter: `rating`, `flagged` |
-
-**Memblokir pengguna:**
+Filter: `verification_level` (turunan — 1/2/3, satu definisi bersama
+`User::whereVerificationLevel`), `is_blocked` (boolean), `search`
+(nama/telepon). Terpaginasi (§12.2).
 
 ```http
 PATCH /admin/users/{user_id}/block
 ```
 
-Body: `{"reason": "Terindikasi penipuan berulang"}`
+Body:
 
-Semua token pengguna dicabut seketika. Permintaan berikutnya dari pengguna itu
-mendapat **`423 Locked`** (§11). Toko miliknya otomatis dinonaktifkan dan
-listing-nya hilang dari pencarian, tetapi pesanan yang sedang berjalan tetap
-utuh agar pihak lawan tidak dirugikan.
+| Field | Aturan |
+| :-- | :-- |
+| `is_blocked` | `required\|boolean` — `false` = membuka blokir |
+| `reason` | `required_if:is_blocked,true\|max:255` |
 
-> ⚠️ Ulasan yang dihapus admin memicu perhitungan ulang `rating_avg` dan
-> `total_reviews` toko terkait.
+Memblokir mencabut **semua token** pengguna seketika — permintaan
+berikutnya mendapat **`423 Locked`** (§11). Toko miliknya ikut
+dinonaktifkan dan listing-nya hilang dari pencarian, tetapi pesanan yang
+sedang berjalan sengaja tidak diusik agar pihak lawan tidak dirugikan.
 
-### 10.5 Pengaturan Sistem
+### 10.5 Pengaturan Sistem — `permission:manage-settings`
 
 ```http
 GET  /admin/settings
 POST /admin/settings
 ```
 
-**Hanya `super-admin`** — admin biasa mendapat `403`.
+Permission ini sengaja ditahan dari role `admin` (hanya `super-admin` yang
+memegangnya) — admin biasa mendapat `403`. `POST` menerima
+`{"settings": {kunci: nilai, ...}}` dan **kunci yang tidak dikenal ditolak
+422** — salah ketik tidak boleh diam-diam membuat baris yang tidak pernah
+dibaca kode mana pun.
 
 ```json
 {

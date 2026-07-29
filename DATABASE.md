@@ -1,13 +1,23 @@
 # 🗄️ DATABASE DESIGN — SEEKITAR
 
 **Dokumen Lengkap, Optimal, & Production‑Ready**  
-**Versi:** 2.1 (Production‑Hardened)  
+**Versi:** 2.2 (Production‑Hardened)  
 **Tanggal:** 27 Juli 2026  
 **Target Deployment:** MySQL 8.0.34+ InnoDB  
 **Charset:** utf8mb4 – Collation: utf8mb4_unicode_ci  
 **ORM:** Laravel 13 (Eloquent) · PHP 8.3+
 
 > 📌 Versi mengacu pada [`TECH_STACK.md`](TECH_STACK.md) sebagai sumber kebenaran tunggal.
+
+> **Perubahan 2.2** — dokumentasi diselaraskan dengan implementasi
+> `seekitar-server` terkini: level pengguna murni turunan (kolom levelnya
+> dihapus dari `users`; lihat §4.1), stempel tahap 1 dapat ditulis SISTEM
+> saat OTP cocok (`verified1_by = NULL`), satu persetujuan admin
+> menyelesaikan semua tahap yang menunggu, aturan perubahan-data-vs-stempel
+> (admin tak pernah mengubah stempel; pengguna wajib verifikasi ulang data
+> yang digantinya), syarat persetujuan toko diperiksa ulang server (pemilik
+> terverifikasi + foto asli terunggah), serta konvensi placeholder foto
+> berseed `PlaceholderImg` (§4).
 
 ---
 
@@ -133,6 +143,15 @@ orders 1──N disputes
 ## 4. SKEMA LENGKAP TABEL
 
 Setiap tabel dilengkapi penjelasan tiap kolom, alasan pemilihan tipe, dan constraint lengkap.
+
+> **Konvensi placeholder foto (sisi aplikasi).** Kolom foto tampilan yang
+> kosong (`avatar_url`, `stores.photo`, `listings.images`) tidak pernah
+> merender gambar hampa: aksesor model menjatuhkannya ke URL **berseed**
+> (`App\Support\PlaceholderImg`, pola `picsum.photos/seed/{id}/{w}/{h}`)
+> supaya entitas yang sama selalu mendapat foto yang sama. Karena itu,
+> konteks VERIFIKASI wajib membaca kolom mentah (`getRawOriginal(...)`) —
+> gambar hiasan bukan bukti. Dokumen identitas (KTP/selfie) sengaja TIDAK
+> diberi placeholder: status "Belum diunggah" lebih jujur daripada foto acak.
 
 ### 4.1 `users`
 
@@ -1196,7 +1215,7 @@ CREATE TABLE settings (
 > `request_expiry_hours` tidak memperpendek permintaan yang sudah berjalan —
 > `expires_at` sudah dihitung saat baris dibuat.
 
-### 4.9d Tabel kerangka: `sessions` & `personal_access_tokens`
+### 4.9d `personal_access_tokens` & `sessions` (tabel kerangka Sanctum/session)
 
 Dua tabel bawaan Laravel **diubah dari skema default-nya** karena `users.id`
 Seekitar adalah UUID, bukan BIGINT:
@@ -1209,6 +1228,22 @@ Seekitar adalah UUID, bukan BIGINT:
 Tanpa penyesuaian ini, **login admin gagal total** (session driver
 `database` menulis UUID ke kolom integer) dan **`createToken()` API gagal
 total** dengan error integer 1366 yang tidak menunjuk sebab sebenarnya.
+
+**Kolom lengkap `personal_access_tokens`** (identik skema paket Sanctum,
+kecuali `tokenable_id`):
+
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| `id` | BIGINT UNSIGNED AUTO_INCREMENT | Primary key bawaan Sanctum. |
+| `tokenable_type` | VARCHAR(255) | Kelas model pemilik token (`uuidMorphs`). |
+| `tokenable_id` | CHAR(36) | UUID `users.id` pemilik token. |
+| `name` | VARCHAR(255) | Nama token (di sini selalu `mobile`). |
+| `token` | VARCHAR(64) UNIQUE | SHA-256 dari teks token — teks aslinya tidak pernah disimpan. |
+| `abilities` | TEXT | JSON ability (`["*"]`). |
+| `last_used_at` | TIMESTAMP NULL | Terakhir token dipakai — untuk audit sesi. |
+| `expires_at` | TIMESTAMP NULL | Seekitar mengisinya 30 hari (TOKEN_TTL di AuthController). |
+| `created_at` | TIMESTAMP | Standar. |
+| `updated_at` | TIMESTAMP | Standar. |
 
 Migrasi Sanctum bawaan **tidak perlu dinonaktifkan**: sejak Sanctum 4.x
 paket itu tidak lagi memuat migrasinya sendiri, melainkan hanya
@@ -1509,7 +1544,7 @@ WHERE TABLE_NAME = 'stores';
 2. **Foreign Key Constraints** – Tidak akan ada order tanpa pembeli/penjual.
 3. **UNIQUE constraint** pada offers (`request_id`, `store_id`) – mencegah toko mengirim dua penawaran pada permintaan yang sama, baik dari aplikasi maupun langsung dari SQL.
 4. **ENUM + CHECK** – Status pesanan, tipe listing, rating, semua memiliki domain terbatas yang terverifikasi di level engine.
-5. **Default value** – `verification_level` = 1, `status` = ‘active’, dll.
+5. **Default value** – `rating_avg` = 0.00, `total_reviews` = 0, `is_blocked` = 0, `is_active` = 1, dll. Verifikasi TIDAK punya kolom ber-default: statusnya turunan dari stempel `verified*` yang memang NULL sejak lahir (§4.1).
 6. **Aplikasi wajib gunakan transaksi** – setiap aksi multi‑tabel (contoh: menerima penawaran → update request, update offer, insert order) HARUS dalam `DB::transaction()` **dengan `lockForUpdate()`** pada baris yang jadi rebutan.
 7. **Validasi data JSON** – Di Laravel, gunakan `$casts` dan Form Request untuk memastikan `category_ids` adalah array integer, `images` adalah array URL, dll.
 8. **Mekanisme update rating toko** – `rating_avg` dihitung dari `reviews.store_id` (bukan `reviewee_id`) dan hanya arah `buyer_to_store`, diperbarui dalam transaksi bersama penulisan ulasan.

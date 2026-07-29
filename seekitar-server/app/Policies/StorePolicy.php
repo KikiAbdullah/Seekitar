@@ -14,6 +14,10 @@ class StorePolicy
      */
     public function create(User $user): bool
     {
+        // Pemilik toko harus SUDAH terverifikasi (canOpenStore = stempel KTP
+        // tahap 2 terisi). Penting: syarat ini diperiksa ULANG di titik
+        // persetujuan admin (VerificationController::approveStore), karena
+        // level bisa turun setelah pengajuan masuk antrian.
         return $user->canOpenStore();
     }
 
