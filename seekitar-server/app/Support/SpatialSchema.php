@@ -102,6 +102,23 @@ final class SpatialSchema
     }
 
     /**
+     * SQL fragment untuk mengekstrak latitude/longitude dari kolom POINT.
+     *
+     * MySQL 8.0.12+ punya ST_Latitude/ST_Longitude yang respect SRID axis order.
+     * MariaDB pakai ST_X (longitude) / ST_Y (latitude) — koordinat tersimpan
+     * dalam urutan (longitude latitude) sesuai WKT.
+     */
+    public static function latSql(string $column = 'location'): string
+    {
+        return self::isMariaDb() ? "ST_Y(`{$column}`)" : "ST_Latitude(`{$column}`)";
+    }
+
+    public static function lngSql(string $column = 'location'): string
+    {
+        return self::isMariaDb() ? "ST_X(`{$column}`)" : "ST_Longitude(`{$column}`)";
+    }
+
+    /**
      * Ekspresi SQL untuk menulis koordinat.
      *
      * Opsi `axis-order=long-lat` hanya didukung MySQL >= 8.0.

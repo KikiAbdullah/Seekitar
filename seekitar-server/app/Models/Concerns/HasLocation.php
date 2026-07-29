@@ -71,7 +71,7 @@ trait HasLocation
     {
         return $q
             ->select($this->baseSelect($q))
-            ->selectRaw("ST_Latitude(`$column`) AS latitude, ST_Longitude(`$column`) AS longitude");
+            ->selectRaw(SpatialSchema::latSql($column).' AS latitude, '.SpatialSchema::lngSql($column).' AS longitude');
     }
 
     /**
