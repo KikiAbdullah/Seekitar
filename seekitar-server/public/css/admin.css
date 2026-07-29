@@ -27,6 +27,26 @@
     --seekitar-yellow: #F5B83D;
     --seekitar-ink: #1F2933;
 
+    /*
+     * Font UI tunggal: Plus Jakarta Sans — menyamai situs publik (BRANDING
+     * §3.5 & §4). Tema Modernize membiarkan --bs-font-sans-serif menunjuk
+     * ke tumpukan sistem bawaan Bootstrap; berkas temanya DIMINIFY dan
+     * akan tertimpa setiap kali template ditingkatkan, jadi alih-alih
+     * menyuntingnya kita timpa variabelnya di sini — berkas ini dimuat
+     * setelah tema, dan karena seluruh komponen Bootstrap membaca lewat
+     * var() mereka ikut berpindah serentak. Font-nya sendiri dimuat di
+     * <head> layout (Google Fonts, bobot 300–800).
+     *
+     * Tabler Icons & teman-temannya menetapkan font-family sendiri, jadi
+     * tidak tersentuh; tumpukan monospace Bootstrap pun sengaja dipertahankan
+     * — kode seharusnya mono.
+     */
+    --bs-font-sans-serif: 'Plus Jakarta Sans', system-ui, -apple-system,
+        'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans', 'Liberation Sans',
+        Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
     /* Umpan balik status (§3.5.3) — sengaja BUKAN hijau lokal, agar tombol
        aksi dan pesan status tidak tertukar. */
     --seekitar-success: #16A34A;

@@ -42,9 +42,13 @@
     <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    {{-- Satu-satunya font UI situs: Plus Jakarta Sans, semua bobot yang
+         dipakai Bootstrap & gaya khusus (300 fw-light s.d. 800 angka
+         statistik) — bobot yang tidak dimuat dipaksa peramban menebalkan
+         palsu (faux bold) yang terlihat buram. --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     {{-- Ikon Tabler — berkas yang sama dengan panel admin, sudah lokal. --}}
     <link rel="stylesheet" href="{{ asset('vendor/modernize/css/icons/tabler-icons/tabler-icons.min.css') }}">
