@@ -2,6 +2,7 @@
 
 namespace App\DataTables;
 
+use App\Enums\VerificationStatus;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,14 +18,19 @@ class UsersDataTable
 {
     public function json(Request $request): JsonResponse
     {
-        $query = User::query()->select([
-            'id', 'phone', 'name', 'verification_level',
-            'rating_avg', 'total_reviews',
-            'is_blocked', 'ktp_submitted_at', 'created_at',
-        ]);
+        $query = User::query()
+            ->select([
+                'id', 'phone', 'name', 'verified2_at',
+                'rating_avg', 'total_reviews',
+                'is_blocked', 'ktp_submitted_at', 'created_at',
+            ])
+            // Lencana level adalah turunan (kolomnya sudah dihapus);
+            // EXISTS ini memasoknya tanpa memicu satu query per baris.
+            ->withExists(['stores as has_verified_store' => fn ($q) => $q
+                ->where('verification_status', VerificationStatus::Verified)]);
 
         if ($request->filled('verification_level')) {
-            $query->where('verification_level', $request->integer('verification_level'));
+            $query->whereVerificationLevel($request->integer('verification_level'));
         }
 
         if ($request->filled('is_blocked')) {
@@ -33,7 +39,7 @@ class UsersDataTable
 
         return DataTables::eloquent($query)
             ->editColumn('created_at', fn (User $u) => $u->created_at?->format('d M Y H:i'))
-            ->editColumn('verification_level', fn (User $u) => $u->verification_level?->label())
+            ->editColumn('verification_level', fn (User $u) => $u->verification_level->label())
             // ★ teks, bukan HTML — kolom ini lolos escaping DataTables apa adanya.
             ->addColumn('rating', fn (User $u) => (int) $u->total_reviews > 0
                 ? sprintf('★ %s (%d)', number_format((float) $u->rating_avg, 1, ',', '.'), $u->total_reviews)

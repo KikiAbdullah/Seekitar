@@ -933,7 +933,14 @@ Nilai enum **wajib** sama persis dengan ENUM di `DATABASE.md`:
 | `VerificationStatus` | `pending`, `verified`, `rejected`                                            | `stores.verification_status`  |
 | `PaymentMethod`      | `cod`, `transfer`                                                            | `orders.payment_method`       |
 | `DisputeStatus`      | `open`, `resolved`                                                           | `disputes.status`             |
-| `VerificationLevel`  | `1`, `2`, `3` (int)                                                          | `users.verification_level`    |
+| `VerificationLevel`  | `1`, `2`, `3` (int)                                                          | **TURUNAN** — bukan kolom lagi; dihitung `User::verificationLevel` (DATABASE.md §4.1) |
+
+> ℹ️ **Perubahan sesudah panduan ini ditulis:** kolom `users.verification_level`
+> sudah dihapus. Level pengguna kini murni turunan dari stempel verifikasi +
+> status toko, supaya tidak ada dua sumber kebenaran yang bisa berbeda
+> pendapat. Cuplikan di panduan ini yang masih menulis `verification_level`
+> ke `users` terbit dari desain awal — ikuti DATABASE.md §4.1 sebagai
+> kebenaran terkini.
 
 > ⚠️ **Perhatikan bedanya:** `StoreType` memakai bentuk **jamak**
 > (`goods`, `services`) karena kolomnya bertipe SET dan menampung kombinasi —

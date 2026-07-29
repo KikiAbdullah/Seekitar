@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Enums\VerificationLevel;
 use App\Http\Concerns\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
@@ -20,7 +19,10 @@ class VerificationController extends Controller
     {
         $user = $request->user();
 
-        if ($user->verification_level !== VerificationLevel::Basic) {
+        // "Sudah terverifikasi" dibaca dari stempel KTP-nya, bukan kolom
+        // level (sudah dihapus): pengiriman ulang berkas hanya berguna
+        // bagi yang belum lolos tahap 2.
+        if ($user->verified2_at !== null) {
             return $this->fail('Akun Anda sudah terverifikasi.', 422);
         }
 

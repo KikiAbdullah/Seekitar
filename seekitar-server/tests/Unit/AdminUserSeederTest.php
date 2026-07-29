@@ -2,7 +2,6 @@
 
 namespace Tests\Unit;
 
-use App\Enums\VerificationLevel;
 use App\Support\PhoneNumber;
 use Database\Seeders\AdminUserSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -139,11 +138,14 @@ class AdminUserSeederTest extends TestCase
         );
     }
 
-    public function test_verifikasi_level_admin_paling_tinggi(): void
+    public function test_staf_panel_selalu_berstempel_ktp(): void
     {
+        // Kolom level sudah dihapus: yang bisa dinyatakan konstanta hanyalah
+        // "identitas staf dianggap terverifikasi" (stempel) — lencana Pro
+        // bukan lagi sesuatu yang bisa diberi manual.
         foreach (AdminUserSeeder::accounts() as $account) {
             if (in_array($account['role'], ['admin', 'super-admin'], true)) {
-                $this->assertSame(VerificationLevel::Pro, $account['level']);
+                $this->assertTrue($account['ktp']);
             }
         }
     }

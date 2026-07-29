@@ -168,12 +168,13 @@ class DemoDataSeeder extends Seeder
     // ───────────────────────────────────────────────────────── Pengguna
 
     /**
-     * Penjual: semuanya minimal Level 2 (KTP terverifikasi).
+     * Penjual: semuanya berstempel KTP (verified2_at terisi).
      *
      * Bukan pilihan gaya — `StorePolicy::create()` menuntut
-     * `canOpenStore()`, yang berarti verification_level >= 2 (PRD §5.3.2).
-     * Penjual Level 1 akan menghasilkan data yang tidak mungkin ada di
-     * produksi.
+     * `canOpenStore()`, yang sejak kolom level dihapus berarti stempel
+     * KTP (PRD §5.3.2). "Pro" TIDAK disetel di sini: lencana itu turunan
+     * dari toko tervalidasi, dan 80% toko demo memang terverifikasi —
+     * persis seperti alur produksi.
      */
     private function buatPenjual(): \Illuminate\Support\Collection
     {
@@ -181,11 +182,7 @@ class DemoDataSeeder extends Seeder
 
         return User::factory()
             ->count($jumlah)
-            ->state(new \Illuminate\Database\Eloquent\Factories\Sequence(
-                fn ($sequence) => $sequence->index % 4 === 0
-                    ? ['verification_level' => \App\Enums\VerificationLevel::Pro]
-                    : ['verification_level' => \App\Enums\VerificationLevel::Verified],
-            ))
+            ->verified()
             ->create()
             ->each(function (User $u): void {
                 [$lat, $lng] = Wilayah::acak();

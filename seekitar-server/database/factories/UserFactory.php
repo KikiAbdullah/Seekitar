@@ -2,7 +2,6 @@
 
 namespace Database\Factories;
 
-use App\Enums\VerificationLevel;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -41,42 +40,53 @@ class UserFactory extends Factory
         $phone = '628' . str_pad((string) (++self::$phoneSeq), 9, '0', STR_PAD_LEFT);
 
         return [
-            'id'                 => (string) Str::uuid7(),
-            'phone'              => $phone,
-            'name'               => fake('id_ID')->name(),
-            'verification_level' => VerificationLevel::Basic,
-            'is_blocked'         => false,
+            'id'         => (string) Str::uuid7(),
+            'phone'      => $phone,
+            'name'       => fake('id_ID')->name(),
+            'is_blocked' => false,
         ];
     }
 
-    /** Nomor HP terverifikasi saja — belum boleh membuka toko. */
+    /** Tanpa stempel KTP — belum boleh membuka toko (keadaan default). */
     public function basic(): static
     {
-        return $this->state(['verification_level' => VerificationLevel::Basic]);
-    }
-
-    /** KTP disetujui: syarat minimum membuka toko (PRD §5.3.2). */
-    public function verified(): static
-    {
         return $this->state(fn () => [
-            'verification_level' => VerificationLevel::Verified,
-            'ktp_submitted_at'   => now()->subDays(fake()->numberBetween(3, 60)),
-            'address'            => fake('id_ID')->streetAddress(),
-        ]);
-    }
-
-    /** Usaha tervalidasi — prioritas siaran lebih tinggi. */
-    public function pro(): static
-    {
-        return $this->state(fn () => [
-            'verification_level' => VerificationLevel::Pro,
-            'ktp_submitted_at'   => now()->subDays(fake()->numberBetween(30, 200)),
-            'address'            => fake('id_ID')->streetAddress(),
+            'verified1_at' => null,
+            'verified2_at' => null,
         ]);
     }
 
     /**
-     * Menunggu peninjauan KTP: berkas SUDAH dikirim tapi level masih Basic.
+     * KTP disetujui admin: syarat minimum membuka toko (PRD §5.3.2).
+     * "Level 2" tidak ditulis ke mana-mana — ia turunan dari stempel ini.
+     */
+    public function verified(): static
+    {
+        return $this->state(fn () => [
+            'ktp_submitted_at' => now()->subDays(fake()->numberBetween(3, 60)),
+            'verified1_at'     => now()->subDays(fake()->numberBetween(2, 59)),
+            'verified2_at'     => now()->subDays(fake()->numberBetween(1, 58)),
+            'address'          => fake('id_ID')->streetAddress(),
+        ]);
+    }
+
+    /**
+     * Alias verified() untuk niat "penjual matang".
+     *
+     * Level 3 TIDAK bisa di-set dari factory pengguna: Usaha Terverifikasi
+     * adalah turunan dari toko berstatus verified — beri pemilik ini toko
+     * terverifikasi dan lencana Pro muncul dengan sendirinya.
+     */
+    public function pro(): static
+    {
+        return $this->verified()->state(fn () => [
+            'ktp_submitted_at' => now()->subDays(fake()->numberBetween(30, 200)),
+        ]);
+    }
+
+    /**
+     * Menunggu peninjauan KTP: berkas SUDAH dikirim tapi stempel tahap 2
+     * belum ada.
      *
      * Inilah definisi antrian verifikasi di VerificationController — bukan
      * sekadar "punya ktp_image".
@@ -84,10 +94,9 @@ class UserFactory extends Factory
     public function menungguKtp(): static
     {
         return $this->state(fn () => [
-            'verification_level' => VerificationLevel::Basic,
-            'ktp_submitted_at'   => now()->subHours(fake()->numberBetween(1, 40)),
-            'ktp_image'          => 'ktp/'.Str::uuid7().'.jpg',
-            'selfie_image'       => 'selfie/'.Str::uuid7().'.jpg',
+            'ktp_submitted_at' => now()->subHours(fake()->numberBetween(1, 40)),
+            'ktp_image'        => 'ktp/'.Str::uuid7().'.jpg',
+            'selfie_image'     => 'selfie/'.Str::uuid7().'.jpg',
         ]);
     }
 

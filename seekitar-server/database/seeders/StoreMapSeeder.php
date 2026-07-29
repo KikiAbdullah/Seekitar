@@ -188,8 +188,8 @@ class StoreMapSeeder extends Seeder
 
         $slot = intdiv($i, 5);
 
-        // pro(), bukan verified(VerificationLevel::Pro) — UserFactory::verified()
-        // tidak menerima argumen; level Pro punya state tersendiri.
+        // pro() = penjual berstempel KTP "matang". Lencana Pro-nya sendiri
+        // tidak ditulis — turunan dari toko tervalidasi yang ia miliki.
         return $cache[$slot] ??= User::factory()
             ->pro()
             ->create(['name' => 'Pemilik Toko '.($slot + 1)]);

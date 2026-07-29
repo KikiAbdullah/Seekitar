@@ -24,7 +24,11 @@ class UserResource extends JsonResource
             'name'               => $this->name,
             'avatar_url'         => $this->avatar_url,
             'address'            => $this->address,
-            'verification_level' => $this->verification_level?->value,
+            // HANYA-BACA dan dihitung sistem (User::verificationLevel):
+            // 1 = OTP, 2 = KTP disetujui, 3 = punya toko tervalidasi.
+            // Tidak ada kolom pengatur — klien tidak akan menemukan cara
+            // menuliskannya, memang sengaja.
+            'verification_level' => $this->verification_level->value,
 
             // Reputasi sebagai PEMBELI — dari ulasan store_to_buyer (cermin
             // toko↔pembeli; ReviewObserver yang menjaga angkanya).

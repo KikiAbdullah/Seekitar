@@ -6,7 +6,6 @@ use App\Enums\DisputeStatus;
 use App\Enums\OfferStatus;
 use App\Enums\OrderStatus;
 use App\Enums\RequestStatus;
-use App\Enums\VerificationLevel;
 use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
 use App\Models\CustomerRequest;
@@ -365,15 +364,15 @@ class DashboardController extends Controller
     /**
      * KTP yang menunggu peninjauan.
      *
-     * Definisinya: berkas SUDAH dikirim tapi level masih Basic. Penolakan
-     * mengosongkan `ktp_submitted_at` (lihat VerificationController), sehingga
-     * pengajuan yang ditolak tidak ikut terhitung sampai dikirim ulang.
+     * Memakai scope pendingVerification, SATU-SATUNYA definisi antrian:
+     * berkas sudah dikirim tapi stempel tahap 2 belum ada. Penolakan
+     * mengosongkan `ktp_submitted_at` (lihat VerificationController),
+     * sehingga pengajuan yang ditolak tidak ikut terhitung sampai
+     * dikirim ulang.
      */
     private function ktpMenunggu(): int
     {
-        return User::whereNotNull('ktp_submitted_at')
-            ->where('verification_level', VerificationLevel::Basic)
-            ->count();
+        return User::pendingVerification()->count();
     }
 
     /**

@@ -8,7 +8,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 /**
- * Pembuatan toko (API §3.1). Syarat verification_level >= 2 ditegakkan
+ * Pembuatan toko (API §3.1). Syarat pengguna terverifikasi (KTP) ditegakkan
  * Policy, bukan di sini — validasi hanya mengurus bentuk data.
  */
 class StoreStoreRequest extends FormRequest

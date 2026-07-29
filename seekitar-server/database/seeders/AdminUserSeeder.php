@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Enums\VerificationLevel;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -33,7 +32,7 @@ class AdminUserSeeder extends Seeder
      * MEMBUKTIKAN bahwa ia ditolak. Tanpa akun kontrol seperti ini, tidak
      * ada cara menguji bahwa pembatasan peran benar-benar bekerja.
      *
-     * @var list<array{role: string, name: string, phone: string, email: string, level: VerificationLevel, panel: bool}>
+     * @var list<array{role: string, name: string, phone: string, email: string, ktp: bool, panel: bool}>
      */
     private const ACCOUNTS = [
         [
@@ -41,7 +40,10 @@ class AdminUserSeeder extends Seeder
             'name'  => 'Sinta Wijaya',
             'phone' => '6280000000001',
             'email' => 'superadmin@seekitar.test',
-            'level' => VerificationLevel::Pro,
+            // Staf panel dianggap identitasnya terverifikasi: stempel KTP
+            // diisi supaya halaman pengguna menampilkannya utuh. "Pro"
+            // tidak ditulis manual — turunan dari toko tervalidasi.
+            'ktp'   => true,
             'panel' => true,
         ],
         [
@@ -49,7 +51,7 @@ class AdminUserSeeder extends Seeder
             'name'  => 'Andi Prasetyo',
             'phone' => '6280000000002',
             'email' => 'admin.staf@seekitar.test',
-            'level' => VerificationLevel::Pro,
+            'ktp'   => true,
             'panel' => true,
         ],
         [
@@ -60,7 +62,7 @@ class AdminUserSeeder extends Seeder
             'name'  => 'Budi Santoso',
             'phone' => '6280000000003',
             'email' => 'warga@seekitar.test',
-            'level' => VerificationLevel::Basic,
+            'ktp'   => false,
             'panel' => false,
         ],
     ];
@@ -95,7 +97,7 @@ class AdminUserSeeder extends Seeder
         $this->printCredentials();
     }
 
-    /** @param array{role: string, name: string, phone: string, email: string, level: VerificationLevel, panel: bool} $account */
+    /** @param array{role: string, name: string, phone: string, email: string, ktp: bool, panel: bool} $account */
     private function createAccount(array $account): void
     {
         // Kunci pencarian `phone`, bukan `email`: nomor telepon adalah
@@ -103,10 +105,14 @@ class AdminUserSeeder extends Seeder
         $user = User::withTrashed()->firstOrCreate(
             ['phone' => $account['phone']],
             [
-                'name'               => $account['name'],
-                'email'              => $account['email'],
-                'verification_level' => $account['level'],
-            ],
+                'name'  => $account['name'],
+                'email' => $account['email'],
+            ] + ($account['ktp'] ? [
+                // Stempel == status "terverifikasi": tidak ada kolom level
+                // untuk ditulis; lencana pengguna murni turunan dari ini.
+                'verified1_at' => now(),
+                'verified2_at' => now(),
+            ] : []),
         );
 
         // getAttributes(), bukan $user->password: Model::shouldBeStrict()

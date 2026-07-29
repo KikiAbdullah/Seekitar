@@ -35,8 +35,11 @@ return new class extends Migration
             $table->string('avatar_url', 500)->nullable();
             $table->string('address', 255)->nullable();
 
-            // 1 = HP, 2 = KTP, 3 = Pro. TIDAK ADA level 0 atau 4.
-            $table->unsignedTinyInteger('verification_level')->default(1);
+            // TIDAK ADA kolom verification_level: level pengguna adalah
+            // TURUNAN murni (1 = terdaftar via OTP, 2 = verified2_at terisi,
+            // 3 = pemilik toko verified). Menyimpannya sebagai kolom berarti
+            // dua sumber kebenaran yang bisa berbeda pendapat — dan memohon
+            // bug "kolom bilang 2, stempel KTP bilang belum".
 
             // Data pribadi (UU PDP) — disimpan di bucket privat, path saja.
             $table->string('ktp_image', 500)->nullable();
@@ -46,7 +49,8 @@ return new class extends Migration
 
             /*
              * Jejak audit DUA tahap verifikasi admin (DATABASE.md §4.1):
-             *   tahap 1 nomor HP · tahap 2 KTP & NIK (→ level 2)
+             *   tahap 1 nomor HP · tahap 2 KTP & NIK
+             *   (level 2 adalah TURUNAN dari stempel tahap 2 ini)
              *
              * Kontrak penulisan (ditegakkan VerificationController::verifyUser):
              * _by dan _at SELALU diisi berpasangan, SEKALI, dalam satu
@@ -85,7 +89,6 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index('deleted_at', 'users_deleted_at_idx');
-            $table->index('verification_level', 'users_verification_level_idx');
         });
 
         // NULL-able: baris user harus ada sebelum lokasi diisi (alur OTP).

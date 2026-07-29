@@ -74,7 +74,7 @@ class StoreController extends Controller
         return $this->ok(['store' => new StoreResource($store)]);
     }
 
-    /** POST /stores — butuh verification_level >= 2. */
+    /** POST /stores — butuh pengguna terverifikasi (no HP + KTP). */
     public function store(StoreStoreRequest $request): JsonResponse
     {
         $this->authorize('create', Store::class);

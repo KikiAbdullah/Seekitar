@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\VerificationLevel;
 use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\RejectVerificationRequest;
@@ -47,6 +46,10 @@ class VerificationController extends Controller
                 // Nama admin pemverifikasi tiap tahap ikut dimuat — kolom
                 // tabel menampilkannya, dan N+1 di tabel 20 baris tidak perlu.
                 ->with(['verified1By:id,name', 'verified2By:id,name'])
+                // Lencana level turunan butuh EXISTS ini; tanpa itu tiap
+                // baris menembak satu query tambahan (20 baris = 20 query).
+                ->withExists(['stores as has_verified_store' => fn ($q) => $q
+                    ->where('verification_status', VerificationStatus::Verified)])
                 ->pendingVerification()
                 ->orderBy('ktp_submitted_at')
                 ->paginate(20)
@@ -60,9 +63,13 @@ class VerificationController extends Controller
         return view('admin.verifications.stores', [
             'pending' => Store::query()
                 // Relasi pemilik toko bernama owner(), bukan user().
-                // verification_level pemilik ikut dimuat: syarat mengajukan
-                // toko adalah KTP level 2, dan admin perlu memastikannya.
-                ->with('owner:id,name,phone,verification_level')
+                // verified2_at ikut dipilih: syaratnya kini dibaca dari
+                // stempel KTP (kolom level sudah dihapus), dan has_verified_store
+                // memberi lencana Pro pemilik tanpa EXISTS per baris.
+                ->with(['owner' => fn ($q) => $q
+                    ->select(['id', 'name', 'phone', 'verified2_at'])
+                    ->withExists(['stores as has_verified_store' => fn ($s) => $s
+                        ->where('verification_status', VerificationStatus::Verified)])])
                 // latitude/longitude untuk peta kecil pada modal — kolom
                 // POINT mentah berupa biner WKB yang tidak berguna di Blade.
                 ->withCoordinates()
@@ -97,9 +104,12 @@ class VerificationController extends Controller
                 $antrian->verified1_by = $adminId;
                 $antrian->verified1_at = now();
             } else {
+                // Stempel tahap 2 ADALAH kenaikan levelnya: sejak kolom
+                // verification_level dihapus, "level 2" murni turunan dari
+                // verified2_at — menulis keduanya akan membuka peluang
+                // dua sumber kebenaran berbeda pendapat.
                 $antrian->verified2_by        = $adminId;
                 $antrian->verified2_at        = now();
-                $antrian->verification_level  = VerificationLevel::Verified;
                 $antrian->ktp_rejected_reason = null;
             }
 
@@ -159,25 +169,20 @@ class VerificationController extends Controller
     }
 
     /**
-     * Menyetujui pengajuan toko SEKALIGUS menaikkan pemiliknya ke Level 3.
+     * Menyetujui pengajuan toko.
      *
      * SYARAT PERSETUJUAN (aturan 2): (1) pemilik SUDAH terverifikasi —
-     * nomor HP + KTP, alias verification_level >= 2; (2) berkas tokonya
-     * memenuhi syarat — minimal foto etalase benar-benar terunggah
+     * nomor HP + KTP, dibaca dari stempel verified2_at-nya; (2) berkas
+     * tokonya memenuhi syarat — minimal foto etalase benar-benar terunggah
      * (getRawOriginal: placeholder hiasan bukan bukti). Keduanya dicek
      * ULANG di sini, bukan cukup mengandalkan StorePolicy::create saat
-     * pengajuan: level pengguna bisa diturunkan admin SETELAH tokonya
+     * pengajuan: verifikasi pengguna bisa dicabut keadaannya SETELAH toko
      * masuk antrian, dan persetujuan tidak boleh mengesahkan toko yang
      * syaratnya sudah gugur.
      *
-     * Level 3 "Usaha Terverifikasi" artinya usahanya lolos tinjauan — persis
-     * yang disahkan klik ini (foto tempat usaha + koordinat, PRD §5.3.2).
-     * Tanpa kenaikan otomatis di sini TIDAK ADA alur apa pun yang menghasilkan
-     * Level 3: antrian pengguna berhenti di Level 2, sehingga lencana Pro di
-     * halaman pengguna tidak pernah benar-benar muncul dari data.
-     * Kenaikannya SATU ARAH — penolakan toko sesudahnya tidak menurunkan
-     * level, karena Pro manual tak bisa dibedakan dari Pro hasil toko tanpa
-     * kolom penanda; pencabutan dibiarkan keputusan manusia (Sunting Pengguna).
+     * Begitu stempel persetujuan ditulis, pemilik OTOMATIS tampil sebagai
+     * Level 3 · Usaha Terverifikasi — level adalah turunan dari toko
+     * verified, tidak ada kolom level untuk ditulis lagi.
      */
     public function approveStore(Request $request, Store $store): RedirectResponse
     {
@@ -216,16 +221,6 @@ class VerificationController extends Controller
             $toko->verified_by         = $request->user()->id;
             $toko->save();
 
-            // Usaha lolos verifikasi ⇒ PEMILIK-nya naik ke Level 3.
-            // !== Pro berarti levelnya 1 atau 2 (rentangnya memang hanya
-            // 1–3), jadi penulisan ini tidak pernah menurunkan siapa pun.
-            if ($pemilik->verification_level !== VerificationLevel::Pro) {
-                $pemilik->verification_level = VerificationLevel::Pro;
-                $pemilik->save();
-
-                return 'naik';
-            }
-
             return 'disetujui';
         });
 
@@ -236,9 +231,8 @@ class VerificationController extends Controller
                 "Toko {$store->name} belum bisa diverifikasi: pemiliknya belum terverifikasi (nomor HP + KTP). Selesaikan dulu di antrian Verifikasi Pengguna."),
             'foto-belum-diunggah' => back()->with('error',
                 "Toko {$store->name} belum bisa diverifikasi: foto toko belum diunggah pemilik. Tolak pengajuannya agar pemilik memperbaiki."),
-            'naik' => back()->with('success',
-                "Toko {$store->name} disetujui. Pemilik naik ke Level 3 · Usaha Terverifikasi."),
-            default => back()->with('success', "Toko {$store->name} disetujui."),
+            default => back()->with('success',
+                "Toko {$store->name} disetujui — pemilik kini berstatus Level 3 · Usaha Terverifikasi."),
         };
     }
 

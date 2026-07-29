@@ -93,7 +93,13 @@ class DummyDataSeeder extends Seeder
     {
         return User::firstOrCreate(
             ['phone' => $phone],
-            ['name' => $name, 'verification_level' => $level],
+            // Level tidak ditulis sebagai kolom — ia TURUNAN: Basic = tanpa
+            // stempel; Verified/Pro = stempel KTP terisi (Pro sendiri baru
+            // tampil setelah salah satu tokonya disetujui, diisi store()).
+            ['name' => $name] + ($level === VerificationLevel::Basic ? [] : [
+                'verified1_at' => now(),
+                'verified2_at' => now(),
+            ]),
         );
     }
 

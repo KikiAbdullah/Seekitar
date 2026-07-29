@@ -183,6 +183,11 @@ POST /auth/verify-otp
 }
 ```
 
+> **`verification_level` adalah baca-saja & dihitung sistem** (bukan kolom):
+> 1 = masuk OTP, 2 = KTP disetujui admin, 3 = memiliki toko tervalidasi.
+> Tidak ada endpoint untuk mengubahnya — naik level hanya lewat alur
+> verifikasi yang berjejak.
+
 | Field | Keterangan |
 | :-- | :-- |
 | `token_type` | Selalu `Bearer`. Kirim sebagai `Authorization: Bearer <token>`. |

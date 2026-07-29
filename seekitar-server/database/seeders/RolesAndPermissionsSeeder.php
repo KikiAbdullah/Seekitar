@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Enums\VerificationLevel;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -109,9 +108,13 @@ class RolesAndPermissionsSeeder extends Seeder
         $user = User::withTrashed()->firstOrCreate(
             ['phone' => $phone],
             [
-                'name'               => 'Super Admin',
-                'email'              => $email,
-                'verification_level' => VerificationLevel::Pro,
+                'name'  => 'Super Admin',
+                'email' => $email,
+                // Stempel == status "terverifikasi"; khusus akun staf ini
+                // identitasnya dianggap sudah ditinjau. "Pro" tidak perlu
+                // ditulis — ia turunan dari toko tervalidasi.
+                'verified1_at' => now(),
+                'verified2_at' => now(),
             ],
         );
 

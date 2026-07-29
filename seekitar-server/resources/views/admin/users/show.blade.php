@@ -127,11 +127,13 @@
                  persetujuan toko PERTAMA miliknya (stores.verified_*), jadi
                  jejaknya dibaca dari sana, bukan dari kolom baru. --}}
             @php
+                // Level 3 = turunan dari toko tervalidasi — jadi "sudah Pro"
+                // dan "punya toko Pro" adalah dua cara menyebut fakta yang sama.
                 $tokoPro = $user->stores
                     ->filter(fn ($toko) => $toko->verification_status === \App\Enums\VerificationStatus::Verified)
                     ->sortBy('verified_at')
                     ->first();
-                $sudahPro = $user->verification_level === \App\Enums\VerificationLevel::Pro;
+                $sudahPro = $tokoPro !== null;
             @endphp
             <div class="card">
                 <div class="card-header fw-semibold">Jejak Verifikasi</div>
@@ -168,8 +170,6 @@
                                 @if ($tokoPro)
                                     Toko {{ $tokoPro->name }} disetujui —
                                     {{ $tokoPro->verifiedBy?->name ?? '—' }}@if ($tokoPro->verified_at) · {{ $tokoPro->verified_at->format('d M Y H:i') }}@endif
-                                @elseif ($sudahPro)
-                                    <span class="text-muted">Ditetapkan manual — tidak ada toko tervalidasi yang tercatat</span>
                                 @else
                                     <span class="text-muted">Belum — naik otomatis saat tokonya disetujui di Verifikasi Toko</span>
                                 @endif

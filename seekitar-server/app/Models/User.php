@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\VerificationLevel;
+use App\Enums\VerificationStatus;
 use App\Models\Concerns\HasLocation;
 use App\Models\Concerns\SerializesDatesAsUtc;
 use App\Support\PlaceholderImg;
@@ -22,7 +23,7 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, HasLocation, HasRoles, HasUuids, SerializesDatesAsUtc, SoftDeletes;
 
     protected $fillable = [
-        'phone', 'email', 'password', 'name', 'avatar_url', 'address', 'verification_level',
+        'phone', 'email', 'password', 'name', 'avatar_url', 'address',
         'ktp_image', 'selfie_image', 'ktp_submitted_at', 'ktp_rejected_reason',
         'verified1_by', 'verified1_at', 'verified2_by', 'verified2_at',
         'nik', 'nik_hash', 'is_blocked', 'blocked_reason', 'blocked_at',
@@ -37,7 +38,6 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'verification_level' => VerificationLevel::class,
             'nik'                => 'encrypted',
             'is_blocked'         => 'boolean',
             'rating_avg'         => 'decimal:2',
@@ -148,9 +148,74 @@ class User extends Authenticatable
         return $this->hasMany(UserDevice::class);
     }
 
+    /*
+     * Level verifikasi sebagai TURUNAN MURNI, bukan kolom tersimpan
+     * (kolomnya sengaja dihapus — lihat migrasi users):
+     *
+     *   1 · Nomor Terverifikasi     — setiap pengguna terdaftar (masuk OTP).
+     *   2 · Identitas Terverifikasi — verified2_at terisi (KTP disetujui).
+     *   3 · Usaha Terverifikasi     — memiliki minimal 1 toko berstatus
+     *                                 verified; stempelnya ada di toko,
+     *                                 bukan duplikat di users.
+     *
+     * has_verified_store diisi via withExists oleh query pemanggil; bila
+     * belum dimuat, jatuh ke SATU EXISTS kecil — tidak pernah dibiarkan
+     * diam-diam salah membaca "belum punya toko". Model yang BELUM tersimpan
+     * (factory->make()) diskip total dari query: mustahil punya toko, dan
+     * kontrak factory memang diuji tanpa basis data.
+     */
+    protected function verificationLevel(): Attribute
+    {
+        return Attribute::get(function (): VerificationLevel {
+            $punyaTokoTerverifikasi = array_key_exists('has_verified_store', $this->attributes)
+                ? (bool) $this->attributes['has_verified_store']
+                : $this->exists
+                    && $this->stores()
+                        ->where('verification_status', VerificationStatus::Verified)
+                        ->exists();
+
+            return match (true) {
+                $punyaTokoTerverifikasi      => VerificationLevel::Pro,
+                $this->verified2_at !== null => VerificationLevel::Verified,
+                default                      => VerificationLevel::Basic,
+            };
+        });
+    }
+
+    /**
+     * Filter level TURUNAN — dipakai panel admin (DataTable) maupun API
+     * admin. Dua definisi terpisah pasti berbeda pendapat di kasus tepi:
+     * pengguna ber-KTP yang tokonya disetujui adalah level 3, bukan 2.
+     *
+     * @param  int|null  $level  1/2/3; nilai lain berarti tanpa filter.
+     */
+    public function scopeWhereVerificationLevel(Builder $query, ?int $level): Builder
+    {
+        $tokoTerverifikasi = fn (Builder $q) => $q
+            ->where('verification_status', VerificationStatus::Verified);
+
+        return match ($level) {
+            VerificationLevel::Pro->value => $query
+                ->whereHas('stores', $tokoTerverifikasi),
+            VerificationLevel::Verified->value => $query
+                ->whereNotNull('verified2_at')
+                ->whereDoesntHave('stores', $tokoTerverifikasi),
+            VerificationLevel::Basic->value => $query
+                ->whereNull('verified2_at')
+                ->whereDoesntHave('stores', $tokoTerverifikasi),
+            default => $query,
+        };
+    }
+
+    /**
+     * Boleh membuka toko — aturan 2: pemilik toko harus SUDAH terverifikasi,
+     * yaitu nomor HP (bawaan OTP) + KTP disetujui admin. Dibaca langsung
+     * dari stempelnya, BUKAN dari level turunan: toko verified warisan dengan
+     * stempel KTP kosong tidak boleh membuat pemiliknya tampak layak.
+     */
     public function canOpenStore(): bool
     {
-        return $this->verification_level->canOpenStore();
+        return $this->verified2_at !== null;
     }
 
     /**

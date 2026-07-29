@@ -147,7 +147,6 @@ Setiap tabel dilengkapi penjelasan tiap kolom, alasan pemilihan tipe, dan constr
 | `avatar_url`         | VARCHAR(500) NULL    | URL foto profil, disimpan di cloud storage. Panjang 500 cukup untuk URL pre‑signed.  |
 | `location`           | POINT SRID 4326 NULL | Lokasi default pengguna (misal rumah). NULL hanya saat onboarding belum selesai.     |
 | `address`            | VARCHAR(255) NULL    | Alamat teks hasil reverse geocoding. Untuk ditampilkan, bukan untuk query.           |
-| `verification_level` | TINYINT DEFAULT 1    | 1 = nomor HP, 2 = KTP diverifikasi, 3 = Pro — naik otomatis saat tokonya disetujui. Hanya 1–3. |
 | `ktp_image`          | VARCHAR(500) NULL    | URL foto KTP (terenkripsi at-rest). Diisi saat pengajuan verifikasi Level 2.         |
 | `selfie_image`       | VARCHAR(500) NULL    | URL selfie memegang KTP. Wajib bersama `ktp_image`.                                  |
 | `ktp_submitted_at`   | TIMESTAMP NULL       | Kapan berkas diajukan — dipakai SLA peninjauan admin 1×24 jam.                       |
@@ -155,7 +154,7 @@ Setiap tabel dilengkapi penjelasan tiap kolom, alasan pemilihan tipe, dan constr
 | `verified1_by`       | CHAR(36) NULL FK → `users.id` | Admin yang memverifikasi tahap 1 (nomor HP). ON DELETE SET NULL. |
 | `verified1_at`       | TIMESTAMP NULL       | Kapan tahap 1 disetujui — untuk audit & SLA. |
 | `verified2_by`       | CHAR(36) NULL FK → `users.id` | Admin yang memverifikasi tahap 2 (KTP & NIK). ON DELETE SET NULL. |
-| `verified2_at`       | TIMESTAMP NULL       | Kapan tahap 2 disetujui — bersamaan naiknya level ke 2. |
+| `verified2_at`       | TIMESTAMP NULL       | Kapan tahap 2 disetujui — kolom inilah yang membuat pengguna ber-Level 2 (lihat penjelasan level turunan di bawah). |
 | `rating_avg`         | DECIMAL(3,2) DEFAULT 0.00 | Rata-rata rating 1–5 sebagai PEMBELI — hanya dari ulasan `store_to_buyer`. Dihitung ulang `ReviewObserver`, bukan diisi manual. |
 | `total_reviews`      | INT UNSIGNED DEFAULT 0      | Jumlah ulasan yang diterima sebagai pembeli — pasangan `rating_avg`. |
 | `nik`                | VARCHAR(255) NULL    | NIK hasil pembacaan admin. **Terenkripsi** (cast `encrypted`), bukan plaintext.      |
@@ -227,25 +226,36 @@ Setiap tabel dilengkapi penjelasan tiap kolom, alasan pemilihan tipe, dan constr
 **Verifikasi KTP (Level 2):** `ktp_image` dan `selfie_image` adalah data pribadi
 sensitif menurut UU PDP. Simpan di bucket privat, akses hanya lewat URL
 pre-signed berumur pendek, dan **jangan** pernah dikembalikan di response API
-publik. Setelah `verification_level` naik ke 2, berkas boleh dihapus sesuai
-kebijakan retensi.
+publik. Setelah tahap 2 disetujui, berkas boleh dihapus sesuai kebijakan retensi.
+
+**Level pengguna DIHITUNG, bukan disimpan.** Tidak ada kolom
+`verification_level` di tabel ini — kolom itu sengaja dihapus karena faktanya
+sudah dijawab lengkap oleh stempel verifikasi + status toko, dan kolom
+tersendiri adalah sumber kebenaran kedua yang pasti suatu hari berbeda
+pendapat ("kolom bilang 2, stempel KTP bilang belum"). Turunannya
+(`User::verificationLevel`):
+
+| Level | Label | Fakta penentunya |
+| :---- | :---- | :--------------- |
+| 1 | Nomor Terverifikasi | Selalu berlaku — setiap pengguna masuk lewat OTP. |
+| 2 | Identitas Terverifikasi | `verified2_at` terisi (KTP disetujui). Syarat membuka toko: `User::canOpenStore()` membaca kolom ini LANGSUNG, bukan levelnya, supaya toko verified warisan tidak bisa mengangkat pemilik ber-KTP kosong. |
+| 3 | Usaha Terverifikasi | Memiliki minimal 1 toko `verification_status = 'verified'` — jejaknya `stores.verified_by` / `verified_at`, bukan stempel ketiga di sini (usaha itu sendiri adalah berkasnya). |
 
 **Verifikasi admin DUA TAHAP** (`verified1_*`, `verified2_*`):
 tiap tahap disetujui lewat satu klik tombol "Verifikasi" pada baris antrian,
 dan stempelnya — siapa (`_by`) + kapan (`_at`) — tidak pernah ditimpa.
 
 1. **Tahap 1 · Nomor HP** → `verified1_by` / `verified1_at`.
-2. **Tahap 2 · KTP & NIK** → `verified2_by` / `verified2_at` + level naik ke 2.
+2. **Tahap 2 · KTP & NIK** → `verified2_by` / `verified2_at` — terisinya kolom
+   inilah yang menjadikan pengguna Level 2 (turunan, bukan penulisan kedua).
    NIK yang terbaca di foto KTP dicocokkan dengan kolom `nik`.
 
-**Level 3 (Pro) tidak lewat dua tahap di atas.** Level ini naik OTOMATIS saat
-salah satu toko miliknya disetujui admin di antrian Verifikasi Toko — jejaknya
-adalah `stores.verified_by` / `stores.verified_at`, bukan kolom stempel ketiga
-di `users` (usaha itu sendiri adalah berkasnya; menambah stempel sendiri hanya
-menduplikasi kebenaran). Kenaikannya satu arah: penolakan toko sesudahnya tidak
-menurunkan level, karena Pro hasil pemberian manual tak bisa dibedakan dari Pro
-hasil persetujuan toko — pencabutan adalah keputusan admin lewat Sunting
-Pengguna, bukan heuristik mesin.
+Karena level murni turunan, TIDAK ADA penyuntingan level manual di panel:
+menaikkan pengguna = menyetujui KTP/tokonya lewat antrian yang berjejak;
+menurunkan haknya = memblokir akun (dengan alasan), bukan memangkas angka.
+Konsekuensi filter admin: "level 3" = `WHERE EXISTS (toko verified)`,
+"level 2" = `verified2_at` terisi TANPA toko verified, "level 1" = sisanya —
+satu definisi bersama di `User::scopeWhereVerificationLevel`.
 
 ### 4.2 `stores`
 
@@ -308,9 +318,11 @@ Di atas ketiga langkah penilaian itu ada dua SYARAT POKOK yang bersifat
 fakta data, bukan penilaian admin. Karena itu server memeriksanya ulang saat
 persetujuan — tidak cukup mengandalkan `StorePolicy::create` waktu pengajuan:
 
-1. **Pemilik sudah terverifikasi** — nomor HP + KTP, `verification_level ≥ 2`.
-   Level bisa diturunkan admin setelah toko masuk antrian, dan persetujuan
-   tidak boleh mengesahkan toko yang syarat pemiliknya sudah gugur.
+1. **Pemilik sudah terverifikasi** — nomor HP + KTP, `verified2_at` terisi
+   (kolom level sudah dihapus — syarat ini dibaca langsung dari stempelnya).
+   Dicek ulang saat menyetujui karena pengajuan bisa masuk antrian LALU
+   keadaan pemiliknya berubah, dan persetujuan tidak boleh mengesahkan
+   toko yang syaratnya sudah gugur.
 2. **Foto etalase benar-benar terunggah** — dibaca lewat
    `getRawOriginal('photo')`. Aksesor `photo` menjatuhkan nilai kosong ke
    placeholder hiasan demi tampilan publik, dan gambar hiasan bukanlah bukti.

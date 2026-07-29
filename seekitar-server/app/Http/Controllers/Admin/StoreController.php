@@ -38,7 +38,12 @@ class StoreController extends Controller
             // ST_Longitude — properti biasa berisi WKB biner (HasLocation).
             ->withCoordinates()
             ->with([
-                'owner:id,name,phone,verification_level',
+                // Lencana level pemilik adalah turunan: stempel KTP + EXISTS
+                // toko terverifikasinya memasok label tanpa kolom level.
+                'owner' => fn ($q) => $q
+                    ->select(['id', 'name', 'phone', 'verified2_at'])
+                    ->withExists(['stores as has_verified_store' => fn ($s) => $s
+                        ->where('verification_status', \App\Enums\VerificationStatus::Verified)]),
                 'verifiedBy:id,name',
             ])
             ->withCount(['listings', 'offers', 'orders', 'reviews'])

@@ -1,20 +1,6 @@
 @extends('admin.layout')
 @section('title', 'Sunting Pengguna')
 
-@php
-    /*
-     * Satu definisi visual per level, dipakai radio-card maupun badge
-     * konteks — mengganti teks/ikon di satu tempat ini menjaga keduanya
-     * tidak pernah berbeda pendapat.
-     */
-    $levelInfo = [
-        1 => ['ti ti-device-mobile', 'Dapat bertransaksi: membeli dan memasang kebutuhan.'],
-        2 => ['ti ti-id',            'Identitas KTP ditinjau admin — syarat membuka toko.'],
-        3 => ['ti ti-rosette',       'Lencana Pro — normalnya naik otomatis saat tokonya disetujui.'],
-    ];
-    $levelAktif = $user->verification_level?->value ?? 1;
-@endphp
-
 @section('content')
 
     <div class="card bg-light-primary shadow-none position-relative overflow-hidden mb-4">
@@ -64,7 +50,7 @@
                             </div>
                         </div>
                         <span class="badge bg-light-primary text-primary flex-shrink-0">
-                            Level {{ $levelAktif }} · {{ $user->verification_level?->label() ?? 'Nomor Terverifikasi' }}
+                            Level {{ $user->verification_level->value }} · {{ $user->verification_level->label() }}
                         </span>
                     </div>
                 </div>
@@ -105,55 +91,30 @@
                     </div>
                 </div>
 
+                {{-- Level TIDAK lagi isian formulir: ia turunan dari jejak
+                     verifikasi. Kartu ini menjelaskan itu — tanpa penjelasan,
+                     admin akan mencari-cari radio yang "hilang". --}}
                 <div class="card">
-                    <div class="card-header fw-semibold">
-                        Level Verifikasi <span class="text-danger">*</span>
-                    </div>
+                    <div class="card-header fw-semibold">Level Verifikasi</div>
                     <div class="card-body">
-                        <p class="text-muted fs-3 mb-3">
-                            Verifikasi di admin bersifat manual — memilih level di sini mengesampingkan
-                            proses tinjauan KTP. Gunakan satu menu Verifikasi bila jejak persetujuan
-                            (siapa &amp; kapan) harus tercatat rapi.
-                        </p>
-
-                        @error('verification_level')
-                            <div class="alert alert-danger bg-light-danger text-danger border-0 fs-3 py-2 mb-3">
-                                {{ $message }}
-                            </div>
-                        @enderror
-
-                        <div class="d-flex flex-column gap-2">
-                            @foreach (\App\Enums\VerificationLevel::cases() as $level)
-                                @php [$ikon, $manfaat] = $levelInfo[$level->value]; @endphp
-                                <div class="form-check admin-radio-kartu mb-0">
-                                    <input class="form-check-input" type="radio" name="verification_level"
-                                           id="level{{ $level->value }}" value="{{ $level->value }}"
-                                           @checked(old('verification_level', $levelAktif) == $level->value)>
-                                    <label class="form-check-label" for="level{{ $level->value }}">
-                                        <span class="rp" aria-hidden="true"></span>
-                                        <span class="d-flex align-items-center justify-content-center rounded-2 bg-light-primary text-primary flex-shrink-0"
-                                              style="width: 40px; height: 40px;" aria-hidden="true">
-                                            <i class="{{ $ikon }} fs-6"></i>
-                                        </span>
-                                        <span style="min-width: 0;">
-                                            <span class="d-block fw-semibold">Level {{ $level->value }} · {{ $level->label() }}</span>
-                                            <span class="d-block text-muted fs-3">{{ $manfaat }}</span>
-                                        </span>
-                                    </label>
-                                </div>
-                            @endforeach
+                        <div class="d-flex align-items-center flex-wrap gap-2 mb-3">
+                            <span class="badge bg-light-primary text-primary fs-5">
+                                Level {{ $user->verification_level->value }} · {{ $user->verification_level->label() }}
+                            </span>
+                            <span class="text-muted fs-3">Status saat ini</span>
                         </div>
-
-                        @if ($user->stores_count > 0)
-                            <div class="alert bg-light-warning text-warning border-0 d-flex align-items-start gap-2 fs-3 mt-3 mb-0" role="note">
-                                <i class="ti ti-alert-triangle mt-1 flex-shrink-0" aria-hidden="true"></i>
-                                <span>
-                                    Pengguna ini memiliki {{ $user->stores_count }} toko. Menurunkan level ke 1
-                                    <strong>tidak</strong> menonaktifkan toko yang sudah ada — hanya mencegahnya
-                                    membuka toko baru.
-                                </span>
-                            </div>
-                        @endif
+                        <p class="fs-3 text-muted mb-2">
+                            Level dihitung otomatis dari jejak verifikasi — tidak ada kolom yang bisa
+                            disunting langsung, supaya lencana tidak pernah berkata lain dari buktinya:
+                        </p>
+                        <ul class="fs-3 text-muted mb-3">
+                            <li><strong>Level 2 · Identitas</strong> naik saat KTP disetujui di menu Verifikasi Pengguna.</li>
+                            <li><strong>Level 3 · Usaha</strong> naik saat salah satu tokonya disetujui di Verifikasi Toko.</li>
+                        </ul>
+                        <p class="fs-3 text-muted mb-0">
+                            Menurunkan hak pengguna dilakukan lewat <strong>Blokir</strong>,
+                            bukan dengan memangkas level.
+                        </p>
 
                         <div class="d-flex align-items-center gap-2 mt-4">
                             <button type="submit" class="btn btn-seekitar">
@@ -238,15 +199,14 @@
                                     @endif
                                     <span class="text-muted d-block">Toko {{ $tokoPro->name }} disetujui</span>
                                 </span>
-                            @elseif ($levelAktif === 3)
-                                <span class="text-muted fs-3">Ditetapkan manual — tak ada toko tervalidasi yang tercatat.</span>
                             @else
                                 <span class="text-muted fs-3">Belum ada — naik otomatis saat tokonya disetujui.</span>
                             @endif
                         </li>
                     </ul>
                     <div class="card-body border-top fs-3 text-muted">
-                        Mengubah level lewat formulir ini tidak menulis jejak apa pun pada tiga baris di atas.
+                        Tiga baris di atas ADALAH level pengguna — stempelnya menentukan lencananya,
+                        tidak ada kolom level tersendiri yang bisa berkata lain.
                     </div>
                 </div>
 

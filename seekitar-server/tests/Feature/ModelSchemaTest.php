@@ -11,7 +11,6 @@ use App\Enums\PaymentMethod as Pay;
 use App\Enums\RequestStatus;
 use App\Enums\ReviewDirection;
 use App\Enums\StoreType;
-use App\Enums\VerificationLevel;
 use App\Enums\VerificationStatus;
 use App\Models\Category;
 use App\Models\CustomerRequest;
@@ -33,9 +32,11 @@ class ModelSchemaTest extends TestCase
 
     private function seller(): User
     {
+        // "Penjual yang boleh buka toko" = berstempel KTP; kolom level
+        // sudah dihapus — status terverifikasi murni turunan stempel ini.
         return User::create([
             'phone' => '628222222222', 'name' => 'Yanto Wijaya',
-            'verification_level' => VerificationLevel::Verified,
+            'verified1_at' => now(), 'verified2_at' => now(),
         ]);
     }
 
@@ -43,7 +44,6 @@ class ModelSchemaTest extends TestCase
     {
         return User::create([
             'phone' => '628111111111', 'name' => 'Budi Santoso',
-            'verification_level' => VerificationLevel::Basic,
         ]);
     }
 

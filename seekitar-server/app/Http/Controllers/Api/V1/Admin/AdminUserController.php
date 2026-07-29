@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Enums\VerificationStatus;
 use App\Http\Concerns\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
@@ -17,10 +18,14 @@ class AdminUserController extends Controller
     /** GET /admin/users */
     public function index(Request $request): JsonResponse
     {
-        $query = User::query();
+        $query = User::query()
+            // verification_level di JSON adalah TURUNAN (bukan kolom):
+            // EXISTS ini memasok accessor-nya tanpa satu query per baris.
+            ->withExists(['stores as has_verified_store' => fn ($q) => $q
+                ->where('verification_status', VerificationStatus::Verified)]);
 
         if ($request->filled('verification_level')) {
-            $query->where('verification_level', $request->integer('verification_level'));
+            $query->whereVerificationLevel($request->integer('verification_level'));
         }
 
         if ($request->has('is_blocked')) {

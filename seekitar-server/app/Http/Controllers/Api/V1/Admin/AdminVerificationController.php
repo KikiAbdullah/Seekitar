@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
-use App\Enums\VerificationLevel;
 use App\Enums\VerificationStatus;
 use App\Http\Concerns\ApiResponse;
 use App\Http\Controllers\Controller;
@@ -21,18 +20,36 @@ class AdminVerificationController extends Controller
     /** GET /admin/verifications/pending */
     public function pending(): JsonResponse
     {
-        $users = User::whereNotNull('ktp_submitted_at')
-            ->where('verification_level', VerificationLevel::Basic)
+        $users = User::pendingVerification()    // definisi antrian TUNGGAL, sama dengan panel web
+            ->withExists(['stores as has_verified_store' => fn ($q) => $q
+                ->where('verification_status', VerificationStatus::Verified)])
             ->orderBy('ktp_submitted_at')       // SLA: yang paling lama menunggu didahulukan
             ->paginate($this->perPage());
 
         return $this->paginated($users, UserResource::class);
     }
 
-    /** POST /admin/verifications/users/{user}/approve */
-    public function approveUser(User $user): JsonResponse
+    /**
+     * POST /admin/verifications/users/{user}/approve
+     *
+     * Stempel persetujuan ADALAH kenaikan levelnya — sejak kolom
+     * verification_level dihapus, "level 2" murni turunan dari stempel ini.
+     * Tulis-sekali seperti panel web: tahap yang sudah terisi tidak ditimpa.
+     */
+    public function approveUser(Request $request, User $user): JsonResponse
     {
-        $user->verification_level  = VerificationLevel::Verified;
+        $adminId = $request->user()->id;
+
+        if ($user->verified1_at === null) {
+            $user->verified1_by = $adminId;
+            $user->verified1_at = now();
+        }
+
+        if ($user->verified2_at === null) {
+            $user->verified2_by = $adminId;
+            $user->verified2_at = now();
+        }
+
         $user->ktp_rejected_reason = null;
         $user->save();
 
@@ -55,12 +72,33 @@ class AdminVerificationController extends Controller
         return $this->ok(['user' => new UserResource($user)]);
     }
 
-    /** POST /admin/verifications/stores/{store}/approve */
-    public function approveStore(Store $store): JsonResponse
+    /**
+     * POST /admin/verifications/stores/{store}/approve
+     *
+     * Syaratnya SAMA dengan panel web (DATABASE.md §4.2): antrian pending,
+     * pemilik terverifikasi (no HP + KTP), dan foto benar-benar terunggah.
+     * Aturan produk tidak boleh berubah hanya karena kanalnya API.
+     */
+    public function approveStore(Request $request, Store $store): JsonResponse
     {
+        if ($store->verification_status !== VerificationStatus::Pending) {
+            return $this->fail('Toko ini sudah diproses sebelumnya.', 422);
+        }
+
+        if (! ($store->owner?->canOpenStore() ?? false)) {
+            return $this->fail('Pemilik toko belum terverifikasi (nomor HP + KTP).', 422);
+        }
+
+        // Foto dinilai dari kolom mentah: placeholder hiasan bukan bukti
+        // unggahan pemilik, dan aksesor photo selalu mengembalikan URL.
+        if (empty($store->getRawOriginal('photo'))) {
+            return $this->fail('Foto toko belum diunggah pemilik.', 422);
+        }
+
         $store->verification_status = VerificationStatus::Verified;
         $store->rejected_reason     = null;
         $store->verified_at         = now();
+        $store->verified_by         = $request->user()->id;
         $store->save();
 
         return $this->ok(['store' => new StoreResource($store)]);
