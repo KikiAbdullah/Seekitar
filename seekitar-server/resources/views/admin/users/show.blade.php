@@ -171,11 +171,11 @@
                         </dl>
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <div class="text-muted fw-semibold mb-1" style="font-size: 11px;">FOTO ORANG (SELFIE)</div>
+                                <div class="text-muted fw-semibold mb-1" style="font-size: 11px;">FOTO WAJAH</div>
                                 @if ($user->selfie_image)
                                     <a href="{{ route('admin.verifications.users.media', [$user, 'selfie']) }}" target="_blank" rel="noopener">
                                         <img loading="lazy" decoding="async" src="{{ route('admin.verifications.users.media', [$user, 'selfie']) }}"
-                                             alt="Selfie {{ $user->name }}" class="img-fluid rounded border"
+                                             alt="Foto wajah {{ $user->name }}" class="img-fluid rounded border"
                                              style="max-height: 160px; object-fit: cover;">
                                     </a>
                                 @else

@@ -32,7 +32,7 @@
 
             <div class="modal-body">
 
-                {{-- Berkas identitas. Foto orang (selfie) disandingkan dengan
+                {{-- Berkas identitas. Foto wajah disandingkan dengan
                      KTP supaya wajahnya bisa dibandingkan dalam satu pandang. --}}
                 <div class="row g-3 mb-3">
                     <div class="col-md-4">
@@ -44,12 +44,12 @@
                              loading="lazy" decoding="async">
                     </div>
                     <div class="col-md-4">
-                        <div class="text-muted fw-semibold mb-1" style="font-size: 11px;">FOTO ORANG (SELFIE)</div>
+                        <div class="text-muted fw-semibold mb-1" style="font-size: 11px;">FOTO WAJAH</div>
                         @if ($user->selfie_image)
                             <a href="{{ route('admin.verifications.users.media', [$user, 'selfie']) }}"
                                target="_blank" rel="noopener" title="Buka ukuran penuh di tab baru">
                                 <img src="{{ route('admin.verifications.users.media', [$user, 'selfie']) }}"
-                                     alt="Selfie {{ $user->name }}" class="img-fluid rounded border"
+                                     alt="Foto wajah {{ $user->name }}" class="img-fluid rounded border"
                                      style="max-height: 180px; object-fit: cover;">
                             </a>
                         @else
