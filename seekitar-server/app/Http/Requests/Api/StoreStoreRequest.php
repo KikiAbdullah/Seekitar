@@ -47,7 +47,8 @@ class StoreStoreRequest extends FormRequest
             'service_radius_km' => ['sometimes', 'numeric', 'min:0.1', 'max:50'],
 
             'operating_hours' => ['sometimes', 'nullable', 'array'],
-            'bank_account'    => ['sometimes', 'nullable', 'string', 'max:100'],
+            'bank_account'      => ['sometimes', 'nullable', 'string', 'max:100'],
+            'bank_account_name' => ['sometimes', 'nullable', 'string', 'max:100'],
             'npwp'            => ['sometimes', 'nullable', 'string', 'max:20'],
 
             'accepts_cod'     => ['sometimes', 'boolean'],

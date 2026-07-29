@@ -3,7 +3,7 @@
 namespace App\Policies;
 
 use App\Enums\OfferStatus;
-use App\Enums\VerificationStatus;
+use App\Enums\StoreStatus;
 use App\Models\CustomerRequest;
 use App\Models\Offer;
 use App\Models\Store;
@@ -21,7 +21,7 @@ class OfferPolicy
     {
         // isOpen() sudah mencakup status DAN kedaluwarsa sekaligus.
         return $store->user_id === $user->id
-            && $store->verification_status === VerificationStatus::Verified
+            && $store->status === StoreStatus::Verified
             && $request->isOpen()
             && $request->user_id !== $user->id;
     }

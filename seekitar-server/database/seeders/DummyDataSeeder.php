@@ -7,7 +7,7 @@ use App\Enums\ListingType;
 use App\Enums\RequestStatus;
 use App\Enums\StoreType;
 use App\Enums\VerificationLevel;
-use App\Enums\VerificationStatus;
+use App\Enums\StoreStatus;
 use App\Models\Category;
 use App\Models\CustomerRequest;
 use App\Models\Listing;
@@ -128,14 +128,15 @@ class DummyDataSeeder extends Seeder
             'service_radius_km'   => 5,
             'accepts_cod'         => true,
             'allows_pickup'       => true,
-            'verification_status' => VerificationStatus::Verified,
+            'status'              => StoreStatus::Verified,
             'verified_at'         => now(),
             'verified_by'         => $admin->id,
         ]);
 
-        // Kolom POINT tidak bisa mass-assign; setLocation() memastikan opsi
-        // axis-order ikut terpasang.
-        $store->setLocation($lat, $lng)->save();
+        // Lokasi toko kolom biasa sejak 2.3 — ikut fill seperti kolom lain.
+        $store->latitude  = $lat;
+        $store->longitude = $lng;
+        $store->save();
 
         return $store;
     }

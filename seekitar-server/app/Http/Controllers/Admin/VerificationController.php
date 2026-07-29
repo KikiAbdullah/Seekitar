@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\VerificationStatus;
+use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\RejectVerificationRequest;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\VerifikasiTokoService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,6 +34,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class VerificationController extends Controller
 {
+    public function __construct(private readonly VerifikasiTokoService $verifikasiToko) {}
+
     /**
      * Antrian verifikasi identitas pengguna.
      *
@@ -62,14 +65,15 @@ class VerificationController extends Controller
     {
         return view('admin.verifications.stores', [
             'pending' => Store::query()
-                // Relasi pemilik toko bernama owner(), bukan user().
-                // verified_at ikut dipilih: syaratnya dibaca dari stempel
-                // persetujuan identitas pemiliknya.
-                ->with(['owner:id,name,phone,verified_at'])
-                // latitude/longitude untuk peta kecil pada modal — kolom
-                // POINT mentah berupa biner WKB yang tidak berguna di Blade.
-                ->withCoordinates()
-                ->where('verification_status', VerificationStatus::Pending)
+                // Antrian HANYA berisi toko yang pemiliknya SUDAH
+                // terverifikasi identitas — definisi bersamanya hidup di
+                // Store::scopePendingVerification (lencana sidebar memakai
+                // definisi yang sama; dua sumber akan membuat angkanya
+                // tidak cocok).
+                // verified_at pemilik ikut dipilih: badge "pemilik layak"
+                // di modal dibaca dari stempel itu.
+                ->with(['owner:id,name,phone,verified_at,address'])
+                ->pendingVerification()
                 ->orderBy('created_at')
                 ->paginate(20)
                 ->withQueryString(),
@@ -102,7 +106,7 @@ class VerificationController extends Controller
 
             $antrian->verified_by     = $adminId;
             $antrian->verified_at     = now();
-            $antrian->status          = \App\Enums\UserStatus::Terverifikasi;
+            $antrian->status          = UserStatus::Terverifikasi;
             $antrian->rejected_by     = null;
             $antrian->rejected_at     = null;
             $antrian->rejected_reason = null;
@@ -156,7 +160,7 @@ class VerificationController extends Controller
      */
     public function rejectUser(RejectVerificationRequest $request, User $user): RedirectResponse
     {
-        $user->status          = \App\Enums\UserStatus::Ditolak;
+        $user->status          = UserStatus::Ditolak;
         $user->rejected_by     = $request->user()->id;
         $user->rejected_at     = now();
         $user->rejected_reason = $request->reason();
@@ -168,15 +172,9 @@ class VerificationController extends Controller
     /**
      * Menyetujui pengajuan toko.
      *
-     * SYARAT PERSETUJUAN (aturan 2): (1) pemilik SUDAH terverifikasi —
-     * identitasnya disetujui admin, dibaca dari stempel verified_at-nya;
-     * (2) berkas
-     * tokonya memenuhi syarat — minimal foto etalase benar-benar terunggah
-     * (getRawOriginal: placeholder hiasan bukan bukti). Keduanya dicek
-     * ULANG di sini, bukan cukup mengandalkan StorePolicy::create saat
-     * pengajuan: verifikasi pengguna bisa dicabut keadaannya SETELAH toko
-     * masuk antrian, dan persetujuan tidak boleh mengesahkan toko yang
-     * syaratnya sudah gugur.
+     * Seluruh syarat & penulisan stempel hidup di VerifikasiTokoService —
+     * ditulis SEKALI di sana karena aksi yang sama juga tersedia dari
+     * tabel toko dan API admin; tiga salinan aturan pasti menyimpang.
      *
      * Begitu stempel persetujuan ditulis, pemilik OTOMATIS tampil sebagai
      * Level 3 · Usaha Terverifikasi — level adalah turunan dari toko
@@ -184,45 +182,7 @@ class VerificationController extends Controller
      */
     public function approveStore(Request $request, Store $store): RedirectResponse
     {
-        $hasil = DB::transaction(function () use ($store, $request): string {
-            // Baris dikunci sebelum ditulis: dua admin bisa menekan Setujui
-            // nyaris bersamaan, dan keduanya harus berakhir di kondisi yang
-            // sama — bukan saling menimpa stempel.
-            $toko = Store::lockForUpdate()->findOrFail($store->id);
-
-            // Stempel persetujuan tulis-sekali: antrian memang hanya memuat
-            // toko pending, tapi POST manual/dobel tidak boleh menimpa
-            // verified_by/verified_at yang sudah tercatat.
-            if ($toko->verification_status !== VerificationStatus::Pending) {
-                return 'bukan-antrian';
-            }
-
-            $pemilik = User::lockForUpdate()->find($toko->user_id);
-
-            // Syarat (1): pemilik terverifikasi (no HP + KTP). NULL pun
-            // ditolak — toko yatim tidak layak disahkan apa pun sebabnya.
-            if ($pemilik === null || ! $pemilik->canOpenStore()) {
-                return 'pemilik-belum-terverifikasi';
-            }
-
-            // Syarat (2): berkas toko memenuhi syarat — foto etalase yang
-            // dinilai admin harus foto yang BENAR-BENAR diunggah pemilik.
-            // Aksesor photo menjatuhkan nilai kosong ke placeholder hiasan,
-            // jadi di sini wajib membaca kolom mentahnya.
-            if (empty($toko->getRawOriginal('photo'))) {
-                return 'foto-belum-diunggah';
-            }
-
-            $toko->verification_status = VerificationStatus::Verified;
-            $toko->rejected_reason     = null;
-            $toko->verified_at         = now();
-            $toko->verified_by         = $request->user()->id;
-            $toko->save();
-
-            return 'disetujui';
-        });
-
-        return match ($hasil) {
+        return match ($this->verifikasiToko->setujui($store, $request->user()->id)) {
             'bukan-antrian' => back()->with('error',
                 "Toko {$store->name} sudah diproses sebelumnya — stempel persetujuan tidak bisa ditimpa."),
             'pemilik-belum-terverifikasi' => back()->with('error',
@@ -235,23 +195,7 @@ class VerificationController extends Controller
 
     public function rejectStore(RejectVerificationRequest $request, Store $store): RedirectResponse
     {
-        $ditolak = DB::transaction(function () use ($request, $store): bool {
-            $toko = Store::lockForUpdate()->findOrFail($store->id);
-
-            // Penolakan hanya sah dari antrian — sebagaimana persetujuan.
-            // Menolak toko yang SUDAH disetujui akan mengubah statusnya
-            // sambil menyisakan stempel verified_*: keadaan kontradiktif
-            // yang tidak punya makna alur (pencabutan belum jadi fitur).
-            if ($toko->verification_status !== VerificationStatus::Pending) {
-                return false;
-            }
-
-            $toko->verification_status = VerificationStatus::Rejected;
-            $toko->rejected_reason     = $request->reason();
-            $toko->save();
-
-            return true;
-        });
+        $ditolak = $this->verifikasiToko->tolak($store, $request->user()->id, $request->reason());
 
         if (! $ditolak) {
             return back()->with('error',

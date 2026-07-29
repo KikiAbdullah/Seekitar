@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
-use App\Enums\VerificationStatus;
+use App\Enums\StoreStatus;
 use App\Http\Concerns\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\StoreResource;
 use App\Http\Resources\UserResource;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\VerifikasiTokoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -17,12 +18,14 @@ class AdminVerificationController extends Controller
 {
     use ApiResponse;
 
+    public function __construct(private readonly VerifikasiTokoService $verifikasiToko) {}
+
     /** GET /admin/verifications/pending */
     public function pending(): JsonResponse
     {
         $users = User::pendingVerification()    // definisi antrian TUNGGAL, sama dengan panel web
             ->withExists(['stores as has_verified_store' => fn ($q) => $q
-                ->where('verification_status', VerificationStatus::Verified)])
+                ->where('status', StoreStatus::Verified)])
             ->orderBy('ktp_submitted_at')       // SLA: yang paling lama menunggu didahulukan
             ->paginate($this->perPage());
 
@@ -78,27 +81,14 @@ class AdminVerificationController extends Controller
      */
     public function approveStore(Request $request, Store $store): JsonResponse
     {
-        if ($store->verification_status !== VerificationStatus::Pending) {
-            return $this->fail('Toko ini sudah diproses sebelumnya.', 422);
-        }
-
-        if (! ($store->owner?->canOpenStore() ?? false)) {
-            return $this->fail('Pemilik toko belum terverifikasi (nomor HP + KTP).', 422);
-        }
-
-        // Foto dinilai dari kolom mentah: placeholder hiasan bukan bukti
-        // unggahan pemilik, dan aksesor photo selalu mengembalikan URL.
-        if (empty($store->getRawOriginal('photo'))) {
-            return $this->fail('Foto toko belum diunggah pemilik.', 422);
-        }
-
-        $store->verification_status = VerificationStatus::Verified;
-        $store->rejected_reason     = null;
-        $store->verified_at         = now();
-        $store->verified_by         = $request->user()->id;
-        $store->save();
-
-        return $this->ok(['store' => new StoreResource($store)]);
+        // Aturannya PERSIS panel web — service yang sama menjaga stempel
+        // tulis-sekali & syaratnya (antrian, pemilik, foto mentah).
+        return match ($this->verifikasiToko->setujui($store, $request->user()->id)) {
+            'bukan-antrian'              => $this->fail('Toko ini sudah diproses sebelumnya.', 422),
+            'pemilik-belum-terverifikasi' => $this->fail('Pemilik toko belum terverifikasi (nomor HP + KTP).', 422),
+            'foto-belum-diunggah'        => $this->fail('Foto toko belum diunggah pemilik.', 422),
+            default                      => $this->ok(['store' => new StoreResource($store->fresh())]),
+        };
     }
 
     /** POST /admin/verifications/stores/{store}/reject */
@@ -108,10 +98,10 @@ class AdminVerificationController extends Controller
             'reason' => ['required', 'string', 'max:500'],
         ]);
 
-        $store->verification_status = VerificationStatus::Rejected;
-        $store->rejected_reason     = $data['reason'];
-        $store->save();
+        $ditolak = $this->verifikasiToko->tolak($store, $request->user()->id, $data['reason']);
 
-        return $this->ok(['store' => new StoreResource($store)]);
+        return $ditolak
+            ? $this->ok(['store' => new StoreResource($store->fresh())])
+            : $this->fail('Toko ini sudah diproses sebelumnya.', 422);
     }
 }

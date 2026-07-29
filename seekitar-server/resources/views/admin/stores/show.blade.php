@@ -28,9 +28,41 @@
         </div>
     </div>
 
+    {{-- Keadaan khusus tampil mencolok di atas: biasanya justru itulah yang
+         membuat admin membuka halaman ini. --}}
+    @if ($store->status === \App\Enums\StoreStatus::Blocked)
+        <div class="alert alert-danger d-flex align-items-start gap-3" role="alert">
+            <i class="ti ti-ban fs-6 mt-1" aria-hidden="true"></i>
+            <div>
+                <div class="fw-semibold">Toko ini diblokir bersama pemiliknya</div>
+                <div class="fs-3 mb-0">
+                    {{ $store->blocked_reason }}
+                    <span class="text-muted">
+                        — {{ $store->blockedBy?->name ?? 'admin' }}, {{ $store->blocked_at?->format('d M Y H:i') }}.
+                        Dibuka kembali dengan mencabut blokir pemiliknya.
+                    </span>
+                </div>
+            </div>
+        </div>
+    @elseif ($store->status === \App\Enums\StoreStatus::Rejected)
+        <div class="alert alert-warning d-flex align-items-start gap-3" role="alert">
+            <i class="ti ti-alert-triangle fs-6 mt-1" aria-hidden="true"></i>
+            <div>
+                <div class="fw-semibold">Pengajuan toko ini ditolak</div>
+                <div class="fs-3 mb-0">
+                    {{ $store->rejected_reason }}
+                    <span class="text-muted">
+                        — {{ $store->rejectedBy?->name ?? 'admin' }}, {{ $store->rejected_at?->format('d M Y H:i') }}.
+                        Menunggu pemilik memperbaiki & mengajukan ulang.
+                    </span>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <div class="row">
 
-        {{-- Foto, status & aksi. --}}
+        {{-- Foto, kedudukan & aksi. --}}
         <div class="col-lg-4">
             <div class="card">
                 @if ($store->photo)
@@ -50,18 +82,7 @@
                     <h5 class="fw-semibold mb-2">{{ $store->name }}</h5>
 
                     <div class="d-flex flex-wrap justify-content-center gap-2 mb-2">
-                        @if ($store->verification_status->value === 'verified')
-                            <span class="badge bg-success-subtle text-success">{{ $store->verification_status->label() }}</span>
-                        @elseif ($store->verification_status->value === 'pending')
-                            <span class="badge bg-warning-subtle text-warning">{{ $store->verification_status->label() }}</span>
-                        @else
-                            <span class="badge bg-danger-subtle text-danger">{{ $store->verification_status->label() }}</span>
-                        @endif
-                        @if ($store->is_active)
-                            <span class="badge bg-primary-subtle text-primary">Aktif</span>
-                        @else
-                            <span class="badge bg-secondary-subtle text-secondary">Nonaktif</span>
-                        @endif
+                        @include('admin.stores._status', ['store' => $store])
                     </div>
 
                     <div class="mb-3">
@@ -131,20 +152,6 @@
                         <span class="text-muted">Dibuat</span>
                         <span class="text-end">{{ $store->created_at->format('d M Y H:i') }}</span>
                     </li>
-                    @if ($store->verified_at)
-                        <li class="list-group-item d-flex justify-content-between gap-3">
-                            <span class="text-muted">Disetujui</span>
-                            <span class="text-end">
-                                {{ $store->verifiedBy?->name ?? '—' }} · {{ $store->verified_at->format('d M Y H:i') }}
-                            </span>
-                        </li>
-                    @endif
-                    @if ($store->rejected_reason)
-                        <li class="list-group-item">
-                            <div class="text-muted mb-1">Alasan penolakan</div>
-                            <span class="text-danger">{{ $store->rejected_reason }}</span>
-                        </li>
-                    @endif
                 </ul>
             </div>
         </div>
@@ -179,71 +186,119 @@
                 </div>
             </div>
 
-            {{-- Profil usaha. --}}
-            <div class="card">
-                <div class="card-header fw-semibold">Profil Usaha</div>
-                <div class="card-body">
-                    <dl class="row mb-3 fs-3">
-                        <dt class="col-sm-3">Jenis</dt>
-                        <dd class="col-sm-9">
-                            @foreach ($store->store_type ?? [] as $tipe)
-                                <span class="badge text-bg-light border">{{ $tipe->label() }}</span>
-                            @endforeach
-                        </dd>
-                        <dt class="col-sm-3">Kategori</dt>
-                        <dd class="col-sm-9">
-                            @forelse ($kategori as $nama)
-                                <span class="badge bg-primary-subtle text-primary">{{ $nama }}</span>
-                            @empty
-                                <span class="text-muted">—</span>
-                            @endforelse
-                        </dd>
-                        @if ($store->npwp)
-                            <dt class="col-sm-3">NPWP</dt>
-                            <dd class="col-sm-9 font-monospace">{{ $store->npwp }}</dd>
-                        @endif
-                        @if ($store->bank_account)
-                            <dt class="col-sm-3">Rekening</dt>
-                            <dd class="col-sm-9 font-monospace">{{ $store->bank_account }}</dd>
-                        @endif
-                    </dl>
+            <div class="row">
 
-                    <div class="d-flex flex-wrap gap-2 mb-3">
-                        @if ($store->accepts_cod)
-                            <span class="badge bg-success-subtle text-success">Bisa COD</span>
-                        @endif
-                        @if ($store->offers_delivery)
-                            <span class="badge bg-info-subtle text-info">Bisa Diantar</span>
-                        @endif
-                        @if ($store->allows_pickup)
-                            <span class="badge bg-primary-subtle text-primary">Ambil di Tempat</span>
-                        @endif
+                {{-- Profil usaha + rekening. --}}
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header fw-semibold">Profil Usaha</div>
+                        <div class="card-body">
+                            <dl class="row mb-3 fs-3">
+                                <dt class="col-sm-4">Jenis</dt>
+                                <dd class="col-sm-8">
+                                    @foreach ($store->store_type ?? [] as $tipe)
+                                        <span class="badge text-bg-light border">{{ $tipe->label() }}</span>
+                                    @endforeach
+                                </dd>
+                                <dt class="col-sm-4">Kategori</dt>
+                                <dd class="col-sm-8">
+                                    @forelse ($kategori as $nama)
+                                        <span class="badge bg-primary-subtle text-primary">{{ $nama }}</span>
+                                    @empty
+                                        <span class="text-muted">—</span>
+                                    @endforelse
+                                </dd>
+                                @if ($store->npwp)
+                                    <dt class="col-sm-4">NPWP</dt>
+                                    <dd class="col-sm-8 font-monospace">{{ $store->npwp }}</dd>
+                                @endif
+                                <dt class="col-sm-4">Rekening</dt>
+                                <dd class="col-sm-8">
+                                    @if ($store->bank_account)
+                                        <span class="font-monospace">{{ $store->bank_account }}</span>
+                                        <div class="text-muted fs-2">
+                                            a.n. {{ $store->bank_account_name ?? '(nama belum diisi)' }}
+                                        </div>
+                                    @else
+                                        <span class="text-muted">Belum diisi</span>
+                                    @endif
+                                </dd>
+                            </dl>
+
+                            <div class="d-flex flex-wrap gap-2 mb-0">
+                                @if ($store->accepts_cod)
+                                    <span class="badge bg-success-subtle text-success">Bisa COD</span>
+                                @endif
+                                @if ($store->offers_delivery)
+                                    <span class="badge bg-info-subtle text-info">Bisa Diantar</span>
+                                @endif
+                                @if ($store->allows_pickup)
+                                    <span class="badge bg-primary-subtle text-primary">Ambil di Tempat</span>
+                                @endif
+                            </div>
+                        </div>
                     </div>
+                </div>
 
-                    {{-- Jam operasional, bila diisi pemilik (JSON per hari). --}}
-                    @php
-                        $hari = ['senin' => 'Senin', 'selasa' => 'Selasa', 'rabu' => 'Rabu',
-                                 'kamis' => 'Kamis', 'jumat' => 'Jumat', 'sabtu' => 'Sabtu',
-                                 'minggu' => 'Minggu'];
-                        $jam = $store->operating_hours ?? [];
-                    @endphp
-                    @if ($jam)
-                        <div class="text-muted fw-semibold mb-1" style="font-size: 11px;">JAM OPERASIONAL</div>
-                        <ul class="list-unstyled fs-3 mb-0">
-                            @foreach ($hari as $kunci => $nama)
-                                <li class="d-flex justify-content-between" style="max-width: 280px;">
-                                    <span>{{ $nama }}</span>
-                                    <span class="font-monospace">
-                                        @if (isset($jam[$kunci]['open'], $jam[$kunci]['close']))
-                                            {{ $jam[$kunci]['open'] }}–{{ $jam[$kunci]['close'] }}
+                {{-- Jam operasional + jejak audit kedudukan. --}}
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header fw-semibold">Jam & Jejak</div>
+                        <div class="card-body fs-3">
+                            @php
+                                $hari = ['senin' => 'Senin', 'selasa' => 'Selasa', 'rabu' => 'Rabu',
+                                         'kamis' => 'Kamis', 'jumat' => 'Jumat', 'sabtu' => 'Sabtu',
+                                         'minggu' => 'Minggu'];
+                                $jam = $store->operating_hours ?? [];
+                            @endphp
+
+                            @if ($jam)
+                                <div class="text-muted fw-semibold mb-1" style="font-size: 11px;">JAM OPERASIONAL</div>
+                                <ul class="list-unstyled mb-3">
+                                    @foreach ($hari as $kunci => $nama)
+                                        <li class="d-flex justify-content-between" style="max-width: 260px;">
+                                            <span>{{ $nama }}</span>
+                                            <span class="font-monospace">
+                                                @if (isset($jam[$kunci]['open'], $jam[$kunci]['close']))
+                                                    {{ $jam[$kunci]['open'] }}–{{ $jam[$kunci]['close'] }}
+                                                @else
+                                                    <span class="text-muted">Tutup</span>
+                                                @endif
+                                            </span>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            @endif
+
+                            {{-- Jejak audit: siapa & kapan pada tiap peristiwa
+                                 kedudukan — dibaca dari stempelnya, bukan status. --}}
+                            <div class="text-muted fw-semibold mb-1" style="font-size: 11px;">JEJAK AUDIT</div>
+                            <ul class="list-unstyled mb-0">
+                                <li class="d-flex justify-content-between" style="max-width: 340px;">
+                                    <span>Disetujui</span>
+                                    <span class="text-end">
+                                        @if ($store->verified_at)
+                                            {{ $store->verifiedBy?->name ?? 'admin' }} · {{ $store->verified_at->format('d M Y H:i') }}
                                         @else
-                                            <span class="text-muted">Tutup</span>
+                                            <span class="text-muted">—</span>
                                         @endif
                                     </span>
                                 </li>
-                            @endforeach
-                        </ul>
-                    @endif
+                                @if ($store->rejected_at)
+                                    <li class="d-flex justify-content-between" style="max-width: 340px;">
+                                        <span>Ditolak</span>
+                                        <span class="text-end">{{ $store->rejectedBy?->name ?? 'admin' }} · {{ $store->rejected_at->format('d M Y H:i') }}</span>
+                                    </li>
+                                @endif
+                                @if ($store->blocked_at)
+                                    <li class="d-flex justify-content-between" style="max-width: 340px;">
+                                        <span>Diblokir</span>
+                                        <span class="text-end">{{ $store->blockedBy?->name ?? 'admin' }} · {{ $store->blocked_at->format('d M Y H:i') }}</span>
+                                    </li>
+                                @endif
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -252,7 +307,7 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span class="fw-semibold">Lokasi</span>
                     <a class="btn btn-sm btn-outline-primary"
-                       href="https://www.google.com/maps/search/?api=1&query={{ $store->latitude }},{{ $store->longitude }}"
+                       href="https://www.google.com/maps/search/?api=1&query={{ (float) $store->latitude }},{{ (float) $store->longitude }}"
                        target="_blank" rel="noopener">
                         <i class="ti ti-map-pin" aria-hidden="true"></i> Google Maps
                     </a>
@@ -273,6 +328,7 @@
         const wadah = document.getElementById('petaDetailToko');
         if (!wadah || typeof L === 'undefined') return;
 
+        // Nilai mentah untuk JS — bukan format tampil (Angka::desimal).
         const lat    = @js((float) $store->latitude);
         const lng    = @js((float) $store->longitude);
         const radius = @js((float) $store->service_radius_km);
@@ -287,8 +343,8 @@
         L.marker([lat, lng]).addTo(peta);
 
         if (radius > 0) {
-            // Lingkaran klaim jangkauan — langsung terlihat masuk akal
-            // untuk titik tokonya atau tidak.
+            // Lingkaran klaim jangkauan — terlihat masuk akal/tidaknya
+            // sekaligus dengan letak tokonya.
             L.circle([lat, lng], {
                 radius: radius * 1000,
                 color: '#5d87ff',

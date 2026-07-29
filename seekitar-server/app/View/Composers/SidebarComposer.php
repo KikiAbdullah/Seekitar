@@ -3,7 +3,6 @@
 namespace App\View\Composers;
 
 use App\Enums\DisputeStatus;
-use App\Enums\VerificationStatus;
 use App\Models\Dispute;
 use App\Models\Store;
 use App\Models\User;
@@ -84,8 +83,11 @@ class SidebarComposer
             return 0;
         }
 
+        // Antrian toko = definisi bersama Store::pendingVerification
+        // (toko yang pemiliknya sudah terverifikasi): lencana dan halaman
+        // antrian WAJIB menghitung himpunan yang sama.
         return $this->remember('sidebar.pending_stores', fn (): int => Store::query()
-            ->where('verification_status', VerificationStatus::Pending)
+            ->pendingVerification()
             ->count());
     }
 

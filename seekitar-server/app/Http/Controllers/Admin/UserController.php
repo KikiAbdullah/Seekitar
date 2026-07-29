@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\DataTables\UsersDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\VerifikasiTokoService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -16,6 +17,8 @@ use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
+    public function __construct(private readonly VerifikasiTokoService $verifikasiToko) {}
+
     public function index(): View
     {
         return view('admin.users.index');
@@ -64,7 +67,7 @@ class UserController extends Controller
                     'verifiedBy:id,name',
                     'rejectedBy:id,name',
                     'blockedBy:id,name',
-                    'stores:id,user_id,name,photo,verification_status,is_active,rating_avg,total_reviews,created_at',
+                    'stores:id,user_id,name,photo,status,is_active,rating_avg,total_reviews,created_at',
                 ])
                 ->withCount(['stores', 'customerRequests', 'orders'])
                 ->findOrFail($user->getKey()),
@@ -244,7 +247,9 @@ class UserController extends Controller
 
         $blocking = $request->input('action') === 'block';
 
-        DB::transaction(function () use ($user, $blocking, $data, $request): void {
+        $tokoTerseret = 0;
+
+        DB::transaction(function () use ($user, $blocking, $data, $request, &$tokoTerseret): void {
             if ($blocking) {
                 $user->status         = \App\Enums\UserStatus::Diblokir;
                 $user->blocked_by     = $request->user()->id;
@@ -260,12 +265,18 @@ class UserController extends Controller
 
             if ($blocking) {
                 $user->tokens()->delete();
-                $user->stores()->update(['is_active' => false]);
             }
+
+            // Orang yang bermasalah membuat tokonya ikut bermasalah:
+            // kedudukan tokonya ikut diblokir (bukan sekadar nonaktif),
+            // dan pulih ke kedudukan semula saat blokir dicabut.
+            $tokoTerseret = $this->verifikasiToko->seretBersamaPemilik(
+                $user, $blocking, $request->user()->id, $data['reason'] ?? null
+            );
         });
 
         return back()->with('success', $blocking
-            ? "Pengguna diblokir — {$user->stores()->count()} tokonya ikut nonaktif."
-            : 'Blokir dicabut.');
+            ? "Pengguna diblokir — {$tokoTerseret} tokonya ikut diblokir."
+            : "Blokir dicabut — {$tokoTerseret} tokonya pulih ke kedudukan semula.");
     }
 }

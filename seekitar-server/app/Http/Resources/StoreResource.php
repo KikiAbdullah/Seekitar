@@ -40,7 +40,9 @@ class StoreResource extends JsonResource
             'rating_avg'      => (float) $this->rating_avg,
             'total_reviews'   => (int) $this->total_reviews,
 
-            'verification_status' => $this->verification_status?->value,
+            // Nama JSON DIPELAHANKAN untuk klien lama; sumbernya kini kolom
+            // `status` (pending|verified|rejected|blocked).
+            'verification_status' => $this->status?->value,
             'is_active'           => (bool) $this->is_active,
 
             // Hanya ada bila query memakai scope withDistance().
@@ -49,10 +51,15 @@ class StoreResource extends JsonResource
             ),
 
             // Rekening hanya ditampilkan ke pemiliknya; pembeli melihatnya
-            // lewat detail pesanan saat metode bayar transfer.
+            // lewat detail pesanan saat metode bayar transfer. Atas namanya
+            // ikut disertakan — transfer manual butuh kepastian itu.
             'bank_account' => $this->when(
                 $request->user()?->id === $this->user_id,
                 $this->bank_account
+            ),
+            'bank_account_name' => $this->when(
+                $request->user()?->id === $this->user_id,
+                $this->bank_account_name
             ),
 
             'created_at' => $this->created_at?->format('Y-m-d\TH:i:s\Z'),

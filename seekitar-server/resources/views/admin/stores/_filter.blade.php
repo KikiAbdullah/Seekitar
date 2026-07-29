@@ -1,10 +1,12 @@
-<label for="filter-verification-status" class="form-label">Status verifikasi</label>
+<label for="filter-status" class="form-label">Kedudukan</label>
 
-<select id="filter-verification-status" name="verification_status"
+{{-- Nilai opsi = nilai enum mentahnya, jadi pilihan di UI tidak bisa
+     menyimpang dari StoreStatus. --}}
+<select id="filter-status" name="status"
         class="form-select w-auto d-inline-block js-select2"
         data-dt-filter="stores-table">
     <option value="">Semua</option>
-    @foreach (\App\Enums\VerificationStatus::cases() as $status)
+    @foreach (\App\Enums\StoreStatus::cases() as $status)
         <option value="{{ $status->value }}">{{ $status->label() }}</option>
     @endforeach
 </select>

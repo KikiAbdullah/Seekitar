@@ -6,7 +6,7 @@ use App\Enums\DisputeStatus;
 use App\Enums\OfferStatus;
 use App\Enums\OrderStatus;
 use App\Enums\RequestStatus;
-use App\Enums\VerificationStatus;
+use App\Enums\StoreStatus;
 use App\Http\Controllers\Controller;
 use App\Models\CustomerRequest;
 use App\Models\Dispute;
@@ -110,7 +110,7 @@ class DashboardController extends Controller
             $cards['stores'] = [
                 'label' => 'Toko Aktif',
                 'value' => Store::where('is_active', true)
-                    ->where('verification_status', VerificationStatus::Verified)
+                    ->where('status', StoreStatus::Verified)
                     ->count(),
                 'icon'  => 'ti-building-store',
                 'tone'  => 'primary',
@@ -227,7 +227,8 @@ class DashboardController extends Controller
         if (Gate::allows('verify-stores')) {
             $items[] = [
                 'label' => 'Toko menunggu peninjauan',
-                'value' => Store::where('verification_status', VerificationStatus::Pending)->count(),
+                // Definisi bersama antrian: pemiliknya sudah terverifikasi.
+                'value' => Store::pendingVerification()->count(),
                 'url'   => route('admin.verifications.stores'),
                 'tone'  => 'warning',
                 'icon'  => 'ti-building-store',

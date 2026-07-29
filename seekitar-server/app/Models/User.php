@@ -4,7 +4,7 @@ namespace App\Models;
 
 use App\Enums\UserStatus;
 use App\Enums\VerificationLevel;
-use App\Enums\VerificationStatus;
+use App\Enums\StoreStatus;
 use App\Models\Concerns\HasLocation;
 use App\Models\Concerns\SerializesDatesAsUtc;
 use App\Support\PlaceholderImg;
@@ -204,7 +204,7 @@ class User extends Authenticatable
                 ? (bool) $this->attributes['has_verified_store']
                 : $this->exists
                     && $this->stores()
-                        ->where('verification_status', VerificationStatus::Verified)
+                        ->where('status', StoreStatus::Verified)
                         ->exists();
 
             return match (true) {
@@ -225,7 +225,7 @@ class User extends Authenticatable
     public function scopeWhereVerificationLevel(Builder $query, ?int $level): Builder
     {
         $tokoTerverifikasi = fn (Builder $q) => $q
-            ->where('verification_status', VerificationStatus::Verified);
+            ->where('status', StoreStatus::Verified);
 
         return match ($level) {
             VerificationLevel::Pro->value => $query

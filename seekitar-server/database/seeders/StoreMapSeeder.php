@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\StoreType;
-use App\Enums\VerificationStatus;
+use App\Enums\StoreStatus;
 use App\Models\Category;
 use App\Models\Store;
 use App\Models\User;
@@ -79,14 +79,14 @@ class StoreMapSeeder extends Seeder
              * (hijau), sisanya menunggu & ditolak, apa pun urutan undiannya.
              */
             $status = match (true) {
-                $i % 10 === 4 => VerificationStatus::Pending,
-                $i % 10 === 9 => VerificationStatus::Rejected,
-                default       => VerificationStatus::Verified,
+                $i % 10 === 4 => StoreStatus::Pending,
+                $i % 10 === 9 => StoreStatus::Rejected,
+                default       => StoreStatus::Verified,
             };
 
             $factory = match ($status) {
-                VerificationStatus::Pending  => Store::factory()->menunggu(),
-                VerificationStatus::Rejected => Store::factory()->ditolak(),
+                StoreStatus::Pending  => Store::factory()->menunggu(),
+                StoreStatus::Rejected => Store::factory()->ditolak(),
                 default                      => Store::factory()->terverifikasi(),
             };
 

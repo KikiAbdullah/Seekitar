@@ -82,6 +82,11 @@
                             </span>
                         @endif
                     </dd>
+                    @if ($store->owner?->address)
+                        <dt class="col-sm-3">Domisili pemilik</dt>
+                        {{-- Bahan banding: toko jauh dari domisili pemiliknya layak ditanya. --}}
+                        <dd class="col-sm-9">{{ $store->owner->address }}</dd>
+                    @endif
                     <dt class="col-sm-3">Jenis</dt>
                     <dd class="col-sm-9">
                         @foreach ($store->store_type ?? [] as $tipe)
@@ -162,6 +167,13 @@
                     <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
                         <span class="font-monospace text-muted fs-2 me-auto">
                             {{ \App\Support\Angka::desimal($store->latitude, 6) }}, {{ \App\Support\Angka::desimal($store->longitude, 6) }}
+                        </span>
+                        {{-- Jarak dari pusat kabupaten: pin yang ke luar wilayah menyolok tanpa membuka peta. --}}
+                        <span class="badge text-bg-light border font-monospace">
+                            {{ \App\Support\Angka::desimal(\App\Support\Jarak::haversineKm(
+                                \Database\Factories\Support\Wilayah::PUSAT_LAT,
+                                \Database\Factories\Support\Wilayah::PUSAT_LNG,
+                                (float) $store->latitude, (float) $store->longitude), 1) }} km dari pusat
                         </span>
                         <a class="btn btn-sm btn-outline-primary"
                            href="https://www.google.com/maps/search/?api=1&query={{ $store->latitude }},{{ $store->longitude }}"

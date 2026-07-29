@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Enums\StoreStatus;
 use App\Enums\StoreType;
-use App\Enums\VerificationStatus;
 use App\Models\Store;
 use App\Models\User;
 use Database\Factories\Support\Wilayah;
@@ -13,11 +13,10 @@ use Illuminate\Support\Str;
 /**
  * @extends Factory<Store>
  *
- * CATATAN PENTING soal kolom `location`:
- * kolom POINT tidak bisa diisi lewat mass-assignment biasa — nilainya harus
- * ekspresi SQL `ST_GeomFromText(..., 'axis-order=long-lat')`. Karena itu
- * factory ini memakai `afterMaking`/`afterCreating` yang memanggil
- * `setLocation()`, satu-satunya tempat opsi axis-order dipasang.
+ * Koordinat BUKAN lagi pekerjaan khusus: latitude/longitude adalah kolom
+ * DECIMAL biasa sejak skema 2.3, jadi ikut mass-assignment seperti kolom
+ * lain — tidak ada lagi afterMaking ST_GeomFromText dan jebakan urutan
+ * sumbu yang menyertainya.
  */
 class StoreFactory extends Factory
 {
@@ -34,6 +33,8 @@ class StoreFactory extends Factory
 
     public function definition(): array
     {
+        [$lat, $lng] = Wilayah::acak();
+
         return [
             'id'      => (string) Str::uuid7(),
             'user_id' => User::factory()->verified(),
@@ -51,7 +52,10 @@ class StoreFactory extends Factory
             'store_type'   => [fake()->randomElement(StoreType::cases())],
             'category_ids' => [],   // diisi seeder yang tahu kategori nyata
 
-            'address'           => fake('id_ID')->streetAddress().', Kec. '.Wilayah::namaKecamatan(),
+            'address'   => fake('id_ID')->streetAddress().', Kec. '.Wilayah::namaKecamatan(),
+            'latitude'  => $lat,
+            'longitude' => $lng,
+
             'service_radius_km' => fake()->randomElement([3, 5, 7, 10, 15]),
 
             'accepts_cod'     => fake()->boolean(80),
@@ -66,28 +70,10 @@ class StoreFactory extends Factory
             'total_reviews'   => 0,
             'is_active'       => true,
 
-            'verification_status' => VerificationStatus::Pending,
+            'status' => StoreStatus::Pending,
         ];
     }
 
-    /**
-     * Mengisi kolom POINT lewat setLocation().
-     *
-     * KENAPA afterMaking, BUKAN definition()
-     * --------------------------------------
-     * Kolom POINT tidak bisa diisi nilai biasa; isinya harus ekspresi SQL
-     * `ST_GeomFromText(..., 'axis-order=long-lat')`. Satu-satunya tempat
-     * ekspresi itu dirakit adalah `HasLocation::setLocation()`.
-     *
-     * afterMaking (bukan afterCreating) karena `location` NOT NULL — insert
-     * akan gagal bila kolomnya baru diisi setelah baris tersimpan.
-     *
-     * ⚠️ Koordinat TIDAK boleh disimpan sebagai atribut semu (mis. `_lat`)
-     * lalu dipindahkan di sini. Factory membuat model lewat
-     * `new Model($attributes)` yang menghormati $fillable, dan atribut di
-     * luar daftar itu melempar MassAssignmentException — bukan diabaikan
-     * diam-diam. Diverifikasi langsung.
-     */
     public function configure(): static
     {
         return $this->afterMaking(function (Store $store): void {
@@ -95,40 +81,54 @@ class StoreFactory extends Factory
             if (! $store->offers_delivery && ! $store->allows_pickup) {
                 $store->allows_pickup = true;
             }
-
-            // Sudah dipasang state diTitik()? Jangan ditimpa.
-            if (! isset($store->getAttributes()['location'])) {
-                [$lat, $lng] = Wilayah::acak();
-                $store->setLocation($lat, $lng);
-            }
         });
     }
 
     public function terverifikasi(): static
     {
         return $this->state(fn () => [
-            'verification_status' => VerificationStatus::Verified,
-            'verified_at'         => now()->subDays(fake()->numberBetween(1, 180)),
+            'status'      => StoreStatus::Verified,
+            'verified_at' => now()->subDays(fake()->numberBetween(1, 180)),
         ]);
     }
 
     public function menunggu(): static
     {
-        return $this->state([
-            'verification_status' => VerificationStatus::Pending,
-            'verified_at'         => null,
+        // Foto ikut dipasang: antrian memerlukan foto benar-benar terunggah
+        // (syarat persetujuan membaca kolom mentahnya), dan toko pending
+        // TANPA foto adalah antrian yang tidak pernah bisa selesai.
+        return $this->state(fn () => [
+            'status'      => StoreStatus::Pending,
+            'verified_at' => null,
+            'photo'       => 'https://picsum.photos/seed/toko-'.Str::lower(Str::random(8)).'/600/400',
         ]);
     }
 
     public function ditolak(): static
     {
         return $this->state(fn () => [
-            'verification_status' => VerificationStatus::Rejected,
-            'rejected_reason'     => fake()->randomElement([
+            'status'          => StoreStatus::Rejected,
+            'rejected_at'     => now()->subDays(fake()->numberBetween(1, 30)),
+            'rejected_reason' => fake()->randomElement([
                 'Foto tempat usaha tidak jelas.',
                 'Alamat di luar wilayah layanan Kabupaten Pasuruan.',
                 'Nama toko tidak sesuai dengan dokumen usaha.',
             ]),
+        ]);
+    }
+
+    /**
+     * Diblokir BERSAMA pemiliknya — bukan keadaan yang lahir sendiri.
+     * Pemiliknya sengaja dibuat ikut diblokir supaya pasangan data ini
+     * menggambarkan keadaan yang benar-benar bisa terjadi di produksi.
+     */
+    public function diblokir(): static
+    {
+        return $this->state(fn () => [
+            'user_id'        => User::factory()->diblokir(),
+            'status'         => StoreStatus::Blocked,
+            'blocked_at'     => now()->subDays(fake()->numberBetween(1, 30)),
+            'blocked_reason' => 'Pemilik diblokir — penipuan berulang.',
         ]);
     }
 
@@ -144,37 +144,28 @@ class StoreFactory extends Factory
     }
 
     /**
-     * Menempatkan toko pada koordinat tertentu.
-     *
-     * Memakai afterMaking sendiri, BUKAN properti factory: `newInstance()`
-     * merakit ulang objek factory dari daftar properti tetap (count, states,
-     * afterMaking, …) sehingga properti kustom apa pun HILANG begitu state
-     * lain dirangkai sesudahnya. Closure afterMaking ikut disalin, jadi ia
-     * selamat. Diverifikasi dengan membaca newInstance() di framework.
+     * Menempatkan toko pada koordinat tertentu — kolom biasa, jadi
+     * cukup state(), tanpa afterMaking khusus.
      */
     public function diTitik(float $lat, float $lng): static
     {
-        return $this->afterMaking(fn (Store $store) => $store->setLocation($lat, $lng));
+        return $this->state(['latitude' => $lat, 'longitude' => $lng]);
     }
 
     /**
-     * Jam buka per hari.
+     * Jam operasional realistis: sebagian hari bisa tutup (null), yang
+     * buka selalu tutup setelah buka.
      *
-     * Sebagian toko sengaja tutup di hari Minggu — data yang selalu buka
-     * 7 hari membuat logika "sedang tutup" tidak pernah teruji.
+     * @return array<string, ?array{open: string, close: string}>
      */
     private function jamOperasional(): array
     {
-        $buka  = fake()->randomElement(['07:00', '07:30', '08:00', '09:00']);
-        $tutup = fake()->randomElement(['16:00', '17:00', '20:00', '21:00']);
+        $hari = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu', 'minggu'];
 
-        $jam = [];
-        foreach (['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu', 'minggu'] as $hari) {
-            $jam[$hari] = ($hari === 'minggu' && fake()->boolean(40))
-                ? ['buka' => null, 'tutup' => null]
-                : ['buka' => $buka, 'tutup' => $tutup];
-        }
-
-        return $jam;
+        return collect($hari)->mapWithKeys(fn (string $h): array => [
+            $h => fake()->boolean(12)
+                ? null
+                : ['open' => '07:00', 'close' => fake()->randomElement(['17:00', '21:00', '22:00'])],
+        ])->all();
     }
 }

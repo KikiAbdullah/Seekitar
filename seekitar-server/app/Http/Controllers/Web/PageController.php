@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Enums\ListingStatus;
-use App\Enums\VerificationStatus;
+use App\Enums\StoreStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Listing;
@@ -38,7 +38,7 @@ class PageController extends Controller
         $statistik = Cache::remember('web.home.stats', self::STATIC_CACHE_SECONDS, fn () => [
             // Hanya angka yang JUJUR diverifikasi sistem, bukan klaim pemasaran.
             'toko'    => Store::query()
-                ->where('verification_status', VerificationStatus::Verified->value)
+                ->where('status', StoreStatus::Verified->value)
                 ->where('is_active', true)
                 ->count(),
             'listing' => Listing::query()

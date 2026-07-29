@@ -58,7 +58,15 @@ $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 $app->bind(App\View\Composers\SidebarComposer::class, fn () => new class {
     public function compose(Illuminate\View\View $view): void
     {
-        $view->with(['pendingVerifikasi' => 3, 'laporanLewatSla' => 1]);
+        // Empat variabel PERSIS seperti composer asli — stub yang lebih
+        // sedikit membiarkan lencana menu tersembunyi oleh `?? 0` dan
+        // tata letak kosongnya tidak pernah terlihat di sini.
+        $view->with([
+            'pendingVerifikasiPengguna' => 2,
+            'pendingVerifikasiToko'     => 1,
+            'pendingVerifikasi'         => 3,
+            'laporanLewatSla'           => 1,
+        ]);
     }
 });
 
@@ -128,6 +136,70 @@ $paginatorKosong = new Illuminate\Pagination\LengthAwarePaginator([], 0, 20, 1, 
     'path' => 'http://localhost/admin',
 ]);
 
+// ── Toko tiruan utuh untuk halaman detail & sunting ─────────────────────
+// Relasi HARUS disuntik manual: model non-persisted yang mengakses relasi
+// tak disiapkan akan membuka koneksi basis data — yang sengaja tidak ada
+// di harness ini — dan WASM mati dengan "unreachable", bukan exception.
+$pemilikToko = (new App\Models\User())->setRawAttributes([
+    'id'          => '019fa000-0000-7000-8000-0000000000e1',
+    'name'        => 'Siti Aminah',
+    'phone'       => '081234567890',
+    'verified_at' => '2026-07-01 08:00:00',
+], true);
+
+$adminStempel = (new App\Models\User())->setRawAttributes([
+    'id'   => '019fa000-0000-7000-8000-0000000000e2',
+    'name' => 'Admin Seekitar',
+], true);
+
+$tipePertama = App\Enums\StoreType::cases()[0];
+
+$tokoTiruan = (new App\Models\Store())->setRawAttributes([
+    'id'                => '019fa000-0000-7000-8000-0000000000f1',
+    'user_id'           => $pemilikToko->getAttribute('id'),
+    'name'              => 'Toko Barokah ABC',
+    'regency'           => 'Kabupaten Pasuruan',
+    'regency_code'      => '3514',
+    'store_type'        => $tipePertama->value,
+    'category_ids'      => '[1]',
+    'address'           => 'Jl. Raya Bangil No. 12, Kec. Bangil',
+    'latitude'          => -7.59980000,
+    'longitude'         => 112.81864000,
+    'service_radius_km' => 5,
+    'accepts_cod'       => 1,
+    'offers_delivery'   => 1,
+    'allows_pickup'     => 1,
+    'operating_hours'   => json_encode([
+        'senin' => ['open' => '07:00', 'close' => '21:00'],
+        'minggu' => null,
+    ]),
+    'npwp'              => '12.345.678.9-012.345',
+    'bank_account'      => 'BCA 1234567890',
+    'bank_account_name' => 'Siti Aminah',
+    'photo'             => 'https://picsum.photos/seed/toko-tiruan/600/400',
+    'rating_avg'        => 4.5,
+    'total_reviews'     => 12,
+    'is_active'         => 1,
+    'status'            => App\Enums\StoreStatus::Verified->value,
+    'verified_at'       => '2026-07-10 09:30:00',
+    'verified_by'       => $adminStempel->getAttribute('id'),
+    // withCount aslinya; di sini diisi manual agar angka tampil.
+    'listings_count'    => 3,
+    'offers_count'      => 1,
+    'orders_count'      => 9,
+    'reviews_count'     => 12,
+    'created_at'        => '2026-06-15 10:00:00',
+    'updated_at'        => '2026-07-20 10:00:00',
+], true);
+$tokoTiruan->setRelation('owner', $pemilikToko);
+$tokoTiruan->setRelation('verifiedBy', $adminStempel);
+$tokoTiruan->setRelation('rejectedBy', null);
+$tokoTiruan->setRelation('blockedBy', null);
+
+$kategoriTiruan = collect([
+    (new App\Models\Category())->setRawAttributes(['id' => 1, 'name' => 'Sembako'], true),
+]);
+
 $halaman = [
     'admin.dashboard' => [
         'stats'     => [],
@@ -138,10 +210,20 @@ $halaman = [
     ],
     'admin.users.index'          => [],
     'admin.stores.index'         => [],
+    'admin.stores.show'          => [
+        'store'    => $tokoTiruan,
+        'kategori' => collect(['Sembako']),
+    ],
+    'admin.stores.edit'          => [
+        'store'    => $tokoTiruan,
+        'kategori' => $kategoriTiruan,
+        'tipeToko' => App\Enums\StoreType::cases(),
+    ],
     'admin.maps.stores'          => [
         'pusat'  => [-7.5966, 112.8203],
         'batas'  => ['sw' => [-8.5056, 112.5653], 'ne' => [-7.5428, 113.5103]],
-        'status' => App\Enums\VerificationStatus::cases(),
+        // Kedudukan toko — enum VerificationStatus lama sudah dihapus (2.3).
+        'status' => App\Enums\StoreStatus::cases(),
     ],
     'admin.listings.index'       => [],
     'admin.orders.index'         => [],

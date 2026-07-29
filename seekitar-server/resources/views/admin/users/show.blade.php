@@ -276,13 +276,7 @@
                             <div class="text-muted" style="font-size: 12px;">sejak {{ $store->created_at->format('d M Y') }}</div>
                         </td>
                         <td class="text-end text-nowrap">
-                            @if ($store->verification_status->value === 'verified')
-                                <span class="badge bg-success-subtle text-success">{{ $store->verification_status->label() }}</span>
-                            @elseif ($store->verification_status->value === 'pending')
-                                <span class="badge bg-warning-subtle text-warning">{{ $store->verification_status->label() }}</span>
-                            @else
-                                <span class="badge bg-danger-subtle text-danger">{{ $store->verification_status->label() }}</span>
-                            @endif
+                            <span class="badge bg-{{ $store->status->color() }}-subtle text-{{ $store->status->color() }}">{{ $store->status->label() }}</span>
                             @unless ($store->is_active)
                                 <span class="badge bg-secondary-subtle text-secondary">Nonaktif</span>
                             @endunless

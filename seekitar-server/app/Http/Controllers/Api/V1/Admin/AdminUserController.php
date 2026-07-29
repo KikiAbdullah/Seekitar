@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
-use App\Enums\VerificationStatus;
+use App\Enums\StoreStatus;
+use App\Enums\UserStatus;
 use App\Http\Concerns\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Services\VerifikasiTokoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +17,8 @@ class AdminUserController extends Controller
 {
     use ApiResponse;
 
+    public function __construct(private readonly VerifikasiTokoService $verifikasiToko) {}
+
     /** GET /admin/users */
     public function index(Request $request): JsonResponse
     {
@@ -22,7 +26,7 @@ class AdminUserController extends Controller
             // verification_level di JSON adalah TURUNAN (bukan kolom):
             // EXISTS ini memasok accessor-nya tanpa satu query per baris.
             ->withExists(['stores as has_verified_store' => fn ($q) => $q
-                ->where('verification_status', VerificationStatus::Verified)]);
+                ->where('status', StoreStatus::Verified)]);
 
         if ($request->filled('verification_level')) {
             $query->whereVerificationLevel($request->integer('verification_level'));
@@ -33,8 +37,8 @@ class AdminUserController extends Controller
             // status: tidak ada lagi boolean terpisah yang bisa bertentangan
             // dengan stempel blokir.
             $request->boolean('is_blocked')
-                ? $query->where('status', \App\Enums\UserStatus::Diblokir)
-                : $query->whereNot('status', \App\Enums\UserStatus::Diblokir);
+                ? $query->where('status', UserStatus::Diblokir)
+                : $query->whereNot('status', UserStatus::Diblokir);
         }
 
         if ($search = $request->query('search')) {
@@ -50,8 +54,9 @@ class AdminUserController extends Controller
      * PATCH /admin/users/{user}/block
      *
      * Memblokir WAJIB mencabut seluruh token: tanpa itu, sesi yang sudah
-     * berjalan tetap bisa dipakai sampai tokennya kedaluwarsa sendiri
-     * (API §10.3).
+     * berjalan tetap bisa dipakai sampai tokennya kedaluwarsa sendiri.
+     * Tokonya ikut DIBLOKIR bersamanya — pesanan berjalan sengaja tidak
+     * diusik supaya pihak lawan tidak dirugikan.
      */
     public function block(Request $request, User $user): JsonResponse
     {
@@ -64,7 +69,7 @@ class AdminUserController extends Controller
             $blocked = (bool) $data['is_blocked'];
 
             if ($blocked) {
-                $user->status         = \App\Enums\UserStatus::Diblokir;
+                $user->status         = UserStatus::Diblokir;
                 $user->blocked_by     = $request->user()->id;
                 $user->blocked_at     = now();
                 $user->blocked_reason = $data['reason'];
@@ -80,11 +85,13 @@ class AdminUserController extends Controller
 
             if ($blocked) {
                 $user->tokens()->delete();
-                // Toko miliknya ikut dinonaktifkan agar listingnya hilang
-                // dari pencarian; pesanan berjalan sengaja TIDAK diusik
-                // supaya pihak lawan tidak dirugikan.
-                $user->stores()->update(['is_active' => false]);
             }
+
+            // Cascade yang sama dengan panel web: kedudukan tokonya diseret
+            // ke blocked beserta jejaknya, dan pulih saat blokir dicabut.
+            $this->verifikasiToko->seretBersamaPemilik(
+                $user, $blocked, $request->user()->id, $data['reason'] ?? null
+            );
         });
 
         return $this->ok(['user' => new UserResource($user->fresh())]);

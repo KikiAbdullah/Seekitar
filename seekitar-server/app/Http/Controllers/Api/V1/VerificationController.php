@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\UserStatus;
 use App\Http\Concerns\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
@@ -44,7 +45,7 @@ class VerificationController extends Controller
         }
 
         $user->ktp_submitted_at = now();
-        $user->status           = \App\Enums\UserStatus::Menunggu;
+        $user->status           = UserStatus::Menunggu;
 
         // Jejak penolakan lama SENGAJA dipertahankan (dan tampil di antrian):
         // itulah satu-satunya cara admin tahu harus memeriksa ulang apa.

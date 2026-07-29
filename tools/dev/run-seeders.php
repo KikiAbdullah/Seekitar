@@ -133,6 +133,7 @@ Schema::create('stores', function (Blueprint $t) {
     $t->string('store_type');                  // SET di MySQL
     $t->json('category_ids');
     $t->string('address', 255)->nullable();
+    $t->string('photo')->nullable();           // foto tampak depan, satu
     $t->decimal('service_radius_km', 5, 2)->default(5);
     $t->boolean('accepts_cod')->default(true);
     $t->boolean('offers_delivery')->default(false);
@@ -143,11 +144,22 @@ Schema::create('stores', function (Blueprint $t) {
     $t->decimal('rating_avg', 3, 2)->default(0);
     $t->unsignedInteger('total_reviews')->default(0);
     $t->boolean('is_active')->default(true);
-    $t->string('verification_status')->default('pending');
-    $t->text('rejected_reason')->nullable();
+    // Kedudukan toko 2.3: `status` tunggal + jejak audit lengkap; lokasi
+    // pindah ke dua kolom DECIMAL (latitude/longitude) — POINT dihapus
+    // dari stores karena toko dicari via kotak pembatas (bbox), bukan
+    // fungsi spasial.
+    $t->string('status')->default('pending');
     $t->timestamp('verified_at')->nullable();
     $t->char('verified_by', 36)->nullable();
-    $t->text('location');                      // NOT NULL, seperti MySQL
+    $t->timestamp('rejected_at')->nullable();
+    $t->char('rejected_by', 36)->nullable();
+    $t->text('rejected_reason')->nullable();
+    $t->timestamp('blocked_at')->nullable();
+    $t->char('blocked_by', 36)->nullable();
+    $t->string('blocked_reason')->nullable();
+    $t->decimal('latitude', 11, 8);
+    $t->decimal('longitude', 12, 8);
+    $t->string('bank_account_name', 100)->nullable();
     $t->softDeletes();
     $t->timestamps();
     $t->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
@@ -405,16 +417,24 @@ $arahSalah = DB::table('reviews')
     ->count();
 $cek('reviews: store_id sesuai arah', $arahSalah === 0, "{$arahSalah} baris");
 
-$tokoTanpaLokasi = DB::table('stores')->whereNull('location')->count();
-$cek('stores: location terisi (NOT NULL)', $tokoTanpaLokasi === 0, "{$tokoTanpaLokasi} baris");
+// Lokasi toko = dua kolom DECIMAL NOT NULL sejak 2.3; keduanya wajib
+// terisi karena peta & pencarian terdekat bergantung pada keduanya.
+$tokoTanpaLokasi = DB::table('stores')
+    ->where(fn ($q) => $q->whereNull('latitude')->orWhereNull('longitude'))
+    ->count();
+$cek('stores: latitude/longitude terisi (NOT NULL)', $tokoTanpaLokasi === 0, "{$tokoTanpaLokasi} baris");
 
 $reqTanpaLokasi = DB::table('customer_requests')->whereNull('location')->count();
 $cek('customer_requests: location terisi', $reqTanpaLokasi === 0, "{$reqTanpaLokasi} baris");
 
-// WKT harus memakai axis-order=long-lat, kalau tidak MySQL menolak bujur
-// Indonesia dengan ERROR 3617.
-$wktSalah = DB::table('stores')->where('location', 'not like', '%axis-order=long-lat%')->count();
-$cek('stores: WKT memakai axis-order=long-lat', $wktSalah === 0, "{$wktSalah} baris");
+// Presisi DECIMAL(11,8)/(12,8): 8 digit desimal ≈ akurasi 1,1 mm. SQLite
+// tidak menegakkan skala, jadi yang diperiksa di sini adalah RENTANG —
+// koordinat contoh harus berada di daratan+bujur Indonesia.
+$diLuar = DB::table('stores')
+    ->whereNotBetween('latitude', [-11.5, 6.5])
+    ->orWhereNotBetween('longitude', [94, 142])
+    ->count();
+$cek('stores: koordinat di rentang Indonesia', $diLuar === 0, "{$diLuar} baris");
 
 $nomorGanda = DB::table('orders')->select('order_number')
     ->groupBy('order_number')->havingRaw('COUNT(*) > 1')->get()->count();
@@ -447,8 +467,38 @@ $cek('disputes: ada laporan lewat SLA untuk dasbor', $slaLewat > 0, "{$slaLewat}
 $ktpAntri = DB::table('users')->where('status', 'menunggu')->whereNotNull('ktp_submitted_at')->count();
 $cek('users: antrian verifikasi KTP terisi', $ktpAntri > 0, "{$ktpAntri} baris");
 
-$tokoMenunggu = DB::table('stores')->where('verification_status', 'pending')->count();
-$cek('stores: antrian verifikasi toko terisi', $tokoMenunggu > 0, "{$tokoMenunggu} baris");
+// Antrian toko = status pending DAN pemiliknya sudah verified (definisi
+// tunggal Store::pendingVerification) — toko pending yang pemiliknya
+// belum lulus KTP sengaja dibuat dan TIDAK boleh terhitung.
+$tokoAntri    = App\Models\Store::query()->pendingVerification()->count();
+$pendingTotal = DB::table('stores')->where('status', 'pending')->count();
+$cek('stores: antrian verifikasi toko terisi', $tokoAntri > 0, "{$tokoAntri} baris");
+$cek(
+    'stores: antrian mengecualikan pemilik belum verified',
+    $tokoAntri < $pendingTotal,
+    "{$tokoAntri} dari {$pendingTotal} pending",
+);
+
+// Setiap kedudukan toko (pending/verified/rejected/blocked) terwakili —
+// filter admin tidak boleh punya pilihan yang selalu kosong.
+$statusToko = DB::table('stores')->distinct()->pluck('status')->all();
+$tokoKurang = array_diff(App\Enums\StoreStatus::values(), $statusToko);
+$cek('stores: semua status terwakili', $tokoKurang === [], implode(', ', $tokoKurang));
+
+// Blokir pemilik menyeret tokonya: toko blocked harus dimiliki user
+// yang ikut diblokir, dan jejak auditnya terisi.
+$blokirYatim = DB::table('stores')
+    ->join('users', 'users.id', '=', 'stores.user_id')
+    ->where('stores.status', 'blocked')
+    ->where('users.status', '!=', 'diblokir')
+    ->count();
+$cek('stores: toko blocked milik user diblokir', $blokirYatim === 0, "{$blokirYatim} baris");
+
+$blokirTampaJejak = DB::table('stores')
+    ->where('status', 'blocked')
+    ->where(fn ($q) => $q->whereNull('blocked_at')->orWhereNull('blocked_reason'))
+    ->count();
+$cek('stores: jejak blocked_at/blocked_reason terisi', $blokirTampaJejak === 0, "{$blokirTampaJejak} baris");
 
 $diblokir = DB::table('users')->where('status', 'diblokir')->count();
 $cek('users: ada yang diblokir (filter admin)', $diblokir > 0, "{$diblokir} baris");

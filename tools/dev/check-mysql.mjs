@@ -168,19 +168,33 @@ const lower = ddl.toLowerCase();
 const points = [...ddl.matchAll(/ALTER TABLE `(\w+)` ADD COLUMN `(\w+)` POINT (NOT NULL|NULL) SRID (\d+)/gi)]
   .map(([, table, col, nullability, srid]) => ({ table, col, nullability, srid }));
 
-if (points.length < 4) fail(`kolom POINT terlalu sedikit: ${points.length}, harusnya 4`);
+// Sejak 2.3 hanya TIGA kolom POINT tersisa: users.location,
+// customer_requests.location, orders.shipping_location. Kolom stores.
+// location DIBUBARKAN — toko dicari lewat kotak pembatas latitude/
+// longitude (DECIMAL) karena lebih murah dan bebas jebakan urutan sumbu;
+// tiga tabel di atas tetap POINT karena dipakai fungsi jarak langsung.
+if (points.length < 3) fail(`kolom POINT terlalu sedikit: ${points.length}, harusnya 3 (users, customer_requests, orders)`);
 for (const p of points) {
   if (p.srid !== '4326') fail(`${p.table}.${p.col} memakai SRID ${p.srid}, harus 4326`);
 }
-if (points.length >= 4 && points.every(p => p.srid === '4326')) {
+if (points.length >= 3 && points.every(p => p.srid === '4326')) {
   ok(`${points.length} kolom POINT semuanya SRID 4326`);
 }
 
-// SPATIAL INDEX hanya sah pada kolom NOT NULL.
+// Toko 2.3: koordinat toko adalah dua kolom DECIMAL berskala 8 digit
+// (≈ 1,1 mm), keduanya NOT NULL — pengganti POINT yang dibubarkan.
+// Spasi setelah koma bervariasi antarversi klien (decimal(11, 8) vs (11,8)).
+if (!/`latitude` decimal\(11,\s?8\) NOT NULL/i.test(ddl)) fail('stores.latitude bukan DECIMAL(11,8) NOT NULL');
+else if (!/`longitude` decimal\(12,\s?8\) NOT NULL/i.test(ddl)) fail('stores.longitude bukan DECIMAL(12,8) NOT NULL');
+else ok('stores.latitude/longitude DECIMAL berskala 8, NOT NULL');
+
+// SPATIAL INDEX hanya sah pada kolom NOT NULL. Setelah stores pindah ke
+// DECIMAL (2.3), satu-satunya yang tersisa adalah cr_location_spatial di
+// customer_requests — satu-satunya tabel yang memfilter jarak di SQL.
 const spatialIdx = [...ddl.matchAll(/ALTER TABLE `(\w+)` ADD SPATIAL INDEX `(\w+)` \(`(\w+)`\)/gi)]
   .map(([, table, idx, col]) => ({ table, idx, col }));
 
-if (spatialIdx.length < 2) fail(`SPATIAL INDEX kurang: ${spatialIdx.length}`);
+if (spatialIdx.length < 1) fail(`SPATIAL INDEX hilang: customer_requests.location butuh cr_location_spatial`);
 else ok(`${spatialIdx.length} SPATIAL INDEX dibuat`);
 
 for (const { table, idx, col } of spatialIdx) {

@@ -223,22 +223,26 @@ if (exists(CTRL)) {
   const ctrl = read(CTRL);
 
   /*
-   * Kolom POINT harus dibaca lewat ST_Latitude/ST_Longitude
-   * (scopeWithCoordinates). Membacanya sebagai properti biasa menghasilkan
-   * WKB biner — JSON tetap terbentuk, koordinatnya saja yang sampah.
+   * 2.3: koordinat toko adalah kolom DECIMAL(11,8)/(12,8) NOT NULL, bukan
+   * POINT lagi — tidak ada WKB biner dan tidak ada baris tanpa titik
+   * (engine menolak NULL). GeoJSON wajib dibangun dari keduanya lewat
+   * accessor coordinates(); pola lama (withCoordinates + whereNotNull)
+   * tetap diterima sebagai padanan historis.
    */
-  if (!/withCoordinates\(\)/.test(ctrl)) {
-    fail('controller peta tidak memakai withCoordinates() — koordinat akan berupa WKB biner');
+  const geojsonBaru = /'latitude'/.test(ctrl) && /coordinates\(\)/.test(ctrl);
+  if (!geojsonBaru && !/withCoordinates\(\)/.test(ctrl)) {
+    fail('controller peta tidak membangun GeoJSON dari kolom latitude/longitude');
   } else {
-    ok('koordinat dibaca lewat scopeWithCoordinates()');
+    ok('GeoJSON dibangun dari kolom latitude/longitude (bukan WKB biner)');
   }
 
-  // Baris tanpa location harus dibuang di SQL: null yang lolos ke Leaflet
-  // melempar "Invalid LatLng" dan mematikan SELURUH peta, bukan satu titik.
-  if (!/whereNotNull\(\s*'location'\s*\)/.test(ctrl)) {
-    fail("toko tanpa koordinat tidak disaring (whereNotNull('location')) — satu null mematikan seluruh peta");
+  // Null yang lolos ke Leaflet melempar "Invalid LatLng" dan mematikan
+  // SELURUH peta, bukan satu titik — kolom NOT NULL atau filter lama
+  // adalah dua cara sah mencegahnya.
+  if (!/coordinates\(\)/.test(ctrl) && !/whereNotNull\(\s*'location'\s*\)/.test(ctrl)) {
+    fail("titik tanpa koordinat bisa lolos — satu null mematikan seluruh peta");
   } else {
-    ok('toko tanpa koordinat disaring di SQL');
+    ok('titik peta terjamin punya koordinat (kolom NOT NULL)');
   }
 }
 

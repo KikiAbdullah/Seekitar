@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\ListingStatus;
-use App\Enums\VerificationStatus;
+use App\Enums\StoreStatus;
 use App\Http\Concerns\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreListingRequest;
@@ -54,7 +54,7 @@ class ListingController extends Controller
                 // Hanya toko yang tayang — toko pending/ditolak/nonaktif
                 // menyeret listingnya keluar dari pencarian (Store::isVisible).
                 $q->where('is_active', true)
-                    ->where('verification_status', VerificationStatus::Verified->value)
+                    ->where('status', StoreStatus::Verified->value)
                     ->nearby($lat, $lng, $radius);
             });
 

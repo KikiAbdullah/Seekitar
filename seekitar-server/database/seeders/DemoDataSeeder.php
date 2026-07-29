@@ -227,19 +227,20 @@ class DemoDataSeeder extends Seeder
         $toko   = collect();
 
         // Mayoritas terverifikasi agar katalog berisi, tetapi antrian
-        // verifikasi & daftar penolakan dijamin tidak kosong.
+        // verifikasi, daftar penolakan, dan filter "Diblokir" dijamin
+        // tidak kosong — tanpa jatah wajib, ketiganya tak bisa diuji.
         $rencana = $this->alokasiStatus($jumlah, [
-            'terverifikasi' => 0.80,
+            'terverifikasi' => 0.77,
             'menunggu'      => 0.13,
             'ditolak'       => 0.07,
+            'diblokir'      => 0.03,
         ]);
 
         foreach ($rencana as $i => $status) {
-            $pemilik = $penjual->random();
-
             $factory = match ($status) {
                 'menunggu' => Store::factory()->menunggu(),
                 'ditolak'  => Store::factory()->ditolak(),
+                'diblokir' => Store::factory()->diblokir(),
                 default    => Store::factory()->terverifikasi(),
             };
 
@@ -252,16 +253,33 @@ class DemoDataSeeder extends Seeder
                 [StoreType::Goods, StoreType::Services],
             ]);
 
-            $toko->push($factory->tipe($tipe)->create([
-                'user_id'      => $pemilik->id,
+            $atribut = [
                 'category_ids' => $kategori->random(fake()->numberBetween(1, 3))
                     ->pluck('id')->values()->all(),
-            ]));
+            ];
+
+            // Toko diblokir adalah PASANGAN pemilik yang diblokir (blokir
+            // pemilik menyeret tokonya): factory ->diblokir() sudah membuat
+            // pemiliknya sendiri. Menggantinya dengan penjual acak yang
+            // sehat menghasilkan data mustahil.
+            if ($status !== 'diblokir') {
+                $atribut['user_id'] = $penjual->random()->id;
+            }
+
+            $toko->push($factory->tipe($tipe)->create($atribut));
         }
 
         // Beberapa toko dinonaktifkan — filter "tidak aktif" perlu isi.
         $toko->random(max(1, (int) round($jumlah * 0.08)))
             ->each(fn (Store $s) => $s->forceFill(['is_active' => false])->save());
+
+        // Satu toko pending dengan pemilik yang BELUM lulus KTP: antrian
+        // verifikasi toko mensyaratkan pemilik verified, jadi toko ini
+        // sengaja ada untuk membuktikan dirinya TIDAK terhitung antrian.
+        Store::factory()->menunggu()->create([
+            'user_id'      => User::factory()->menungguKtp(),
+            'category_ids' => $kategori->random(1)->pluck('id')->all(),
+        ]);
 
         return $toko;
     }
@@ -271,7 +289,7 @@ class DemoDataSeeder extends Seeder
     private function buatListing(\Illuminate\Support\Collection $toko): \Illuminate\Support\Collection
     {
         $aktif   = $toko->where('is_active', true)
-            ->where('verification_status', \App\Enums\VerificationStatus::Verified);
+            ->where('status', \App\Enums\StoreStatus::Verified);
 
         // Toko yang belum terverifikasi tidak boleh punya listing
         // (ListingPolicy::createFor) — kalau dipaksakan, data contoh
@@ -376,7 +394,7 @@ class DemoDataSeeder extends Seeder
         \Illuminate\Support\Collection $toko,
     ): void {
         $terbuka = $requests->where('status', \App\Enums\RequestStatus::Open);
-        $penyedia = $toko->where('verification_status', \App\Enums\VerificationStatus::Verified);
+        $penyedia = $toko->where('status', \App\Enums\StoreStatus::Verified);
 
         if ($penyedia->isEmpty()) {
             return;

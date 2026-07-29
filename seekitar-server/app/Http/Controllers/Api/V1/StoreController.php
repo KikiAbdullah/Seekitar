@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Enums\VerificationStatus;
+use App\Enums\StoreStatus;
 use App\Http\Concerns\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreStoreRequest;
@@ -39,24 +39,49 @@ class StoreController extends Controller
         $maxRadius = $this->settings->int('max_search_radius_km', 25);
         $radius    = min((float) ($data['radius'] ?? $maxRadius), $maxRadius);
 
-        $query = Store::query()
-            ->withCoordinates()
+        $lat = (float) $data['lat'];
+        $lng = (float) $data['lng'];
+
+        /*
+         * Dua tahap, tanpa SQL mentah (keputusan skema 2.3 — lokasi toko
+         * adalah kolom DECIMAL berindeks, bukan POINT):
+         *   1. SQL  — kotak pembatas lewat whereBetween (Eloquent murni);
+         *   2. PHP  — lingkaran akurat lewat Jarak::haversineKm, lalu urut
+         *             dan paginasi manual atas koleksinya.
+         * Skalanya satu kabupaten: kandidat kotak berjumlah puluhan, jadi
+         * menyortirnya di PHP lebih cepat daripada memaksa engine
+         * menghitung fungsi jarak untuk setiap baris.
+         */
+        $kandidat = Store::query()
             ->where('is_active', true)
             // Publik hanya boleh melihat toko yang SUDAH diverifikasi admin —
-            // toko pending/ditolak tidak pernah tayang, apa pun jaraknya.
-            // Cermin Store::isVisible().
-            ->where('verification_status', VerificationStatus::Verified->value)
-            ->nearby((float) $data['lat'], (float) $data['lng'], $radius)
-            ->withDistance((float) $data['lat'], (float) $data['lng'])
-            ->orderByDistance();
+            // toko pending/ditolak/diblokir tidak pernah tayang, apa pun
+            // jaraknya. Cermin Store::isVisible().
+            ->where('status', StoreStatus::Verified)
+            ->withinBox($lat, $lng, $radius)
+            ->when(isset($data['type']), fn ($q) => $q->whereStoreType($data['type']))
+            ->get()
+            ->map(function (Store $s) use ($lat, $lng): Store {
+                $s->setAttribute('distance_km', \App\Support\Jarak::haversineKm(
+                    $lat, $lng, (float) $s->latitude, (float) $s->longitude
+                ));
+                return $s;
+            })
+            // Sudut kotak pembatas bisa berada di luar lingkaran — buang.
+            ->filter(fn (Store $s) => $s->distance_km <= $radius)
+            ->sortBy('distance_km', SORT_NUMERIC)
+            ->values();
 
-        if (isset($data['type'])) {
-            // FIND_IN_SET, bukan LIKE: kolom SET harus dicocokkan per nilai,
-            // kalau tidak 'goods' ikut cocok dengan 'goods_bekas'.
-            $query->whereRaw('FIND_IN_SET(?, store_type)', [$data['type']]);
-        }
+        $halaman  = (int) $request->integer('page', 1);
+        $paginasi = new \Illuminate\Pagination\LengthAwarePaginator(
+            $kandidat->forPage($halaman, $this->perPage())->values(),
+            $kandidat->count(),
+            $this->perPage(),
+            $halaman,
+            ['path' => $request->url(), 'query' => $request->query()],
+        );
 
-        return $this->paginated($query->paginate($this->perPage()), StoreResource::class);
+        return $this->paginated($paginasi, StoreResource::class);
     }
 
     /** GET /stores/{store} */
@@ -69,7 +94,9 @@ class StoreController extends Controller
             abort(404);
         }
 
-        $store = Store::withCoordinates()->whereKey($store->getKey())->firstOrFail();
+        // latitude/longitude adalah kolom biasa — dibaca langsung, tanpa
+        // fungsi spasial apa pun.
+        $store = Store::whereKey($store->getKey())->firstOrFail();
 
         return $this->ok(['store' => new StoreResource($store)]);
     }
@@ -81,7 +108,9 @@ class StoreController extends Controller
 
         $user = $request->user();
 
-        $store = new Store($request->safe()->except(['latitude', 'longitude', 'photo']));
+        // latitude/longitude kini kolom biasa — ikut mass-assignment,
+        // tidak ada lagi penulisan titik lewat ekspresi SQL mentah.
+        $store = new Store($request->safe()->except(['photo']));
         $store->user_id      = $user->id;
         $store->regency      = config('seekitar.regency');
         $store->regency_code = config('seekitar.regency_code');
@@ -94,10 +123,7 @@ class StoreController extends Controller
             $store->photo = Storage::disk('public')->url($path);
         }
 
-        $store->setLocation(
-            (float) $request->validated('latitude'),
-            (float) $request->validated('longitude'),
-        )->save();
+        $store->save();
 
         return $this->created(['store' => new StoreResource($store->fresh())]);
     }
@@ -110,7 +136,7 @@ class StoreController extends Controller
     {
         $this->authorize('update', $store);
 
-        $store->fill($request->safe()->except(['latitude', 'longitude', 'photo']));
+        $store->fill($request->safe()->except(['photo']));
 
         if ($request->hasFile('photo')) {
             // Foto lama sengaja tidak dihapus dulu: membersihkan berkas yatim
@@ -118,14 +144,6 @@ class StoreController extends Controller
             // mahal daripada sisa berkas.
             $path = $request->file('photo')->store('stores', 'public');
             $store->photo = Storage::disk('public')->url($path);
-        }
-
-        // required_with menjamin pasangan lengkap bila latitude ada.
-        if ($request->filled('latitude')) {
-            $store->setLocation(
-                (float) $request->validated('latitude'),
-                (float) $request->validated('longitude'),
-            );
         }
 
         $store->save();

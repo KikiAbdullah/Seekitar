@@ -11,7 +11,7 @@ use App\Enums\PaymentMethod as Pay;
 use App\Enums\RequestStatus;
 use App\Enums\ReviewDirection;
 use App\Enums\StoreType;
-use App\Enums\VerificationStatus;
+use App\Enums\StoreStatus;
 use App\Models\Category;
 use App\Models\CustomerRequest;
 use App\Models\Listing;
@@ -49,14 +49,15 @@ class ModelSchemaTest extends TestCase
 
     private function store(User $owner, Category $cat): Store
     {
-        // Koordinat POINT tidak bisa mass-assign — harus lewat setLocation()
-        // supaya opsi axis-order tidak terlewat (HasLocation).
+        // Lokasi toko adalah kolom biasa sejak 2.3 — ikut mass-assignment,
+        // tidak ada lagi setLocation() untuk stores.
         $store = Store::make([
             'user_id' => $owner->id, 'name' => 'Bengkel AC Yanto', 'regency' => 'Sidoarjo',
             'store_type' => [StoreType::Services], 'category_ids' => [$cat->id],
-            'verification_status' => VerificationStatus::Verified,
+            'status' => StoreStatus::Verified,
+            'latitude' => -7.2575, 'longitude' => 112.7521,
         ]);
-        $store->setLocation(lat: -7.2575, lng: 112.7521)->save();
+        $store->save();
 
         return $store;
     }

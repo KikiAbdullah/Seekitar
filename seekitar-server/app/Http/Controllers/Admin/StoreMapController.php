@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\VerificationStatus;
+use App\Enums\StoreStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Store;
 use Database\Factories\Support\Wilayah;
@@ -47,7 +47,7 @@ class StoreMapController extends Controller
         return view('admin.maps.stores', [
             'pusat'  => [Wilayah::PUSAT_LAT, Wilayah::PUSAT_LNG],
             'batas'  => self::BATAS,
-            'status' => VerificationStatus::cases(),
+            'status' => StoreStatus::cases(),
         ]);
     }
 
@@ -57,34 +57,20 @@ class StoreMapController extends Controller
      * Endpoint TERPISAH dari halaman supaya peta bisa digambar duluan lalu
      * diisi titik — halaman tidak menunggu query selesai.
      *
-     * `withCoordinates()` membaca kolom POINT lewat ST_Latitude/ST_Longitude.
-     * Membacanya sebagai properti biasa hanya menghasilkan WKB biner yang
-     * tidak berguna di PHP, dan itu gagal DIAM-DIAM: JSON tetap terbentuk,
-     * hanya saja koordinatnya sampah.
-     *
-     * URUTAN select() WAJIB sebelum withCoordinates(): select() MENIMPA
-     * seluruh daftar kolom, jadi menuliskannya setelah scope akan membuang
-     * latitude/longitude yang baru ditambahkan — geometry jadi null dan
-     * tak satu pun titik tergambar di peta (lihat docblock HasLocation).
+     * latitude/longitude toko adalah kolom DECIMAL biasa (bukan POINT
+     * lagi), jadi dibaca langsung — tidak ada fungsi spasial, tidak ada
+     * jebakan urutan sumbu, dan filternya memakai indeks stores_latlng_idx
+     * bila suatu saat peta membatasi viewport.
      */
     public function data(Request $request): JsonResponse
     {
         $status = $request->string('status')->toString();
 
         $stores = Store::query()
-            ->select(['id', 'name', 'address', 'verification_status', 'is_active', 'location'])
-            ->withCoordinates()
-            /*
-             * Toko tanpa koordinat DIBUANG di SQL, bukan disaring di PHP.
-             * Menyaringnya belakangan berarti membawa baris yang pasti
-             * dibuang melewati jaringan, dan lebih buruk: `null` yang lolos
-             * ke Leaflet melempar "Invalid LatLng" yang mematikan SELURUH
-             * peta, bukan hanya satu titik.
-             */
-            ->whereNotNull('location')
+            ->select(['id', 'name', 'address', 'status', 'is_active', 'latitude', 'longitude'])
             ->when(
-                $status !== '' && VerificationStatus::tryFrom($status),
-                fn ($q) => $q->where('verification_status', $status),
+                $status !== '' && StoreStatus::tryFrom($status),
+                fn ($q) => $q->where('status', $status),
             )
             ->orderBy('name')
             ->get();
@@ -98,8 +84,8 @@ class StoreMapController extends Controller
                     'id'      => $s->id,
                     'nama'    => $s->name,
                     'alamat'  => $s->address,
-                    'status'  => $s->verification_status?->value,
-                    'label'   => $s->verification_status?->label(),
+                    'status'  => $s->status?->value,
+                    'label'   => $s->status?->label(),
                     'aktif'   => (bool) $s->is_active,
                 ],
             ])->all(),

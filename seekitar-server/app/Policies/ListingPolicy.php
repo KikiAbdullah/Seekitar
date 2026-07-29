@@ -2,7 +2,7 @@
 
 namespace App\Policies;
 
-use App\Enums\VerificationStatus;
+use App\Enums\StoreStatus;
 use App\Models\Listing;
 use App\Models\Store;
 use App\Models\User;
@@ -16,7 +16,7 @@ class ListingPolicy
     public function createFor(User $user, Store $store): bool
     {
         return $store->user_id === $user->id
-            && $store->verification_status === VerificationStatus::Verified;
+            && $store->status === StoreStatus::Verified;
     }
 
     public function update(User $user, Listing $listing): bool

@@ -31,7 +31,7 @@
         <div class="card-body py-3 px-4">
             <div class="d-flex align-items-start gap-3">
                 <i class="ti ti-info-circle fs-6 text-info mt-1" aria-hidden="true"></i>
-                <p class="mb-0 fs-3">Toko yang belum disetujui <strong>tidak bisa memasang listing</strong> maupun mengirim penawaran. <strong>Klik baris</strong> untuk membuka berkas (foto toko &amp; peta lokasi) dan tombol Verifikasi.</p>
+                <p class="mb-0 fs-3">Antrian ini <strong>hanya memuat toko yang pemiliknya sudah terverifikasi identitas</strong> — yang belum, dinilai dulu di Verifikasi Pengguna. <strong>Klik baris</strong> untuk membuka berkas (foto toko &amp; peta lokasi) dan tombol Verifikasi.</p>
             </div>
         </div>
     </div>
@@ -100,15 +100,12 @@
                                     @endif
                                 </div>
                                 <div class="text-muted font-monospace" style="font-size: 12px;">{{ $store->owner?->phone }}</div>
-                                @if ($store->owner?->canOpenStore())
-                                    <span class="badge bg-success-subtle text-success mt-1" style="font-size: 11px;">
-                                        Pemilik terverifikasi
-                                    </span>
-                                @else
-                                    <span class="badge bg-danger-subtle text-danger mt-1" style="font-size: 11px;">
-                                        Pemilik belum terverifikasi
-                                    </span>
-                                @endif
+                                {{-- Antrian sudah menyaring pemilik terverifikasi di SQL (poin 1),
+                                     jadi lencananya selalu hijau — bukan kebetulan desain. --}}
+                                <span class="badge bg-success-subtle text-success mt-1" style="font-size: 11px;">
+                                    <i class="ti ti-circle-check" aria-hidden="true"></i>
+                                    Pemilik terverifikasi
+                                </span>
                             </div>
                         </td>
 
@@ -119,16 +116,22 @@
                             @endforeach
                         </td>
 
-                        {{-- Lokasi: koordinat mentah + radius layanan;
-                             petanya yang bisa dizoom ada di dalam modal. --}}
+                        {{-- Lokasi: koordinat + radius + jarak dari pusat kabupaten —
+                             pin yang ke luar wilayah langsung menyolok di sini. --}}
                         <td class="text-nowrap">
                             @if ($store->latitude !== null)
+                                @php
+                                    $jarakPusat = \App\Support\Jarak::haversineKm(
+                                        \Database\Factories\Support\Wilayah::PUSAT_LAT,
+                                        \Database\Factories\Support\Wilayah::PUSAT_LNG,
+                                        (float) $store->latitude, (float) $store->longitude);
+                                @endphp
                                 <div class="lh-sm">
                                     <div class="font-monospace" style="font-size: 12px;">
                                         {{ \App\Support\Angka::desimal($store->latitude, 5) }}, {{ \App\Support\Angka::desimal($store->longitude, 5) }}
                                     </div>
                                     <div class="text-muted" style="font-size: 12px;">
-                                        Radius {{ rtrim(rtrim(\App\Support\Angka::desimal($store->service_radius_km, 2), '0'), ',') }} km · {{ $store->regency }}
+                                        Radius {{ rtrim(rtrim(\App\Support\Angka::desimal($store->service_radius_km, 2), '0'), ',') }} km · {{ \App\Support\Angka::desimal($jarakPusat, 1) }} km dari pusat
                                     </div>
                                 </div>
                             @else
@@ -150,7 +153,11 @@
                     <tr>
                         <td colspan="5" class="text-center text-muted py-5">
                             <i class="ti ti-circle-check fs-7 d-block mb-2 opacity-25" aria-hidden="true"></i>
-                            Tidak ada pengajuan toko menunggu.
+                            Tidak ada pengajuan toko menunggu.<br>
+                            <span style="font-size: 12px;">
+                                Pengajuan yang pemiliknya belum terverifikasi tidak tampil di sini —
+                                selesaikan dulu di <a href="{{ route('admin.verifications.users') }}">Verifikasi Pengguna</a>.
+                            </span>
                         </td>
                     </tr>
                 @endforelse

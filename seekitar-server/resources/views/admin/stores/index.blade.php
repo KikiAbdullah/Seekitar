@@ -9,12 +9,12 @@
         'order'    => [[5, 'desc']],
         'filterView' => 'admin.stores._filter',
         'columns'  => [
-            ['data' => 'name',                'label' => 'Nama'],
-            ['data' => 'owner',               'label' => 'Pemilik', 'orderable' => false],
-            ['data' => 'regency',             'label' => 'Kabupaten'],
-            ['data' => 'verification_status', 'label' => 'Verifikasi'],
-            ['data' => 'rating_avg',          'label' => 'Rating'],
-            ['data' => 'created_at',          'label' => 'Dibuat'],
+            ['data' => 'name',       'label' => 'Nama'],
+            ['data' => 'owner',      'label' => 'Pemilik', 'orderable' => false],
+            ['data' => 'regency',    'label' => 'Kabupaten'],
+            ['data' => 'status',     'label' => 'Kedudukan', 'orderable' => false],
+            ['data' => 'rating',     'label' => 'Rating', 'orderable' => false],
+            ['data' => 'created_at', 'label' => 'Dibuat'],
         ],
     ])
 

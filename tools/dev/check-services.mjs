@@ -106,30 +106,47 @@ console.log('\nBroadcastService — pencocokan dua arah PRD §5.2.2');
 if (exists(`${APP}/Services/BroadcastService.php`)) {
   const src = read(`${APP}/Services/BroadcastService.php`);
 
+  // Kedua arah WAJIB diperiksa, tetapi CARANYA berubah pada 2.3: lokasi
+  // toko bukan lagi POINT, jadi tidak ada ST_Distance/->nearby mentah —
+  // kandidat disaring kotak pembatas (withinBox) lalu lingkaran akurat
+  // dihitung di PHP lewat Jarak::haversineKm (keputusan "tanpa SQL
+  // mentah"). Pola lama diterima sebagai padanan historis.
   // ARAH 1: toko dalam radius pembeli.
-  if (!/->nearby\(/.test(src)) fail('arah 1 hilang: toko harus berada dalam radius pembeli');
+  const arah1 = /distance_km\s*<=\s*\(float\)\s*\$request->radius_km/.test(src) || /->nearby\(/.test(src);
+  if (!arah1) fail('arah 1 hilang: toko harus berada dalam radius pembeli');
   else ok('arah 1 — toko dalam radius pembeli');
 
   // ARAH 2: pembeli dalam radius layanan toko. Tanpa ini, warung beradius
   // 5 km dibanjiri permintaan dari pembeli 12 km jauhnya.
-  if (!/service_radius_km \* 1000/.test(src)) {
+  const arah2 = /distance_km\s*<=\s*\(float\)\s*\$s->service_radius_km/.test(src)
+    || /service_radius_km \* 1000/.test(src);
+  if (!arah2) {
     fail('arah 2 hilang: pembeli harus berada dalam radius layanan toko');
   } else ok('arah 2 — pembeli dalam radius layanan toko');
+
+  // Pra-filter kotak: tanpa withinBox (atau nearby lama), kandidat yang
+  // ditarik dari basis data adalah SELURUH toko aktif — lambat.
+  if (!/->withinBox\(/.test(src) && !/->nearby\(/.test(src)) {
+    fail('tidak ada pra-filter kotak — seluruh toko ditarik sebelum disaring');
+  }
 
   if (!/where\('user_id', '!=', \$request->user_id\)/.test(src)) {
     fail('toko bisa menawar pada permintaannya sendiri');
   } else ok('toko sendiri dikecualikan');
 
-  if (!/JSON_CONTAINS\(category_ids/.test(src)) fail('kategori tidak dicocokkan');
-  else ok('kategori dicocokkan lewat JSON_CONTAINS');
+  const kategori = /whereJsonContains\('category_ids'/.test(src) || /JSON_CONTAINS\(category_ids/.test(src);
+  if (!kategori) fail('kategori tidak dicocokkan');
+  else ok('kategori dicocokkan (whereJsonContains/JSON_CONTAINS)');
 
   const limit = src.match(/MAX_RECIPIENTS\s*=\s*(\d+)/);
   if (!limit) fail('tidak ada batas penerima — satu permintaan bisa memicu ribuan notifikasi');
   else if (Number(limit[1]) !== 50) fail(`batas penerima ${limit[1]}, dokumen menyebut 50`);
   else ok('batas 50 penerima');
 
-  if (!/VerificationStatus::Verified/.test(src)) fail('toko belum terverifikasi ikut menerima siaran');
-  else ok('hanya toko terverifikasi');
+  // Enum VerificationStatus dihapus pada 2.3; status toko kini StoreStatus.
+  if (!/StoreStatus::Verified|VerificationStatus::Verified/.test(src)) {
+    fail('toko belum terverifikasi ikut menerima siaran');
+  } else ok('hanya toko terverifikasi');
 }
 
 // ───────────────────────────────────────── 5. Scope lokasi tidak saling menimpa
