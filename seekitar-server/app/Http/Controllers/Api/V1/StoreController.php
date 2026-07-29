@@ -6,6 +6,7 @@ use App\Enums\VerificationStatus;
 use App\Http\Concerns\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreStoreRequest;
+use App\Http\Requests\Api\UpdateStoreRequest;
 use App\Http\Resources\ReviewResource;
 use App\Http\Resources\StoreResource;
 use App\Models\Store;
@@ -99,6 +100,37 @@ class StoreController extends Controller
         )->save();
 
         return $this->created(['store' => new StoreResource($store->fresh())]);
+    }
+
+    /**
+     * PATCH /stores/{store} — pemilik memperbarui profil tokonya (API §3.4).
+     * Parsial: hanya field yang dikirim yang berubah.
+     */
+    public function update(UpdateStoreRequest $request, Store $store): JsonResponse
+    {
+        $this->authorize('update', $store);
+
+        $store->fill($request->safe()->except(['latitude', 'longitude', 'photo']));
+
+        if ($request->hasFile('photo')) {
+            // Foto lama sengaja tidak dihapus dulu: membersihkan berkas yatim
+            // adalah pekerjaan repositori terpisah, dan salah hapus lebih
+            // mahal daripada sisa berkas.
+            $path = $request->file('photo')->store('stores', 'public');
+            $store->photo = Storage::disk('public')->url($path);
+        }
+
+        // required_with menjamin pasangan lengkap bila latitude ada.
+        if ($request->filled('latitude')) {
+            $store->setLocation(
+                (float) $request->validated('latitude'),
+                (float) $request->validated('longitude'),
+            );
+        }
+
+        $store->save();
+
+        return $this->ok(['store' => new StoreResource($store->fresh())], 'Toko berhasil diperbarui');
     }
 
     /** GET /stores/{store}/reviews */

@@ -86,7 +86,13 @@ Route::prefix('v1')->group(function (): void {
         Route::middleware('profile.complete')->group(function (): void {
 
             Route::post('stores', [StoreController::class, 'store']);
+            Route::patch('stores/{store}', [StoreController::class, 'update']);
+
             Route::post('listings', [ListingController::class, 'store']);
+            // Kontrak API §4.4 menyebut PUT; PATCH diterima sebagai sinonim
+            // karena klien mobile umum mengirimnya untuk pembaruan parsial.
+            Route::match(['put', 'patch'], 'listings/{listing}', [ListingController::class, 'update']);
+            Route::delete('listings/{listing}', [ListingController::class, 'destroy']);
 
             Route::get('requests', [CustomerRequestController::class, 'index']);
             Route::get('requests/mine', [CustomerRequestController::class, 'mine']);

@@ -7,6 +7,7 @@ use App\Enums\VerificationStatus;
 use App\Http\Concerns\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreListingRequest;
+use App\Http\Requests\Api\UpdateListingRequest;
 use App\Http\Resources\ListingResource;
 use App\Models\Listing;
 use App\Models\Store;
@@ -118,5 +119,34 @@ class ListingController extends Controller
         $listing = Listing::create($request->validated());
 
         return $this->created(['listing' => new ListingResource($listing->load('store'))]);
+    }
+
+    /**
+     * PUT /listings/{listing} (API §4.4) — pemilik memperbarui judul, harga,
+     * stok/slot, foto, atau status dagangannya. Parsial; tipe tidak berubah
+     * (lihat UpdateListingRequest).
+     */
+    public function update(UpdateListingRequest $request, Listing $listing): JsonResponse
+    {
+        $this->authorize('update', $listing);
+
+        $listing->fill($request->validated());
+        $listing->save();
+
+        return $this->ok(['listing' => new ListingResource($listing->load('store'))], 'Listing berhasil diperbarui');
+    }
+
+    /**
+     * DELETE /listings/{listing} (API §4.4) — soft delete: riwayat pesanan
+     * lama tetap bisa membuka listing asalnya sebagaimana tertangkap saat
+     * transaksi berlangsung.
+     */
+    public function destroy(Listing $listing): JsonResponse
+    {
+        $this->authorize('delete', $listing);
+
+        $listing->delete();
+
+        return $this->noContent();
     }
 }

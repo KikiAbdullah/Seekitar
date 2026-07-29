@@ -537,6 +537,28 @@ GET /stores/{store_id}
 
 **Public** – Detail toko + daftar listings (maks 5 terbaru).
 
+### 3.4 Update Store
+
+```http
+PATCH /stores/{store_id}
+```
+
+**Pemilik toko** – Pembaruan parsial: kirim hanya field yang ingin diubah.
+Semua aturan bentuk sama dengan §3.1, dengan tiga pengecualian:
+
+| Aturan khusus update | Keterangan |
+| :-- | :-- |
+| `latitude` + `longitude` | Harus dikirim **berpasangan** atau tidak sama sekali |
+| `photo` | Multipart seperti pembuatan; foto lama tergantikan |
+| `is_active` | Saklar "tutup sementara" milik pemilik (`boolean`) |
+
+`offers_delivery` & `allows_pickup` dinilai dari gabungan nilai baru dan
+nilai lama — keduanya tidak boleh tidak-aktif bersamaan (CHECK
+`stores_fulfilment_chk`). Mengubah field yang ditinjau admin (foto, titik)
+**tidak** mengembalikan status verifikasi ke `pending`.
+
+**Response 200:** bentuk `store` identik dengan respons pembuatan (§3.1).
+
 ---
 
 ## 4. LISTINGS
@@ -678,8 +700,31 @@ GET /listings/{listing_id}
 
 ### 4.4 Update / Delete Listing
 
-- `PUT /listings/{listing_id}` (pemilik toko)
-- `DELETE /listings/{listing_id}` (soft delete)
+```http
+PUT /listings/{listing_id}     (PATCH diterima sebagai sinonim)
+DELETE /listings/{listing_id}
+```
+
+**Pemilik toko** – Pembaruan parsial: kirim hanya field yang ingin diubah.
+
+| Field | Aturan | Keterangan |
+| :-- | :-- | :-- |
+| `title` | `string\|min:5\|max:200` | |
+| `description` | `string\|max:5000` | |
+| `price` | `numeric\|min:0` | Jasa boleh `null` (nego); produk/sewa **tidak boleh dikosongkan** |
+| `stock_qty` | `integer\|min:0` | Produk/sewa; **dilarang** untuk jasa |
+| `slot` | `integer\|min:1` | Jasa; **dilarang** untuk produk/sewa |
+| `images` | `array\|min:1\|max:5` berisi URL (§4.0) | |
+| `status` | `active` / `sold` / `hidden` | Penjual menandai terjual / menyembunyikan |
+| `listing_type` | **`prohibited`** | Tipe tidak dapat diubah — hapus dan buat ulang |
+
+`listing_type` dikunci karena CHECK `listings_qty_slot_chk` mengikat stok/slot
+pada tipe (DATABASE.md §4.4); memutar tipe berarti memutar makna semua kolom
+lain — barista lama tidak boleh tiba-tiba dibaca sebagai "slot jasa".
+
+**DELETE** berupa *soft delete* (204): pesanan lama tetap bisa merujuk
+listing asalnya, dan listing terhapus tampil di wishlist sebagai
+`is_available: false` (§4.5).
 
 ### 4.5 Wishlist / Favorit
 

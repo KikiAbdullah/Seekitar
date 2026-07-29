@@ -67,8 +67,9 @@ class StoreStoreRequest extends FormRequest
     /**
      * `operating_hours` berupa objek per hari, atau `null` untuk hari libur.
      * Divalidasi manual karena strukturnya bersarang dan kuncinya tetap.
+     * protected (bukan private) supaya UpdateStoreRequest ikut memakainya.
      */
-    private function validateOperatingHours(Validator $v): void
+    protected function validateOperatingHours(Validator $v): void
     {
         $hours = $this->input('operating_hours');
 
@@ -104,8 +105,10 @@ class StoreStoreRequest extends FormRequest
      * Toko wajib bisa dijangkau lewat minimal satu cara.
      * Sama dengan CHECK `stores_fulfilment_chk` di database — divalidasi di
      * sini juga supaya pengguna mendapat 422 yang jelas, bukan 500 dari engine.
+     * protected: UpdateStoreRequest menimpanya dengan penilaian gabungan
+     * nilai baru & nilai lama.
      */
-    private function validateFulfilment(Validator $v): void
+    protected function validateFulfilment(Validator $v): void
     {
         $delivery = $this->boolean('offers_delivery');
         $pickup   = $this->has('allows_pickup') ? $this->boolean('allows_pickup') : true;
