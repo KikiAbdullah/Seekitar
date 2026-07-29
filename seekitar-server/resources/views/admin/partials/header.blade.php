@@ -15,7 +15,7 @@
         </ul>
 
         <div class="d-block d-lg-none">
-            <span class="admin-brand-dot" aria-hidden="true">S</span>
+            <img src="{{ asset('img/brand/logo-mark.png') }}" alt="Logo Seekitar" class="admin-brand-logo" width="34" height="34">
         </div>
 
         <button class="navbar-toggler p-0 border-0" type="button" data-bs-toggle="collapse"

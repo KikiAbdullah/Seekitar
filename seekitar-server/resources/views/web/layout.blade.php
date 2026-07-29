@@ -35,6 +35,12 @@
         <meta name="robots" content="noindex, nofollow">
     @endunless
 
+    {{-- Ikon peramban: favicon.ico multi-ukuran (16/32/48) otomatis dipilih
+         sesuai kerapatan layar; apple-touch-icon versi latar putih polos —
+         iOS mengabaikan kanal alfa sehingga sudut transparan menjadi hitam. --}}
+    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -55,7 +61,7 @@
 <nav class="navbar navbar-expand-lg navbar-seekitar sticky-top">
     <div class="container">
         <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="{{ route('web.home') }}">
-            <span class="brand-dot">S</span> Seekitar
+            <img src="{{ asset('img/brand/logo-mark.png') }}" alt="Logo Seekitar" class="brand-logo" width="36" height="36"> Seekitar
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
                 data-bs-target="#navmenu" aria-controls="navmenu"
@@ -95,7 +101,7 @@
         <div class="row g-4">
             <div class="col-lg-4">
                 <div class="d-flex align-items-center gap-2 mb-2">
-                    <span class="brand-dot">S</span>
+                    <img src="{{ asset('img/brand/logo-mark.png') }}" alt="" class="brand-logo" width="36" height="36">
                     <span class="h6 mb-0 text-white fw-bold">Seekitar</span>
                 </div>
                 <p class="mb-2">Yang kamu butuhkan, ada di sekitar.</p>

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>Masuk — Seekitar Admin</title>
+    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
 
     <link rel="stylesheet" href="{{ asset('vendor/modernize/css/icons/tabler-icons/tabler-icons.min.css') }}">
     <link id="themeColors" rel="stylesheet" href="{{ asset('vendor/modernize/css/style.min.css') }}">
@@ -21,7 +22,7 @@
 
                 <div class="col-xl-7 col-xxl-8">
                     <a href="{{ url('/') }}" class="text-nowrap logo-img d-flex align-items-center gap-2 px-4 py-9">
-                        <span class="admin-brand-dot" aria-hidden="true">S</span>
+                        <img src="{{ asset('img/brand/logo-mark.png') }}" alt="Logo Seekitar" class="admin-brand-logo" width="34" height="34">
                         <span class="fw-bold fs-5 text-dark">Seekitar</span>
                     </a>
 

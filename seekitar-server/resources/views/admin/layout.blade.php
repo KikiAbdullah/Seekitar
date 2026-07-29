@@ -6,6 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="robots" content="noindex, nofollow">
     <title>@yield('title', 'Panel Admin') — Seekitar Admin</title>
+    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
 
     {{-- Handshake TLS ke CDN/Tiles dimulai lebih awal; header & ubin peta
          merupakan satu-satunya sumber daya eksternal panel ini. --}}

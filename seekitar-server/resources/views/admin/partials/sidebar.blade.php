@@ -2,7 +2,7 @@
     <div>
         <div class="brand-logo d-flex align-items-center justify-content-between">
             <a href="{{ route('admin.dashboard') }}" class="text-nowrap logo-img d-flex align-items-center gap-2">
-                <span class="admin-brand-dot" aria-hidden="true">S</span>
+                <img src="{{ asset('img/brand/logo-mark.png') }}" alt="Logo Seekitar" class="admin-brand-logo" width="34" height="34">
                 <span class="fw-bold fs-5 text-dark">Seekitar</span>
             </a>
             <div class="close-btn d-xl-none d-block sidebartoggler cursor-pointer" id="sidebarCollapse"

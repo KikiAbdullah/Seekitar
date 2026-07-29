@@ -29,11 +29,9 @@ body {
 
 .navbar-seekitar { background: #fff; border-bottom: 1px solid #E5E7EB; }
 
-.brand-dot {
-    width: 36px; height: 36px; border-radius: 50%;
-    background: var(--hijau-lokal); color: #fff;
-    display: grid; place-items: center; font-weight: 700;
-}
+/* Logo aplikasi (public/img/brand/logo-mark.png): transparan di luar tile
+   rounded — tidak perlu radius atau latar tambahan di sini. */
+.brand-logo { width: 36px; height: 36px; display: block; }
 
 .btn-seekitar { background: var(--hijau-lokal); color: #fff; }
 .btn-seekitar:hover, .btn-seekitar:focus { background: var(--hijau-gelap); color: #fff; }

@@ -158,6 +158,11 @@
 
 /* ----------------------------------------------------------- Identitas */
 
+/* Logo aplikasi di titik merek panel (sidebar, header mobile, login).
+   PNG-nya sendiri sudah berbentuk tile rounded transparan, jadi kelas ini
+   hanya mematok ukuran — mengikuti dimensi .admin-brand-dot yang digantikan. */
+.admin-brand-logo { width: 34px; height: 34px; display: block; }
+
 .admin-brand-dot {
     width: 34px;
     height: 34px;
