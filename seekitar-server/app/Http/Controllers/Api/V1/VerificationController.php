@@ -26,7 +26,7 @@ class VerificationController extends Controller
             'nik'          => ['sometimes', 'nullable', 'digits:16'],
         ]);
 
-        $sudahTerverifikasi = $user->verified2_at !== null;
+        $sudahTerverifikasi = $user->verified_at !== null;
         $ktpLama            = $user->ktp_image;
         $selfieLama         = $user->selfie_image;
 
@@ -43,16 +43,20 @@ class VerificationController extends Controller
             $user->nik_hash = hash_hmac('sha256', $request->input('nik'), config('app.key'));
         }
 
-        $user->ktp_submitted_at    = now();
-        $user->ktp_rejected_reason = null;
+        $user->ktp_submitted_at = now();
+        $user->status           = \App\Enums\UserStatus::Menunggu;
+
+        // Jejak penolakan lama SENGAJA dipertahankan (dan tampil di antrian):
+        // itulah satu-satunya cara admin tahu harus memeriksa ulang apa.
+        // Baru dibersihkan saat admin menyetujui siklus ini.
 
         // Aturan 5: perubahan dari sisi PENGGUNA wajib ditinjau ulang —
-        // akun yang sebelumnya sudah lulus KTP kehilangan stempelnya saat
-        // mengganti berkas, dan antrian admin terbuka lagi. (Kebalikannya:
+        // akun yang sebelumnya sudah lulus kehilangan stempel persetujuannya
+        // saat mengganti berkas, dan antrian admin terbuka lagi. (Kebalikannya:
         // perubahan lewat admin justru SENGAJA tidak menyentuh stempel.)
         if ($sudahTerverifikasi) {
-            $user->verified2_at = null;
-            $user->verified2_by = null;
+            $user->verified_at = null;
+            $user->verified_by = null;
         }
 
         $user->save();

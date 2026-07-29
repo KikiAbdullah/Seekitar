@@ -30,10 +30,14 @@ class UserController extends Controller
     public function edit(User $user): View
     {
         return view('admin.users.edit', [
-            // Statistik & jejak verifikasi ikut dimuat: formulir sunting tidak
-            // boleh memaksa admin memutuskan "buta" tanpa konteks si pengguna.
-            'user' => $user->loadMissing('verified1By:id,name', 'verified2By:id,name')
-                ->loadCount(['stores', 'customerRequests', 'orders']),
+            // withCoordinates(): titik domisilinya mengisi peta pemilih —
+            // kolom POINT mentah adalah WKB biner yang tidak berguna di Blade.
+            // Statistik ikut dimuat supaya admin tidak menyunting "buta".
+            'user' => User::query()
+                ->withCoordinates()
+                ->with(['verifiedBy:id,name', 'rejectedBy:id,name', 'blockedBy:id,name'])
+                ->withCount(['stores', 'customerRequests', 'orders'])
+                ->findOrFail($user->getKey()),
         ]);
     }
 
@@ -57,8 +61,9 @@ class UserController extends Controller
             'user' => User::query()
                 ->withCoordinates()
                 ->with([
-                    'verified1By:id,name',
-                    'verified2By:id,name',
+                    'verifiedBy:id,name',
+                    'rejectedBy:id,name',
+                    'blockedBy:id,name',
                     'stores:id,user_id,name,photo,verification_status,is_active,rating_avg,total_reviews,created_at',
                 ])
                 ->withCount(['stores', 'customerRequests', 'orders'])
@@ -69,12 +74,12 @@ class UserController extends Controller
     /**
      * Menyimpan suntingan profil.
      *
-     * ATURAN 5: formulir admin TIDAK PERNAH menyentuh stempel verifikasi
-     * (verified1/2_by/at). Stempel adalah fakta audit "admin X menyetujui
-     * pada waktu Y" — penyuntingan data oleh admin lain tidak membatalkan
-     * fakta itu. Kebalikannya (perubahan oleh pengguna sendiri lewat API)
-     * WAJIB verifikasi ulang: lihat Api\V1\VerificationController::uploadKtp
-     * dan AuthController::verifyPhoneChangeOtp.
+     * ATURAN 5: formulir admin TIDAK PERNAH menyentuh jejak verifikasi
+     * (status + stempel verified_/rejected_). Stempel adalah fakta audit
+     * "admin X menyetujui pada waktu Y" — penyuntingan data oleh admin lain
+     * tidak membatalkan fakta itu. Kebalikannya (perubahan berkas oleh
+     * pengguna sendiri lewat API) WAJIB tinjauan ulang: lihat
+     * Api\V1\VerificationController::uploadKtp.
      *
      * Nomor HP juga tidak bisa diubah di sini: nomor adalah kredensial masuk
      * (OTP); menggantinya tanpa bukti kepemilikan = menyerahkan akun.
@@ -86,7 +91,7 @@ class UserController extends Controller
         // email/digits: kolomnya tidak pernah bisa dikosongkan lagi.
         $request->merge(array_map(
             fn ($nilai) => $nilai === '' ? null : $nilai,
-            $request->only(['email', 'address', 'nik']),
+            $request->only(['email', 'address', 'nik', 'latitude', 'longitude']),
         ));
 
         $data = $request->validate([
@@ -94,16 +99,27 @@ class UserController extends Controller
             'email'   => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'address' => ['nullable', 'string', 'max:255'],
             'nik'     => ['nullable', 'digits:16'],
+            /*
+             * Titik domisili DATANG SEPASANG atau tidak sama sekali: POINT
+             * POINT tanpa sumbu lengkap adalah data setengah jadi yang lebih
+             * buruk daripada null (DATABASE.md §4.1 memakai POINT SRID 4326).
+             */
+            'latitude'  => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
             // Avatar publik; KTP/selfie divalidasi TERPISAH di bawah —
             // hanya pemegang izin verifikasi yang boleh menyentuhnya.
             'avatar'  => ['nullable', 'image', 'mimes:jpeg,png', 'max:2048'],
         ], [
-            'name.required' => 'Nama wajib diisi.',
-            'name.max'      => 'Nama maksimal 100 karakter.',
-            'email.email'   => 'Format email tidak valid.',
-            'email.unique'  => 'Email ini sudah dipakai akun lain.',
-            'address.max'   => 'Alamat maksimal 255 karakter.',
-            'nik.digits'    => 'NIK harus tepat 16 digit angka.',
+            'name.required'          => 'Nama wajib diisi.',
+            'name.max'               => 'Nama maksimal 100 karakter.',
+            'email.email'            => 'Format email tidak valid.',
+            'email.unique'           => 'Email ini sudah dipakai akun lain.',
+            'address.max'            => 'Alamat maksimal 255 karakter.',
+            'nik.digits'             => 'NIK harus tepat 16 digit angka.',
+            'latitude.between'       => 'Lintang harus di antara -90 sampai 90.',
+            'longitude.between'      => 'Bujur harus di antara -180 sampai 180.',
+            'latitude.required_with'  => 'Lintang dan bujur harus diisi sepasang.',
+            'longitude.required_with' => 'Lintang dan bujur harus diisi sepasang.',
             'avatar.image'  => 'Foto profil harus berupa gambar.',
             'avatar.mimes'  => 'Foto profil hanya boleh JPEG atau PNG.',
             'avatar.max'    => 'Foto profil maksimal 2 MB.',
@@ -113,6 +129,14 @@ class UserController extends Controller
         // sebagian (formulir apa pun, atau curl rakitan berisi name saja)
         // tidak boleh menghapus email/alamat/NIK yang sudah ada.
         $user->fill(collect($data)->only(['name', 'email', 'address'])->all());
+
+        // Kolom POINT tidak bisa mass-assign: kosong = hapus titik, pasangan
+        // terisi = pindahkan (opsi axis-order ikut terpasang di setLocation).
+        if (array_key_exists('latitude', $data)) {
+            $data['latitude'] === null
+                ? ($user->location = null)
+                : $user->setLocation((float) $data['latitude'], (float) $data['longitude']);
+        }
 
         if (array_key_exists('nik', $data)) {
             if ($data['nik'] === null) {
@@ -207,6 +231,10 @@ class UserController extends Controller
      *
      * Token WAJIB dicabut saat memblokir — tanpa itu sesi yang sudah
      * berjalan tetap hidup sampai tokennya kedaluwarsa sendiri.
+     * Membuka blokir mengembalikan kedudukan LAMANYA (dibaca dari stempel
+     * verified_ yang tidak pernah dicabut blokir), dan tokonya TIDAK ikut
+     * aktif sendiri: landing aktif toko punya penyebab lain (kejadian
+     * nonaktif manual), jadi membukanya butuh keputusan toko sendiri.
      */
     public function block(Request $request, User $user): RedirectResponse
     {
@@ -216,10 +244,18 @@ class UserController extends Controller
 
         $blocking = $request->input('action') === 'block';
 
-        DB::transaction(function () use ($user, $blocking, $data): void {
-            $user->is_blocked     = $blocking;
-            $user->blocked_reason = $blocking ? $data['reason'] : null;
-            $user->blocked_at     = $blocking ? now() : null;
+        DB::transaction(function () use ($user, $blocking, $data, $request): void {
+            if ($blocking) {
+                $user->status         = \App\Enums\UserStatus::Diblokir;
+                $user->blocked_by     = $request->user()->id;
+                $user->blocked_at     = now();
+                $user->blocked_reason = $data['reason'];
+            } else {
+                $user->status         = $user->statusSebelumDiblokir();
+                $user->blocked_by     = null;
+                $user->blocked_at     = null;
+                $user->blocked_reason = null;
+            }
             $user->save();
 
             if ($blocking) {
@@ -228,6 +264,8 @@ class UserController extends Controller
             }
         });
 
-        return back()->with('success', $blocking ? 'Pengguna diblokir.' : 'Blokir dicabut.');
+        return back()->with('success', $blocking
+            ? "Pengguna diblokir — {$user->stores()->count()} tokonya ikut nonaktif."
+            : 'Blokir dicabut.');
     }
 }

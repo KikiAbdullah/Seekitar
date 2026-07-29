@@ -35,44 +35,58 @@ return new class extends Migration
             $table->string('avatar_url', 500)->nullable();
             $table->string('address', 255)->nullable();
 
-            // TIDAK ADA kolom verification_level: level pengguna adalah
-            // TURUNAN murni (1 = terdaftar via OTP, 2 = verified2_at terisi,
-            // 3 = pemilik toko verified). Menyimpannya sebagai kolom berarti
-            // dua sumber kebenaran yang bisa berbeda pendapat — dan memohon
-            // bug "kolom bilang 2, stempel KTP bilang belum".
+            /*
+             * Kedudukan akun SATU kata (DATABASE.md §4.1):
+             *   menunggu      — nomor sudah dibuktikan OTP, identitas belum
+             *                   disetujui admin (nilai awal setiap akun);
+             *   terverifikasi — admin menyetujui wajah+KTP+alamat+koordinat;
+             *   ditolak       — berkas belum sesuai (boleh kirim ulang);
+             *   diblokir      — akun bermasalah; tokonya ikut dinonaktifkan.
+             * ENUM, bukan boolean berantai (is_blocked dkk.): empat keadaan
+             * saling eksklusif, dan kolom boolean terpisah bisa menyatakan
+             * dua-duanya sekaligus — kontradiksi yang tidak punya makna alur.
+             */
+            $table->enum('status', ['menunggu', 'terverifikasi', 'ditolak', 'diblokir'])
+                ->default('menunggu')->index();
 
             // Data pribadi (UU PDP) — disimpan di bucket privat, path saja.
             $table->string('ktp_image', 500)->nullable();
             $table->string('selfie_image', 500)->nullable();
             $table->timestamp('ktp_submitted_at')->nullable();
-            $table->text('ktp_rejected_reason')->nullable();
 
             /*
-             * Jejak audit DUA tahap verifikasi (DATABASE.md §4.1):
-             *   tahap 1 nomor HP · tahap 2 KTP & NIK
-             *   (level 2 adalah TURUNAN dari stempel tahap 2 ini)
+             * Jejak audit SATU verifikasi (DATABASE.md §4.1):
+             *   verified_* — admin menyetujui berkas identitas; sekaligus
+             *                mengangkat status → terverifikasi;
+             *   rejected_* — admin menolak berkas; status → ditolak;
+             *   blocked_*  — admin memblokir akun; status → diblokir.
              *
-             * Kontrak penulisan: _at ditulis SEKALI dan tidak pernah ditimpa.
-             * Tahap 1 khusus: stempelnya bisa ditulis SISTEM saat OTP daftar/
-             * ganti nomor cocok (AuthController) — dalam hal itu _by sengaja
-             * NULL, dan NULL tersebut ADALAH jejak "dibuktikan kode OTP,
-             * bukan mata admin" (ditampilkan sebagai "Sistem (OTP)").
-             * Stempel yang ditulis admin (VerificationController::verifyUser)
-             * mengisi _by+_at berpasangan dalam transaksi berkunci. Karena
-             * itu CHECK "keduanya NULL atau keduanya terisi" MUSTAHIL
-             * dipasang — sah secara kontrak justru "_at terisi, _by NULL",
-             * selain ia juga bertabrakan dengan nullOnDelete di bawah
-             * (hard-delete admin akan gagal total hanya karena jejak audit).
+             * TIDAK ADA stempel tahap nomor HP: nomor dibuktikan kode OTP
+             * yang hanya dikirim ke nomornya sendiri — pengujian mata manusia
+             * tidak menambah sinyal apa pun, jadi bukti OTP cukup dibaca dari
+             * fakta akunnya ada, bukan dari kolom terpisah.
              *
-             * nullOnDelete sendiri aman: tabel ini soft-delete, jadi FK baru
-             * menyala saat admin benar-benar dihapus permanen.
+             * Kontrak penulisan: verified_at/_by ditulis dalam transaksi
+             * berkunci dan tidak pernah ditimpa (pengajuan ulang identitas
+             * yang SUDAH disetujui mengosongkannya — berkas baru belum
+             * diperiksa siapa pun). rejected_* justru dipertahankan sampai
+             * berkas pengganti disetujui: ia satu-satunya konteks admin
+             * apa yang harus diperiksa ulang. blocked_* dibersihkan saat
+             * blokir dicabut. Relasi ke penyetuju nullOnDelete supaya
+             * hard-delete admin tidak gagal hanya karena jejak audit — aman:
+             * tabel ini soft-delete, FK baru menyala pada hapus permanen.
              */
-            $table->foreignUuid('verified1_by')->nullable()
+            $table->foreignUuid('verified_by')->nullable()
                 ->constrained('users')->nullOnDelete();
-            $table->timestamp('verified1_at')->nullable();
-            $table->foreignUuid('verified2_by')->nullable()
+            $table->timestamp('verified_at')->nullable();
+            $table->foreignUuid('rejected_by')->nullable()
                 ->constrained('users')->nullOnDelete();
-            $table->timestamp('verified2_at')->nullable();
+            $table->timestamp('rejected_at')->nullable();
+            $table->text('rejected_reason')->nullable();
+            $table->foreignUuid('blocked_by')->nullable()
+                ->constrained('users')->nullOnDelete();
+            $table->timestamp('blocked_at')->nullable();
+            $table->string('blocked_reason', 255)->nullable();
 
             // Reputasi pembeli — dihitung ulang ReviewObserver dari ulasan
             // store_to_buyer (reviewee = pembeli ini). Cermin
@@ -84,10 +98,6 @@ return new class extends Migration
             // (kolom encrypted tidak bisa di-WHERE, DATABASE.md §4.1).
             $table->string('nik', 255)->nullable();
             $table->char('nik_hash', 64)->nullable()->unique();
-
-            $table->boolean('is_blocked')->default(false);
-            $table->string('blocked_reason', 255)->nullable();
-            $table->timestamp('blocked_at')->nullable();
 
             $table->rememberToken();
             $table->softDeletes();

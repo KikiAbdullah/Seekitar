@@ -29,7 +29,12 @@ class AdminUserController extends Controller
         }
 
         if ($request->has('is_blocked')) {
-            $query->where('is_blocked', $request->boolean('is_blocked'));
+            // Kontrak API-nya dipertahankan, implementasinya pindah ke kolom
+            // status: tidak ada lagi boolean terpisah yang bisa bertentangan
+            // dengan stempel blokir.
+            $request->boolean('is_blocked')
+                ? $query->where('status', \App\Enums\UserStatus::Diblokir)
+                : $query->whereNot('status', \App\Enums\UserStatus::Diblokir);
         }
 
         if ($search = $request->query('search')) {
@@ -55,12 +60,22 @@ class AdminUserController extends Controller
             'reason'     => ['required_if:is_blocked,true', 'nullable', 'string', 'max:255'],
         ]);
 
-        DB::transaction(function () use ($user, $data): void {
+        DB::transaction(function () use ($user, $data, $request): void {
             $blocked = (bool) $data['is_blocked'];
 
-            $user->is_blocked     = $blocked;
-            $user->blocked_reason = $blocked ? $data['reason'] : null;
-            $user->blocked_at     = $blocked ? now() : null;
+            if ($blocked) {
+                $user->status         = \App\Enums\UserStatus::Diblokir;
+                $user->blocked_by     = $request->user()->id;
+                $user->blocked_at     = now();
+                $user->blocked_reason = $data['reason'];
+            } else {
+                // Kedudukan lamanya pulih kembali dari stempel verified_
+                // yang tidak pernah dicabut blokir — bukan tebakan.
+                $user->status         = $user->statusSebelumDiblokir();
+                $user->blocked_by     = null;
+                $user->blocked_at     = null;
+                $user->blocked_reason = null;
+            }
             $user->save();
 
             if ($blocked) {

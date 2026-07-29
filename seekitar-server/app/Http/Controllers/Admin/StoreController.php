@@ -39,7 +39,7 @@ class StoreController extends Controller
             ->withCoordinates()
             ->with([
                 // Stempel KTP pemilik — dasar status layak, tanpa label level.
-                'owner:id,name,phone,verified2_at',
+                'owner:id,name,phone,verified_at',
                 'verifiedBy:id,name',
             ])
             ->withCount(['listings', 'offers', 'orders', 'reviews'])

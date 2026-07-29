@@ -15,17 +15,17 @@ use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Antrian verifikasi — pengguna (3 tahap) & pengajuan toko.
+ * Antrian verifikasi — pengguna (SATU verifikasi) & pengajuan toko.
  *
  * DUA HALAMAN, DUA IZIN. `verify-users` dan `verify-stores` adalah permission
  * terpisah (§6.2), jadi menggabungkannya dalam satu halaman akan memaksa admin
  * yang hanya punya salah satunya melihat data yang bukan haknya.
  *
- * Verifikasi pengguna DUA TAHAP, masing-masing di-stempel (admin+waktu,
- * atau sistem untuk OTP): 1. nomor HP — otomatis saat OTP daftar cocok,
- * 2. KTP & NIK. Satu klik "Verifikasi" menyelesaikan semua tahap yang
- * masih menunggu — prinsip periksa-dulu dipindah ke checklist SOP modal
- * (pola yang sama dengan verifikasi toko).
+ * Verifikasi pengguna SATU KLIK: admin meninjau wajah, KTP, alamat, dan
+ * koordinat di dalam modal, lalu menekan Setujui — stempel verified_*
+ * ditulis pasangan dan statusnya berangkat ke terverifikasi. Nomor HP tidak
+ * ikut dinilai: OTP yang hanya dikirim ke nomornya sendiri sudah merupakan
+ * bukti pemilikannya, lebih kuat daripada mata manusia.
  *
  * SLA peninjauan 1×24 jam (PRD §5.3.2) — karena itu urutannya SELALU dari
  * pengajuan terlama, bukan terbaru: yang paling lama menunggu adalah yang
@@ -34,7 +34,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class VerificationController extends Controller
 {
     /**
-     * Antrian verifikasi pengguna (semua tahap dalam satu tabel).
+     * Antrian verifikasi identitas pengguna.
      *
      * Definisi antriannya BUKAN di sini, melainkan scope
      * `User::pendingVerification()` — lencana sidebar memakai definisi yang
@@ -43,10 +43,13 @@ class VerificationController extends Controller
     public function users(): View
     {
         return view('admin.verifications.users', [
+            // Koordinat pemohon ikut dibaca: modal memeriksa titik domisili
+            // terhadap alamatnya — kolom POINT mentah adalah WKB biner.
+            // rejectedBy ikut dimuat: tabel & modal menampilkan konteks
+            // "pengajuan ulang" tanpa N+1 di tiap baris.
             'pending' => User::query()
-                // Nama admin pemverifikasi tiap tahap ikut dimuat — kolom
-                // tabel menampilkannya, dan N+1 di tabel 20 baris tidak perlu.
-                ->with(['verified1By:id,name', 'verified2By:id,name'])
+                ->withCoordinates()
+                ->with(['rejectedBy:id,name'])
                 ->pendingVerification()
                 ->orderBy('ktp_submitted_at')
                 ->paginate(20)
@@ -60,9 +63,9 @@ class VerificationController extends Controller
         return view('admin.verifications.stores', [
             'pending' => Store::query()
                 // Relasi pemilik toko bernama owner(), bukan user().
-                // verified2_at ikut dipilih: syaratnya kini dibaca dari
-                // stempel KTP (kolom level sudah dihapus).
-                ->with(['owner:id,name,phone,verified2_at'])
+                // verified_at ikut dipilih: syaratnya dibaca dari stempel
+                // persetujuan identitas pemiliknya.
+                ->with(['owner:id,name,phone,verified_at'])
                 // latitude/longitude untuk peta kecil pada modal — kolom
                 // POINT mentah berupa biner WKB yang tidak berguna di Blade.
                 ->withCoordinates()
@@ -74,57 +77,47 @@ class VerificationController extends Controller
     }
 
     /**
-     * Menyelesaikan SEMUA tahap verifikasi yang masih menunggu, sekaligus.
+     * SATU persetujuan = identitas pengguna terverifikasi.
      *
-     * Dulu tiap klik hanya menyelesaikan satu tahap — tetapi modal kini
-     * memaksa admin mencentang SOP pemeriksaan tiap tahap SEBELUM tombol
-     * Setuju terbuka (pola yang sama dengan verifikasi toko), sehingga
-     * prinsip "periksa dulu, baru setujui" berpindah dari dua klik
-     * terpisah ke satu tinjauan utuh per pengguna.
+     * Admin sudah dipaksa mencentang SOP pemeriksaan (wajah ↔ KTP ↔ NIK ↔
+     * alamat ↔ koordinat) di modal SEBELUM tombol Setuju terbuka — prinsip
+     * "periksa dulu, baru setujui" dijaga checklist-gate.js, dan di sini
+     * tinggal menulis hasilnya: stempel verified_* pasangan + status naik.
      *
      * Stempel yang SUDAH ada tidak pernah ditimpa (tulis-sekali); baris
      * dikunci dulu supaya dua admin yang menekan Setujui nyaris bersamaan
-     * berakhir di kondisi yang sama.
+     * berakhir di kondisi yang sama. Pengguna yang diblokir atau berkasnya
+     * sudah tidak antre tidak boleh naik lewat POST manual.
      */
     public function verifyUser(Request $request, User $user): RedirectResponse
     {
         $adminId = $request->user()->id;
 
-        $tahapSelesai = DB::transaction(function () use ($user, $adminId): array {
+        $disetujui = DB::transaction(function () use ($user, $adminId): bool {
             $antrian = User::lockForUpdate()->findOrFail($user->id);
 
-            $selesai = [];
-
-            if ($antrian->verified1_at === null) {
-                $antrian->verified1_by = $adminId;
-                $antrian->verified1_at = now();
-                $selesai[] = 1;
+            if ($antrian->isBlocked() || $antrian->verified_at !== null) {
+                return false;
             }
 
-            if ($antrian->verified2_at === null) {
-                // Stempel tahap 2 ADALAH kenaikan levelnya: sejak kolom
-                // verification_level dihapus, "level 2" murni turunan dari
-                // verified2_at — menulis keduanya akan membuka peluang
-                // dua sumber kebenaran berbeda pendapat.
-                $antrian->verified2_by        = $adminId;
-                $antrian->verified2_at        = now();
-                $antrian->ktp_rejected_reason = null;
-                $selesai[] = 2;
-            }
-
+            $antrian->verified_by     = $adminId;
+            $antrian->verified_at     = now();
+            $antrian->status          = \App\Enums\UserStatus::Terverifikasi;
+            $antrian->rejected_by     = null;
+            $antrian->rejected_at     = null;
+            $antrian->rejected_reason = null;
             $antrian->save();
 
-            return $selesai;
+            return true;
         });
 
-        if ($tahapSelesai === []) {
-            // Bisa terjadi bila admin lain lebih dulu menyelesaikannya —
+        if (! $disetujui) {
+            // Bisa terjadi bila admin lain lebih dulu memprosesnya —
             // bukan kesalahan, cukup diberi tahu.
-            return back()->with('error', "Tidak ada tahap yang menunggu untuk {$user->name}.");
+            return back()->with('error', "Verifikasi {$user->name} sudah diproses sebelumnya — stempel tidak bisa ditimpa.");
         }
 
-        return back()->with('success',
-            "Verifikasi {$user->name} selesai (tahap ".implode(' & ', $tahapSelesai).").");
+        return back()->with('success', "Identitas {$user->name} terverifikasi.");
     }
 
     /**
@@ -151,27 +144,33 @@ class VerificationController extends Controller
     }
 
     /**
-     * Menolak pengajuan KTP.
+     * Menolak berkas identitas.
      *
-     * `ktp_submitted_at` dikosongkan supaya barisnya keluar dari antrian dan
-     * pengguna bisa mengirim ulang berkas. Stempel tahap yang SUDAH lolos
-     * tidak dicabut: tahap 1 memeriksa nomor HP yang tetap valid meski foto
-     * KTP-nya ditolak — pengguna hanya mengulang dari tahap yang gagal.
+     * Statusnya jatuh ke `ditolak` sehingga barisnya keluar dari antrian,
+     * dengan jejak rejected_* yang tampil di aplikasi pengguna — tanpa itu
+     * ia tidak tahu apa yang harus diperbaiki. KTP/selfie menunggu pengganti:
+     * pengiriman ulang berkas membuka siklus baru (status kembali menunggu),
+     * sementara jejak penolakan ini SENGAJA dipertahankan — di antrian ia
+     * menjadi konteks "pengajuan ulang" bagi admin, dan baru dibersihkan
+     * saat identitasnya akhirnya disetujui.
      */
     public function rejectUser(RejectVerificationRequest $request, User $user): RedirectResponse
     {
-        $user->ktp_rejected_reason = $request->reason();
-        $user->ktp_submitted_at    = null;
+        $user->status          = \App\Enums\UserStatus::Ditolak;
+        $user->rejected_by     = $request->user()->id;
+        $user->rejected_at     = now();
+        $user->rejected_reason = $request->reason();
         $user->save();
 
-        return back()->with('success', "Verifikasi {$user->name} ditolak.");
+        return back()->with('success', "Berkas {$user->name} ditolak — alasan terkirim ke aplikasinya.");
     }
 
     /**
      * Menyetujui pengajuan toko.
      *
      * SYARAT PERSETUJUAN (aturan 2): (1) pemilik SUDAH terverifikasi —
-     * nomor HP + KTP, dibaca dari stempel verified2_at-nya; (2) berkas
+     * identitasnya disetujui admin, dibaca dari stempel verified_at-nya;
+     * (2) berkas
      * tokonya memenuhi syarat — minimal foto etalase benar-benar terunggah
      * (getRawOriginal: placeholder hiasan bukan bukti). Keduanya dicek
      * ULANG di sini, bukan cukup mengandalkan StorePolicy::create saat

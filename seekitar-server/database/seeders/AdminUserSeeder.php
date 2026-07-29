@@ -108,10 +108,10 @@ class AdminUserSeeder extends Seeder
                 'name'  => $account['name'],
                 'email' => $account['email'],
             ] + ($account['ktp'] ? [
-                // Stempel == status "terverifikasi": tidak ada kolom level
-                // untuk ditulis; lencana pengguna murni turunan dari ini.
-                'verified1_at' => now(),
-                'verified2_at' => now(),
+                // Stempel + status == "terverifikasi": tidak ada kolom lain
+                // untuk ditulis; lencana & izin buka toko turunan dari ini.
+                'status'      => \App\Enums\UserStatus::Terverifikasi,
+                'verified_at' => now(),
             ] : []),
         );
 

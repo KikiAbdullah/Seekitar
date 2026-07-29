@@ -5,13 +5,13 @@ namespace App\Enums;
 use App\Enums\Concerns\HasValues;
 
 /**
- * Level verifikasi pengguna (DATABASE.md §4.1). Hanya 1-3.
+ * Level verifikasi pengguna (kontrak API, DATABASE.md §4.1). Hanya 1-3.
  * TIDAK ADA level 0 dan tidak ada level 4 di MVP.
  *
- * Enum ini BUKAN kolom: kolom users.verification_level sudah dihapus
- * karena level adalah TURUNAN murni — 1 = terdaftar via OTP, 2 = stempel
- * verified2_at, 3 = pemilik toko verified. Yang menghitungnya adalah
- * User::verificationLevel; enum ini tinggal kosakata label & filter.
+ * Enum ini BUKAN kolom: level adalah TURUNAN murni — 1 = nomor dibuktikan
+ * OTP (semua akun), 2 = stempel verified_at (identitas disetujui admin),
+ * 3 = pemilik toko verified. Yang menghitungnya adalah User::verificationLevel;
+ * enum ini tinggal kosakata label & filter.
  */
 enum VerificationLevel: int
 {

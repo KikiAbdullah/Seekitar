@@ -85,7 +85,7 @@ class AuthController extends Controller
 
             if ($user) {
                 // Akun yang kembali lewat OTP dipulihkan; kalau ia memang
-                // diblokir, gerbang is_blocked di bawah tetap menahannya.
+                // diblokir, gerbang kedudukan di bawah tetap menahannya.
                 if ($user->trashed()) {
                     $user->restore();
                 }
@@ -99,19 +99,16 @@ class AuthController extends Controller
         [$user, $isNew] = $result;
 
         /*
-         * OTP yang cocok ADALAH bukti kepemilikan nomor — stempel tahap 1
-         * ditulis sistem di sini (verified1_by sengaja NULL). Meminta admin
-         * "memverifikasi" nomor HP secara visual tidak menambah sinyal apa
-         * pun; antrian pengguna jadi hanya meninjau yang benar-benar butuh
-         * mata manusia: berkas KTP.
-         * Tulis-sekali: login OTP berikutnya tidak mengubah apa pun.
+         * OTP yang cocok ADALAH bukti kepemilikan nomor — tanpa kolom apa
+         * pun untuk ditulis: kode OTP hanya dikirim ke nomornya sendiri,
+         * jadi keberadaan akun di tabel users sudah merupakan jejaknya.
+         * Verifikasi oleh manusia tinggal SATU hal: admin meninjau wajah,
+         * KTP, alamat, dan koordinat (kolom verified_*), bukan nomornya.
+         * Akun baru berstatus 'menunggu' secara default — tidak ada yang
+         * perlu diubah di sini.
          */
-        if ($user->verified1_at === null) {
-            $user->verified1_at = now();
-            $user->save();
-        }
 
-        if ($user->is_blocked) {
+        if ($user->isBlocked()) {
             return $this->fail('Akun Anda diblokir. Hubungi dukungan Seekitar.', 423);
         }
 
@@ -170,9 +167,11 @@ class AuthController extends Controller
     /**
      * POST /auth/phone/verify-otp — nomor DIGANTI hanya setelah OTP-nya cocok.
      *
-     * Stempel tahap 1 ditulis ulang oleh sistem (& adminnya dikosongkan):
-     * stempel lama dibuat atas bukti nomor LAMA, dan membiarkannya menggantung
-     * akan membuat jejak audit berbohong tentang nomor yang sekarang.
+     * Yang ditulis HANYA kolom phone-nya: OTP yang baru saja cocok sudah
+     * merupakan bukti pemilikan nomor terkini — tidak ada stempel nomor
+     * terpisah untuk diperbarui. Kedudukan akun (terverifikasi/menunggu/
+     * ditolak) sengaja TIDAK gugur karena nomor ganti: yang diverifikasi
+     * admin adalah berkas identitasnya, bukan nomor teleponnya.
      */
     public function verifyPhoneChangeOtp(VerifyOtpRequest $request): JsonResponse
     {
@@ -196,9 +195,11 @@ class AuthController extends Controller
         }
 
         $user = $request->user();
-        $user->phone         = $phone;
-        $user->verified1_at  = now();    // OTP barusan = bukti nomor terkini
-        $user->verified1_by  = null;     // NULL berarti diverifikasi sistem
+        $user->phone = $phone;
+        // Tidak ada stempel nomor untuk diperbarui: OTP yang baru saja cocok
+        // SUDAH merupakan bukti pemilikan nomor terkini, dan kedudukan akun
+        // (terverifikasi/ditolak/menunggu) tidak gugur karena nomor ganti —
+        // yang diverifikasi admin adalah BERKAS identitasnya, bukan nomornya.
         $user->save();
 
         return $this->ok(

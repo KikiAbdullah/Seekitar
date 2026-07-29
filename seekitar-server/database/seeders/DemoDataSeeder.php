@@ -168,7 +168,7 @@ class DemoDataSeeder extends Seeder
     // ───────────────────────────────────────────────────────── Pengguna
 
     /**
-     * Penjual: semuanya berstempel KTP (verified2_at terisi).
+     * Penjual: semuanya terverifikasi (verified_at terisi).
      *
      * Bukan pilihan gaya — `StorePolicy::create()` menuntut
      * `canOpenStore()`, yang sejak kolom level dihapus berarti stempel
@@ -318,7 +318,7 @@ class DemoDataSeeder extends Seeder
         \Illuminate\Support\Collection $kategori,
     ): \Illuminate\Support\Collection {
         $jumlah = $this->volume['permintaan'];
-        $aktif  = $pembeli->where('is_blocked', false);
+        $aktif  = $pembeli->filter(fn (User $u) => ! $u->isBlocked());
         $daftar = collect();
 
         /*
@@ -459,7 +459,7 @@ class DemoDataSeeder extends Seeder
         \Illuminate\Support\Collection $listing,
     ): \Illuminate\Support\Collection {
         $jumlah  = $this->volume['pesanan'];
-        $aktif   = $pembeli->where('is_blocked', false);
+        $aktif   = $pembeli->filter(fn (User $u) => ! $u->isBlocked());
         $pesanan = collect();
 
         /*

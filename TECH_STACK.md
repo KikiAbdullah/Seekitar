@@ -224,7 +224,8 @@ Keduanya sudah tepat dan **tidak perlu diseragamkan**:
 
 | Kolom | Tipe | Kenapa sufiksnya begitu |
 | :-- | :-- | :-- |
-| `users.verification_level` | Turunan 1–3 (bukan kolom) | **Bertingkat** — level 3 lebih tinggi dari level 2. Kolomnya sudah dihapus; nilainya dihitung `User::verificationLevel` dari stempel + status toko (DATABASE.md §4.1) |
+| `users.verification_level` | Turunan 1–3 (bukan kolom) | **Bertingkat** — level 3 lebih tinggi dari level 2. Kolomnya sudah dihapus; nilainya dihitung `User::verificationLevel` dari stempel `verified_at` + status toko (DATABASE.md §4.1) |
+| `users.status` | ENUM (`UserStatus`) | **Kategori** — `menunggu`, `terverifikasi`, `ditolak`, `diblokir` adalah keadaan kedudukan, bukan tangga kenaikan |
 | `stores.verification_status` | ENUM | **Kategori** — `verified` bukan “lebih tinggi” dari `rejected`, sekadar berbeda |
 
 Aturannya: pakai `_level` bila nilainya berurutan dan bisa dibandingkan,
@@ -254,7 +255,7 @@ tidak bermakna — keduanya harus dibaca sebagai satu himpunan.
 
 | Dokumen | Versi |
 | :-- | :-- |
-| `PRD.md`, `DATABASE.md`, `API_DOCUMENTATION.md`, `Server_Implementation_Guide.md`, `Mobile_Implementation_Guide.md`, `BRANDING-GUIDELINE.md` | **2.1** |
+| `PRD.md`, `DATABASE.md`, `API_DOCUMENTATION.md`, `Server_Implementation_Guide.md`, `Mobile_Implementation_Guide.md`, `BRANDING-GUIDELINE.md` | **2.3** |
 
 **Aturan penomoran:**
 
@@ -264,7 +265,7 @@ tidak bermakna — keduanya harus dibaca sebagai satu himpunan.
 | Penambahan fitur, kolom, atau endpoint baru | Minor (2.1 → 2.2) |
 | Perbaikan penulisan, klarifikasi, contoh kode | Tidak perlu |
 
-> ℹ️ **Tanggal “27 Juli 2026” bukan salah ketik.** Sempat dipertanyakan apakah
+> ℹ️ **Tanggal “29 Juli 2026” bukan salah ketik.** Sempat dipertanyakan apakah
 > itu tanggal masa depan; dokumen ini memang disusun pada tanggal tersebut.
 > Yang perlu dijaga adalah **konsistensinya** — perbarui tanggal hanya saat
 > nomor versi berubah, bukan setiap kali menyunting kalimat.

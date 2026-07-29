@@ -25,7 +25,7 @@ assets/brand/       Aset merek yang dikendalikan versi
 
 ## Dokumentasi
 
-Dokumen dibaca sebagai **satu himpunan** — semuanya pada versi **2.2**.
+Dokumen dibaca sebagai **satu himpunan** — semuanya pada versi **2.3**.
 
 | Dokumen | Isi | Baca saat |
 | :-- | :-- | :-- |

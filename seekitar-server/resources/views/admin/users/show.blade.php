@@ -1,13 +1,17 @@
 @extends('admin.layout')
 @section('title', 'Detail Pengguna')
 
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('vendor/leaflet/leaflet.css') }}">
+@endpush
+
 @section('content')
 
     <div class="card bg-light-primary shadow-none position-relative overflow-hidden mb-4">
         <div class="card-body px-4 py-3">
             <div class="row align-items-center">
                 <div class="col-12">
-                    <h4 class="fw-semibold mb-2">{{ $user->name }}</h4>
+                    <h4 class="fw-semibold mb-2">Detail Pengguna</h4>
                     <nav aria-label="Remah roti">
                         <ol class="breadcrumb mb-0">
                             <li class="breadcrumb-item">
@@ -16,7 +20,7 @@
                             <li class="breadcrumb-item">
                                 <a class="text-muted text-decoration-none" href="{{ route('admin.users.index') }}">Pengguna</a>
                             </li>
-                            <li class="breadcrumb-item active" aria-current="page">Detail</li>
+                            <li class="breadcrumb-item active" aria-current="page">{{ $user->name }}</li>
                         </ol>
                     </nav>
                 </div>
@@ -26,16 +30,18 @@
 
     <div class="row">
 
-        {{-- Profil & aksi. --}}
+        {{-- Identitas & aksi utama dalam satu kartu: semua keputusan admin
+             atas akun ini (sunting, blokir) berangkat dari sini. --}}
         <div class="col-lg-4">
             <div class="card">
-                <div class="card-body text-center">
+                <div class="card-body text-center pb-0">
                     @if ($user->avatar_url)
                         <img src="{{ $user->avatar_url }}" alt="Foto profil {{ $user->name }}"
-                             width="96" height="96" class="rounded-circle mb-3" style="object-fit: cover;">
+                             width="104" height="104" class="rounded-circle mb-3 border border-2 border-white shadow-sm"
+                             style="object-fit: cover;">
                     @else
                         <span class="rounded-circle bg-light-primary text-primary fw-bold d-inline-flex align-items-center justify-content-center fs-8 mb-3"
-                              style="width: 96px; height: 96px;" aria-hidden="true">
+                              style="width: 104px; height: 104px;" aria-hidden="true">
                             {{ $user->initials }}
                         </span>
                     @endif
@@ -44,37 +50,32 @@
                         {{ $user->name }}
                         @include('admin.partials._cek_terverifikasi', ['user' => $user])
                     </h5>
-                    <div class="font-monospace text-muted mb-2">{{ $user->phone }}</div>
+                    <div class="font-monospace text-muted mb-3">{{ $user->phone }}</div>
 
-                    <div class="d-flex flex-wrap justify-content-center gap-2 mb-2">
-                        @if ($user->verified2_at)
-                            <span class="badge bg-primary-subtle text-primary">KTP terverifikasi</span>
-                        @endif
-                        @if ($user->is_blocked)
-                            <span class="badge bg-danger-subtle text-danger">Diblokir</span>
-                        @else
-                            <span class="badge bg-success-subtle text-success">Aktif</span>
-                        @endif
-                    </div>
-
-                    {{-- Reputasi pembeli dari ulasan toko → pembeli. --}}
-                    <div class="mb-3">
+                    <div class="d-flex flex-wrap justify-content-center gap-2 mb-3">
+                        @include('admin.users._status', ['user' => $user])
                         @if ((int) $user->total_reviews > 0)
                             @include('admin.partials._stars', [
                                 'rating' => $user->rating_avg,
                                 'total'  => $user->total_reviews,
                             ])
-                        @else
-                            <span class="text-muted fs-2">Belum ada ulasan sebagai pembeli</span>
                         @endif
-                    </div>
-
-                    <div class="d-flex flex-wrap justify-content-center gap-2">
-                        @include('admin.users._actions', ['user' => $user])
                     </div>
                 </div>
 
-                <ul class="list-group list-group-flush fs-3">
+                <div class="card-body d-flex flex-wrap justify-content-center gap-2 border-top">
+                    @include('admin.users._actions', ['user' => $user])
+                </div>
+
+                <ul class="list-group list-group-flush fs-3 border-top">
+                    <li class="list-group-item d-flex justify-content-between gap-3">
+                        <span class="text-muted">Email</span>
+                        <span class="text-end">{{ $user->email ?? '—' }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between gap-3">
+                        <span class="text-muted">Bergabung</span>
+                        <span class="text-end">{{ $user->created_at->format('d M Y') }}</span>
+                    </li>
                     <li class="list-group-item d-flex justify-content-between gap-3">
                         <span class="text-muted">Alamat</span>
                         <span class="text-end">{{ $user->address ?? '—' }}</span>
@@ -87,23 +88,12 @@
                             </span>
                         </li>
                     @endif
-                    <li class="list-group-item d-flex justify-content-between gap-3">
-                        <span class="text-muted">Bergabung</span>
-                        <span class="text-end">{{ $user->created_at->format('d M Y') }}</span>
-                    </li>
-                    @if ($user->is_blocked)
-                        <li class="list-group-item">
-                            <div class="text-muted mb-1">Alasan blokir · {{ $user->blocked_at?->format('d M Y H:i') }}</div>
-                            <span class="text-danger">{{ $user->blocked_reason }}</span>
-                        </li>
-                    @endif
                 </ul>
             </div>
         </div>
 
         <div class="col-lg-8">
 
-            {{-- Statistik ringkas aktivitasnya. --}}
             <div class="row">
                 <div class="col-4">
                     <div class="card"><div class="card-body py-3 text-center">
@@ -125,43 +115,57 @@
                 </div>
             </div>
 
-            {{-- Jejak verifikasi dua tahap: siapa & kapan menyetujui nomor
-                 HP lalu KTP — fakta audit, bukan label level apa pun. --}}
+            {{-- Keadaan saat ini di satu pandang, lalu jejak auditnya — status
+                 ditolak/diblokir sengaja paling mencolok. --}}
+            @if ($user->isBlocked())
+                <div class="alert alert-dark d-flex align-items-start gap-3" role="alert">
+                    <i class="ti ti-ban fs-5 mt-1" aria-hidden="true"></i>
+                    <div>
+                        <strong>Diblokir</strong>
+                        oleh {{ $user->blockedBy?->name ?? '—' }} · {{ $user->blocked_at?->format('d M Y H:i') }}<br>
+                        {{ $user->blocked_reason }}<br>
+                        <span class="text-muted fs-2">Seluruh token dicabut dan tokonya ikut dinonaktifkan selama blokir berlangsung.</span>
+                    </div>
+                </div>
+            @elseif ($user->rejected_at)
+                <div class="alert alert-warning d-flex align-items-start gap-3" role="alert">
+                    <i class="ti ti-alert-triangle fs-5 mt-1" aria-hidden="true"></i>
+                    <div>
+                        <strong>Berkas ditolak</strong>
+                        oleh {{ $user->rejectedBy?->name ?? '—' }} · {{ $user->rejected_at->format('d M Y H:i') }}<br>
+                        {{ $user->rejected_reason }}<br>
+                        <span class="text-muted fs-2">Pengguna bisa mengirim ulang berkas kapan saja — antrian terbuka lagi saat itu.</span>
+                    </div>
+                </div>
+            @endif
+
             <div class="card">
-                <div class="card-header fw-semibold">Jejak Verifikasi</div>
+                <div class="card-header fw-semibold">Jejak Verifikasi Identitas</div>
                 <div class="card-body">
+                    {{-- Garis waktu tunggal: SATU verifikasi — nomor HP bukan
+                         "tahap"; bukti OTP-nya keberadaan akun itu sendiri. --}}
                     <ul class="list-unstyled mb-0 fs-3">
                         <li class="d-flex align-items-start gap-2 mb-2">
-                            <i class="ti {{ $user->verified1_at ? 'ti-circle-check text-success' : 'ti-clock-hour-4 text-warning' }} mt-1" aria-hidden="true"></i>
+                            <i class="ti ti-device-mobile-check text-success mt-1" aria-hidden="true"></i>
                             <span>
-                                <strong>Tahap 1 · Nomor HP</strong><br>
-                                @if ($user->verified1_at)
-                                    {{ $user->verified1_by_label }} · {{ $user->verified1_at->format('d M Y H:i') }}
-                                @else
-                                    <span class="text-muted">Belum diverifikasi</span>
-                                @endif
+                                <strong>Nomor HP dibuktikan OTP</strong><br>
+                                <span class="text-muted">Kode hanya dikirim ke nomornya sendiri — {{ $user->phone }}</span>
                             </span>
                         </li>
-                        <li class="d-flex align-items-start gap-2 mb-2">
-                            <i class="ti {{ $user->verified2_at ? 'ti-circle-check text-success' : 'ti-clock-hour-4 text-warning' }} mt-1" aria-hidden="true"></i>
+                        <li class="d-flex align-items-start gap-2">
+                            <i class="ti {{ $user->verified_at ? 'ti-circle-check text-success' : 'ti-clock-hour-4 text-warning' }} mt-1" aria-hidden="true"></i>
                             <span>
-                                <strong>Tahap 2 · KTP &amp; NIK</strong><br>
-                                @if ($user->verified2_at)
-                                    {{ $user->verified2By?->name ?? '—' }} · {{ $user->verified2_at->format('d M Y H:i') }}
+                                <strong>Identitas (wajah, KTP, alamat, titik domisili)</strong><br>
+                                @if ($user->verified_at)
+                                    {{ $user->verifiedBy?->name ?? '—' }} · {{ $user->verified_at->format('d M Y H:i') }}
                                 @elseif ($user->ktp_submitted_at)
-                                    <span class="text-muted">Menunggu — diajukan {{ $user->ktp_submitted_at->format('d M Y H:i') }}</span>
+                                    <span class="text-muted">Menunggu peninjauan — berkas diajukan {{ $user->ktp_submitted_at->format('d M Y H:i') }}</span>
                                 @else
-                                    <span class="text-muted">Belum mengajukan</span>
+                                    <span class="text-muted">Belum mengajukan berkas</span>
                                 @endif
                             </span>
                         </li>
                     </ul>
-
-                    @if ($user->ktp_rejected_reason)
-                        <div class="alert alert-warning py-2 fs-3 mt-3 mb-0">
-                            Pernah ditolak: {{ $user->ktp_rejected_reason }}
-                        </div>
-                    @endif
                 </div>
 
                 {{-- Berkas identitas = hak `verify-users` (UU PDP); route
@@ -207,6 +211,30 @@
                     @endif
                 @endcan
             </div>
+
+            @if ($user->latitude !== null)
+                <div class="card">
+                    <div class="card-header fw-semibold">Titik Domisili</div>
+                    <div class="card-body">
+                        <div class="rounded border" style="height: 260px; width: 100%;"
+                             data-peta-user
+                             data-lat="{{ $user->latitude }}"
+                             data-lng="{{ $user->longitude }}"
+                             role="img" aria-label="Peta titik domisili {{ $user->name }}"></div>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                            <span class="font-monospace text-muted fs-2 me-auto">
+                                {{ \App\Support\Angka::desimal($user->latitude, 6) }}, {{ \App\Support\Angka::desimal($user->longitude, 6) }}
+                            </span>
+                            <a class="btn btn-sm btn-outline-primary"
+                               href="https://www.google.com/maps/search/?api=1&query={{ $user->latitude }},{{ $user->longitude }}"
+                               target="_blank" rel="noopener">
+                                <i class="ti ti-map-pin" aria-hidden="true"></i>
+                                Buka di Google Maps
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 
@@ -270,3 +298,29 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script src="{{ asset('vendor/leaflet/leaflet.js') }}"></script>
+    <script>
+        // Peta titik domisili statis: penanda saja, tanpa interaksi apa pun
+        // — konteksnya melihat & memastikan, bukan mengubah (itu di Sunting).
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('[data-peta-user]').forEach(function (wadah) {
+                if (typeof L === 'undefined') return;
+                const lat = parseFloat(wadah.dataset.lat);
+                const lng = parseFloat(wadah.dataset.lng);
+
+                const peta = L.map(wadah, {
+                    center: [lat, lng],
+                    zoom: 15,
+                    scrollWheelZoom: false,
+                });
+                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 18,
+                    attribution: '&copy; OpenStreetMap contributors',
+                }).addTo(peta);
+                L.marker([lat, lng]).addTo(peta);
+            });
+        });
+    </script>
+@endpush

@@ -1,23 +1,32 @@
 # 🗄️ DATABASE DESIGN — SEEKITAR
 
 **Dokumen Lengkap, Optimal, & Production‑Ready**  
-**Versi:** 2.2 (Production‑Hardened)  
-**Tanggal:** 27 Juli 2026  
+**Versi:** 2.3 (Production‑Hardened)  
+**Tanggal:** 29 Juli 2026  
 **Target Deployment:** MySQL 8.0.34+ InnoDB  
 **Charset:** utf8mb4 – Collation: utf8mb4_unicode_ci  
 **ORM:** Laravel 13 (Eloquent) · PHP 8.3+
 
 > 📌 Versi mengacu pada [`TECH_STACK.md`](TECH_STACK.md) sebagai sumber kebenaran tunggal.
 
+> **Perubahan 2.3** — verifikasi pengguna dirampingkan menjadi SATU langkah
+> (lihat §4.1): OTP sudah merupakan bukti pemilikan nomor HP, sehingga tahap
+> "verifikasi nomor" beserta stempelnya (`verified1_*`) dihapus. Kolom
+> `users.status` (ENUM `menunggu|terverifikasi|ditolak|diblokir`) menggantikan
+> boolean berantai `is_blocked`, dan jejak auditnya kini tunggal:
+> `verified_*` (disetujui), `rejected_*` (ditolak), `blocked_*` (diblokir).
+> Formulir sunting pengguna di panel kini juga menerima unggahan avatar,
+> alamat, dan titik domisili di peta (§4.1 bagian aturan 5).
+
 > **Perubahan 2.2** — dokumentasi diselaraskan dengan implementasi
 > `seekitar-server` terkini: level pengguna murni turunan (kolom levelnya
-> dihapus dari `users`; lihat §4.1), stempel tahap 1 dapat ditulis SISTEM
-> saat OTP cocok (`verified1_by = NULL`), satu persetujuan admin
-> menyelesaikan semua tahap yang menunggu, aturan perubahan-data-vs-stempel
+> dihapus dari `users`; lihat §4.1), satu persetujuan admin
+> menyelesaikan antrian yang menunggu, aturan perubahan-data-vs-stempel
 > (admin tak pernah mengubah stempel; pengguna wajib verifikasi ulang data
 > yang digantinya), syarat persetujuan toko diperiksa ulang server (pemilik
 > terverifikasi + foto asli terunggah), serta konvensi placeholder foto
-> berseed `PlaceholderImg` (§4).
+> berseed `PlaceholderImg` (§4). (Ditulis ulang 2.3: kemasannya berubah —
+> stempel dua tahapnya sudah dilebur jadi satu.)
 
 ---
 
@@ -161,26 +170,27 @@ Setiap tabel dilengkapi penjelasan tiap kolom, alasan pemilihan tipe, dan constr
 | `email`              | VARCHAR(255) NULL UNIQUE | **Khusus admin.** Login panel web; NULL untuk pengguna biasa. |
 | `email_verified_at`  | TIMESTAMP NULL       | Bawaan Laravel; belum dipakai alur apa pun.                    |
 | `password`           | VARCHAR(255) NULL    | **Khusus admin.** Hash bcrypt. NULL = akun hanya bisa OTP.     |
-| `phone`              | VARCHAR(15)          | Nomor HP Indonesia (diawali 62), unik. Menghindari duplikasi akun.                   |
+| `phone`              | VARCHAR(15)          | Nomor HP Indonesia (diawali 62), unik. Menghindari duplikasi akun. Keberadaannya di tabel ini SEKALIGUS jejak "nomor dibuktikan OTP" — kode hanya dikirim ke nomornya sendiri. |
 | `name`               | VARCHAR(100)         | Nama asli pengguna, wajib diisi.                                                     |
 | `avatar_url`         | VARCHAR(500) NULL    | URL foto profil, disimpan di cloud storage. Panjang 500 cukup untuk URL pre‑signed.  |
 | `location`           | POINT SRID 4326 NULL | Lokasi default pengguna (misal rumah). NULL hanya saat onboarding belum selesai.     |
 | `address`            | VARCHAR(255) NULL    | Alamat teks hasil reverse geocoding. Untuk ditampilkan, bukan untuk query.           |
-| `ktp_image`          | VARCHAR(500) NULL    | URL foto KTP (terenkripsi at-rest). Diisi saat pengajuan verifikasi Level 2.         |
-| `selfie_image`       | VARCHAR(500) NULL    | URL selfie memegang KTP. Wajib bersama `ktp_image`.                                  |
-| `ktp_submitted_at`   | TIMESTAMP NULL       | Kapan berkas diajukan — dipakai SLA peninjauan admin 1×24 jam.                       |
-| `ktp_rejected_reason`| TEXT NULL            | Alasan penolakan agar pengguna tahu apa yang harus diperbaiki.                       |
-| `verified1_by`       | CHAR(36) NULL FK → `users.id` | Admin yang memverifikasi tahap 1 (nomor HP). **NULL berarti stempel ditulis SISTEM** — OTP daftar/ganti nomor yang cocok adalah bukti kepemilikan nomor itu sendiri (ditampilkan panel sebagai "Sistem (OTP)"). ON DELETE SET NULL. |
-| `verified1_at`       | TIMESTAMP NULL       | Kapan tahap 1 disetujui — untuk audit & SLA. |
-| `verified2_by`       | CHAR(36) NULL FK → `users.id` | Admin yang memverifikasi tahap 2 (KTP & NIK). ON DELETE SET NULL. |
-| `verified2_at`       | TIMESTAMP NULL       | Kapan tahap 2 disetujui — kolom inilah yang membuat pengguna ber-Level 2 (lihat penjelasan level turunan di bawah). |
+| `status`             | ENUM('menunggu','terverifikasi','ditolak','diblokir') DEFAULT 'menunggu' | **Kedudukan akun, SATU kata.** `menunggu` = nomor sudah OTP tapi identitas belum disetujui admin (nilai awal setiap akun); `terverifikasi` = admin menyetujui wajah+KTP+alamat+titik; `ditolak` = berkas belum sesuai, boleh kirim ulang; `diblokir` = akun bermasalah — token dicabut & tokonya ikut nonaktif. INDEX. |
+| `ktp_image`          | VARCHAR(500) NULL    | Path foto KTP di disk PRIVAT (UU PDP), bukan URL publik. Diisi saat mengajukan berkas. |
+| `selfie_image`       | VARCHAR(500) NULL    | Path foto wajah di disk privat. Wajib bersama `ktp_image`.                          |
+| `ktp_submitted_at`   | TIMESTAMP NULL       | Kapan berkas (terakhir) diajukan — dipakai SLA peninjauan 1×24 jam DAN pembeda "sudah antre" vs "belum pernah mengajukan" pada status menunggu. |
+| `verified_by`        | CHAR(36) NULL FK → `users.id` | Admin yang menyetujui berkas identitas. Ditulis pasangan dengan `verified_at`, tulis-sekali per siklus. ON DELETE SET NULL. |
+| `verified_at`        | TIMESTAMP NULL       | Kapan disetujui — kolom inilah yang membuat pengguna sah membuka toko (`User::canOpenStore()` membacanya LANGSUNG). |
+| `rejected_by`        | CHAR(36) NULL FK → `users.id` | Admin yang menolak berkas. Dipertahankan sampai berkas pengganti DISETUJUI — konteks "periksa ulang apa" di antrian. ON DELETE SET NULL. |
+| `rejected_at`        | TIMESTAMP NULL       | Kapan ditolak — pasangan `rejected_by`. |
+| `rejected_reason`    | TEXT NULL            | Alasan penolakan, tampil di aplikasi pengguna agar tahu apa yang diperbaiki. |
+| `blocked_by`         | CHAR(36) NULL FK → `users.id` | Admin yang memblokir. Dikosongkan saat blokir dicabut. ON DELETE SET NULL. |
+| `blocked_at`         | TIMESTAMP NULL       | Kapan diblokir — untuk audit dan pencabutan token. |
+| `blocked_reason`     | VARCHAR(255) NULL    | Alasan pemblokiran, ditampilkan ke pengguna saat login ditolak.                      |
 | `rating_avg`         | DECIMAL(3,2) DEFAULT 0.00 | Rata-rata rating 1–5 sebagai PEMBELI — hanya dari ulasan `store_to_buyer`. Dihitung ulang `ReviewObserver`, bukan diisi manual. |
 | `total_reviews`      | INT UNSIGNED DEFAULT 0      | Jumlah ulasan yang diterima sebagai pembeli — pasangan `rating_avg`. |
 | `nik`                | VARCHAR(255) NULL    | NIK hasil pembacaan admin. **Terenkripsi** (cast `encrypted`), bukan plaintext.      |
 | `nik_hash`           | CHAR(64) NULL        | SHA-256 dari NIK. Untuk mendeteksi NIK ganda, karena kolom terenkripsi tak bisa di-`WHERE`. |
-| `is_blocked`         | TINYINT(1) DEFAULT 0 | Diblokir admin. Dipakai filter `GET /admin/users` & respons `423`.                   |
-| `blocked_reason`     | VARCHAR(255) NULL    | Alasan pemblokiran, ditampilkan ke pengguna saat login ditolak.                      |
-| `blocked_at`         | TIMESTAMP NULL       | Kapan diblokir — untuk audit dan pencabutan token.                                   |
 | `remember_token`     | VARCHAR(100) NULL    | Bawaan Laravel. Tidak dipakai alur OTP, tetap ada agar `Authenticatable` utuh.       |
 | `deleted_at`         | TIMESTAMP NULL       | Soft delete untuk pengguna yang menonaktifkan akun.                                  |
 | `created_at`         | TIMESTAMP            | Otomatis diisi Laravel.                                                              |
@@ -210,6 +220,7 @@ Setiap tabel dilengkapi penjelasan tiap kolom, alasan pemilihan tipe, dan constr
 - UNIQUE KEY `users_email_unique` (`email`) — NULL-able, hanya akun admin
 - UNIQUE KEY `users_phone_unique` (`phone`)
 - SPATIAL INDEX `users_location_spatial` (`location`)
+- INDEX `users_status_index` (`status`) — antrian & filter panel memfilternya
 - INDEX `users_deleted_at_idx` (`deleted_at`) — untuk filter global scope soft delete.
 
 > ⚠️ **Kenapa `location` tetap NULL-able (bukan NOT NULL).**
@@ -242,64 +253,67 @@ Setiap tabel dilengkapi penjelasan tiap kolom, alasan pemilihan tipe, dan constr
 > SHA-256 (dengan `APP_KEY` sebagai pepper) agar bisa diindeks dan diperiksa
 > keunikannya. Lihat `Server_Implementation_Guide.md` §18A.3.
 
-**Verifikasi KTP (Level 2):** `ktp_image` dan `selfie_image` adalah data pribadi
-sensitif menurut UU PDP. Simpan di bucket privat, akses hanya lewat URL
-pre-signed berumur pendek, dan **jangan** pernah dikembalikan di response API
-publik. Setelah tahap 2 disetujui, berkas boleh dihapus sesuai kebijakan retensi.
+**Berkas identitas (UU PDP):** `ktp_image` dan `selfie_image` adalah data pribadi
+sensitif. Simpan di disk privat, akses hanya lewat route berizin `verify-users`
+(header `Cache-Control: private, no-store`), dan **jangan** pernah dikembalikan
+di response API publik. Setelah disetujui, berkas boleh dihapus sesuai kebijakan
+retensi.
 
-**Level pengguna DIHITUNG, bukan disimpan.** Tidak ada kolom
-`verification_level` di tabel ini — kolom itu sengaja dihapus karena faktanya
-sudah dijawab lengkap oleh stempel verifikasi + status toko, dan kolom
+**Kedudukan akun SATU kolom.** `status` menggantikan boolean berantai lama
+("sudah OTP?" + "KTP lulus?" + "diblokir?") — empat keadaan itu saling
+eksklusif, sedangkan boolean terpisah bisa menyatakan dua-duanya sekaligus.
+Nilainya satu kata dan sumber kebenaran tunggal untuk panel, API, dan lencana:
+
+| status | Kapan | Efek praktis |
+| :----- | :---- | :----------- |
+| `menunggu` | Default setiap akun (nomor sudah OTP); juga kedudukan setelah kirim/kirim-ulang berkas, atau setelah blokir dicabut tanpa stempel `verified_at` | Belum bisa membuka toko. Bila `ktp_submitted_at` terisi → masuk antrian tinjauan admin. |
+| `terverifikasi` | Admin menyetujui wajah, KTP, alamat, dan titik domisili | Boleh membuka toko (`canOpenStore()`), ikon centang di panel, level API = 2. |
+| `ditolak` | Admin menolak berkas dengan alasan | Keluar antrian; alasan tampil di aplikasi; kirim ulang mengembalikannya ke `menunggu`. |
+| `diblokir` | Admin memblokir dengan alasan | Login ditolak (423), token dicabut, tokonya ikut nonaktif (pesanan berjalan tidak diusik). Membuka blokir mengembalikan `terverifikasi` bila `verified_at` masih terisi, kalau tidak kembali `menunggu`. |
+
+**Verifikasi identitas SATU langkah.** Tidak ada tahap "verifikasi nomor HP":
+kode OTP hanya dikirim ke nomornya sendiri, sehingga keberadaan akunnya sudah
+merupakan bukti pemilikan nomor — tidak ada stempel tersendiri untuk itu.
+Yang diverifikasi admin persis satu hal: berkas identitas (wajah, KTP/NIK,
+alamat, titik domisili). Satu klik Setujui di antrian menulis
+`verified_by`+`verified_at` pasangan (tulis-sekali, transaksi berkunci,
+antrian `pendingVerification` = status `menunggu` DAN berkas sudah terkirim)
+dan mengangkat `status` ke `terverifikasi`. Penolakan menulis `rejected_*`
+dan menjatuhkan `status` ke `ditolak`.
+
+**Kontrak penulisan stempel.** `verified_*` tidak pernah ditimpa; pengajuan
+ulang OLEH PENGGUNA yang sebelumnya sudah disetujui mengosongkannya — berkas
+baru belum diperiksa siapa pun. `rejected_*` justru dipertahankan sampai
+siklus pengganti disetujui (itulah konteks admin "periksa ulang apa").
+Perubahan dari sisi ADMIN lewat formulir panel tidak pernah menyentuh stempel
+maupun `status` (aturan 5 — `Admin\UserController::update`).
+
+**Level API DIHITUNG, bukan disimpan.** Tidak ada kolom level di tabel ini —
+faktanya sudah dijawab lengkap oleh `status`/stempel + status toko, dan kolom
 tersendiri adalah sumber kebenaran kedua yang pasti suatu hari berbeda
-pendapat ("kolom bilang 2, stempel KTP bilang belum"). Turunannya
-(`User::verificationLevel`):
+pendapat. Turunannya (`User::verificationLevel`, satu-satunya sumber untuk
+`UserResource::verification_level`):
 
 | Level | Label | Fakta penentunya |
 | :---- | :---- | :--------------- |
-| 1 | Nomor Terverifikasi | Selalu berlaku — setiap pengguna masuk lewat OTP. |
-| 2 | Identitas Terverifikasi | `verified2_at` terisi (KTP disetujui). Syarat membuka toko: `User::canOpenStore()` membaca kolom ini LANGSUNG, bukan levelnya, supaya toko verified warisan tidak bisa mengangkat pemilik ber-KTP kosong. |
+| 1 | Nomor Terverifikasi | Selalu berlaku — setiap pengguna masuk lewat OTP (kedudukan menunggu/ditolak/diblokir). |
+| 2 | Identitas Terverifikasi | `verified_at` terisi. Syarat membuka toko: `User::canOpenStore()` membaca kolom ini LANGSUNG, bukan levelnya, supaya toko verified warisan tidak bisa mengangkat pemilik tanpa persetujuan identitas. |
 | 3 | Usaha Terverifikasi | Memiliki minimal 1 toko `verification_status = 'verified'` — jejaknya `stores.verified_by` / `verified_at`, bukan stempel ketiga di sini (usaha itu sendiri adalah berkasnya). |
 
-**Verifikasi DUA TAHAP** (`verified1_*`, `verified2_*`): stempelnya —
-siapa (`_by`) + kapan (`_at`) — tidak pernah ditimpa (tulis-sekali).
-
-1. **Tahap 1 · Nomor HP** → `verified1_at`. Biasanya ditulis SISTEM saat OTP
-   pendaftaran cocok — kode OTP adalah bukti kepemilikan nomor itu sendiri,
-   jadi `verified1_by` sengaja NULL (dibaca: diverifikasi sistem, bukan
-   mata admin). Stamp admin hanya ada untuk data lama/khusus yang lolos
-   tanpa OTP. Ganti nomor HP di aplikasi menulis ulang stempel ini lewat
-   OTP ke nomor baru — nomor lama tidak boleh mewariskan buktinya ke nomor
-   yang belum terbukti.
-2. **Tahap 2 · KTP & NIK** → `verified2_by` / `verified2_at` — terisinya kolom
-   inilah yang menjadikan pengguna Level 2 (turunan, bukan penulisan kedua).
-   NIK yang terbaca di foto KTP dicocokkan dengan kolom `nik`.
-
-Di panel, SATU persetujuan pada antrian pengguna menyelesaikan SEMUA tahap
-yang masih menunggu (biasanya tinggal tahap 2 — tahap 1 sudah distempel
-OTP). Prinsip "periksa dulu, baru setujui" dipindah ke checklist SOP yang
-wajib dicentang sebelum tombol Setuju terbuka — pola yang sama dengan
-antrian toko.
-
 **Kontrak berjenjang pengguna → toko.** Toko hanya bisa DISETUJUI bila
-pemiliknya sudah Level 2 (`canOpenStore()`) DAN berkas tokonya memenuhi
+pemiliknya `terverifikasi` (`canOpenStore()`) DAN berkas tokonya memenuhi
 syarat (foto etalase asli terunggah; dibaca dari kolom mentah karena aksesor
 `Store::photo` menjatuhkan nilai kosong ke placeholder hiasan). Keduanya
-diperiksa ulang SERVER pada klik Setujui (antrian → stempel adminkan waktu
-ke waktu), bukan hanya saat pengajuan — level pemilik bisa turun selama
-menunggu antrian. Level 3 pemilik adalah KONSEKUENSI dari stempel
-`stores.verified_*` tersebut, bukan penyetujuan terpisah di profil pengguna.
-
-**Aturan perubahan data vs stempel.** Perubahan dari sisi ADMIN tidak
-pernah menyentuh stempel; perubahan dari sisi PENGGUNA WAJIB verifikasi
-ulang atas data itu: unggah ulang KTP/selfie mengosongkan `verified2_*`
-(antrian terbuka lagi), ganti nomor HP menulis ulang `verified1_at` hanya
-setelah OTP nomor baru cocok (`verified1_by` kembali NULL).
+diperiksa ulang SERVER pada klik Setujui, bukan hanya saat pengajuan —
+kedudukan pemilik bisa berubah (diblokir/ditolak ulang) selama menunggu
+antrian. Level 3 pemilik adalah KONSEKUENSI dari stempel `stores.verified_*`
+tersebut, bukan penyetujuan terpisah di profil pengguna.
 
 Karena level murni turunan, TIDAK ADA penyuntingan level manual di panel:
-menaikkan pengguna = menyetujui KTP/tokonya lewat antrian yang berjejak;
+menaikkan pengguna = menyetujui berkasnya lewat antrian yang berjejak;
 menurunkan haknya = memblokir akun (dengan alasan), bukan memangkas angka.
 Konsekuensi filter admin: "level 3" = `WHERE EXISTS (toko verified)`,
-"level 2" = `verified2_at` terisi TANPA toko verified, "level 1" = sisanya —
+"level 2" = `verified_at` terisi TANPA toko verified, "level 1" = sisanya —
 satu definisi bersama di `User::scopeWhereVerificationLevel`.
 
 ### 4.2 `stores`
@@ -363,8 +377,9 @@ Di atas ketiga langkah penilaian itu ada dua SYARAT POKOK yang bersifat
 fakta data, bukan penilaian admin. Karena itu server memeriksanya ulang saat
 persetujuan — tidak cukup mengandalkan `StorePolicy::create` waktu pengajuan:
 
-1. **Pemilik sudah terverifikasi** — nomor HP + KTP, `verified2_at` terisi
-   (kolom level sudah dihapus — syarat ini dibaca langsung dari stempelnya).
+1. **Pemilik sudah terverifikasi** — identitasnya disetujui admin,
+   `users.verified_at` terisi (syarat ini dibaca langsung dari stempelnya,
+   bukan dari label apa pun).
    Dicek ulang saat menyetujui karena pengajuan bisa masuk antrian LALU
    keadaan pemiliknya berubah, dan persetujuan tidak boleh mengesahkan
    toko yang syaratnya sudah gugur.
@@ -1544,7 +1559,7 @@ WHERE TABLE_NAME = 'stores';
 2. **Foreign Key Constraints** – Tidak akan ada order tanpa pembeli/penjual.
 3. **UNIQUE constraint** pada offers (`request_id`, `store_id`) – mencegah toko mengirim dua penawaran pada permintaan yang sama, baik dari aplikasi maupun langsung dari SQL.
 4. **ENUM + CHECK** – Status pesanan, tipe listing, rating, semua memiliki domain terbatas yang terverifikasi di level engine.
-5. **Default value** – `rating_avg` = 0.00, `total_reviews` = 0, `is_blocked` = 0, `is_active` = 1, dll. Verifikasi TIDAK punya kolom ber-default: statusnya turunan dari stempel `verified*` yang memang NULL sejak lahir (§4.1).
+5. **Default value** – `rating_avg` = 0.00, `total_reviews` = 0, `users.status` = 'menunggu', `is_active` = 1, dll. Jejak verifikasi TIDAK punya kolom ber-default: stempel `verified_*`/`rejected_*`/`blocked_*` memang NULL sejak lahir dan hanya terisi oleh keputusan admin (§4.1).
 6. **Aplikasi wajib gunakan transaksi** – setiap aksi multi‑tabel (contoh: menerima penawaran → update request, update offer, insert order) HARUS dalam `DB::transaction()` **dengan `lockForUpdate()`** pada baris yang jadi rebutan.
 7. **Validasi data JSON** – Di Laravel, gunakan `$casts` dan Form Request untuk memastikan `category_ids` adalah array integer, `images` adalah array URL, dll.
 8. **Mekanisme update rating toko** – `rating_avg` dihitung dari `reviews.store_id` (bukan `reviewee_id`) dan hanya arah `buyer_to_store`, diperbarui dalam transaksi bersama penulisan ulasan.

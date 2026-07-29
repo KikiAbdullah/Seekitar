@@ -86,7 +86,7 @@ if (exists('seekitar_mobile/analysis_options.yaml')) {
 check('koleksi API (#260)', ['KOLEKSI API', 'openapi'], api);
 
 console.log('\nKonsistensi versi dokumen');
-const VER = '2.2';
+const VER = '2.3';
 const docs = {
   'PRD.md': prd, 'DATABASE.md': db, 'API_DOCUMENTATION.md': api,
   'Server_Implementation_Guide.md': sig, 'Mobile_Implementation_Guide.md': mig,

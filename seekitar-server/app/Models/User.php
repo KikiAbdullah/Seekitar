@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\UserStatus;
 use App\Enums\VerificationLevel;
 use App\Enums\VerificationStatus;
 use App\Models\Concerns\HasLocation;
@@ -24,9 +25,11 @@ class User extends Authenticatable
 
     protected $fillable = [
         'phone', 'email', 'password', 'name', 'avatar_url', 'address',
-        'ktp_image', 'selfie_image', 'ktp_submitted_at', 'ktp_rejected_reason',
-        'verified1_by', 'verified1_at', 'verified2_by', 'verified2_at',
-        'nik', 'nik_hash', 'is_blocked', 'blocked_reason', 'blocked_at',
+        'ktp_image', 'selfie_image', 'ktp_submitted_at',
+        'status', 'verified_by', 'verified_at',
+        'rejected_by', 'rejected_at', 'rejected_reason',
+        'blocked_by', 'blocked_at', 'blocked_reason',
+        'nik', 'nik_hash',
     ];
 
     /** Data pribadi tidak boleh bocor lewat response API (UU PDP). */
@@ -39,11 +42,11 @@ class User extends Authenticatable
     {
         return [
             'nik'                => 'encrypted',
-            'is_blocked'         => 'boolean',
+            'status'             => UserStatus::class,
             'rating_avg'         => 'decimal:2',
             'ktp_submitted_at'   => 'datetime',
-            'verified1_at'       => 'datetime',
-            'verified2_at'       => 'datetime',
+            'verified_at'        => 'datetime',
+            'rejected_at'        => 'datetime',
             'blocked_at'         => 'datetime',
             'email_verified_at'  => 'datetime',
             // Cast 'hashed' membuat password otomatis di-hash saat diisi,
@@ -112,7 +115,7 @@ class User extends Authenticatable
         $hasPassword = ($this->getAttributes()['password'] ?? null) !== null;
 
         return $hasPassword
-            && ! $this->is_blocked
+            && ! $this->isBlocked()
             && $this->hasAnyRole(['admin', 'super-admin']);
     }
 
@@ -121,35 +124,46 @@ class User extends Authenticatable
         return $this->hasMany(Store::class);
     }
 
-    /** Admin yang memverifikasi tahap 1 (nomor HP). */
-    public function verified1By(): BelongsTo
+    /** Admin yang menyetujui berkas identitasnya. */
+    public function verifiedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'verified1_by');
+        return $this->belongsTo(User::class, 'verified_by');
     }
 
-    /** Admin yang memverifikasi tahap 2 (KTP + NIK). */
-    public function verified2By(): BelongsTo
+    /** Admin yang menolak berkas identitasnya. */
+    public function rejectedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'verified2_by');
+        return $this->belongsTo(User::class, 'rejected_by');
+    }
+
+    /** Admin yang memblokir akunnya. */
+    public function blockedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'blocked_by');
     }
 
     /*
-     * Nama penyetuju tahap 1 untuk DITAMPILKAN. Stempel yang ditulis sistem
-     * saat OTP cocok sengaja punya verified1_by NULL — merendernya sebagai
-     * '—' akan membuat jejak audit tampak cacat, padahal NULL justru bukti
-     * TERCATAT bahwa nomornya diverifikasi kode OTP, bukan mata manusia.
+     * "Diblokir" dibaca dari kolom status, bukan lagi boolean sendiri.
+     * Dulu ada kolom terpisah (is_blocked + blocked_*): dua sumber yang
+     * bisa bertentangan ("is_blocked=false tapi blocked_at terisi").
+     * Method — bukan aksesor — supaya tidak menyaru kolom dan selalu
+     * kebagian cast enum-nya.
      */
-    protected function verified1ByLabel(): Attribute
+    public function isBlocked(): bool
     {
-        return Attribute::get(function (): ?string {
-            if ($this->verified1_at === null) {
-                return null;
-            }
+        return $this->status === UserStatus::Diblokir;
+    }
 
-            return $this->verified1_by === null
-                ? 'Sistem (OTP)'
-                : ($this->verified1By?->name ?? '—');
-        });
+    /**
+     * Kedudukan SEBELUM diblokir, untuk memulihkan saat blokir dicabut:
+     * stempel verified_at yang masih utuh berarti identitasnya pernah
+     * disetujui; blokir tidak pernah mencabut fakta audit itu.
+     */
+    public function statusSebelumDiblokir(): UserStatus
+    {
+        return $this->verified_at !== null
+            ? UserStatus::Terverifikasi
+            : UserStatus::Menunggu;
     }
 
     public function customerRequests(): HasMany
@@ -168,11 +182,11 @@ class User extends Authenticatable
     }
 
     /*
-     * Level verifikasi sebagai TURUNAN MURNI, bukan kolom tersimpan
-     * (kolomnya sengaja dihapus — lihat migrasi users):
+     * Level verifikasi sebagai TURUNAN MURNI untuk kontrak API (kolomnya
+     * tidak ada di database — ia dihitung):
      *
-     *   1 · Nomor Terverifikasi     — setiap pengguna terdaftar (masuk OTP).
-     *   2 · Identitas Terverifikasi — verified2_at terisi (KTP disetujui).
+     *   1 · Nomor Terverifikasi     — setiap akun (nomornya dibuktikan OTP).
+     *   2 · Identitas Terverifikasi — verified_at terisi (berkas disetujui).
      *   3 · Usaha Terverifikasi     — memiliki minimal 1 toko berstatus
      *                                 verified; stempelnya ada di toko,
      *                                 bukan duplikat di users.
@@ -194,9 +208,9 @@ class User extends Authenticatable
                         ->exists();
 
             return match (true) {
-                $punyaTokoTerverifikasi      => VerificationLevel::Pro,
-                $this->verified2_at !== null => VerificationLevel::Verified,
-                default                      => VerificationLevel::Basic,
+                $punyaTokoTerverifikasi     => VerificationLevel::Pro,
+                $this->verified_at !== null => VerificationLevel::Verified,
+                default                     => VerificationLevel::Basic,
             };
         });
     }
@@ -217,28 +231,33 @@ class User extends Authenticatable
             VerificationLevel::Pro->value => $query
                 ->whereHas('stores', $tokoTerverifikasi),
             VerificationLevel::Verified->value => $query
-                ->whereNotNull('verified2_at')
+                ->whereNotNull('verified_at')
                 ->whereDoesntHave('stores', $tokoTerverifikasi),
             VerificationLevel::Basic->value => $query
-                ->whereNull('verified2_at')
+                ->whereNull('verified_at')
                 ->whereDoesntHave('stores', $tokoTerverifikasi),
             default => $query,
         };
     }
 
     /**
-     * Boleh membuka toko — aturan 2: pemilik toko harus SUDAH terverifikasi,
-     * yaitu nomor HP (bawaan OTP) + KTP disetujui admin. Dibaca langsung
-     * dari stempelnya, BUKAN dari level turunan: toko verified warisan dengan
-     * stempel KTP kosong tidak boleh membuat pemiliknya tampak layak.
+     * Boleh membuka toko — aturan 2: pemilik toko harus SUDAH terverifikasi:
+     * berkas identitasnya disetujui admin (verified_at terisi). Dibaca
+     * langsung dari stempelnya, BUKAN dari status: akun terverifikasi yang
+     * kemudian diblokir tetap pernah lolos identitas, tetapi tokonya pun
+     * ikut dinonaktifkan selama blokirnya berlangsung.
      */
     public function canOpenStore(): bool
     {
-        return $this->verified2_at !== null;
+        return $this->verified_at !== null;
     }
 
     /**
-     * Antrian verifikasi admin — pengajuan KTP yang belum selesai dua tahap.
+     * Antrian verifikasi admin — pengajuan identitas yang menunggu tinjauan.
+     *
+     * status=menunggu SAJA tidak cukup: itu juga kedudukan setiap akun baru
+     * yang belum pernah mengirim berkas. Yang membuatnya ANTRE adalah
+     * ktp_submitted_at — berkas benar-benar sudah dikirim.
      *
      * SATU-SATUNYA definisi antrian: dipakai halaman antrian (VerificationController)
      * dan lencana sidebar (SidebarComposer). Dua definisi terpisah akan
@@ -246,41 +265,8 @@ class User extends Authenticatable
      */
     public function scopePendingVerification(Builder $query): Builder
     {
-        return $query->whereNotNull('ktp_submitted_at')
-            ->whereNull('verified2_at');
-    }
-
-    /**
-     * Tahap verifikasi berikutnya yang belum berstempel: 1, 2, atau null
-     * bila tidak ada yang bisa dikerjakan.
-     *
-     * Hasilnya dipakai antrian untuk MENENTUKAN isi checklist SOP modal
-     * (tahap yang masih kosong = yang harus diperiksa). Satu persetujuan
-     * admin menyelesaikan SEMUA tahap kosong sekaligus — periksa-dulu
-     * dijaga checklist, bukan lagi dengan memecah persetujuan per tahap.
-     */
-    public function nextVerificationStep(): ?int
-    {
-        // Kedua tahap hanya ada selama pengajuan KTP masih terbuka.
-        if ($this->ktp_submitted_at === null) {
-            return null;
-        }
-
-        if ($this->verified1_at === null) {
-            return 1;   // nomor HP
-        }
-
-        return $this->verified2_at === null ? 2 : null;   // KTP & NIK
-    }
-
-    /** Label singkat tiap tahap — untuk tombol dan pesan sukses. */
-    public static function verificationStepLabel(int $step): string
-    {
-        return match ($step) {
-            1       => 'Nomor HP',
-            2       => 'KTP & NIK',
-            default => 'Tidak diketahui',
-        };
+        return $query->where('status', UserStatus::Menunggu)
+            ->whereNotNull('ktp_submitted_at');
     }
 
     /**

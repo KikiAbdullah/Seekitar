@@ -1,7 +1,7 @@
 # 🎨 BRAND GUIDELINE — SEEKITAR
 
 **Dokumen Identitas & Panduan Merek**  
-**Versi:** 2.2 (Komprehensif & Siap Implementasi)
+**Versi:** 2.3 (Komprehensif & Siap Implementasi)
 
 | Informasi Dokumen    |                                                                                                           |
 | :------------------- | :-------------------------------------------------------------------------------------------------------- |
@@ -9,7 +9,7 @@
 | **Tagline**          | _Yang kamu butuhkan, ada di sekitar._                                                                     |
 | **Kategori**         | Platform Marketplace Hyperlocal Dua Arah                                                                  |
 | **Pemilik Merek**    | PT Seekitar Digital Nusantara                                                                             |
-| **Tanggal Efektif**  | 27 Juli s2026                                                                                             |
+| **Tanggal Efektif**  | 29 Juli 2026                                                                                              |
 | **Versi Dokumen**    | 2.0                                                                                                       |
 | **Penanggung Jawab** | Tim Brand & Kreatif                                                                                       |
 | **Sifat Dokumen**    | **Rahasia Internal** – hanya untuk pihak yang terlibat langsung dalam produksi komunikasi merek Seekitar. |
@@ -630,8 +630,8 @@ Kepercayaan adalah fondasi marketplace lokal. Identitas visual badge harus jelas
 
 | Level | Nama Badge                  | Ikon                     | Syarat                                      | Fakta penentunya |
 | :---- | :-------------------------- | :----------------------- | :------------------------------------------ | :--------------- |
-| 1     | **Nomor Terverifikasi**     | Telepon + centang (biru) | OTP WhatsApp                                | Setiap pengguna terdaftar (masuk lewat OTP; `verified1_at` menandainya) |
-| 2     | **Identitas Terverifikasi** | KTP + centang (biru)     | Unggah KTP & selfie, lolos verifikasi admin | `verified2_at` terisi |
+| 1     | **Nomor Terverifikasi**     | Telepon + centang (biru) | OTP WhatsApp                                | Setiap pengguna terdaftar — masuknya membuktikan OTP (buktinya peristiwa OTP yang cocok di nomornya sendiri, bukan stempel kolom) |
+| 2     | **Identitas Terverifikasi** | KTP + centang (biru)     | Unggah KTP & selfie, lolos verifikasi admin | `verified_at` terisi |
 | 3     | **Usaha Terverifikasi**     | Toko + centang (biru)    | Verifikasi lokasi & informasi usaha         | Memiliki ≥ 1 toko `verification_status = 'verified'` |
 
 > Level adalah **turunan murni** (`User::verificationLevel`), bukan kolom

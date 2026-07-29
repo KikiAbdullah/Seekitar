@@ -110,11 +110,11 @@ class RolesAndPermissionsSeeder extends Seeder
             [
                 'name'  => 'Super Admin',
                 'email' => $email,
-                // Stempel == status "terverifikasi"; khusus akun staf ini
+                // Stempel + status == "terverifikasi"; khusus akun staf ini
                 // identitasnya dianggap sudah ditinjau. "Pro" tidak perlu
                 // ditulis — ia turunan dari toko tervalidasi.
-                'verified1_at' => now(),
-                'verified2_at' => now(),
+                'status'      => \App\Enums\UserStatus::Terverifikasi,
+                'verified_at' => now(),
             ],
         );
 

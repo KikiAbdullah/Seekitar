@@ -21,13 +21,15 @@ class UsersDataTable
             ->select([
                 'id', 'phone', 'name', 'email', 'address',
                 'rating_avg', 'total_reviews',
-                // verified2_at ikut dipilih hanya untuk ikon centang pada
-                // nama — bukan untuk ditampilkan sebagai kolom sendiri.
-                'is_blocked', 'ktp_submitted_at', 'verified2_at', 'created_at',
+                // status & verified_at ikut dipilih untuk lencana kedudukan
+                // dan ikon centang pada nama — bukan kolom tampilan sendiri.
+                'status', 'ktp_submitted_at', 'verified_at', 'created_at',
             ]);
 
-        if ($request->filled('is_blocked')) {
-            $query->where('is_blocked', $request->boolean('is_blocked'));
+        // Filter kedudukan dari select tabel: nilai = nilai enum mentahnya,
+        // sehingga tidak ada pemetaan kedua yang bisa menyimpang.
+        if ($request->filled('status')) {
+            $query->where('status', $request->string('status')->toString());
         }
 
         return DataTables::eloquent($query)
@@ -42,11 +44,13 @@ class UsersDataTable
             ->addColumn('rating', fn (User $u) => (int) $u->total_reviews > 0
                 ? sprintf('★ %s (%d)', number_format((float) $u->rating_avg, 1, ',', '.'), $u->total_reviews)
                 : '—')
-            ->addColumn('status', fn (User $u) => $u->is_blocked ? 'Diblokir' : 'Aktif')
+            // Lencana kedudukan dirender Blade supaya warna enum tidak
+            // diduplikasi di PHP — satu sumber: UserStatus::color().
+            ->editColumn('status', fn (User $u) => view('admin.users._status', ['user' => $u])->render())
             ->addColumn('action', fn (User $u) => view('admin.users._actions', ['user' => $u])->render())
             // Kolom hasil render HTML tidak boleh di-escape ulang; sisanya
             // TETAP di-escape oleh Blade.
-            ->rawColumns(['name', 'action'])
+            ->rawColumns(['name', 'status', 'action'])
             // Kolom aksi tidak mewakili data, jadi mengurutkannya tidak
             // bermakna dan hanya menghasilkan SQL yang salah.
             ->toJson();

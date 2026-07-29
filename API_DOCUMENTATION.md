@@ -1,9 +1,17 @@
 # 📘 API DOCUMENTATION – SEEKITAR
 
-**Versi:** 2.2 (Production‑Ready)  
-**Tanggal Publikasi:** 27 Juli 2026  
+**Versi:** 2.3 (Production‑Ready)  
+**Tanggal Publikasi:** 29 Juli 2026  
 **Backend:** Laravel 13 · PHP 8.3+ · Sanctum 4
 
+> **Perubahan 2.3** — verifikasi pengguna menjadi SATU langkah: OTP sudah
+> membuktikan nomor HP, jadi "tahap 1" beserta stempelnya dihapus;
+> persetujuan admin kini menstempel `verified_*` tunggal dan menggerakkan
+> kolom kedudukan `status` (`menunggu|terverifikasi|ditolak|diblokir`)
+> (§2.5, §10.1). Kontrak klien tidak berubah: `verification_level` tetap
+> turunan baca-saja, dan filter/blokir admin memakai nama yang sama —
+> hanya sumber datanya yang pindah ke `users.status` (§10.4).
+>
 > **Perubahan 2.2** — kontrak diselaraskan dengan `seekitar-server` terkini:
 > `verification_level` di JSON adalah turunan baca-saja (§2.2); unggah ulang
 > KTP selalu boleh dan membuka peninjauan ulang (§2.5); alur ganti nomor HP
@@ -301,10 +309,13 @@ lewat hash terpisah, tidak lewat kolom terenkripsi).
 
 **Unggah ulang SELALU boleh** — termasuk oleh akun yang sudah terverifikasi.
 Konsekuensinya (aturan perubahan data): penggantian berkas dari sisi
-pengguna mengosongkan stempel `verified2_*`, sehingga `verification_level`
+pengguna mengosongkan stempel `verified_*` (bila sudah ada) dan
+mengembalikan kedudukan ke `menunggu`, sehingga `verification_level`
 turun kembali ke 1 dan antrian admin terbuka lagi sampai berkas baru
-disetujui. Perubahan data lewat panel admin sebaliknya tidak pernah
-menyentuh stempel.
+disetujui. Jejak penolakan sebelumnya (`rejected_*`) sengaja
+dipertahankan — itulah konteks yang dibaca admin saat menilai ulang —
+dan baru dibersihkan saat berkasnya disetujui. Perubahan data lewat panel
+admin sebaliknya tidak pernah menyentuh stempel.
 
 **Response 200:** (data user terkini)
 
@@ -312,7 +323,7 @@ menyentuh stempel.
 {
   "success": true,
   "message": "Berkas verifikasi diterima. Ditinjau maksimal 1x24 jam.",
-  "data": { "user": { "id": "uuid", "verification_level": 2 } }
+  "data": { "user": { "id": "uuid", "verification_level": 1 } }
 }
 ```
 
@@ -358,10 +369,11 @@ POST /auth/phone/verify-otp
 | `phone` | string | `required` — nomor baru yang sama dengan langkah 1 |
 | `otp` | string | `required` — 6 digit |
 
-Throttle 5 kali/menit per nomor. Berhasil: `phone` berubah dan stempel
-tahap 1 ditulis ulang oleh sistem (`verified1_at = sekarang`,
-`verified1_by = NULL` — NULL berarti dibuktikan OTP, bukan admin; bukti atas
-nomor lama tidak boleh mewariskan kepercayaan ke nomor baru).
+Throttle 5 kali/menit per nomor. Berhasil: HANYA `phone` yang berubah —
+OTP yang baru saja cocok sudah menjadi bukti pemilikan nomor terkini,
+sehingga tidak ada stempel nomor terpisah untuk diperbarui. Kedudukan
+akun (`status`) juga tidak gugur karena ganti nomor: yang dinilai admin
+adalah berkas identitasnya, bukan nomor teleponnya.
 
 **Response 200:** (data user terkini)
 
@@ -1442,9 +1454,9 @@ admin** (bukan API).
 GET /admin/verifications/pending
 ```
 
-Daftar antrian verifikasi KTP **pengguna** (`ktp_submitted_at` terisi,
-`verified2_at` kosong), diurutkan dari pengajuan terlama (SLA 1×24 jam),
-terpaginasi.
+Daftar antrian verifikasi identitas **pengguna** (kedudukan `menunggu`
+DAN `ktp_submitted_at` terisi), diurutkan dari pengajuan terlama
+(SLA 1×24 jam), terpaginasi.
 
 ```http
 POST /admin/verifications/users/{user_id}/approve
@@ -1455,13 +1467,16 @@ POST /admin/verifications/stores/{store_id}/reject
 
 Semantiknya sama dengan panel web (§DATABASE 4.1–4.2):
 
-- **Approve pengguna**: men-stempel semua tahap yang kosong
-  (`verified1_*` / `verified2_*`, tulis-sekali — yang sudah terisi tidak
-  ditimpa) dan membersihkan `ktp_rejected_reason`. "Level 2" adalah turunan
-  dari stempel ini, bukan kolom yang ditulis terpisah.
-- **Reject pengguna**: hanya mengisi `ktp_rejected_reason` (`reason` wajib)
-  dan mengosongkan `ktp_submitted_at` (keluar antrian); stempel lama tidak
-  disentuh.
+- **Approve pengguna**: SATU persetujuan = identitas terverifikasi —
+  menulis stempel `verified_by`/`verified_at` (tulis-sekali; yang sudah
+  terisi tidak pernah ditimpa), menggerakkan `status` ke `terverifikasi`,
+  dan membersihkan jejak `rejected_*`. "Level 2" adalah turunan dari
+  stempel ini, bukan kolom yang ditulis terpisah.
+- **Reject pengguna**: menggerakkan `status` ke `ditolak` berikut jejak
+  `rejected_by`/`rejected_at`/`rejected_reason` (`reason` wajib, maks
+  500) — alasan inilah yang sampai ke aplikasi pengguna. Stempel
+  `verified_*` tidak disentuh: penolakan berbicara tentang pengajuan yang
+  sedang terbuka, bukan mencabut persetujuan lama.
 - **Approve toko**: hanya sah dari antrian `pending`, dan syarat
   diperiksa ulang server — pemilik terverifikasi (no HP + KTP) serta foto
   etalase asli terunggah.
@@ -1512,7 +1527,9 @@ GET /admin/users
 
 Filter: `verification_level` (turunan — 1/2/3, satu definisi bersama
 `User::whereVerificationLevel`), `is_blocked` (boolean), `search`
-(nama/telepon). Terpaginasi (§12.2).
+(nama/telepon). Terpaginasi (§12.2). Nama filter `is_blocked`
+dipertahankan demi kompatibilitas klien, tetapi sumber datanya kini kolom
+`users.status` — `is_blocked=true` adalah pemetaan kedudukan `diblokir`.
 
 ```http
 PATCH /admin/users/{user_id}/block
@@ -1525,10 +1542,15 @@ Body:
 | `is_blocked` | `required\|boolean` — `false` = membuka blokir |
 | `reason` | `required_if:is_blocked,true\|max:255` |
 
-Memblokir mencabut **semua token** pengguna seketika — permintaan
-berikutnya mendapat **`423 Locked`** (§11). Toko miliknya ikut
-dinonaktifkan dan listing-nya hilang dari pencarian, tetapi pesanan yang
-sedang berjalan sengaja tidak diusik agar pihak lawan tidak dirugikan.
+Memblokir menggerakkan kedudukan ke `diblokir` (jejaknya
+`blocked_by`/`blocked_at`/`blocked_reason`) dan mencabut **semua token**
+pengguna seketika — permintaan berikutnya mendapat **`423 Locked`** (§11).
+Toko miliknya ikut dinonaktifkan dan listing-nya hilang dari pencarian,
+tetapi pesanan yang sedang berjalan sengaja tidak diusik agar pihak lawan
+tidak dirugikan. Membuka blokir mengembalikan kedudukan ke keadaan
+sebelum blokir (`terverifikasi` bila stempel `verified_at` masih ada,
+kalau tidak `menunggu`) dan mengosongkan jejak `blocked_*`; tokonya
+tidak ikut aktif otomatis.
 
 ### 10.5 Pengaturan Sistem — `permission:manage-settings`
 

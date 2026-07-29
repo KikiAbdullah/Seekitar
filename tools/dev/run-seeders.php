@@ -89,24 +89,25 @@ Schema::create('users', function (Blueprint $t) {
     $t->string('name', 100);
     $t->string('avatar_url', 500)->nullable();
     $t->string('address', 255)->nullable();
-    // TIDAK ADA verification_level: level turunan dari stempel (DATABASE.md §4.1).
+    // Kedudukan SATU kata (ENUM di MySQL; string di mock — SQLite tak kenal ENUM).
+    $t->string('status')->default('menunggu');
     $t->string('ktp_image', 500)->nullable();
     $t->string('selfie_image', 500)->nullable();
     $t->timestamp('ktp_submitted_at')->nullable();
-    $t->text('ktp_rejected_reason')->nullable();
-    // Stempel dua tahap (FK longgar — mock tidak memaksa constrained()).
-    $t->char('verified1_by', 36)->nullable();
-    $t->timestamp('verified1_at')->nullable();
-    $t->char('verified2_by', 36)->nullable();
-    $t->timestamp('verified2_at')->nullable();
+    // Jejak audit SATU verifikasi + blokir (FK longgar — mock tanpa constrained()).
+    $t->char('verified_by', 36)->nullable();
+    $t->timestamp('verified_at')->nullable();
+    $t->char('rejected_by', 36)->nullable();
+    $t->timestamp('rejected_at')->nullable();
+    $t->text('rejected_reason')->nullable();
+    $t->char('blocked_by', 36)->nullable();
+    $t->timestamp('blocked_at')->nullable();
+    $t->string('blocked_reason', 255)->nullable();
     // Reputasi pembeli — ditulis ReviewObserver (DATABASE.md §4.1).
     $t->decimal('rating_avg', 3, 2)->default(0);
     $t->unsignedInteger('total_reviews')->default(0);
     $t->string('nik', 255)->nullable();
     $t->char('nik_hash', 64)->nullable()->unique();
-    $t->boolean('is_blocked')->default(false);
-    $t->string('blocked_reason', 255)->nullable();
-    $t->timestamp('blocked_at')->nullable();
     $t->text('location')->nullable();          // POINT di MySQL
     $t->rememberToken();
     $t->softDeletes();
@@ -441,15 +442,15 @@ $slaLewat = DB::table('disputes')
     ->where('response_deadline', '<', now())->count();
 $cek('disputes: ada laporan lewat SLA untuk dasbor', $slaLewat > 0, "{$slaLewat} baris");
 
-// Definisi antrian TUNGGAL (User::pendingVerification): pengajuan terbuka,
-// bukan filter level — level memang bukan kolom lagi.
-$ktpAntri = DB::table('users')->whereNotNull('ktp_submitted_at')->whereNull('verified2_at')->count();
+// Definisi antrian TUNGGAL (User::pendingVerification): status menunggu
+// DAN berkas benar-benar sudah dikirim (ktp_submitted_at).
+$ktpAntri = DB::table('users')->where('status', 'menunggu')->whereNotNull('ktp_submitted_at')->count();
 $cek('users: antrian verifikasi KTP terisi', $ktpAntri > 0, "{$ktpAntri} baris");
 
 $tokoMenunggu = DB::table('stores')->where('verification_status', 'pending')->count();
 $cek('stores: antrian verifikasi toko terisi', $tokoMenunggu > 0, "{$tokoMenunggu} baris");
 
-$diblokir = DB::table('users')->where('is_blocked', true)->count();
+$diblokir = DB::table('users')->where('status', 'diblokir')->count();
 $cek('users: ada yang diblokir (filter admin)', $diblokir > 0, "{$diblokir} baris");
 
 // Setiap nilai ENUM status pesanan harus terwakili, kalau tidak filter panel

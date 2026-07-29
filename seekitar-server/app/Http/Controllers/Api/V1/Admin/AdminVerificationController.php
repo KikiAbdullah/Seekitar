@@ -32,26 +32,21 @@ class AdminVerificationController extends Controller
     /**
      * POST /admin/verifications/users/{user}/approve
      *
-     * Stempel persetujuan ADALAH kenaikan levelnya — sejak kolom
-     * verification_level dihapus, "level 2" murni turunan dari stempel ini.
-     * Tulis-sekali seperti panel web: tahap yang sudah terisi tidak ditimpa.
+     * SATU persetujuan, SATU stempel: admin menyatakan wajah, KTP, alamat,
+     * dan koordinat sesuai — statusnya berangkat ke terverifikasi. Stempel
+     * tulis-sekali seperti panel web: yang sudah terisi tidak pernah ditimpa.
      */
     public function approveUser(Request $request, User $user): JsonResponse
     {
-        $adminId = $request->user()->id;
-
-        if ($user->verified1_at === null) {
-            $user->verified1_by = $adminId;
-            $user->verified1_at = now();
+        if ($user->verified_at === null) {
+            $user->verified_by       = $request->user()->id;
+            $user->verified_at       = now();
+            $user->status            = \App\Enums\UserStatus::Terverifikasi;
+            $user->rejected_at       = null;
+            $user->rejected_by       = null;
+            $user->rejected_reason   = null;
+            $user->save();
         }
-
-        if ($user->verified2_at === null) {
-            $user->verified2_by = $adminId;
-            $user->verified2_at = now();
-        }
-
-        $user->ktp_rejected_reason = null;
-        $user->save();
 
         return $this->ok(['user' => new UserResource($user)]);
     }
@@ -65,8 +60,10 @@ class AdminVerificationController extends Controller
             'reason' => ['required', 'string', 'max:500'],
         ]);
 
-        $user->ktp_rejected_reason = $data['reason'];
-        $user->ktp_submitted_at    = null;
+        $user->status          = \App\Enums\UserStatus::Ditolak;
+        $user->rejected_by     = $request->user()->id;
+        $user->rejected_at     = now();
+        $user->rejected_reason = $data['reason'];
         $user->save();
 
         return $this->ok(['user' => new UserResource($user)]);

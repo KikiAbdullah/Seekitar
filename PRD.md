@@ -10,8 +10,8 @@ _“Yang kamu butuhkan, ada di sekitar.”_
 | :-------------------- | :------------------------------------------------------------------------ |
 | **Nama Produk**       | Seekitar                                                                  |
 | **Platform**          | Mobile App (Flutter) & Web App (Laravel 13 + Bootstrap 5.3.x) + Admin Dashboard |
-| **Versi Dokumen**     | 2.2 (Production Ready – MySQL)                                            |
-| **Tanggal**           | 27 Juli 2026                                                              |
+| **Versi Dokumen**     | 2.3 (Production Ready – MySQL)                                            |
+| **Tanggal**           | 29 Juli 2026                                                              |
 | **Penulis**           | Tim Pengembang Seekitar                                                   |
 | **Status**            | Final – Siap Implementasi                                                 |
 
@@ -349,7 +349,7 @@ Definisinya di sini agar tidak ditafsirkan berbeda-beda saat perencanaan Fase 2:
 **5.3.2 Level Verifikasi (KTP & Toko)**
 
 - **Level 1 (Pengguna Biasa):** Hanya nomor HP, bisa membeli, memasang permintaan.
-- **Level 2 (Pengguna Terverifikasi):** Unggah foto KTP dan selfie dengan KTP. Ditinjau manual oleh admin (maks 1x24 jam). Setelah lolos, bisa membuka toko.
+- **Level 2 (Pengguna Terverifikasi):** Unggah foto KTP dan selfie dengan KTP. Ditinjau manual oleh admin (maks 1x24 jam) dalam SATU penilaian — wajah, KTP, alamat, dan titik domisili — sedangkan nomor HP tidak ikut dinilai: OTP yang dikirim ke nomornya sendiri sudah menjadi bukti pemilikannya. Setelah lolos, bisa membuka toko.
 - **Level 3 (Penyedia Pro):** Mengisi data usaha (NPWP opsional), foto tempat usaha, verifikasi lokasi via GPS. Lolos verifikasi mendapat lencana “Pro” dan peringkat lebih tinggi dalam broadcast.
 
 **5.3.3 Pembukaan Toko & Pengaturan**
@@ -583,14 +583,16 @@ pesanan ke `selesai`. Tidak ada nilai ENUM `dikembalikan`.
 | name | VARCHAR(100) | |
 | avatar_url | VARCHAR(500) NULL | |
 | location | POINT SRID 4326 | Lokasi default user |
-| verified1_at | TIMESTAMP NULL | Stempel tahap 1 (nomor HP) — ditulis sistem saat OTP cocok |
-| verified2_at | TIMESTAMP NULL | Stempel tahap 2 (KTP) — terisi = pengguna terverifikasi penuh |
+| status | ENUM | Kedudukan akun: `menunggu` (bawaan), `terverifikasi`, `ditolak`, `diblokir` |
+| verified_at / verified_by | TIMESTAMP / CHAR(36) NULL | Stempel SATU verifikasi identitas (wajah·KTP·alamat·titik) — terisi = terverifikasi penuh |
+| rejected_at / rejected_by / rejected_reason | NULL | Jejak penolakan (dibersihkan saat akhirnya disetujui) |
+| blocked_at / blocked_by / blocked_reason | NULL | Jejak pemblokiran — yang diblokir, tokonya ikut nonaktif |
 | created_at | TIMESTAMP | |
 | updated_at | TIMESTAMP | |
 
 > **`verification_level` (1–3) tetap dipakai sebagai KONSEP, tetapi bukan
 > kolom** — ia turunan murni dari stempel di atas + status toko:
-> 1 = terdaftar (masuk OTP), 2 = `verified2_at` terisi, 3 = memiliki toko
+> 1 = terdaftar (masuk OTP), 2 = `verified_at` terisi, 3 = memiliki toko
 > `verified`. Detailnya di DATABASE.md §4.1.
 
 **`stores`**

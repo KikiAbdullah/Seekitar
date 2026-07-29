@@ -9,15 +9,15 @@
 
     <form action="{{ route('admin.users.block', $user) }}" method="POST" class="d-inline">
         @csrf
-        <input type="hidden" name="action" value="{{ $user->is_blocked ? 'unblock' : 'block' }}">
-        @unless ($user->is_blocked)
+        <input type="hidden" name="action" value="{{ $user->isBlocked() ? 'unblock' : 'block' }}">
+        @unless ($user->isBlocked())
             <input type="hidden" name="reason" value="Ditandai admin dari daftar pengguna">
         @endunless
         <button type="submit"
-                class="btn btn-sm {{ $user->is_blocked ? 'btn-outline-success' : 'btn-outline-danger' }}"
-                data-seekitar-confirm="Status blokir {{ $user->name }} akan diubah.">
-            <i class="ti {{ $user->is_blocked ? 'ti-lock-open' : 'ti-ban' }} me-1" aria-hidden="true"></i>
-            {{ $user->is_blocked ? 'Buka Blokir' : 'Blokir' }}
+                class="btn btn-sm {{ $user->isBlocked() ? 'btn-outline-success' : 'btn-outline-danger' }}"
+                data-seekitar-confirm="Kedudukan {{ $user->name }} akan diubah.">
+            <i class="ti {{ $user->isBlocked() ? 'ti-lock-open' : 'ti-ban' }} me-1" aria-hidden="true"></i>
+            {{ $user->isBlocked() ? 'Buka Blokir' : 'Blokir' }}
         </button>
     </form>
 @endcan

@@ -32,11 +32,11 @@ class ModelSchemaTest extends TestCase
 
     private function seller(): User
     {
-        // "Penjual yang boleh buka toko" = berstempel KTP; kolom level
-        // sudah dihapus — status terverifikasi murni turunan stempel ini.
+        // "Penjual yang boleh buka toko" = identitasnya disetujui admin:
+        // status terverifikasi + stempel verified_at (SATU verifikasi).
         return User::create([
             'phone' => '628222222222', 'name' => 'Yanto Wijaya',
-            'verified1_at' => now(), 'verified2_at' => now(),
+            'status' => \App\Enums\UserStatus::Terverifikasi, 'verified_at' => now(),
         ]);
     }
 

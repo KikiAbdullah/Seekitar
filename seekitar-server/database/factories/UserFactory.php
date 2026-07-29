@@ -40,32 +40,35 @@ class UserFactory extends Factory
         $phone = '628' . str_pad((string) (++self::$phoneSeq), 9, '0', STR_PAD_LEFT);
 
         return [
-            'id'         => (string) Str::uuid7(),
-            'phone'      => $phone,
-            'name'       => fake('id_ID')->name(),
-            'is_blocked' => false,
+            'id'     => (string) Str::uuid7(),
+            'phone'  => $phone,
+            'name'   => fake('id_ID')->name(),
+            // 'menunggu' juga default kolomnya — ditulis eksplisit supaya
+            // kontrak kedudukan akun terbaca di sini, bukan di DDL saja.
+            'status' => \App\Enums\UserStatus::Menunggu,
         ];
     }
 
-    /** Tanpa stempel KTP — belum boleh membuka toko (keadaan default). */
+    /** Belum pernah mengirim berkas — belum boleh membuka toko (default). */
     public function basic(): static
     {
         return $this->state(fn () => [
-            'verified1_at' => null,
-            'verified2_at' => null,
+            'status'     => \App\Enums\UserStatus::Menunggu,
+            'verified_at' => null,
         ]);
     }
 
     /**
-     * KTP disetujui admin: syarat minimum membuka toko (PRD §5.3.2).
-     * "Level 2" tidak ditulis ke mana-mana — ia turunan dari stempel ini.
+     * Identitas disetujui admin: syarat minimum membuka toko (PRD §5.3.2).
+     * "Level 2" kontrak API tidak ditulis ke mana-mana — ia turunan dari
+     * stempel ini.
      */
     public function verified(): static
     {
         return $this->state(fn () => [
+            'status'           => \App\Enums\UserStatus::Terverifikasi,
             'ktp_submitted_at' => now()->subDays(fake()->numberBetween(3, 60)),
-            'verified1_at'     => now()->subDays(fake()->numberBetween(2, 59)),
-            'verified2_at'     => now()->subDays(fake()->numberBetween(1, 58)),
+            'verified_at'      => now()->subDays(fake()->numberBetween(1, 58)),
             'address'          => fake('id_ID')->streetAddress(),
         ]);
     }
@@ -85,15 +88,15 @@ class UserFactory extends Factory
     }
 
     /**
-     * Menunggu peninjauan KTP: berkas SUDAH dikirim tapi stempel tahap 2
-     * belum ada.
+     * Menunggu tinjauan: berkas SUDAH dikirim dan kedudukannya `menunggu`.
      *
-     * Inilah definisi antrian verifikasi di VerificationController — bukan
-     * sekadar "punya ktp_image".
+     * Inilah definisi antrian verifikasi di VerificationController
+     * (scope pendingVerification) — bukan sekadar "punya ktp_image".
      */
     public function menungguKtp(): static
     {
         return $this->state(fn () => [
+            'status'           => \App\Enums\UserStatus::Menunggu,
             'ktp_submitted_at' => now()->subHours(fake()->numberBetween(1, 40)),
             'ktp_image'        => 'ktp/'.Str::uuid7().'.jpg',
             'selfie_image'     => 'selfie/'.Str::uuid7().'.jpg',
@@ -103,7 +106,7 @@ class UserFactory extends Factory
     public function diblokir(string $alasan = 'Melanggar ketentuan layanan.'): static
     {
         return $this->state(fn () => [
-            'is_blocked'     => true,
+            'status'         => \App\Enums\UserStatus::Diblokir,
             'blocked_reason' => $alasan,
             'blocked_at'     => now()->subDays(fake()->numberBetween(1, 30)),
         ]);

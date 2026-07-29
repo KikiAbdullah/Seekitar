@@ -1,18 +1,30 @@
 # 📄 Seekitar – Server Implementation Guide
 
-**Versi:** 2.2 (Ultra‑Detailed · Production‑Ready)  
-**Tanggal:** 27 Juli 2026  
+**Versi:** 2.3 (Ultra‑Detailed · Production‑Ready)  
+**Tanggal:** 29 Juli 2026  
 **Target:** Laravel 13 + PHP 8.3+ + MySQL 8.0.34+ + Bootstrap 5.3.x + Yajra Datatables 13 + Spatie Permission 8
 
 > 📌 Versi mengacu pada [`TECH_STACK.md`](TECH_STACK.md) sebagai sumber kebenaran tunggal.
 
+> **Perubahan 2.3** — verifikasi pengguna menjadi SATU langkah (§9.3):
+> OTP yang dikirim ke nomornya sendiri sudah membuktikan pemilikan nomor
+> HP, jadi "tahap 1" beserta stempelnya dihapus; penilaian admin yang tersisa
+> (wajah ↔ KTP ↔ NIK ↔ alamat ↔ titik domisili) selesai satu klik. Jejak
+> auditnya kini tunggal — `verified_*`, `rejected_*`, `blocked_*` — dan
+> kedudukan eksplisitnya disimpan di `users.status` (`UserStatus`;
+> `menunggu|terverifikasi|ditolak|diblokir`). Pengguna yang diblokir
+> otomatis menonaktifkan tokonya. Formulir sunting pengguna kini lengkap:
+> unggah avatar ber-pratinjau, alamat, dan pin lokasi di peta sebagaimana
+> halaman toko (§9.4).
+>
 > **Perubahan 2.2** — panduan diselaraskan dengan implementasi terkini:
 > antrian & logika verifikasi ditulis ulang sesuai kode (§9.3 — stempel
 > tulis-sekali, OTP men-stempel tahap 1, satu klik semua tahap, syarat
 > persetujuan toko diperiksa ulang server); manajemen pengguna mengikuti
 > `UsersDataTable` + halaman sunting lengkap (§9.4); penyimpanan berkas KTP
 > memakai disk `local` privat + route streaming berizin (§18A.3); seeder
-> men-stempel `verified*_at`, bukan kolom level.
+> men-stempel `verified*_at`, bukan kolom level. (Ditulis ulang 2.3: dua
+> stempel tahapnya sudah dilebur menjadi satu `verified_*`.)
 
 ---
 
@@ -1825,24 +1837,33 @@ terlanjur ada siklus di data lama.
 
 **Index Verifikasi Pengguna (`/admin/verifications/users`):**
 
-- Antriannya BUKAN filter level — satu definisi bersama
-  `User::pendingVerification()`: pengajuan KTP terbuka
-  (`ktp_submitted_at` terisi DAN `verified2_at` kosong), diurutkan dari
+- Antriannya BUKAN filter level maupun tebakan kolom — satu definisi
+  bersama `User::pendingVerification()`: kedudukan `menunggu` DAN
+  berkasnya sudah masuk (`ktp_submitted_at` terisi), diurutkan dari
   pengajuan TERLAMA (SLA peninjauan 1×24 jam — yang paling lama menunggu
-  didahulukan).
-- Kolom: Nama + status pengajuan, No HP, stempel Tahap 1 & Tahap 2
-  (siapa & kapan — tahap 1 umumnya bertuliskan "Sistem (OTP)"), Aksi.
-- Aksi: klik baris → modal berkas (KTP/selfie/NIK) → centang checklist
-  SOP → satu klik **Verifikasi Pengguna** menyelesaikan SEMUA tahap yang
-  masih kosong sekaligus. Tombol Setuju terkunci sampai seluruh checklist
+  didahulukan). Otomatis tidak antre: akun baru tanpa berkas (belum minta
+  dinilai), yang sudah terverifikasi, yang ditolak sambil menyiapkan
+  perbaikan, dan yang diblokir.
+- Kolom: Pengguna (+ konteks "pengajuan ulang" bila jejak `rejected_*`
+  masih terisi — berkas ini pernah dikembalikan, dan admin menilai apakah
+  masalah lamanya sudah beres), Nomor HP (bertanda "dibuktikan OTP" —
+  nomornya bukan barang yang masih dinilai di sini), Domisili, Umur
+  pengajuan, Aksi.
+- Aksi: klik baris → modal SOP 3 langkah membandingkan wajah ↔ KTP ↔
+  NIK ↔ alamat ↔ titik koordinat (lengkap peta kecil dan tombol "Cek
+  Titik di Google Maps") → satu klik **Verifikasi Pengguna** menstempel
+  `verified_by`/`verified_at` sekaligus menaikkan kedudukan ke
+  `terverifikasi`. Tombol Setuju terkunci sampai seluruh checklist
   dicentang (`public/js/checklist-gate.js`, dipakai bersama antrian toko).
 - Tolak: collapse form di dalam modal yang sama, alasan wajib — tanpa
-  alasan pengguna akan mengirim ulang berkas yang sama.
+  alasan pengguna akan mengirim ulang berkas yang sama. Penolakan
+  menjatuhkan kedudukan ke `ditolak` beserta jejak `rejected_*` yang
+  juga sampai ke aplikasi pengguna.
 
 **Index Verifikasi Toko (`/admin/verifications/stores`):**
 
 - Antrian: toko `verification_status = 'pending'`, terlama dulu; pemilik
-  ikut dimuat (`owner:id,name,phone,verified2_at`) — kelayakan pemilik
+  ikut dimuat (`owner:id,name,phone,verified_at`) — kelayakan pemilik
   adalah bagian dari penilaian.
 - Modal SOP 3 langkah (alamat & pemilik → foto etalase ASLI → koordinat di
   peta) + checklist wajib. Foto dibaca dari kolom MENTAH
@@ -1851,63 +1872,66 @@ terlanjur ada siklus di data lama.
 
 #### Logika Approve & Reject (implementasi aktual)
 
-**Pengguna — stempel tulis-sekali, baris dikunci, satu klik semua tahap:**
+**Pengguna — SATU verifikasi, stempel tulis-sekali, baris dikunci:**
 
 ```php
 public function verifyUser(Request $request, User $user): RedirectResponse
 {
     $adminId = $request->user()->id;
 
-    $tahapSelesai = DB::transaction(function () use ($user, $adminId): array {
+    $disetujui = DB::transaction(function () use ($user, $adminId): bool {
         $antrian = User::lockForUpdate()->findOrFail($user->id);
 
-        $selesai = [];
-
-        // Tahap 1 biasanya SUDAH distempel sistem saat OTP daftar cocok;
-        // cabang ini hanya untuk data lama/khusus yang lolos tanpa OTP.
-        if ($antrian->verified1_at === null) {
-            $antrian->verified1_by = $adminId;
-            $antrian->verified1_at = now();
-            $selesai[] = 1;
+        // Diblokir, atau sudah punya stempel → bukan antrian lagi; stempel
+        // tulis-sekali tidak pernah ditimpa.
+        if ($antrian->isBlocked() || $antrian->verified_at !== null) {
+            return false;
         }
 
-        if ($antrian->verified2_at === null) {
-            // Stempel tahap 2 ADALAH "level 2"-nya: level murni turunan,
-            // tidak ada kolom lain untuk ditulis.
-            $antrian->verified2_by        = $adminId;
-            $antrian->verified2_at        = now();
-            $antrian->ktp_rejected_reason = null;
-            $selesai[] = 2;
-        }
+        $antrian->verified_by     = $adminId;
+        $antrian->verified_at     = now();
+        $antrian->status          = \App\Enums\UserStatus::Terverifikasi;
 
+        // Jejak penolakan dibersihkan di SINI — bukan saat pengguna kirim
+        // ulang berkas — supaya selama menunggu, admin tetap melihat
+        // konteks "pengajuan ulang: terakhir ditolak karena X".
+        $antrian->rejected_by     = null;
+        $antrian->rejected_at     = null;
+        $antrian->rejected_reason = null;
         $antrian->save();
 
-        return $selesai;
+        return true;
     });
 
-    if ($tahapSelesai === []) {
-        return back()->with('error', "Tidak ada tahap yang menunggu untuk {$user->name}.");
+    if (! $disetujui) {
+        return back()->with('error',
+            "Verifikasi {$user->name} sudah diproses sebelumnya — stempel tidak bisa ditimpa.");
     }
 
-    return back()->with('success',
-        "Verifikasi {$user->name} selesai (tahap ".implode(' & ', $tahapSelesai).").");
+    return back()->with('success', "Identitas {$user->name} terverifikasi.");
 }
 ```
 
-**Pengguna — penolakan hanya membuka ulang antrian:**
+**Pengguna — penolakan menjatuhkan kedudukan berikut jejaknya:**
 
 ```php
 public function rejectUser(RejectVerificationRequest $request, User $user): RedirectResponse
 {
-    // Stempel verified_* TIDAK disentuh: penolakan berbicara tentang
-    // pengajuan yang sedang terbuka, bukan mencabut persetujuan lama.
-    $user->ktp_rejected_reason = $request->reason();
-    $user->ktp_submitted_at    = null;   // keluar antrian; unggah ulang membukanya lagi
+    $user->status          = \App\Enums\UserStatus::Ditolak;
+    $user->rejected_by     = $request->user()->id;
+    $user->rejected_at     = now();
+    $user->rejected_reason = $request->reason();
     $user->save();
 
-    return back()->with('success', "Verifikasi {$user->name} ditolak.");
+    return back()->with('success', "Berkas {$user->name} ditolak — alasan terkirim ke aplikasinya.");
 }
 ```
+
+Stempel `verified_*` TIDAK disentuh oleh penolakan: ia berbicara tentang
+pengajuan yang sedang terbuka. Kalau pemiliknya mengganti berkas lewat
+API, kedudukan kembali `menunggu` dan siklusnya dimulai lagi — jejak
+`rejected_*` sengaja dipertahankan sebagai konteks pengajuan ulang,
+baru dibersihkan saat identitasnya akhirnya disetujui.
 
 **Toko — dua syarat diperiksa ulang SERVER di titik persetujuan:**
 
@@ -1955,46 +1979,54 @@ $toko->save();
 `'reason' => 'required|string|min:10|max:500'`) — penolakan tanpa alasan
 membuat pengguna mengajukan ulang berkas yang sama.
 
-> ⚠️ **Antrian pengguna dinilai SATU KLIK, bukan dua.** Desain awal memecah
-> persetujuan menjadi dua klik terpisah (tahap 1 lalu tahap 2). Praktiknya
-> itu hanya menggandakan klik — tahap 1 sudah distempel sistem saat OTP
-> cocok, dan modal kini memagari tinjauan lewat checklist SOP. Yang tidak
-> berubah: stempel tulis-sekali dan penguncian baris.
+> ⚠️ **Verifikasi pengguna itu SATU, bukan bertahap.** Desain awal punya
+> tahap 1 ("verifikasi nomor") dan tahap 2 ("verifikasi KTP") — padahal
+> tahap 1 tidak menilai apa-apa: OTP yang dikirim ke nomor itu sendiri
+> sudah membuktikan pemilikannya, lebih kuat daripada mata admin. Maka
+> bukti nomor cukup menjadi prasyarat sistem (tanpa stempel), dan
+> satu-satunya penilaian manusia adalah identitas: wajah ↔ KTP ↔ NIK ↔
+> alamat ↔ titik, diselesaikan satu klik dengan stempel `verified_*`
+> tunggal. Yang tidak berubah: stempel tulis-sekali dan penguncian baris.
 
 ### 9.4 Manajemen Pengguna
 
 **Index (`/admin/users`):**
 
-- Datatables: Nama (+ ikon centang hijau bila KTP terverifikasi), Telepon,
-  Rating, Status, Terdaftar, Email, Alamat, Aksi.
-- Filter: Status blokir (select). Tidak ada filter level — level murni
+- Datatables: Nama (+ ikon centang hijau bila identitasnya terverifikasi),
+  Telepon, Rating, Kedudukan, Terdaftar, Email, Alamat, Aksi.
+- Filter: Kedudukan (select, opsinya persis `UserStatus::values()` —
+  `menunggu`, `terverifikasi`, `ditolak`, `diblokir` — jadi pilihan di UI
+  tidak bisa menyimpang dari enum). Tidak ada filter level: level murni
   turunan dan sengaja tidak ditampilkan sebagai kolom (DATABASE.md §4.1).
   Untuk API admin, filter `verification_level` tetap tersedia lewat satu
   definisi bersama `User::scopeWhereVerificationLevel()`.
 - Aksi: Detail, Sunting, Blokir/Buka blokir.
 
 **Sumber data dipisah ke kelas `App\DataTables\UsersDataTable`** supaya
-definisi kolom/filter bisa diuji tanpa lapisan HTTP. Kolom nama dirender
-lewat Blade (`admin.users._nama`) dan masuk `rawColumns(['name','action'])`
-— sisanya tetap lolos escaping DataTables:
+definisi kolom/filter bisa diuji tanpa lapisan HTTP. Kolom nama dan
+lencana kedudukan dirender lewat Blade (`admin.users._nama` dan
+`admin.users._status` — warnanya satu sumber dari `UserStatus::color()`),
+masuk `rawColumns(['name','status','action'])` — sisanya tetap lolos
+escaping DataTables:
 
 ```php
 $query = User::query()->select([
     'id', 'phone', 'name', 'email', 'address',
     'rating_avg', 'total_reviews',
-    // verified2_at ikut dipilih hanya untuk ikon centang pada nama.
-    'is_blocked', 'ktp_submitted_at', 'verified2_at', 'created_at',
+    // status & verified_at ikut dipilih untuk lencana kedudukan
+    // dan ikon centang pada nama — bukan kolom tampilan sendiri.
+    'status', 'ktp_submitted_at', 'verified_at', 'created_at',
 ]);
 
-if ($request->filled('is_blocked')) {
-    $query->where('is_blocked', $request->boolean('is_blocked'));
+if ($request->filled('status')) {
+    $query->where('status', $request->string('status')->toString());
 }
 
 return DataTables::eloquent($query)
     ->editColumn('name', fn (User $u) => view('admin.users._nama', ['user' => $u])->render())
-    ->addColumn('status', fn (User $u) => $u->is_blocked ? 'Diblokir' : 'Aktif')
+    ->editColumn('status', fn (User $u) => view('admin.users._status', ['user' => $u])->render())
     ->addColumn('action', fn (User $u) => view('admin.users._actions', ['user' => $u])->render())
-    ->rawColumns(['name', 'action'])
+    ->rawColumns(['name', 'status', 'action'])
     ->toJson();
 ```
 
@@ -2005,26 +2037,51 @@ DataTable di server) dipakai seluruh tabel lain yang punya filter
 
 **Sunting Pengguna (`/admin/users/{user}/edit`, halaman penuh):**
 
-- Strip identitas anti-salah-orang (avatar + nama + nomor + lencana KTP).
+- Strip identitas anti-salah-orang (avatar + nama + nomor + lencana
+  `UserStatus`) — admin mengedit ORANG, jadi siapa yang sedang terbuka
+  harus jelas di setiap layar.
 - **Data Akun**: Nama; Nomor WA readonly — nomor adalah kredensial masuk
   (OTP), penggantiannya hanya milik pemilik lewat aplikasi dengan OTP ke
   nomor baru; Email (unik, nullable — hanya staf panel yang masuk pakai
-  email); Alamat; Foto Profil (JPEG/PNG ≤ 2 MB, disk public).
+  email); Foto Profil (choose file dengan pratinjau instan di browser
+  sebelum tersimpan, JPEG/PNG ≤ 2 MB, disk public).
+- **Domisili**: Alamat + titik koordinat lewat peta Leaflet — sama seperti
+  halaman toko: klik/geser penanda mengisi kolom lintang/bujur (sinkron
+  dua arah; koma desimal ditoleransi), plus tombol hapus titik. Server
+  hanya menerima pasangan lengkap:
+
+  ```php
+  'latitude'  => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
+  'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
+  ```
+
+  lalu menulisnya lewat `HasLocation::setLocation()` — kolom POINT memang
+  tidak bisa diisi mass-assign (DATABASE.md §4.1).
 - **Identitas (KTP)**: NIK (`digits:16`; keunikan dicek lewat `nik_hash`
   karena kolomnya terenkripsi tidak bisa di-`WHERE`); unggah ulang berkas
   KTP/selfie khusus pemegang izin `verify-users` — digerbang di blade
   DAN controller, disimpan di disk privat `local` (UU PDP).
-- **Aturan 5**: penyuntingan admin TIDAK pernah menyentuh stempel
-  `verified1/2_*` — stempel adalah fakta audit "siapa menyetujui, kapan".
-  Kebalikannya, unggah ulang berkas oleh pengguna sendiri lewat API
-  mengosongkan `verified2_*` dan membuka antrian lagi.
+- **Aturan 5**: penyuntingan admin TIDAK pernah menyentuh stempel maupun
+  kedudukan — `verified_at`/`verified_by` adalah fakta audit "siapa
+  menyetujui, kapan". Kebalikannya, unggah ulang berkas oleh pengguna
+  sendiri lewat API mengosongkan stempelnya dan mengembalikan kedudukan
+  ke `menunggu` — kepercayaan tidak boleh berdiri di atas bukti yang
+  sudah diganti.
 
 **Blokir/Buka blokir (`/admin/users/{user}/block`):**
 
-- Memblokir WAJIB mencabut token Sanctum-nya — tanpa itu sesi yang sudah
-  berjalan tetap hidup sampai token kedaluwarsa — sekaligus menonaktifkan
-  seluruh tokonya (`is_active = false`). Alasan blokir wajib diisi dan
-  ditampilkan ke pengguna saat loginnya ditolak (respons `423`).
+- Memblokir menjatuhkan kedudukan ke `diblokir` (jejaknya di
+  `blocked_by`/`blocked_at`/`blocked_reason`) dan WAJIB mencabut token
+  Sanctum-nya — tanpa itu sesi yang sudah berjalan tetap hidup sampai
+  token kedaluwarsa — sekaligus menonaktifkan seluruh tokonya
+  (`is_active = false`): orang yang diblokir tidak boleh tokonya tetap
+  menerima pesanan. Alasan blokir wajib diisi dan ditampilkan ke pengguna
+  saat loginnya ditolak (respons `423`).
+- Membuka blokir mengembalikan kedudukan ke keadaan sebelum blokir
+  (stempel `verified_at` masih ada → `terverifikasi`; kalau belum ada →
+  `menunggu`) dan mengosongkan jejak `blocked_*`, tetapi tokonya TIDAK
+  otomatis ikut aktif lagi — pengaktifan kembali adalah keputusan terpisah
+  yang layak ditinjau ulang satu per satu.
 
 ### 9.5 Manajemen Toko
 
@@ -3405,7 +3462,7 @@ public function media(User $user, string $kind): StreamedResponse
 }
 ```
 
-**Retensi:** setelah tahap 2 disetujui (`verified2_at` terisi), berkas KTP
+**Retensi:** setelah identitasnya disetujui (`verified_at` terisi), berkas KTP
 boleh dihapus sesuai kebijakan retensi — data yang tidak disimpan tidak
 bisa bocor.
 
@@ -3666,10 +3723,11 @@ public function run(): void
             [
                 'name'  => 'Super Admin',
                 'email' => config('seekitar.super_admin_email'),
-                // Stempel == status "terverifikasi" (tidak ada kolom level
-                // untuk ditulis); Pro tetap turunan dari toko tervalidasi.
-                'verified1_at' => now(),
-                'verified2_at' => now(),
+                // Stempel + status == "terverifikasi"; khusus akun staf ini
+                // identitasnya dianggap sudah ditinjau. "Pro" tidak perlu
+                // ditulis — ia turunan dari toko tervalidasi.
+                'status'      => \App\Enums\UserStatus::Terverifikasi,
+                'verified_at' => now(),
             ],
         );
         $user->password ??= config('seekitar.super_admin_password');   // hanya saat akun baru
