@@ -81,7 +81,7 @@
                                 @else
                                     <span class="rounded-circle bg-light-primary text-primary fw-semibold d-inline-flex align-items-center justify-content-center flex-shrink-0"
                                           style="width: 44px; height: 44px;" aria-hidden="true">
-                                        {{ Str::upper(Str::substr($user->name, 0, 1)) }}
+                                        {{ $user->initials }}
                                     </span>
                                 @endif
 
