@@ -66,6 +66,24 @@ class User extends Authenticatable
         );
     }
 
+    /*
+     * Inisial untuk avatar teks: DUA huruf — huruf pertama kata pertama dan
+     * kata terakhir ("Sinta Wijaya" -> "SW"), SATU huruf hanya bila nama
+     * memang satu kata. Versi lama mengambil huruf pertama saja sehingga
+     * semua rekan yang awalan namanya sama menjadi tidak bisa dibedakan.
+     * mb_* dipakai agar nama beraksen tidak menghasilkan inisial rusak.
+     */
+    protected function initials(): Attribute
+    {
+        return Attribute::get(function (): string {
+            $words = preg_split('/\s+/u', trim((string) $this->name)) ?: [];
+            $first = mb_substr($words[0] ?? '', 0, 1);
+            $last  = count($words) > 1 ? mb_substr((string) end($words), 0, 1) : '';
+
+            return mb_strtoupper($first.$last);
+        });
+    }
+
     /**
      * Bisa masuk panel admin?
      *
