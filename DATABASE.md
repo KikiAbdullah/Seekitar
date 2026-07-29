@@ -304,6 +304,21 @@ pemeriksaan tidak disimpan sebagai kolom terpisah: stempel
 `verified_by` + `verified_at` sudah menyatakan seluruhnya lolos — kolom
 `is_address_valid` dan sejenisnya hanya akan menduplikasi makna tersebut.
 
+Di atas ketiga langkah penilaian itu ada dua SYARAT POKOK yang bersifat
+fakta data, bukan penilaian admin. Karena itu server memeriksanya ulang saat
+persetujuan — tidak cukup mengandalkan `StorePolicy::create` waktu pengajuan:
+
+1. **Pemilik sudah terverifikasi** — nomor HP + KTP, `verification_level ≥ 2`.
+   Level bisa diturunkan admin setelah toko masuk antrian, dan persetujuan
+   tidak boleh mengesahkan toko yang syarat pemiliknya sudah gugur.
+2. **Foto etalase benar-benar terunggah** — dibaca lewat
+   `getRawOriginal('photo')`. Aksesor `photo` menjatuhkan nilai kosong ke
+   placeholder hiasan demi tampilan publik, dan gambar hiasan bukanlah bukti.
+
+Stempel `verified_by`/`verified_at` sendiri tulis-sekali: persetujuan hanya
+berlaku dari status `pending`, sehingga klik ganda atau POST ulang tidak
+pernah menimpa siapa & kapan yang sudah tercatat.
+
 > **Catatan: `service_radius_km` DEFAULT 5.00 sudah benar — jangan diubah ke 15.**
 > Ada dua radius berbeda di sistem ini dan keduanya sering tertukar:
 >

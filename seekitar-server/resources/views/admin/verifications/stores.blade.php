@@ -89,11 +89,23 @@
                             </div>
                         </td>
 
-                        {{-- Pemilik: nama + nomor HP. --}}
+                        {{-- Pemilik: nama + nomor HP + status syarat. Lencana
+                             merah = baris yang TIDAK BISA disetujui (aturan 2:
+                             pemilik harus terverifikasi lebih dulu) — lebih baik
+                             terlihat dari tabel daripada ketahuan di dalam modal. --}}
                         <td>
                             <div class="lh-sm">
                                 <div class="fw-semibold mb-1">{{ $store->owner?->name ?? '—' }}</div>
                                 <div class="text-muted font-monospace" style="font-size: 12px;">{{ $store->owner?->phone }}</div>
+                                @if ($store->owner?->canOpenStore())
+                                    <span class="badge bg-success-subtle text-success mt-1" style="font-size: 11px;">
+                                        Pemilik terverifikasi
+                                    </span>
+                                @else
+                                    <span class="badge bg-danger-subtle text-danger mt-1" style="font-size: 11px;">
+                                        Pemilik belum terverifikasi
+                                    </span>
+                                @endif
                             </div>
                         </td>
 

@@ -161,25 +161,54 @@ class VerificationController extends Controller
     /**
      * Menyetujui pengajuan toko SEKALIGUS menaikkan pemiliknya ke Level 3.
      *
+     * SYARAT PERSETUJUAN (aturan 2): (1) pemilik SUDAH terverifikasi —
+     * nomor HP + KTP, alias verification_level >= 2; (2) berkas tokonya
+     * memenuhi syarat — minimal foto etalase benar-benar terunggah
+     * (getRawOriginal: placeholder hiasan bukan bukti). Keduanya dicek
+     * ULANG di sini, bukan cukup mengandalkan StorePolicy::create saat
+     * pengajuan: level pengguna bisa diturunkan admin SETELAH tokonya
+     * masuk antrian, dan persetujuan tidak boleh mengesahkan toko yang
+     * syaratnya sudah gugur.
+     *
      * Level 3 "Usaha Terverifikasi" artinya usahanya lolos tinjauan — persis
      * yang disahkan klik ini (foto tempat usaha + koordinat, PRD §5.3.2).
      * Tanpa kenaikan otomatis di sini TIDAK ADA alur apa pun yang menghasilkan
      * Level 3: antrian pengguna berhenti di Level 2, sehingga lencana Pro di
      * halaman pengguna tidak pernah benar-benar muncul dari data.
-     *
      * Kenaikannya SATU ARAH — penolakan toko sesudahnya tidak menurunkan
-     * level. Alasannya: Pro yang diberikan manual (Sunting Pengguna) tak bisa
-     * dibedakan dari Pro hasil persetujuan toko tanpa kolom penanda tambahan,
-     * jadi pencabutan dibiarkan sebagai keputusan manusia, bukan heuristik
-     * mesin yang berisiko mencabut lencana yang salah.
+     * level, karena Pro manual tak bisa dibedakan dari Pro hasil toko tanpa
+     * kolom penanda; pencabutan dibiarkan keputusan manusia (Sunting Pengguna).
      */
     public function approveStore(Request $request, Store $store): RedirectResponse
     {
-        $pemilikNaik = DB::transaction(function () use ($store, $request): bool {
+        $hasil = DB::transaction(function () use ($store, $request): string {
             // Baris dikunci sebelum ditulis: dua admin bisa menekan Setujui
             // nyaris bersamaan, dan keduanya harus berakhir di kondisi yang
             // sama — bukan saling menimpa stempel.
             $toko = Store::lockForUpdate()->findOrFail($store->id);
+
+            // Stempel persetujuan tulis-sekali: antrian memang hanya memuat
+            // toko pending, tapi POST manual/dobel tidak boleh menimpa
+            // verified_by/verified_at yang sudah tercatat.
+            if ($toko->verification_status !== VerificationStatus::Pending) {
+                return 'bukan-antrian';
+            }
+
+            $pemilik = User::lockForUpdate()->find($toko->user_id);
+
+            // Syarat (1): pemilik terverifikasi (no HP + KTP). NULL pun
+            // ditolak — toko yatim tidak layak disahkan apa pun sebabnya.
+            if ($pemilik === null || ! $pemilik->canOpenStore()) {
+                return 'pemilik-belum-terverifikasi';
+            }
+
+            // Syarat (2): berkas toko memenuhi syarat — foto etalase yang
+            // dinilai admin harus foto yang BENAR-BENAR diunggah pemilik.
+            // Aksesor photo menjatuhkan nilai kosong ke placeholder hiasan,
+            // jadi di sini wajib membaca kolom mentahnya.
+            if (empty($toko->getRawOriginal('photo'))) {
+                return 'foto-belum-diunggah';
+            }
 
             $toko->verification_status = VerificationStatus::Verified;
             $toko->rejected_reason     = null;
@@ -187,33 +216,56 @@ class VerificationController extends Controller
             $toko->verified_by         = $request->user()->id;
             $toko->save();
 
-            $pemilik = User::lockForUpdate()->find($toko->user_id);
-
+            // Usaha lolos verifikasi ⇒ PEMILIK-nya naik ke Level 3.
             // !== Pro berarti levelnya 1 atau 2 (rentangnya memang hanya
             // 1–3), jadi penulisan ini tidak pernah menurunkan siapa pun.
-            if ($pemilik !== null && $pemilik->verification_level !== VerificationLevel::Pro) {
+            if ($pemilik->verification_level !== VerificationLevel::Pro) {
                 $pemilik->verification_level = VerificationLevel::Pro;
                 $pemilik->save();
 
-                return true;
+                return 'naik';
             }
 
-            return false;
+            return 'disetujui';
         });
 
-        $pesan = "Toko {$store->name} disetujui.";
-        if ($pemilikNaik) {
-            $pesan .= ' Pemilik naik ke Level 3 · Usaha Terverifikasi.';
-        }
-
-        return back()->with('success', $pesan);
+        return match ($hasil) {
+            'bukan-antrian' => back()->with('error',
+                "Toko {$store->name} sudah diproses sebelumnya — stempel persetujuan tidak bisa ditimpa."),
+            'pemilik-belum-terverifikasi' => back()->with('error',
+                "Toko {$store->name} belum bisa diverifikasi: pemiliknya belum terverifikasi (nomor HP + KTP). Selesaikan dulu di antrian Verifikasi Pengguna."),
+            'foto-belum-diunggah' => back()->with('error',
+                "Toko {$store->name} belum bisa diverifikasi: foto toko belum diunggah pemilik. Tolak pengajuannya agar pemilik memperbaiki."),
+            'naik' => back()->with('success',
+                "Toko {$store->name} disetujui. Pemilik naik ke Level 3 · Usaha Terverifikasi."),
+            default => back()->with('success', "Toko {$store->name} disetujui."),
+        };
     }
 
     public function rejectStore(RejectVerificationRequest $request, Store $store): RedirectResponse
     {
-        $store->verification_status = VerificationStatus::Rejected;
-        $store->rejected_reason     = $request->reason();
-        $store->save();
+        $ditolak = DB::transaction(function () use ($request, $store): bool {
+            $toko = Store::lockForUpdate()->findOrFail($store->id);
+
+            // Penolakan hanya sah dari antrian — sebagaimana persetujuan.
+            // Menolak toko yang SUDAH disetujui akan mengubah statusnya
+            // sambil menyisakan stempel verified_*: keadaan kontradiktif
+            // yang tidak punya makna alur (pencabutan belum jadi fitur).
+            if ($toko->verification_status !== VerificationStatus::Pending) {
+                return false;
+            }
+
+            $toko->verification_status = VerificationStatus::Rejected;
+            $toko->rejected_reason     = $request->reason();
+            $toko->save();
+
+            return true;
+        });
+
+        if (! $ditolak) {
+            return back()->with('error',
+                "Toko {$store->name} sudah diproses sebelumnya — tidak bisa ditolak lagi.");
+        }
 
         return back()->with('success', "Toko {$store->name} ditolak.");
     }

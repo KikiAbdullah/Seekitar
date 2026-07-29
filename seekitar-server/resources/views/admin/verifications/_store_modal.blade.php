@@ -6,7 +6,9 @@
       langkah 2 — foto toko,
       langkah 3 — koordinat dibandingkan dengan Google Maps.
     Tombol "Verifikasi Toko" terkunci sampai ketiganya dicentang — persetujuan
-    tanpa memeriksa tidak bisa terjadi "tanpa sengaja".
+    tanpa memeriksa tidak bisa terjadi "tanpa sengaja". Ditambah gerbang
+    syarat pokok (pemilik terverifikasi + foto benar-benar terunggah) yang
+    tidak bisa dibuka checklist, dan diperiksa ULANG oleh server.
 
     Penolakan memakai collapse DI DALAM modal, bukan modal kedua —
     Bootstrap tidak mendukung modal bersarang.
@@ -14,6 +16,21 @@
     $index  nomor baris (menyamakan id dengan target pemicu pada tabel)
     $store  model Store antrian (sudah memuat owner + latitude/longitude)
 --}}
+
+@php
+    /*
+     * Dua keputusan dibaca SEKALI lalu dipakai konsisten di seluruh modal —
+     * badge, status SOP, dan kunci tombol tidak boleh berbeda pendapat.
+     *
+     * Foto dibaca dari KOLOM MENTAH: aksesor photo menjatuhkan nilai kosong
+     * ke placeholder hiasan demi tampilan publik, sedangkan keputusan
+     * verifikasi tidak boleh berpijak pada gambar yang tidak pernah
+     * diunggah pemilik — bukti harus bukti, bukan dekorasi.
+     */
+    $fotoAsli             = $store->getRawOriginal('photo');
+    $pemilikTerverifikasi = $store->owner?->canOpenStore() ?? false;
+    $syaratPokokTerpenuhi = $pemilikTerverifikasi && filled($fotoAsli);
+@endphp
 
 <div class="modal fade text-start" id="verifikasiToko{{ $index }}" tabindex="-1"
      aria-labelledby="verifikasiToko{{ $index }}Label" aria-hidden="true">
@@ -49,7 +66,7 @@
                     <dd class="col-sm-9">
                         {{ $store->owner?->name ?? '—' }}
                         <span class="font-monospace text-muted">{{ $store->owner?->phone }}</span>
-                        @if ($store->owner?->canOpenStore())
+                        @if ($pemilikTerverifikasi)
                             <span class="badge bg-success-subtle text-success ms-1">
                                 <i class="ti ti-circle-check" aria-hidden="true"></i>
                                 {{ $store->owner->verification_level->label() }}
@@ -108,16 +125,17 @@
                     LANGKAH 2 · FOTO TOKO
                 </div>
                 <div class="mb-3">
-                    @if ($store->photo)
-                        <a href="{{ $store->photo }}" target="_blank" rel="noopener"
+                    @if ($fotoAsli)
+                        <a href="{{ $fotoAsli }}" target="_blank" rel="noopener"
                            title="Buka ukuran penuh di tab baru">
-                            <img src="{{ $store->photo }}" alt="Foto toko {{ $store->name }}"
+                            <img src="{{ $fotoAsli }}" alt="Foto toko {{ $store->name }}"
                                  class="img-fluid rounded border" style="max-height: 220px; object-fit: cover;">
                         </a>
                     @else
                         <div class="alert alert-warning py-2 fs-3 mb-0">
                             <i class="ti ti-photo-off" aria-hidden="true"></i>
-                            Foto toko belum diunggah — minta pemilik melengkapi lewat penolakan.
+                            Foto toko belum diunggah — syarat belum terpenuhi sehingga pengajuan
+                            ini tidak bisa disetujui; tolak agar pemilik memperbaikinya.
                         </div>
                     @endif
                 </div>
@@ -161,6 +179,21 @@
                      Verifikasi terbuka (lihat skrip di stores.blade). --}}
                 <div class="border rounded p-3 bg-light" data-checklist>
                     <div class="text-muted fw-semibold mb-2" style="font-size: 11px;">KONFIRMASI PEMERIKSAAN</div>
+
+                    {{-- Syarat paling hulu BUKAN centang: status pemilik adalah
+                         fakta data, bukan penilaian admin. Ditampilkan read-only;
+                         server memeriksanya ulang saat persetujuan, jadi tidak
+                         bisa dilompat lewat DevTools. --}}
+                    <div class="d-flex align-items-center gap-2 fs-3 mb-3">
+                        @if ($pemilikTerverifikasi)
+                            <i class="ti ti-circle-check text-success" aria-hidden="true"></i>
+                            <span>Pemilik terverifikasi (nomor HP + KTP)</span>
+                        @else
+                            <i class="ti ti-alert-triangle text-danger" aria-hidden="true"></i>
+                            <span class="text-danger fw-semibold">Pemilik belum terverifikasi — toko belum bisa disetujui</span>
+                        @endif
+                    </div>
+
                     <div class="form-check mb-2">
                         <input class="form-check-input" type="checkbox" id="cekAlamat{{ $index }}">
                         <label class="form-check-label fs-3" for="cekAlamat{{ $index }}">
@@ -217,12 +250,23 @@
                     <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Tutup</button>
                     <form method="POST" action="{{ route('admin.verifications.stores.approve', $store) }}">
                         @csrf
-                        <button type="submit" class="btn btn-success" disabled
-                                data-tombol-verifikasi
-                                title="Centang ketiga konfirmasi pemeriksaan dulu">
-                            <i class="ti ti-circle-check" aria-hidden="true"></i>
-                            Verifikasi Toko
-                        </button>
+                        @if ($syaratPokokTerpenuhi)
+                            <button type="submit" class="btn btn-success" disabled
+                                    data-tombol-verifikasi
+                                    title="Centang ketiga konfirmasi pemeriksaan dulu">
+                                <i class="ti ti-circle-check" aria-hidden="true"></i>
+                                Verifikasi Toko
+                            </button>
+                        @else
+                            {{-- Terkunci permanen: sengaja TANPA atribut
+                                 data-tombol-verifikasi supaya skrip checklist
+                                 tidak pernah bisa membukanya. --}}
+                            <button type="button" class="btn btn-success" disabled
+                                    title="{{ $pemilikTerverifikasi ? 'Foto toko belum diunggah pemilik' : 'Pemilik belum terverifikasi (nomor HP + KTP)' }}">
+                                <i class="ti ti-lock" aria-hidden="true"></i>
+                                Verifikasi Toko
+                            </button>
+                        @endif
                     </form>
                 </div>
             </div>

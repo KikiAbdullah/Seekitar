@@ -76,8 +76,11 @@ class Store extends Model
      * Foto etalase selalu punya URL: tanpa unggahan, jatuh ke placeholder
      * berseed id toko (lihat PlaceholderImg). Blade & API tinggal memakai
      * $store->photo tanpa cabang "ada/tidak ada" di tiap layar.
-     * Filter "sudah/tidak ada foto" tidak ada di fitur mana pun, sehingga
-     * tidak ada logika yang rusak oleh fallback ini.
+     *
+     * PENGECUALIAN konteks VERIFIKASI (antrian admin): di sana wajib
+     * getRawOriginal('photo'). Placeholder adalah dekorasi publik, bukan
+     * bukti — keputusan menyetujui toko tidak boleh berpijak pada gambar
+     * yang tidak pernah diunggah pemilik.
      */
     protected function photo(): Attribute
     {
