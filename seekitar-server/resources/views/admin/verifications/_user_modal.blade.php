@@ -37,12 +37,11 @@
                 <div class="row g-3 mb-3">
                     <div class="col-md-4">
                         <div class="text-muted fw-semibold mb-1" style="font-size: 11px;">FOTO USER</div>
-                        @if ($user->avatar_url)
-                            <img src="{{ $user->avatar_url }}" alt="Foto profil {{ $user->name }}"
-                                 class="img-fluid rounded border" style="max-height: 180px; object-fit: cover;">
-                        @else
-                            <div class="border rounded text-muted text-center py-4 small">Belum diunggah</div>
-                        @endif
+                        {{-- avatar_url accessor selalu mengembalikan URL
+                             (placeholder bila kosong). --}}
+                        <img src="{{ $user->avatar_url }}" alt="Foto profil {{ $user->name }}"
+                             class="img-fluid rounded border" style="max-height: 180px; object-fit: cover;"
+                             loading="lazy" decoding="async">
                     </div>
                     <div class="col-md-4">
                         <div class="text-muted fw-semibold mb-1" style="font-size: 11px;">FOTO ORANG (SELFIE)</div>

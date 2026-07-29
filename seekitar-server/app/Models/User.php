@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Enums\VerificationLevel;
 use App\Models\Concerns\HasLocation;
 use App\Models\Concerns\SerializesDatesAsUtc;
+use App\Support\PlaceholderImg;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -48,6 +50,20 @@ class User extends Authenticatable
             // sehingga tidak ada jalur yang bisa menyimpannya plaintext.
             'password'           => 'hashed',
         ];
+    }
+
+    /*
+     * Avatar selalu punya URL tampilan: tanpa unggahan, jatuh ke
+     * placeholder berseed id pengguna (lihat PlaceholderImg). Catatan:
+     * dokumen identitas (KTP/selfie) SENGAJA tidak diberi fallback seperti
+     * ini — foto acak bukanlah bukti verifikasi, jadi pemeriksaan
+     * `$user->ktp_image` di blade dibiarkan menampilkan "Belum diunggah".
+     */
+    protected function avatarUrl(): Attribute
+    {
+        return Attribute::get(
+            fn (?string $v) => $v ?: PlaceholderImg::url('pengguna-'.$this->getKey(), 240, 240)
+        );
     }
 
     /**

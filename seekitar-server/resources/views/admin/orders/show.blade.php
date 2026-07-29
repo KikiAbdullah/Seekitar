@@ -227,15 +227,13 @@
                     <div class="card h-100">
                         <div class="card-header fw-semibold">Bukti Pembayaran</div>
                         <div class="card-body">
-                            @if ($order->payment_proof_url)
-                                <a href="{{ $order->payment_proof_url }}" target="_blank" rel="noopener"
-                                   title="Buka ukuran penuh di tab baru">
-                                    <img loading="lazy" decoding="async" src="{{ $order->payment_proof_url }}" alt="Bukti pembayaran {{ $order->order_number }}"
-                                         class="rounded border w-100" style="max-height: 180px; object-fit: cover;">
-                                </a>
-                            @else
-                                <p class="text-muted fs-3 mb-0">Belum ada bukti yang diunggah.</p>
-                            @endif
+                            {{-- payment_proof_url accessor selalu mengembalikan
+                                 URL (placeholder bila belum ada unggahan). --}}
+                            <a href="{{ $order->payment_proof_url }}" target="_blank" rel="noopener"
+                               title="Buka ukuran penuh di tab baru">
+                                <img loading="lazy" decoding="async" src="{{ $order->payment_proof_url }}" alt="Bukti pembayaran {{ $order->order_number }}"
+                                     class="rounded border w-100" style="max-height: 180px; object-fit: cover;">
+                            </a>
                         </div>
                     </div>
                 </div>

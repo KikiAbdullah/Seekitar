@@ -29,7 +29,10 @@
         {{-- Galeri foto, status & aksi. --}}
         <div class="col-lg-4">
             <div class="card">
-                @php $foto = $listing->images ?? []; @endphp
+                {{-- Aksesor Listing::images menjamin minimal satu gambar
+                     (placeholder bila belum ada unggahan), jadi galeri ini
+                     tidak punya cabang kosong. --}}
+                @php $foto = $listing->images; @endphp
                 @if ($foto)
                     <a id="tautanFotoUtama" href="{{ $foto[0] }}" target="_blank" rel="noopener"
                        title="Buka ukuran penuh di tab baru">
@@ -49,11 +52,6 @@
                             @endforeach
                         </div>
                     @endif
-                @else
-                    <div class="bg-light-primary text-primary d-flex align-items-center justify-content-center"
-                         style="height: 160px;" aria-hidden="true">
-                        <i class="ti ti-photo fs-10"></i>
-                    </div>
                 @endif
 
                 <div class="card-body text-center">

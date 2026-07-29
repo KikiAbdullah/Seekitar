@@ -6,6 +6,7 @@ use App\Enums\StoreType;
 use App\Enums\VerificationStatus;
 use App\Models\Concerns\HasLocation;
 use App\Models\Concerns\SerializesDatesAsUtc;
+use App\Support\PlaceholderImg;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -68,6 +69,20 @@ class Store extends Model
             set: fn (array $v) => implode(',', array_map(
                 fn ($t) => $t instanceof StoreType ? $t->value : $t, $v
             )),
+        );
+    }
+
+    /*
+     * Foto etalase selalu punya URL: tanpa unggahan, jatuh ke placeholder
+     * berseed id toko (lihat PlaceholderImg). Blade & API tinggal memakai
+     * $store->photo tanpa cabang "ada/tidak ada" di tiap layar.
+     * Filter "sudah/tidak ada foto" tidak ada di fitur mana pun, sehingga
+     * tidak ada logika yang rusak oleh fallback ini.
+     */
+    protected function photo(): Attribute
+    {
+        return Attribute::get(
+            fn (?string $v) => $v ?: PlaceholderImg::url('toko-'.$this->getKey(), 600, 400)
         );
     }
 

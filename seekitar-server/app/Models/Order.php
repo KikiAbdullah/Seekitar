@@ -8,6 +8,8 @@ use App\Enums\OrderType;
 use App\Enums\PaymentMethod;
 use App\Models\Concerns\HasLocation;
 use App\Models\Concerns\SerializesDatesAsUtc;
+use App\Support\PlaceholderImg;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -53,6 +55,18 @@ class Order extends Model
             'completed_at'         => 'datetime',
             'cancelled_at'         => 'datetime',
         ];
+    }
+
+    /*
+     * Bukti bayar selalu punya URL tampilan (placeholder berseed nomor
+     * pesanan bila kosong — PlaceholderImg). Blade detail tidak lagi butuh
+     * cabang "belum ada bukti" untuk merender spot gambarnya.
+     */
+    protected function paymentProofUrl(): Attribute
+    {
+        return Attribute::get(
+            fn (?string $v) => $v ?: PlaceholderImg::url('bukti-'.$this->getKey(), 600, 400)
+        );
     }
 
     public function buyer(): BelongsTo
