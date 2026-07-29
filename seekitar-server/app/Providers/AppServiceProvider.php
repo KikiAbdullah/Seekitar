@@ -28,7 +28,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
-use Laravel\Sanctum\Sanctum;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -65,10 +64,19 @@ class AppServiceProvider extends ServiceProvider
 
         /*
          * Migrasi bawaan Sanctum memakai tokenable_id BIGINT — tidak cocok
-         * dengan users UUID. Versi lokal (uuidMorphs) menggantikannya; lihat
-         * 2026_07_27_100050_create_personal_access_tokens_table.php.
+         * dengan users UUID, sehingga proyek ini membawa versi uuidMorphs-nya
+         * sendiri: 2026_07_27_100050_create_personal_access_tokens_table.php.
+         *
+         * Tidak ada Sanctum::ignoreMigrations() di sini: metode itu DIHAPUS
+         * di Sanctum 4.x karena paketnya kini tidak pernah memuat migrasinya
+         * sendiri — hanya MENERBITKAN (publish). Artinya tabel UUID kita
+         * otomatis menjadi satu-satunya yang dijalankan migrator.
+         *
+         * Konsekuensinya: JANGAN jalankan
+         * `php artisan vendor:publish --tag=sanctum-migrations` — perintah itu
+         * menyalin migrasi BIGINT bawaan ke database/migrations dan membuat
+         * tabel personal_access_tokens ganda bertabrakan dengan milik kita.
          */
-        Sanctum::ignoreMigrations();
     }
 
     public function boot(): void

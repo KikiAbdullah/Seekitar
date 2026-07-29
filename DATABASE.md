@@ -1148,13 +1148,19 @@ Tanpa penyesuaian ini, **login admin gagal total** (session driver
 `database` menulis UUID ke kolom integer) dan **`createToken()` API gagal
 total** dengan error integer 1366 yang tidak menunjuk sebab sebenarnya.
 
-Migrasi Sanctum bawaan dinonaktifkan (`Sanctum::ignoreMigrations()` di
-`AppServiceProvider`) dan digantikan versi lokal
+Migrasi Sanctum bawaan **tidak perlu dinonaktifkan**: sejak Sanctum 4.x
+paket itu tidak lagi memuat migrasinya sendiri, melainkan hanya
+*menerbitkannya* lewat `vendor:publish --tag=sanctum-migrations`
+(`Sanctum::ignoreMigrations()` sendiri dihapus di 4.x). Karena perintah
+publish itu tidak pernah dijalankan, versi lokal
 `2026_07_27_100050_create_personal_access_tokens_table.php` — kolom lain
-identik dengan skema paket agar perilaku Sanctum tidak berubah.
+identik dengan skema paket agar perilaku Sanctum tidak berubah — adalah
+satu-satunya yang membentuk tabel ini.
 
 > ⚠️ Jangan pernah "mengembalikan" dua kolom ini ke BIGINT — itu akan
-> memutus login panel dan API sekaligus.
+> memutus login panel dan API sekaligus. Dan jangan jalankan
+> `vendor:publish --tag=sanctum-migrations`: migrasi BIGINT yang terbit
+> akan bertabrakan dengan tabel yang sudah ada.
 
 ### 4.10 `service_slots` (Fase 2)
 
