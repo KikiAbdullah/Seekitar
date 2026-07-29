@@ -6,9 +6,11 @@
 @section('content')
 
     @include('web.partials._hero', [
-        'kicker'   => 'Kontak & Pengaduan',
-        'judul'    => 'Kontak & Pengaduan',
-        'subjudul' => 'Setiap kanal punya tenggat tanggapan yang mengikat. Sebutkan nomor pesanan bila laporanmu terkait transaksi.',
+        'kicker'    => 'Kontak & Pengaduan',
+        'judul'     => 'Kontak & Pengaduan',
+        'subjudul'  => 'Setiap kanal punya tenggat tanggapan yang mengikat. Sebutkan nomor pesanan bila laporanmu terkait transaksi.',
+        'gambar'    => 'img/web/kontak.webp',
+        'gambarAlt' => 'Ilustrasi kotak surat dengan amplop masuk, dikelilingi lencana pelaporan, keamanan, privasi, dan tenggat waktu',
     ])
 
     <section class="py-5">

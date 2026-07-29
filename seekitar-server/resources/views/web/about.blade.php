@@ -6,9 +6,11 @@
 @section('content')
 
     @include('web.partials._hero', [
-        'kicker'   => 'Tentang',
-        'judul'    => 'Tentang Seekitar',
-        'subjudul' => 'Yang kamu butuhkan, ada di sekitar.',
+        'kicker'    => 'Tentang',
+        'judul'     => 'Tentang Seekitar',
+        'subjudul'  => 'Yang kamu butuhkan, ada di sekitar.',
+        'gambar'    => 'img/web/tentang.webp',
+        'gambarAlt' => 'Ilustrasi peta kabupaten dengan pin lokasi di tengah radius pencarian — rumah, masjid, sawah, dan warung di dalamnya',
     ])
 
     {{-- Gagasan inti --}}

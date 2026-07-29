@@ -20,6 +20,14 @@
     <meta property="og:url" content="{{ url()->current() }}">
     <meta property="og:locale" content="id_ID">
     <meta name="twitter:card" content="summary_large_image">
+    {{-- Pratinjau tautan (WhatsApp dsb.): 1200×630 persis spesifikasi agar
+         tidak terpotong aneh. JPG, bukan WebP — sebagian perayap pratinjau
+         belum mendukung WebP. --}}
+    <meta property="og:image" content="{{ asset('img/web/og.jpg') }}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Seekitar — Yang kamu butuhkan, ada di sekitar">
+    <meta name="twitter:image" content="{{ asset('img/web/og.jpg') }}">
 
     @unless (app()->isProduction())
         {{-- Lingkungan non-produksi tidak boleh bersaing dengan domain asli

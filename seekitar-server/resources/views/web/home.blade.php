@@ -25,8 +25,9 @@
 
     {{--
         Gaya landing page (mengacu template Modernize "frontend-landingpage"
-        yang di-recolor Seekitar). Semua dekorasi murni CSS — tidak ada satu
-        pun gambar unduhan — supaya halaman tetap ringan di koneksi lambat.
+        yang di-recolor Seekitar). Dekorasi latar murni CSS; konten visual
+        memakai ilustrasi WebP lokal (< 100 KB per berkas) di public/img/web/
+        — halaman tetap ratusan KB sehingga cepat di koneksi lambat.
         Prefiks .lp- menjaganya tidak menabrak gaya halaman lain.
     --}}
 @endpush
@@ -84,28 +85,17 @@
                     </div>
                 </div>
 
-                {{-- Mock antarmuka aplikasi (murni CSS, tanpa gambar). --}}
+                {{-- Ilustrasi hero + dua kartu contoh yang melayang di atasnya.
+                     Ini elemen LCP halaman: dimuat penuh semangat (bukan lazy)
+                     dan diberi dimensi eksplisit agar tidak ada lompatan
+                     tata letak saat gambar tiba. --}}
                 <div class="col-lg-5">
-                    <div class="position-relative mx-auto" style="max-width: 340px;">
+                    <div class="position-relative mx-auto" style="max-width: 420px;">
 
-                        <div class="lp-kartu">
-                            <div class="d-flex align-items-center gap-2 mb-3">
-                                <span class="lp-thumb" style="background: var(--hijau-lokal);"
-                                      aria-hidden="true"><i class="ti ti-bolt"></i></span>
-                                <div class="flex-grow-1" style="min-width: 0;">
-                                    <div class="fw-bold lh-1">Permintaan Terkirim</div>
-                                    <div class="text-secondary" style="font-size: 13px;">Disiarkan ke toko sekitar</div>
-                                </div>
-                                <span class="badge bg-success-subtle text-success">Live</span>
-                            </div>
-                            <div class="fw-semibold mb-1">“Butuh tukang pipa besok pagi”</div>
-                            <div class="text-secondary mb-3" style="font-size: 13px;">
-                                <i class="ti ti-map-pin" aria-hidden="true"></i> Radius 5 km · 3 penawaran masuk
-                            </div>
-                            <div class="lp-skeleton mb-2" style="width: 100%;"></div>
-                            <div class="lp-skeleton mb-2" style="width: 82%;"></div>
-                            <div class="lp-skeleton" style="width: 64%;"></div>
-                        </div>
+                        <img src="{{ asset('img/web/hero.webp') }}"
+                             alt="Ilustrasi warga memakai Seekitar: barang, jasa, dan sewa dari toko sekitar dalam satu genggaman"
+                             class="lp-hero-img" width="1100" height="733"
+                             fetchpriority="high" decoding="async">
 
                         <div class="lp-kartu lp-kartu-melayang lp-melayang-1">
                             <div class="d-flex align-items-center gap-2">
@@ -207,8 +197,50 @@
         </div>
     </section>
 
+    {{-- ========================= TIGA LAYANAN ========================= --}}
+    <section id="layanan" class="py-5 bg-light">
+        <div class="container py-lg-3">
+            <div class="text-center mb-5">
+                <div class="lp-kicker mb-2">Apa Saja Ada</div>
+                <h2 class="h3 fw-bold mb-2">Barang, jasa, dan sewaan</h2>
+                <p class="text-secondary mb-0 mx-auto" style="max-width: 36rem;">
+                    Bukan katalog kota sebelah — semua ini benar-benar ada
+                    di sekitar tempat tinggalmu.
+                </p>
+            </div>
+
+            <div class="row g-4">
+                @foreach ([
+                    ['img/web/layanan-barang.webp', 'Ilustrasi etalase warung berisi sembako, sayur segar, dan camilan', 'ti ti-package', 'hijau', 'Barang',
+                     'Sembako, sayur kebun tetangga, kue rumahan, sampai barang bekas layak pakai — semua etalase warga sekitar.'],
+                    ['img/web/layanan-jasa.webp', 'Ilustrasi tukang memperbaiki pipa air dengan sepeda motor dan kotak perkakas', 'ti ti-tools', 'biru', 'Jasa',
+                     'Tukang pipa, servis motor, jahit pakaian, sampai guru les — keahlian warga sekitar yang sudah terverifikasi.'],
+                    ['img/web/layanan-sewa.webp', 'Ilustrasi tenda lipat, tumpukan kursi plastik, dan pengeras suara untuk disewa', 'ti ti-key', 'kuning', 'Sewa',
+                     'Tenda hajatan, kursi, sound system, sampai alat pertanian — pakai sebentar, bayar seperlunya.'],
+                ] as [$berkas, $alt, $ikon, $tone, $judulLayanan, $isi])
+                    <div class="col-md-4">
+                        <div class="lp-kartu-layanan">
+                            <img src="{{ asset($berkas) }}" alt="{{ $alt }}"
+                                 width="900" height="600" loading="lazy" decoding="async">
+                            <div class="p-4">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span class="lp-fitur-ikon lp-tone-{{ $tone }}"
+                                          style="width: 40px; height: 40px; font-size: 20px;" aria-hidden="true">
+                                        <i class="ti {{ $ikon }}"></i>
+                                    </span>
+                                    <h3 class="h5 fw-bold mb-0">{{ $judulLayanan }}</h3>
+                                </div>
+                                <p class="text-secondary mb-0">{{ $isi }}</p>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </section>
+
     {{-- ============================ CARA KERJA ============================ --}}
-    <section id="cara-kerja" class="py-5 bg-light">
+    <section id="cara-kerja" class="py-5">
         <div class="container py-lg-3">
             <div class="text-center mb-5">
                 <div class="fw-bold text-uppercase mb-2" style="color: var(--hijau-lokal); font-size: 13px; letter-spacing: .08em;">
@@ -221,6 +253,10 @@
             <div class="row g-4">
                 <div class="col-lg-6">
                     <div class="h-100 bg-white border rounded-4 p-4">
+                        <img src="{{ asset('img/web/pencari.webp') }}"
+                             alt="Ilustrasi pencari duduk santai membandingkan tiga penawaran yang masuk di ponselnya"
+                             class="lp-foto-kerja mb-4" width="900" height="600"
+                             loading="lazy" decoding="async">
                         <div class="d-flex align-items-center gap-2 mb-4">
                             <span class="lp-fitur-ikon lp-tone-biru" style="width: 44px; height: 44px;" aria-hidden="true">
                                 <i class="ti ti-shopping-bag"></i>
@@ -245,6 +281,10 @@
 
                 <div class="col-lg-6">
                     <div class="h-100 bg-white border rounded-4 p-4">
+                        <img src="{{ asset('img/web/penyedia.webp') }}"
+                             alt="Ilustrasi pemilik warung menerima penawaran masuk dari ponselnya di depan tokonya"
+                             class="lp-foto-kerja mb-4" width="900" height="600"
+                             loading="lazy" decoding="async">
                         <div class="d-flex align-items-center gap-2 mb-4">
                             <span class="lp-fitur-ikon lp-tone-hijau" style="width: 44px; height: 44px;" aria-hidden="true">
                                 <i class="ti ti-building-store"></i>

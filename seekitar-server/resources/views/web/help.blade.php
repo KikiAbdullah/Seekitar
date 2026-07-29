@@ -6,9 +6,11 @@
 @section('content')
 
     @include('web.partials._hero', [
-        'kicker'   => 'Pusat Bantuan',
-        'judul'    => 'Pusat Bantuan',
-        'subjudul' => 'Pertanyaan yang paling sering ditanyakan, dijawab sejujurnya.',
+        'kicker'    => 'Pusat Bantuan',
+        'judul'     => 'Pusat Bantuan',
+        'subjudul'  => 'Pertanyaan yang paling sering ditanyakan, dijawab sejujurnya.',
+        'gambar'    => 'img/web/bantuan.webp',
+        'gambarAlt' => 'Ilustrasi petugas layanan Seekitar dengan headset di depan laptop, diapit gelembung tanya dan centang',
     ])
 
     @php
