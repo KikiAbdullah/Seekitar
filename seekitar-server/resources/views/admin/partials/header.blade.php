@@ -102,7 +102,7 @@
                             <div class="d-flex align-items-center">
                                 <div class="user-profile-img">
                                     <span class="admin-avatar" aria-hidden="true">
-                                        {{ auth()->user()?->initials ?? 'A' }}
+                                        {{ auth()->user()?->initials ?: 'A' }}
                                     </span>
                                 </div>
                             </div>
@@ -118,7 +118,7 @@
 
                                 <div class="d-flex align-items-center py-9 mx-7 border-bottom">
                                     <span class="admin-avatar admin-avatar-lg" aria-hidden="true">
-                                        {{ auth()->user()?->initials ?? 'A' }}
+                                        {{ auth()->user()?->initials ?: 'A' }}
                                     </span>
                                     <div class="ms-3">
                                         <h5 class="mb-1 fs-3">{{ auth()->user()?->name }}</h5>
