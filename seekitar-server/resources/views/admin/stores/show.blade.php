@@ -94,9 +94,7 @@
                                 @endcan
                                 <span class="font-monospace text-muted">{{ $store->owner->phone }}</span>
                                 @if ($store->owner->canOpenStore())
-                                    <span class="badge bg-success-subtle text-success">
-                                        {{ $store->owner->verification_level->label() }}
-                                    </span>
+                                    <span class="badge bg-success-subtle text-success">KTP terverifikasi</span>
                                 @else
                                     <span class="badge bg-danger-subtle text-danger">KTP belum terverifikasi</span>
                                 @endif

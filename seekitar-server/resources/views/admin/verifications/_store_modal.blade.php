@@ -22,6 +22,8 @@
      * Dua keputusan dibaca SEKALI lalu dipakai konsisten di seluruh modal —
      * badge, status SOP, dan kunci tombol tidak boleh berbeda pendapat.
      *
+     * Status pemilik dibaca dari stempel KTP-nya (canOpenStore), BUKAN label
+     * level: panel tidak lagi menampilkan jenjang, hanya fakta layak/tidak.
      * Foto dibaca dari KOLOM MENTAH: aksesor photo menjatuhkan nilai kosong
      * ke placeholder hiasan demi tampilan publik, sedangkan keputusan
      * verifikasi tidak boleh berpijak pada gambar yang tidak pernah
@@ -69,7 +71,7 @@
                         @if ($pemilikTerverifikasi)
                             <span class="badge bg-success-subtle text-success ms-1">
                                 <i class="ti ti-circle-check" aria-hidden="true"></i>
-                                {{ $store->owner->verification_level->label() }}
+                                KTP terverifikasi
                             </span>
                         @else
                             <span class="badge bg-danger-subtle text-danger ms-1">
@@ -212,15 +214,6 @@
                             Koordinat sudah dicocokkan dengan Google Maps dan sesuai alamat
                         </label>
                     </div>
-                </div>
-
-                {{-- Konsekuensi persetujuan harus terlihat SEBELUM tombol
-                     ditekan: klik ini bukan hanya mengubah status toko,
-                     melainkan juga lencana pemiliknya. --}}
-                <div class="text-muted fs-3 mt-2">
-                    <i class="ti ti-rosette" aria-hidden="true"></i>
-                    Menyetujui juga menaikkan pemilik ke
-                    <strong>Level 3 · Usaha Terverifikasi</strong> secara otomatis.
                 </div>
 
                 {{-- Form tolak (collapse — bukan modal di dalam modal). --}}

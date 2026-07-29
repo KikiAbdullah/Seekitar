@@ -46,10 +46,6 @@ class VerificationController extends Controller
                 // Nama admin pemverifikasi tiap tahap ikut dimuat — kolom
                 // tabel menampilkannya, dan N+1 di tabel 20 baris tidak perlu.
                 ->with(['verified1By:id,name', 'verified2By:id,name'])
-                // Lencana level turunan butuh EXISTS ini; tanpa itu tiap
-                // baris menembak satu query tambahan (20 baris = 20 query).
-                ->withExists(['stores as has_verified_store' => fn ($q) => $q
-                    ->where('verification_status', VerificationStatus::Verified)])
                 ->pendingVerification()
                 ->orderBy('ktp_submitted_at')
                 ->paginate(20)
@@ -64,12 +60,8 @@ class VerificationController extends Controller
             'pending' => Store::query()
                 // Relasi pemilik toko bernama owner(), bukan user().
                 // verified2_at ikut dipilih: syaratnya kini dibaca dari
-                // stempel KTP (kolom level sudah dihapus), dan has_verified_store
-                // memberi lencana Pro pemilik tanpa EXISTS per baris.
-                ->with(['owner' => fn ($q) => $q
-                    ->select(['id', 'name', 'phone', 'verified2_at'])
-                    ->withExists(['stores as has_verified_store' => fn ($s) => $s
-                        ->where('verification_status', VerificationStatus::Verified)])])
+                // stempel KTP (kolom level sudah dihapus).
+                ->with(['owner:id,name,phone,verified2_at'])
                 // latitude/longitude untuk peta kecil pada modal — kolom
                 // POINT mentah berupa biner WKB yang tidak berguna di Blade.
                 ->withCoordinates()
@@ -231,8 +223,7 @@ class VerificationController extends Controller
                 "Toko {$store->name} belum bisa diverifikasi: pemiliknya belum terverifikasi (nomor HP + KTP). Selesaikan dulu di antrian Verifikasi Pengguna."),
             'foto-belum-diunggah' => back()->with('error',
                 "Toko {$store->name} belum bisa diverifikasi: foto toko belum diunggah pemilik. Tolak pengajuannya agar pemilik memperbaiki."),
-            default => back()->with('success',
-                "Toko {$store->name} disetujui — pemilik kini berstatus Level 3 · Usaha Terverifikasi."),
+            default => back()->with('success', "Toko {$store->name} disetujui."),
         };
     }
 

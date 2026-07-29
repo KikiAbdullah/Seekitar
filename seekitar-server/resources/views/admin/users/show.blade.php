@@ -44,9 +44,9 @@
                     <div class="font-monospace text-muted mb-2">{{ $user->phone }}</div>
 
                     <div class="d-flex flex-wrap justify-content-center gap-2 mb-2">
-                        <span class="badge bg-primary-subtle text-primary">
-                            Level {{ $user->verification_level->value }} · {{ $user->verification_level->label() }}
-                        </span>
+                        @if ($user->verified2_at)
+                            <span class="badge bg-primary-subtle text-primary">KTP terverifikasi</span>
+                        @endif
                         @if ($user->is_blocked)
                             <span class="badge bg-danger-subtle text-danger">Diblokir</span>
                         @else
@@ -122,19 +122,8 @@
                 </div>
             </div>
 
-            {{-- Jejak verifikasi: dua tahap berkas + satu jalur otomatis.
-                 Level 3 tidak di-stempel di tabel users — sumbernya adalah
-                 persetujuan toko PERTAMA miliknya (stores.verified_*), jadi
-                 jejaknya dibaca dari sana, bukan dari kolom baru. --}}
-            @php
-                // Level 3 = turunan dari toko tervalidasi — jadi "sudah Pro"
-                // dan "punya toko Pro" adalah dua cara menyebut fakta yang sama.
-                $tokoPro = $user->stores
-                    ->filter(fn ($toko) => $toko->verification_status === \App\Enums\VerificationStatus::Verified)
-                    ->sortBy('verified_at')
-                    ->first();
-                $sudahPro = $tokoPro !== null;
-            @endphp
+            {{-- Jejak verifikasi dua tahap: siapa & kapan menyetujui nomor
+                 HP lalu KTP — fakta audit, bukan label level apa pun. --}}
             <div class="card">
                 <div class="card-header fw-semibold">Jejak Verifikasi</div>
                 <div class="card-body">
@@ -160,18 +149,6 @@
                                     <span class="text-muted">Menunggu — diajukan {{ $user->ktp_submitted_at->format('d M Y H:i') }}</span>
                                 @else
                                     <span class="text-muted">Belum mengajukan</span>
-                                @endif
-                            </span>
-                        </li>
-                        <li class="d-flex align-items-start gap-2">
-                            <i class="ti {{ $sudahPro ? 'ti-circle-check text-success' : 'ti-clock-hour-4 text-warning' }} mt-1" aria-hidden="true"></i>
-                            <span>
-                                <strong>Level 3 · Usaha</strong><br>
-                                @if ($tokoPro)
-                                    Toko {{ $tokoPro->name }} disetujui —
-                                    {{ $tokoPro->verifiedBy?->name ?? '—' }}@if ($tokoPro->verified_at) · {{ $tokoPro->verified_at->format('d M Y H:i') }}@endif
-                                @else
-                                    <span class="text-muted">Belum — naik otomatis saat tokonya disetujui di Verifikasi Toko</span>
                                 @endif
                             </span>
                         </li>

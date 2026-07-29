@@ -25,7 +25,7 @@
                     <h5 class="modal-title" id="verifikasiUser{{ $index }}Label">
                         Verifikasi {{ $user->name }}
                     </h5>
-                    <span class="badge text-bg-secondary">{{ $user->verification_level->label() }}</span>
+                    <span class="badge text-bg-secondary">Tahap {{ $tahap ?? '—' }} · Menunggu</span>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
             </div>

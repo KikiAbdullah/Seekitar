@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\DataTables\UsersDataTable;
-use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
@@ -30,19 +29,8 @@ class UserController extends Controller
         return view('admin.users.edit', [
             // Statistik & jejak verifikasi ikut dimuat: formulir sunting tidak
             // boleh memaksa admin memutuskan "buta" tanpa konteks si pengguna.
-            // Lencana level turunan pun ikut dipasok has_verified_store supaya
-            // tidak diam-diam menembak EXISTS kedua.
             'user' => $user->loadMissing('verified1By:id,name', 'verified2By:id,name')
-                ->loadCount(['stores', 'customerRequests', 'orders'])
-                ->loadExists(['stores as has_verified_store' => fn ($q) => $q
-                    ->where('verification_status', VerificationStatus::Verified)]),
-            // Jejak Level 3 tidak punya kolom stempel sendiri di users —
-            // sumbernya adalah persetujuan toko PERTAMA miliknya.
-            'tokoPro' => $user->stores()
-                ->where('verification_status', VerificationStatus::Verified)
-                ->oldest('verified_at')
-                ->with('verifiedBy:id,name')
-                ->first(),
+                ->loadCount(['stores', 'customerRequests', 'orders']),
         ]);
     }
 
@@ -68,17 +56,9 @@ class UserController extends Controller
                 ->with([
                     'verified1By:id,name',
                     'verified2By:id,name',
-                    // verified_at/verified_by ikut dipilih: jejak Level 3
-                    // pengguna dibaca dari persetujuan tokonya, bukan dari
-                    // kolom stempel di tabel users.
-                    'stores:id,user_id,name,photo,verification_status,is_active,rating_avg,total_reviews,verified_at,verified_by,created_at',
-                    'stores.verifiedBy:id,name',
+                    'stores:id,user_id,name,photo,verification_status,is_active,rating_avg,total_reviews,created_at',
                 ])
                 ->withCount(['stores', 'customerRequests', 'orders'])
-                // Bahan lencana level turunan — tanpa ini aksesornya
-                // menembak satu EXISTS tambahan.
-                ->withExists(['stores as has_verified_store' => fn ($q) => $q
-                    ->where('verification_status', VerificationStatus::Verified)])
                 ->findOrFail($user->getKey()),
         ]);
     }
