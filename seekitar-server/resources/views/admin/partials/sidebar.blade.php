@@ -36,19 +36,15 @@
 
                 @can('verify-users')
                     <li class="sidebar-item">
-                        <a class="sidebar-link justify-content-between {{ request()->routeIs('admin.verifications.users') ? 'active' : '' }}"
+                        <a class="sidebar-link {{ request()->routeIs('admin.verifications.users') ? 'active' : '' }}"
                            href="{{ route('admin.verifications.users') }}" aria-expanded="false"
                            @if (request()->routeIs('admin.verifications.users')) aria-current="page" @endif>
-                            <div class="d-flex align-items-center gap-3">
-                                <span class="d-flex"><i class="ti ti-id" aria-hidden="true"></i></span>
-                                <span class="hide-menu">Pengguna</span>
-                            </div>
+                            <span class="d-flex"><i class="ti ti-id" aria-hidden="true"></i></span>
+                            <span class="hide-menu">Pengguna</span>
                             @if ($pendingVerifikasiPengguna ?? 0)
-                                <div class="hide-menu">
-                                    <span class="badge rounded-pill bg-warning-subtle text-warning fs-2 py-1 px-2">
-                                        {{ $pendingVerifikasiPengguna }}
-                                    </span>
-                                </div>
+                                <span class="hide-menu badge rounded-pill bg-warning-subtle text-warning fs-2 py-1 px-2 ms-auto">
+                                    {{ $pendingVerifikasiPengguna }}
+                                </span>
                             @endif
                         </a>
                     </li>
@@ -56,19 +52,15 @@
 
                 @can('verify-stores')
                     <li class="sidebar-item">
-                        <a class="sidebar-link justify-content-between {{ request()->routeIs('admin.verifications.stores') ? 'active' : '' }}"
+                        <a class="sidebar-link {{ request()->routeIs('admin.verifications.stores') ? 'active' : '' }}"
                            href="{{ route('admin.verifications.stores') }}" aria-expanded="false"
                            @if (request()->routeIs('admin.verifications.stores')) aria-current="page" @endif>
-                            <div class="d-flex align-items-center gap-3">
-                                <span class="d-flex"><i class="ti ti-building-store" aria-hidden="true"></i></span>
-                                <span class="hide-menu">Toko</span>
-                            </div>
+                            <span class="d-flex"><i class="ti ti-building-store" aria-hidden="true"></i></span>
+                            <span class="hide-menu">Toko</span>
                             @if ($pendingVerifikasiToko ?? 0)
-                                <div class="hide-menu">
-                                    <span class="badge rounded-pill bg-warning-subtle text-warning fs-2 py-1 px-2">
-                                        {{ $pendingVerifikasiToko }}
-                                    </span>
-                                </div>
+                                <span class="hide-menu badge rounded-pill bg-warning-subtle text-warning fs-2 py-1 px-2 ms-auto">
+                                    {{ $pendingVerifikasiToko }}
+                                </span>
                             @endif
                         </a>
                     </li>
@@ -165,18 +157,14 @@
 
                 @can('manage-disputes')
                     <li class="sidebar-item">
-                        <a class="sidebar-link justify-content-between {{ request()->routeIs('admin.disputes.*') ? 'active' : '' }}"
+                        <a class="sidebar-link {{ request()->routeIs('admin.disputes.*') ? 'active' : '' }}"
                            href="{{ route('admin.disputes.index') }}" aria-expanded="false">
-                            <div class="d-flex align-items-center gap-3">
-                                <span class="d-flex"><i class="ti ti-alert-triangle" aria-hidden="true"></i></span>
-                                <span class="hide-menu">Laporan</span>
-                            </div>
+                            <span class="d-flex"><i class="ti ti-alert-triangle" aria-hidden="true"></i></span>
+                            <span class="hide-menu">Laporan</span>
                             @if ($laporanLewatSla ?? 0)
-                                <div class="hide-menu">
-                                    <span class="badge rounded-pill bg-danger-subtle text-danger fs-2 py-1 px-2">
-                                        {{ $laporanLewatSla }}
-                                    </span>
-                                </div>
+                                <span class="hide-menu badge rounded-pill bg-danger-subtle text-danger fs-2 py-1 px-2 ms-auto">
+                                    {{ $laporanLewatSla }}
+                                </span>
                             @endif
                         </a>
                     </li>
@@ -209,16 +197,14 @@
             </ul>
         </nav>
 
-        <div class="fixed-profile p-3 bg-light-primary rounded sidebar-ad mt-3 hide-menu">
-            <div class="hstack gap-3">
-                <span class="admin-brand-dot" aria-hidden="true">
-                    <i class="ti ti-map-pin fs-4" aria-hidden="true"></i>
-                </span>
-                <div class="lh-sm">
-                    <h6 class="mb-0 fs-3 fw-semibold">{{ config('seekitar.regency') }}</h6>
-                    <span class="fs-2 text-muted">Kode BPS {{ config('seekitar.regency_code') }}</span>
-                </div>
-            </div>
+        {{-- Baris wilayah sesingkat satu napas — identitas layanan tetap
+             terlihat, tanpa mengorbankan ruang menu di layar pendek. --}}
+        <div class="sidebar-ad hide-menu mx-3 mb-3 px-3 py-2 bg-light-primary rounded">
+            <span class="d-flex align-items-center gap-2 fs-2">
+                <i class="ti ti-map-pin text-primary" aria-hidden="true"></i>
+                <span class="fw-semibold text-primary">{{ config('seekitar.regency') }}</span>
+                <span class="text-muted">· BPS {{ config('seekitar.regency_code') }}</span>
+            </span>
         </div>
     </div>
 </aside>

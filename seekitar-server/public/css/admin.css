@@ -134,6 +134,37 @@
 .left-sidebar .sidebar-ad { flex: 0 0 auto; }
 
 /*
+ * Sidebar dipadatkan: empat belas butir + empat judul bagian harus muat
+ * utuh di layar laptop (≥768px) TANPA menggulir.
+ *
+ * Hitungan stok template (diukur, bukan dikira):
+ *   brand 70px + 14 butir × 47px + 4 bagian × 53px + kartu ≈99px ≈ 970px
+ * — jelas melampaui viewport mana pun, jadi bilah gulir selalu muncul.
+ *
+ * Target setelah dipadatkan (link 37px, bagian 32px, brand 56px,
+ * baris wilayah ≈46px): ≈ 736px — muat dengan napas. Di layar yang
+ * lebih pendek simplebar tetap menggulir, itu wajar; yang dihapus di
+ * sini adalah gulir yang muncul di layar NORMAL.
+ *
+ * Judul bagian adalah beaya tersembunyi: margin-top 24px-nya lebih
+ * besar dari tinggi teksnya sendiri, jadi dialah yang pertama dihemat.
+ */
+.left-sidebar .brand-logo { min-height: 56px; }
+
+.sidebar-nav ul .sidebar-item .sidebar-link {
+    padding-top: 7px;
+    padding-bottom: 7px;
+    line-height: 22px;
+    gap: 12px;
+}
+
+.sidebar-nav ul .nav-small-cap {
+    margin-top: 8px;
+    padding-block: 2px;
+    line-height: 22px;
+}
+
+/*
  * Ikon submenu harus terbaca.
  *
  * Template mengunci ikon di dalam .first-level ke `font-size: 7px`. Angka itu
