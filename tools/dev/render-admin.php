@@ -200,6 +200,49 @@ $kategoriTiruan = collect([
     (new App\Models\Category())->setRawAttributes(['id' => 1, 'name' => 'Sembako'], true),
 ]);
 
+// Listing tiruan untuk halaman detail Etalase — relasi store disuntik
+// langsung; pesanan & penggemar diberi SATU contoh agar cabang
+// forelse/empty sama-sama pernah dirender di harness lain.
+$listingTiruan = (new App\Models\Listing())->setRawAttributes([
+    'id'              => '019fa000-0000-7000-8000-0000000000a1',
+    'store_id'        => $tokoTiruan->getAttribute('id'),
+    'title'           => 'Beras Pandan Wangi 5 kg',
+    'description'     => "Beras pulen hasil panen sendiri.\nTanpa pemutih, wangi alami.",
+    'listing_type'    => App\Enums\ListingType::Product->value,
+    'price'           => 68000,
+    'stock_qty'       => 25,
+    'slot'            => null,
+    'images'          => json_encode(['https://picsum.photos/seed/listing-1/800/600']),
+    'status'          => App\Enums\ListingStatus::Active->value,
+    'favorites_count' => 7,
+    'created_at'      => '2026-06-20 09:00:00',
+    'updated_at'      => '2026-07-25 09:00:00',
+], true);
+$listingTiruan->setRelation('store', $tokoTiruan);
+
+$pesananTiruan = (new App\Models\Order())->setRawAttributes([
+    'id'              => '019fa000-0000-7000-8000-0000000000b1',
+    'order_number'    => 'ORD-20260725-0001',
+    'buyer_id'        => '019fa000-0000-7000-8000-0000000000e3',
+    'order_type'      => 'product',
+    'delivery_method' => 'delivery',
+    'quantity'        => 2,
+    'total_amount'    => 136000,
+    'status'          => App\Enums\OrderStatus::Selesai->value,
+    'created_at'      => '2026-07-25 10:00:00',
+], true);
+$pesananTiruan->setRelation('buyer', (new App\Models\User())->setRawAttributes([
+    'id' => '019fa000-0000-7000-8000-0000000000e3', 'name' => 'Budi Santoso', 'phone' => '085600000001',
+], true));
+
+$penggemarTiruan = (new App\Models\Favorite())->setRawAttributes([
+    'id' => 1, 'listing_id' => $listingTiruan->getAttribute('id'),
+    'user_id' => '019fa000-0000-7000-8000-0000000000e4',
+], true);
+$penggemarTiruan->setRelation('user', (new App\Models\User())->setRawAttributes([
+    'id' => '019fa000-0000-7000-8000-0000000000e4', 'name' => 'Rina Wulandari',
+], true));
+
 $halaman = [
     'admin.dashboard' => [
         'stats'     => [],
@@ -226,6 +269,12 @@ $halaman = [
         'status' => App\Enums\StoreStatus::cases(),
     ],
     'admin.listings.index'       => [],
+    'admin.listings.show'        => [
+        'listing'   => $listingTiruan,
+        'statistik' => ['total' => 9, 'selesai' => 6, 'omzet' => 4500000],
+        'pesanan'   => collect([$pesananTiruan]),
+        'penggemar' => collect([$penggemarTiruan]),
+    ],
     'admin.orders.index'         => [],
     'admin.requests.index'       => [],
     'admin.offers.index'         => [],

@@ -21,6 +21,23 @@ enum ListingStatus: string
         };
     }
 
+    /**
+     * Warna lencana Bootstrap-Subtle untuk panel admin.
+     *
+     * Satu sumber kebenaran: sebelum ini tiap Blade menulis if-else warna
+     * sendiri, dan ketika status baru lahir cabangnya jatuh ke "else
+     * abu-abu" secara diam-diam. Di enum, status baru tanpa warna
+     * adalah error kompilasi yang langsung terlihat.
+     */
+    public function color(): string
+    {
+        return match ($this) {
+            self::Active => 'success',
+            self::Sold   => 'info',
+            self::Hidden => 'secondary',
+        };
+    }
+
     public function isVisible(): bool
     {
         return $this === self::Active;

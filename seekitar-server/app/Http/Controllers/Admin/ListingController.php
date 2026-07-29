@@ -27,24 +27,26 @@ class ListingController extends Controller
 
     public function show(Listing $listing): View
     {
-        $listing->load('store:id,name,photo');
+        // Toko dimuati dengan seluruh kolom yang dipakai kartu relasi:
+        // centang terverifikasi (status), rating (rating_avg/total_reviews),
+        // dan domisili (regency) — tanpa menyentuh basis data lagi di view.
+        $listing->load(['store:id,user_id,name,photo,regency,status,rating_avg,total_reviews'])
+                ->loadCount('favorites');
 
         /*
-         * Seluruh statistik pesanan listing ini dihitung dalam SATU query
-         * agregat — bukan tiga query terpisah — karena halaman ini bisa
-         * sering dibuka admin saat meninjau konten. Nilai enum
-         * diinterpolasi sebagai literal konstanta aplikasi (bukan input
-         * pengguna) sehingga aman tanpa binding.
+         * Statistik performa. Tiga query agregat kecil — COUNT, COUNT,
+         * SUM — masing-masing terindeks listing_id. Ini pilihan sadar:
+         * konvensi proyek melarang SQL mentah (selectRaw CASE-WHEN yang
+         * pernah dipakai di sini), dan pada skala satu listing ketiga
+         * query ini sama murahnya dengan satu query raksasa.
          */
-        $selesai = OrderStatus::Selesai->value;
-        $statistik = Order::query()
-            ->where('listing_id', $listing->id)
-            ->selectRaw('COUNT(*) AS total')
-            ->selectRaw("SUM(CASE WHEN status = '{$selesai}' THEN 1 ELSE 0 END) AS selesai")
-            ->selectRaw("COALESCE(SUM(CASE WHEN status = '{$selesai}' THEN total_amount END), 0) AS omzet")
-            ->first();
+        $basisPesanan = fn () => Order::query()->where('listing_id', $listing->id);
 
-        $favorit = Favorite::query()->where('listing_id', $listing->id)->count();
+        $statistik = [
+            'total'   => $basisPesanan()->count(),
+            'selesai' => $basisPesanan()->where('status', OrderStatus::Selesai)->count(),
+            'omzet'   => (int) $basisPesanan()->where('status', OrderStatus::Selesai)->sum('total_amount'),
+        ];
 
         // Riwayat pesanan dibatasi ringkas — halaman detail bukan laporan.
         $pesanan = Order::query()
@@ -55,7 +57,16 @@ class ListingController extends Controller
             ->get(['id', 'order_number', 'buyer_id', 'order_type', 'delivery_method',
                    'quantity', 'total_amount', 'status', 'created_at']);
 
-        return view('admin.listings.show', compact('listing', 'statistik', 'favorit', 'pesanan'));
+        // Wajah-wajah yang memfavoritkan: relasi ini menghangatkan angka
+        // favorit menjadi orang yang nyata.
+        $penggemar = Favorite::query()
+            ->with('user:id,name')
+            ->where('listing_id', $listing->id)
+            ->latest()
+            ->limit(5)
+            ->get(['id', 'listing_id', 'user_id']);
+
+        return view('admin.listings.show', compact('listing', 'statistik', 'pesanan', 'penggemar'));
     }
 
     /** Menghapus konten bermasalah (§6.2 permission manage-listings). */

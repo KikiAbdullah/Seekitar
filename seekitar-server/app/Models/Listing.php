@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Listing extends Model
@@ -56,6 +57,28 @@ class Listing extends Model
     public function store(): BelongsTo
     {
         return $this->belongsTo(Store::class);
+    }
+
+    /**
+     * Pengguna yang memfavoritkan listing ini.
+     *
+     * KENAPA RELASI, BUKAN COUNT MANUAL: angka favorit dipakai di tabel
+     * admin (withCount per halaman) dan di detail (loadCount). Tanpa
+     * relasi, tiap pemakai menulis where('listing_id', ...) sendiri dan
+     * perubahan struktur favorit harus diburu ke banyak tempat.
+     */
+    public function favorites(): HasMany
+    {
+        return $this->hasMany(Favorite::class);
+    }
+
+    /**
+     * Pesanan yang membeli listing ini — dasar statistik performa di
+     * panel admin (jumlah, selesai, omzet) dengan sumber yang sama.
+     */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
     }
 
     public function isAvailable(): bool

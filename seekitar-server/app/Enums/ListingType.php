@@ -21,6 +21,26 @@ enum ListingType: string
         };
     }
 
+    /** Warna lencana panel admin — dipasangkan dengan icon() di bawah. */
+    public function color(): string
+    {
+        return match ($this) {
+            self::Product => 'primary',
+            self::Service => 'warning',
+            self::Rental  => 'info',
+        };
+    }
+
+    /** Ikon Tabler yang bermakna sekilas: paket, perkakas, kalender sewa. */
+    public function icon(): string
+    {
+        return match ($this) {
+            self::Product => 'ti-package',
+            self::Service => 'ti-tools',
+            self::Rental  => 'ti-calendar-time',
+        };
+    }
+
     /** Product & rental wajib punya stok; service memakai slot. */
     public function requiresStock(): bool
     {
