@@ -30,7 +30,7 @@ class ListingController extends Controller
         // Toko dimuati dengan seluruh kolom yang dipakai kartu relasi:
         // centang terverifikasi (status), rating (rating_avg/total_reviews),
         // dan domisili (regency) — tanpa menyentuh basis data lagi di view.
-        $listing->load(['store:id,user_id,name,photo,regency,status,rating_avg,total_reviews'])
+        $listing->load(['store:id,user_id,name,photo,regency,status,is_active,rating_avg,total_reviews'])
                 ->loadCount('favorites');
 
         /*

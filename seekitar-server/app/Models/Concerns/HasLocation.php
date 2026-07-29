@@ -2,40 +2,15 @@
 
 namespace App\Models\Concerns;
 
+use App\Support\SpatialSchema;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Query berbasis lokasi di MySQL 8.
- *
- * SELALU dua tahap: MBRContains (memakai SPATIAL INDEX) lalu
- * ST_Distance_Sphere (akurat). ST_Distance_Sphere sendirian TIDAK memakai
- * indeks sama sekali — lihat DATABASE.md §11.
- *
- * ────────────────────────────────────────────────────────────────────────
- *  URUTAN SUMBU: 'axis-order=long-lat' WAJIB, BUKAN GAYA PENULISAN
- * ────────────────────────────────────────────────────────────────────────
- * Untuk SRID 4326 MySQL mengikuti definisi EPSG: `AXIS["Lat",NORTH],
- * AXIS["Lon",EAST]` — sumbu pertama LATITUDE. Jadi `POINT(107.6 -6.9)`
- * dibaca sebagai latitude 107,6 dan langsung ditolak:
- *
- *     ERROR 3617 (22S03): Latitude 107.600000 is out of range in function
- *     st_geomfromtext. It must be within [-90.000000, 90.000000].
- *
- * Seluruh Indonesia berada di bujur 95°–141° BT — semuanya di luar rentang
- * ±90 — sehingga SETIAP penulisan titik akan gagal bila urutannya tidak
- * dinyatakan. Opsi `'axis-order=long-lat'` membuat MySQL membaca WKT dalam
- * urutan (longitude latitude), sesuai konvensi GeoJSON yang dipakai API.
- *
- * Alternatifnya menulis POINT(lat lng) tanpa opsi. Itu ditolak karena
- * membuat WKT di kode berbeda urutan dari payload API, dan kesalahan
- * seperti itu tidak memicu error — hanya lokasi yang salah diam-diam.
+ * Query berbasis lokasi.
  */
 trait HasLocation
 {
-    /** Opsi wajib untuk semua WKT bersistem koordinat geografis. */
-    private const AXIS = 'axis-order=long-lat';
-
     /** Derajat lintang per meter (jarak antar-lintang praktis konstan). */
     private const METER_PER_LAT_DEGREE = 111320;
 
@@ -60,12 +35,12 @@ trait HasLocation
 
         return $q
             ->whereRaw(
-                'MBRContains(ST_GeomFromText(?, 4326, ?), location)',
-                [$bbox, self::AXIS]
+                'MBRContains('.SpatialSchema::geomFromTextSql().', location)',
+                [$bbox]
             )
             ->whereRaw(
-                'ST_Distance_Sphere(location, ST_GeomFromText(?, 4326, ?)) <= ?',
-                [self::wkt($lat, $lng), self::AXIS, $meter]
+                'ST_Distance_Sphere(location, '.SpatialSchema::geomFromTextSql().') <= ?',
+                [self::wkt($lat, $lng), $meter]
             );
     }
 
@@ -75,8 +50,8 @@ trait HasLocation
         return $q
             ->select($this->baseSelect($q))
             ->selectRaw(
-                'ST_Distance_Sphere(location, ST_GeomFromText(?, 4326, ?)) / 1000 AS distance_km',
-                [self::wkt($lat, $lng), self::AXIS]
+                'ST_Distance_Sphere(location, '.SpatialSchema::geomFromTextSql().') / 1000 AS distance_km',
+                [self::wkt($lat, $lng)]
             );
     }
 
@@ -123,11 +98,7 @@ trait HasLocation
      */
     public function setLocation(float $lat, float $lng, string $column = 'location'): static
     {
-        $this->{$column} = DB::raw(sprintf(
-            "ST_GeomFromText('%s', 4326, '%s')",
-            self::wkt($lat, $lng),
-            self::AXIS
-        ));
+        $this->{$column} = DB::raw(SpatialSchema::pointExpression($lat, $lng));
 
         return $this;
     }

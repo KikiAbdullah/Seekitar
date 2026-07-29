@@ -12,6 +12,7 @@ use App\Http\Resources\ListingResource;
 use App\Models\Listing;
 use App\Models\Store;
 use App\Services\SettingService;
+use App\Support\SpatialSchema;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -86,8 +87,8 @@ class ListingController extends Controller
                 ->join('stores', 'stores.id', '=', 'listings.store_id')
                 ->select('listings.*')
                 ->selectRaw(
-                    'ST_Distance_Sphere(stores.location, ST_GeomFromText(?, 4326, ?)) / 1000 AS distance_km',
-                    [sprintf('POINT(%F %F)', $lng, $lat), 'axis-order=long-lat'],
+                    'ST_Distance_Sphere(stores.location, '.SpatialSchema::geomFromTextSql().') / 1000 AS distance_km',
+                    [sprintf('POINT(%F %F)', $lng, $lat)],
                 )
                 ->orderBy('distance_km'),
         };
