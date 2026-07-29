@@ -22,8 +22,7 @@
 
                 <div class="col-xl-7 col-xxl-8">
                     <a href="{{ url('/') }}" class="text-nowrap logo-img d-flex align-items-center gap-2 px-4 py-9">
-                        <img src="{{ asset('img/brand/logo-mark.png') }}" alt="Logo Seekitar" class="admin-brand-logo" width="34" height="34">
-                        <span class="fw-bold fs-5 text-dark">Seekitar</span>
+                        <img src="{{ asset('img/brand/logo-lockup.png') }}" alt="Seekitar" class="admin-brand-lockup">
                     </a>
 
                     <div class="d-none d-xl-flex align-items-center justify-content-center admin-login-art">

@@ -163,6 +163,10 @@
    hanya mematok ukuran — mengikuti dimensi .admin-brand-dot yang digantikan. */
 .admin-brand-logo { width: 34px; height: 34px; display: block; }
 
+/* Lockup horizontal (mark + kata "Seekitar"): lebar mengikuti rasio berkas,
+   sedikit lebih pendek dari mark agar tidak mendominasi kolom sidebar. */
+.admin-brand-lockup { height: 32px; width: auto; display: block; }
+
 .admin-brand-dot {
     width: 34px;
     height: 34px;

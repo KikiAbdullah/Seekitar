@@ -61,7 +61,7 @@
 <nav class="navbar navbar-expand-lg navbar-seekitar sticky-top">
     <div class="container">
         <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="{{ route('web.home') }}">
-            <img src="{{ asset('img/brand/logo-mark.png') }}" alt="Logo Seekitar" class="brand-logo" width="36" height="36"> Seekitar
+            <img src="{{ asset('img/brand/logo-lockup.png') }}" alt="Seekitar" class="brand-lockup">
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
                 data-bs-target="#navmenu" aria-controls="navmenu"
@@ -101,8 +101,7 @@
         <div class="row g-4">
             <div class="col-lg-4">
                 <div class="d-flex align-items-center gap-2 mb-2">
-                    <img src="{{ asset('img/brand/logo-mark.png') }}" alt="" class="brand-logo" width="36" height="36">
-                    <span class="h6 mb-0 text-white fw-bold">Seekitar</span>
+                    <img src="{{ asset('img/brand/logo-lockup-putih.png') }}" alt="Seekitar" class="brand-lockup">
                 </div>
                 <p class="mb-2">Yang kamu butuhkan, ada di sekitar.</p>
                 <p class="mb-0">

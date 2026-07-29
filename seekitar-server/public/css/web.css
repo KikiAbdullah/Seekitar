@@ -33,6 +33,11 @@ body {
    rounded — tidak perlu radius atau latar tambahan di sini. */
 .brand-logo { width: 36px; height: 36px; display: block; }
 
+/* Lockup horizontal (mark + kata "Seekitar" sebagai satu gambar): lebarnya
+   mengikuti rasio berkas (±4,3:1), tinggi saja yang dipatok. Digambar 4×
+   lipat resolusi pakai agar tajam di layar retina. */
+.brand-lockup { height: 36px; width: auto; display: block; }
+
 .btn-seekitar { background: var(--hijau-lokal); color: #fff; }
 .btn-seekitar:hover, .btn-seekitar:focus { background: var(--hijau-gelap); color: #fff; }
 
