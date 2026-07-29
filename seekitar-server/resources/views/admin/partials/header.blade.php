@@ -101,8 +101,11 @@
                            data-bs-toggle="dropdown" aria-expanded="false">
                             <div class="d-flex align-items-center">
                                 <div class="user-profile-img">
+                                    {{-- Ikon generik, bukan inisial: huruf tidak
+                                         membawa informasi berguna di sini dan
+                                         sempat bermasalah saat nama kosong. --}}
                                     <span class="admin-avatar" aria-hidden="true">
-                                        {{ auth()->user()?->initials ?: 'A' }}
+                                        <i class="ti ti-user" style="font-size: 18px;"></i>
                                     </span>
                                 </div>
                             </div>
@@ -118,7 +121,7 @@
 
                                 <div class="d-flex align-items-center py-9 mx-7 border-bottom">
                                     <span class="admin-avatar admin-avatar-lg" aria-hidden="true">
-                                        {{ auth()->user()?->initials ?: 'A' }}
+                                        <i class="ti ti-user" style="font-size: 38px;"></i>
                                     </span>
                                     <div class="ms-3">
                                         <h5 class="mb-1 fs-3">{{ auth()->user()?->name }}</h5>
