@@ -26,7 +26,12 @@ class UserController extends Controller
 
     public function edit(User $user): View
     {
-        return view('admin.users.edit', ['user' => $user]);
+        return view('admin.users.edit', [
+            // Statistik & jejak verifikasi ikut dimuat: formulir sunting tidak
+            // boleh memaksa admin memutuskan "buta" tanpa konteks si pengguna.
+            'user' => $user->loadMissing('verified1By:id,name', 'verified2By:id,name')
+                ->loadCount(['stores', 'customerRequests', 'orders']),
+        ]);
     }
 
     /**
@@ -63,13 +68,20 @@ class UserController extends Controller
         $data = $request->validate([
             'name'               => ['required', 'string', 'max:100'],
             'verification_level' => ['required', 'integer', 'between:1,3'],
+        ], [
+            'name.required'               => 'Nama wajib diisi.',
+            'name.max'                    => 'Nama maksimal 100 karakter.',
+            'verification_level.required' => 'Pilih level verifikasi.',
+            'verification_level.between'  => 'Level verifikasi tidak dikenal.',
         ]);
 
         $user->update($data);
 
+        // Kembali ke detail, bukan daftar: admin biasanya ingin memastikan
+        // hasil suntingannya tampil benar tepat setelah menyimpan.
         return redirect()
-            ->route('admin.users.index')
-            ->with('success', 'Data pengguna diperbarui.');
+            ->route('admin.users.show', $user)
+            ->with('success', 'Data pengguna berhasil diperbarui.');
     }
 
     /**

@@ -176,7 +176,50 @@
     font-weight: 600;
 }
 
-/* ----------------------------------------------------------- Identitas */
+/* Radio-card (mis. pilihan level verifikasi di Sunting Pengguna): input
+   radio asli disembunyikan secara visual namun tetap fokus-able untuk
+   papan ketik & pembaca layar; labelnya yang berperan sebagai kartu
+   yang bisa diklik seluruhnya — target sentuh jauh lebih lapang daripada
+   radio 16px bawaan (BRANDING §4). */
+.admin-radio-kartu { position: relative; }
+.admin-radio-kartu .form-check-input {
+    position: absolute; opacity: 0; width: 1px; height: 1px;
+    margin: 0;
+}
+.admin-radio-kartu .form-check-label {
+    display: flex; align-items: center; gap: .75rem; width: 100%;
+    padding: .85rem 1rem;
+    border: 2px solid #E5E7EB; border-radius: 14px;
+    cursor: pointer; background: #fff;
+    transition: border-color .15s ease-in-out, background-color .15s ease-in-out;
+}
+.admin-radio-kartu .form-check-input:focus-visible + .form-check-label {
+    border-color: var(--seekitar-green);
+    box-shadow: 0 0 0 .2rem rgba(22, 138, 74, .18);
+}
+.admin-radio-kartu .form-check-input:checked + .form-check-label {
+    border-color: var(--seekitar-green);
+    background: rgba(22, 138, 74, .05);
+}
+
+/* Titik radio kustom — cincin terisi saat terpilih (radio bawaan terlalu
+ * kecil untuk diperhatikan di tengah kartu). */
+.admin-radio-kartu .rp {
+    width: 20px; height: 20px; flex: 0 0 auto;
+    border: 2px solid #9CA3AF; border-radius: 50%;
+    transition: border-color .15s ease-in-out, background-color .15s ease-in-out;
+}
+.admin-radio-kartu .form-check-input:checked + .form-check-label .rp {
+    border-color: var(--seekitar-green);
+    background: var(--seekitar-green);
+    box-shadow: inset 0 0 0 3px #fff;
+}
+@media (prefers-reduced-motion: reduce) {
+    .admin-radio-kartu .form-check-label,
+    .admin-radio-kartu .rp { transition: none; }
+}
+
+
 
 /* Logo aplikasi di titik merek panel (sidebar, header mobile, login).
    PNG-nya sendiri sudah berbentuk tile rounded transparan, jadi kelas ini
