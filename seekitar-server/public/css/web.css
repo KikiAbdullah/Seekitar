@@ -73,6 +73,12 @@ section[id], h2[id] { scroll-margin-top: 88px; }
    bentuknya sama tetapi hanya setinggi yang dibutuhkan judul + remah. */
 .lp-hero-mini { padding: 3rem 0 2.5rem; }
 
+/* Hero dalam YANG BERFOTO memakai pola hero beranda (latar penuh + scrim),
+   hanya dipendekkan — tetap lebih tinggi dari versi legal supaya ilustrasi
+   terbaca sebagai gambar, bukan garis hias tipis. */
+.lp-hero-berfoto { padding: 4.5rem 0 3.5rem; }
+@media (max-width: 991.98px) { .lp-hero-berfoto { padding: 3.5rem 0 3rem; } }
+
 /* Dua blob lembut ala banner-top-left/right template. Absolut terhadap
    hero, bukan viewport: tidak ikut bergeser saat gulir dan tidak
    memunculkan scrollbar horizontal. */
@@ -163,14 +169,6 @@ section[id], h2[id] { scroll-margin-top: 88px; }
     gap: 1.25rem 2.5rem; color: #6B7280; font-weight: 600;
 }
 .lp-iconbar .ti { font-size: 22px; vertical-align: -3px; margin-right: .35rem; }
-
-/* Ilustrasi pada kepala halaman dalam (tentang/bantuan/kontak): bayangan
-   lebih tipis — ia hiasan pendamping judul, bukan fokus utama. */
-.lp-hero-mini-img {
-    display: block; width: 100%;
-    border-radius: 18px;
-    box-shadow: 0 10px 26px rgba(31, 41, 51, .10);
-}
 
 /* Foto/ilustrasi di atas kartu alur cara-kerja: dipotong 2:1 supaya kedua
    kartu (pencari & penyedia) sejajar rapi walau sumbernya tidak identik. */
