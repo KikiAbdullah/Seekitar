@@ -24,6 +24,7 @@ use Carbon\Carbon;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -81,6 +82,16 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        /*
+         * Laravel sejak v11 merender ->links() dengan view Tailwind — panel
+         * ini Bootstrap 5, hasilnya pagination "rusak": daftar tanpa gaya
+         * dan panah SVG raksasa (contoh: /admin/verifications/users).
+         * Saklar global ini mengganti SELURUH ->links() ke view Bootstrap,
+         * sehingga halaman pagination baru di masa depan otomatis ikut benar
+         * tanpa perlu diingat satu per satu.
+         */
+        Paginator::useBootstrapFive();
+
         $this->configureRateLimiting();
         $this->registerObservers();
         $this->registerEventListeners();
