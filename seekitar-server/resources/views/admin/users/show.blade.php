@@ -36,9 +36,11 @@
             <div class="card">
                 <div class="card-body text-center pb-0">
                     @if ($user->avatar_url)
-                        <img src="{{ $user->avatar_url }}" alt="Foto profil {{ $user->name }}"
-                             width="104" height="104" class="rounded-circle mb-3 border border-2 border-white shadow-sm"
-                             style="object-fit: cover;">
+                        <a href="{{ $user->avatar_url }}" data-lightbox data-title="Foto {{ $user->name }}">
+                            <img src="{{ $user->avatar_url }}" alt="Foto profil {{ $user->name }}"
+                                 width="104" height="104" class="rounded-circle mb-3 border border-2 border-white shadow-sm"
+                                 style="object-fit: cover; cursor: pointer;">
+                        </a>
                     @else
                         <span class="rounded-circle bg-light-primary text-primary fw-bold d-inline-flex align-items-center justify-content-center fs-8 mb-3"
                               style="width: 104px; height: 104px;" aria-hidden="true">
@@ -180,11 +182,23 @@
                             <div class="col-md-6">
                                 <div class="text-muted fw-semibold mb-1" style="font-size: 11px;">FOTO WAJAH</div>
                                 @if ($user->selfie_image)
-                                    <a href="{{ route('admin.verifications.users.media', [$user, 'selfie']) }}" target="_blank" rel="noopener">
-                                        <img loading="lazy" decoding="async" src="{{ route('admin.verifications.users.media', [$user, 'selfie']) }}"
-                                             alt="Foto wajah {{ $user->name }}" class="img-fluid rounded border"
-                                             style="max-height: 160px; object-fit: cover;">
-                                    </a>
+                                    @php
+                                        $selfiePath = $user->selfie_image;
+                                        $selfieExists = \Illuminate\Support\Facades\Storage::disk('local')->exists($selfiePath);
+                                    @endphp
+                                    @if ($selfieExists)
+                                        <a href="{{ route('admin.verifications.users.media', [$user, 'selfie']) }}"
+                                           data-lightbox="foto-wajah"
+                                           data-title="Foto Wajah {{ $user->name }}">
+                                            <img src="{{ route('admin.verifications.users.media', [$user, 'selfie']) }}"
+                                                 alt="Foto wajah {{ $user->name }}" class="img-fluid rounded border"
+                                                 style="max-height: 160px; object-fit: cover; background: #f0f0f0; cursor: pointer;"
+                                                 onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+                                            <div class="border rounded text-muted text-center py-3 small" style="display:none">Gambar tidak dapat dimuat</div>
+                                        </a>
+                                    @else
+                                        <div class="border rounded text-muted text-center py-3 small">Berkas tidak ditemukan di penyimpanan</div>
+                                    @endif
                                 @else
                                     <div class="border rounded text-muted text-center py-3 small">Belum diunggah</div>
                                 @endif
@@ -192,11 +206,23 @@
                             <div class="col-md-6">
                                 <div class="text-muted fw-semibold mb-1" style="font-size: 11px;">FOTO KTP</div>
                                 @if ($user->ktp_image)
-                                    <a href="{{ route('admin.verifications.users.media', [$user, 'ktp']) }}" target="_blank" rel="noopener">
-                                        <img loading="lazy" decoding="async" src="{{ route('admin.verifications.users.media', [$user, 'ktp']) }}"
-                                             alt="KTP {{ $user->name }}" class="img-fluid rounded border"
-                                             style="max-height: 160px; object-fit: cover;">
-                                    </a>
+                                    @php
+                                        $ktpPath = $user->ktp_image;
+                                        $ktpExists = \Illuminate\Support\Facades\Storage::disk('local')->exists($ktpPath);
+                                    @endphp
+                                    @if ($ktpExists)
+                                        <a href="{{ route('admin.verifications.users.media', [$user, 'ktp']) }}"
+                                           data-lightbox="foto-ktp"
+                                           data-title="KTP {{ $user->name }}">
+                                            <img src="{{ route('admin.verifications.users.media', [$user, 'ktp']) }}"
+                                                 alt="KTP {{ $user->name }}" class="img-fluid rounded border"
+                                                 style="max-height: 160px; object-fit: cover; background: #f0f0f0; cursor: pointer;"
+                                                 onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+                                            <div class="border rounded text-muted text-center py-3 small" style="display:none">Gambar tidak dapat dimuat</div>
+                                        </a>
+                                    @else
+                                        <div class="border rounded text-muted text-center py-3 small">Berkas tidak ditemukan di penyimpanan</div>
+                                    @endif
                                 @else
                                     <div class="border rounded text-muted text-center py-3 small">Belum diunggah</div>
                                 @endif
@@ -248,8 +274,11 @@
                     <tr>
                         <td style="width: 72px;">
                             @if ($store->photo)
-                                <img loading="lazy" decoding="async" src="{{ $store->photo }}" alt="" width="56" height="42"
-                                     class="rounded border" style="object-fit: cover;">
+                                <a href="{{ $store->photo }}" data-lightbox="toko-{{ $store->id }}"
+                                   data-title="Foto {{ $store->name }}">
+                                    <img loading="lazy" decoding="async" src="{{ $store->photo }}" alt="" width="56" height="42"
+                                         class="rounded border" style="object-fit: cover; cursor: pointer;">
+                                </a>
                             @else
                                 <span class="rounded bg-light-primary text-primary d-inline-flex align-items-center justify-content-center"
                                       style="width: 56px; height: 42px;" aria-hidden="true">
@@ -291,6 +320,7 @@
             </table>
         </div>
     </div>
+    @include('admin.partials._lightbox')
 @endsection
 
 @push('scripts')

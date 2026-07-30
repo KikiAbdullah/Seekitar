@@ -61,12 +61,17 @@ class User extends Authenticatable
      * dokumen identitas (KTP/selfie) SENGAJA tidak diberi fallback seperti
      * ini — foto acak bukanlah bukti verifikasi, jadi pemeriksaan
      * `$user->ktp_image` di blade dibiarkan menampilkan "Belum diunggah".
+     *
+     * Nilai database bisa berupa:
+     * 1. URL absolut (format lama) — path diekstrak, URL regenerasi
+     * 2. Path relatif (format baru) — langsung generate URL
+     * 3. Null — pakai placeholder
      */
     protected function avatarUrl(): Attribute
     {
-        return Attribute::get(
-            fn (?string $v) => $v ?: PlaceholderImg::url('pengguna-'.$this->getKey(), 240, 240, 'Pengguna')
-        );
+        return Attribute::get(function (?string $v): string {
+            return PlaceholderImg::storageUrl($v) ?? PlaceholderImg::url('pengguna-'.$this->getKey(), 240, 240, 'Pengguna');
+        });
     }
 
     /*

@@ -35,8 +35,11 @@
     <div class="card">
         <div class="card-body py-3 px-4 d-flex align-items-center gap-3">
             @if ($store->photo)
-                <img src="{{ $store->photo }}" alt=""
-                     width="72" height="54" class="rounded border flex-shrink-0" style="object-fit: cover;">
+                <a href="{{ $store->photo }}" data-lightbox="store-edit-{{ $store->id }}"
+                   data-title="Foto {{ $store->name }}">
+                    <img src="{{ $store->photo }}" alt=""
+                         width="72" height="54" class="rounded border flex-shrink-0" style="object-fit: cover; cursor: pointer;">
+                </a>
             @else
                 <span class="rounded bg-light-primary text-primary d-inline-flex align-items-center justify-content-center flex-shrink-0"
                       style="width: 72px; height: 54px;" aria-hidden="true">
@@ -127,9 +130,11 @@
                     <div class="card-header fw-semibold">Foto Tampak Depan</div>
                     <div class="card-body">
                         <div class="d-flex align-items-start gap-3">
-                            <img id="pratinjau-foto" src="{{ $store->photo }}" alt="Pratinjau foto toko"
-                                 class="rounded border flex-shrink-0"
-                                 style="width: 200px; height: 140px; object-fit: cover;">
+                            <a href="{{ $store->photo }}" data-lightbox data-title="Foto {{ $store->name }}">
+                                <img id="pratinjau-foto" src="{{ $store->photo }}" alt="Pratinjau foto toko"
+                                     class="rounded border flex-shrink-0"
+                                     style="width: 200px; height: 140px; object-fit: cover; cursor: pointer;">
+                            </a>
                             <div class="flex-grow-1">
                                 <label for="photo" class="form-label">Ganti foto</label>
                                 <input type="file" id="photo" name="photo" accept="image/jpeg,image/png,image/webp"
@@ -338,6 +343,8 @@
             </button>
         </div>
     </form>
+
+    @include('admin.partials._lightbox')
 @endsection
 
 @push('scripts')

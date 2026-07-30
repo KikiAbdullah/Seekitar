@@ -62,10 +62,18 @@ class Order extends Model
      * pesanan bila kosong — PlaceholderImg). Blade detail tidak lagi butuh
      * cabang "belum ada bukti" untuk merender spot gambarnya.
      */
+    /**
+     * Bukti bayar disimpan di disk PRIVAT (`local`), bukan publik —
+     * tidak bisa dijadikan URL publik lewat Storage::url().
+     *
+     * Accessor ini mengembalikan placeholder bila kosong, atau path relatif
+     * bila sudah ada unggahan. Blade/admin harus memakai route khusus
+     * (admin.orders.payment-proof) untuk menyajikan berkas aslinya.
+     */
     protected function paymentProofUrl(): Attribute
     {
         return Attribute::get(
-            fn (?string $v) => $v ?: PlaceholderImg::url('bukti-'.$this->getKey(), 600, 400, 'Bukti Bayar')
+            fn (?string $v): string => $v ?: PlaceholderImg::url('bukti-'.$this->getKey(), 600, 400, 'Bukti Bayar')
         );
     }
 

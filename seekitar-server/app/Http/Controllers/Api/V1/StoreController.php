@@ -13,7 +13,6 @@ use App\Models\Store;
 use App\Services\SettingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class StoreController extends Controller
 {
@@ -119,8 +118,7 @@ class StoreController extends Controller
             // Foto etalase PUBLIK seperti avatar (bukan data pribadi): akan
             // tampil di hasil pencarian — dan admin mencocokkannya dengan
             // kondisi asli saat verifikasi toko.
-            $path = $request->file('photo')->store('stores', 'public');
-            $store->photo = Storage::disk('public')->url($path);
+            $store->photo = $request->file('photo')->store('stores', 'public');
         }
 
         $store->save();
@@ -142,8 +140,7 @@ class StoreController extends Controller
             // Foto lama sengaja tidak dihapus dulu: membersihkan berkas yatim
             // adalah pekerjaan repositori terpisah, dan salah hapus lebih
             // mahal daripada sisa berkas.
-            $path = $request->file('photo')->store('stores', 'public');
-            $store->photo = Storage::disk('public')->url($path);
+            $store->photo = $request->file('photo')->store('stores', 'public');
         }
 
         $store->save();

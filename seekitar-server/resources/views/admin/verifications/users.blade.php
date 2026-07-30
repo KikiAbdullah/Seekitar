@@ -72,8 +72,11 @@
                         <td>
                             <div class="d-flex align-items-center gap-3">
                                 @if ($user->avatar_url)
-                                    <img loading="lazy" decoding="async" src="{{ $user->avatar_url }}" alt="" width="44" height="44"
-                                         class="rounded-circle flex-shrink-0" style="object-fit: cover;">
+                                    <a href="{{ $user->avatar_url }}" data-lightbox="verif-user-avatar-{{ $user->id }}"
+                                       data-title="Foto {{ $user->name }}">
+                                        <img loading="lazy" decoding="async" src="{{ $user->avatar_url }}" alt="" width="44" height="44"
+                                             class="rounded-circle flex-shrink-0" style="object-fit: cover; cursor: pointer;">
+                                    </a>
                                 @else
                                     <span class="rounded-circle bg-light-primary text-primary fw-semibold d-inline-flex align-items-center justify-content-center flex-shrink-0"
                                           style="width: 44px; height: 44px;" aria-hidden="true">
@@ -159,6 +162,8 @@
             });
         });
     </script>
+
+    @include('admin.partials._lightbox')
 @endsection
 
 @push('scripts')

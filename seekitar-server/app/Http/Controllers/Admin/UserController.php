@@ -162,12 +162,13 @@ class UserController extends Controller
         }
 
         $avatarLama = $user->getRawOriginal('avatar_url');
+        $normalisasi = static fn (string $url) => str_starts_with($url, 'http')
+            ? substr($url, strlen(rtrim(Storage::disk('public')->url(''), '/')))
+            : $url;
 
         if ($request->hasFile('avatar')) {
-            // Kolomnya menyimpan URL, bukan path (mengikuti updateProfile
-            // API) — keduanya harus setuju agar penghapusan file lama benar.
             $path = $request->file('avatar')->store('avatars', 'public');
-            $user->avatar_url = Storage::disk('public')->url($path);
+            $user->avatar_url = $path;
         }
 
         /*
@@ -213,13 +214,9 @@ class UserController extends Controller
         if ($selfieLama && $selfieLama !== $user->selfie_image) {
             Storage::disk('local')->delete($selfieLama);
         }
-        if ($avatarLama && $avatarLama !== $user->avatar_url) {
-            // Hanya hapus bila URL-nya menunjuk file LOKAL: avatar bisa
-            // berisi URL placeholder luar, yang bukan milik disk kita.
-            $prefixLokal = Storage::disk('public')->url('');
-            if (str_starts_with($avatarLama, $prefixLokal)) {
-                Storage::disk('public')->delete(substr($avatarLama, strlen($prefixLokal)));
-            }
+        if ($avatarLama && $avatarLama !== $user->getRawOriginal('avatar_url')) {
+            $pathLama = ltrim($normalisasi($avatarLama), '/');
+            Storage::disk('public')->delete($pathLama);
         }
 
         // Kembali ke detail, bukan daftar: admin biasanya ingin memastikan

@@ -30,6 +30,7 @@
      * diunggah pemilik — bukti harus bukti, bukan dekorasi.
      */
     $fotoAsli             = $store->getRawOriginal('photo');
+    $fotoUrl              = $fotoAsli ? \App\Support\PlaceholderImg::storageUrl($fotoAsli) : null;
     $pemilikTerverifikasi = $store->owner?->canOpenStore() ?? false;
     $syaratPokokTerpenuhi = $pemilikTerverifikasi && filled($fotoAsli);
 @endphp
@@ -135,11 +136,11 @@
                     LANGKAH 2 · FOTO TOKO
                 </div>
                 <div class="mb-3">
-                    @if ($fotoAsli)
-                        <a href="{{ $fotoAsli }}" target="_blank" rel="noopener"
-                           title="Buka ukuran penuh di tab baru">
-                            <img src="{{ $fotoAsli }}" alt="Foto toko {{ $store->name }}"
-                                 class="img-fluid rounded border" style="max-height: 220px; object-fit: cover;">
+                    @if ($fotoUrl)
+                        <a href="{{ $fotoUrl }}" data-lightbox="verif-toko-{{ $store->id }}"
+                           data-title="Foto Toko {{ $store->name }}">
+                            <img src="{{ $fotoUrl }}" alt="Foto toko {{ $store->name }}"
+                                 class="img-fluid rounded border" style="max-height: 220px; object-fit: cover; cursor: pointer;">
                         </a>
                     @else
                         <div class="alert alert-warning py-2 fs-3 mb-0">

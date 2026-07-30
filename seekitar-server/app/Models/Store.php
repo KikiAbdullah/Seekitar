@@ -100,12 +100,15 @@ class Store extends Model
      * getRawOriginal('photo'). Placeholder adalah dekorasi publik, bukan
      * bukti — keputusan menyetujui toko tidak boleh berpijak pada gambar
      * yang tidak pernah diunggah pemilik.
+     *
+     * Nilai database bisa berupa URL absolut (lama) atau path relatif (baru);
+     * PlaceholderImg::storageUrl menormalkannya ke URL publik yang benar.
      */
     protected function photo(): Attribute
     {
-        return Attribute::get(
-            fn (?string $v) => $v ?: PlaceholderImg::url('toko-'.$this->getKey(), 600, 400, 'Foto Toko')
-        );
+        return Attribute::get(function (?string $v): string {
+            return PlaceholderImg::storageUrl($v) ?? PlaceholderImg::url('toko-'.$this->getKey(), 600, 400, 'Foto Toko');
+        });
     }
 
     public function owner(): BelongsTo

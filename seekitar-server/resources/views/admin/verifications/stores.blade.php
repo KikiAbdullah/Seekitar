@@ -70,9 +70,12 @@
                         <td>
                             <div class="d-flex align-items-center gap-3">
                                 @if ($store->photo)
-                                    <img loading="lazy" decoding="async" src="{{ $store->photo }}" alt="Foto {{ $store->name }}"
-                                         width="52" height="40" class="rounded border flex-shrink-0"
-                                         style="object-fit: cover;">
+                                    <a href="{{ $store->photo }}" data-lightbox="verif-store-list-{{ $store->id }}"
+                                       data-title="Foto {{ $store->name }}">
+                                        <img loading="lazy" decoding="async" src="{{ $store->photo }}" alt="Foto {{ $store->name }}"
+                                             width="52" height="40" class="rounded border flex-shrink-0"
+                                             style="object-fit: cover; cursor: pointer;">
+                                    </a>
                                 @else
                                     <span class="rounded bg-light-primary text-primary d-inline-flex align-items-center justify-content-center flex-shrink-0"
                                           style="width: 52px; height: 40px;" aria-hidden="true">
@@ -173,6 +176,8 @@
     @foreach ($pending as $store)
         @include('admin.verifications._store_modal', ['store' => $store, 'index' => $loop->index])
     @endforeach
+
+    @include('admin.partials._lightbox')
 @endsection
 
 @push('scripts')

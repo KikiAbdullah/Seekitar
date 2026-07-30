@@ -142,9 +142,12 @@ class VerificationController extends Controller
 
         abort_if($path === null || ! Storage::disk('local')->exists($path), 404);
 
-        return Storage::disk('local')
-            ->response($path)
-            ->header('Cache-Control', 'private, no-store');
+        $response = Storage::disk('local')->response($path);
+        $response->headers->set('Content-Type', Storage::disk('local')->mimeType($path));
+        $response->headers->set('Content-Disposition', 'inline');
+        $response->headers->set('Cache-Control', 'private, no-store');
+
+        return $response;
     }
 
     /**

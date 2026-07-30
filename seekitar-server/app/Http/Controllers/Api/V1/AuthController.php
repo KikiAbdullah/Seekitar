@@ -15,7 +15,6 @@ use App\Exceptions\OtpDeliveryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Autentikasi berbasis OTP WhatsApp (API §2).
@@ -222,8 +221,7 @@ class AuthController extends Controller
 
         if ($request->hasFile('avatar')) {
             // Avatar bersifat publik; KTP tidak (lihat uploadKtp).
-            $path = $request->file('avatar')->store('avatars', 'public');
-            $user->avatar_url = Storage::disk('public')->url($path);
+            $user->avatar_url = $request->file('avatar')->store('avatars', 'public');
         }
 
         if ($request->hasCoordinates()) {

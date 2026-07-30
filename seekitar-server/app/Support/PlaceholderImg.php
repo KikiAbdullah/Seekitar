@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use Illuminate\Support\Facades\Storage;
+
 /*
  * Placeholder foto untuk spot yang seharusnya menampilkan gambar tetapi
  * belum punya unggahan (umumnya data dummy selama pengembangan).
@@ -21,6 +23,10 @@ namespace App\Support;
  *    Dokumen verifikasi (KTP/selfie) sengaja tidak diberi placeholder —
  *    foto acak di sana adalah bukti identitas palsu di mata admin, jadi
  *    bagian itu tetap menampilkan status "Belum diunggah" yang jujur.
+ *
+ * 3. Normalisasi path: nilai database bisa berupa URL absolut (format lama)
+ *    atau path relatif (format baru). Method `storageUrl()` mengkonversi
+ *    keduanya ke URL yang benar sesuai APP_URL saat ini.
  */
 final class PlaceholderImg
 {
@@ -37,6 +43,32 @@ final class PlaceholderImg
         ['16A34A', 'FFFFFF'],
         ['F3F4F6', '6B7280'],
     ];
+
+    /**
+     * Normalisasi path/URL penyimpanan ke URL publik yang benar.
+     *
+     * Nilai database bisa berupa:
+     * 1. URL absolut (format lama) — path diekstrak, URL regenerasi
+     * 2. Path relatif (format baru) — langsung generate URL
+     *
+     * Contoh: 'http://localhost/storage/avatars/file.jpg'  -> 'http://127.0.0.1:8000/storage/avatars/file.jpg'
+     *         'avatars/file.jpg'                            -> 'http://127.0.0.1:8000/storage/avatars/file.jpg'
+     */
+    public static function storageUrl(?string $value, string $disk = 'public'): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (str_starts_with($value, 'http')) {
+            $pos = strpos($value, '/storage/');
+            if ($pos !== false) {
+                $value = substr($value, $pos + 9);
+            }
+        }
+
+        return Storage::disk($disk)->url($value);
+    }
 
     public static function url(string $seed, int $width, int $height, ?string $text = null): string
     {

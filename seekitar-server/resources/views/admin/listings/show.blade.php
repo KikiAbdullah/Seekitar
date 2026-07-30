@@ -47,21 +47,22 @@
             {{-- Galeri + ringkasan. --}}
             <div class="card">
                 @php $foto = $listing->images; @endphp
-                <a id="tautanFotoUtama" href="{{ $foto[0] }}" target="_blank" rel="noopener"
-                   title="Buka ukuran penuh di tab baru">
+                <a id="tautanFotoUtama" href="{{ $foto[0] }}" data-lightbox="listing"
+                   data-title="Foto {{ $listing->title }}">
                     <img id="fotoUtamaListing" src="{{ $foto[0] }}" alt="Foto listing {{ $listing->title }}"
-                         class="card-img-top" style="height: 240px; object-fit: cover;">
+                         class="card-img-top" style="height: 240px; object-fit: cover; cursor: pointer;">
                 </a>
                 @if (count($foto) > 1)
-                    {{-- Thumbnail mengganti foto utama tanpa muat ulang. --}}
+                    {{-- Thumbnail: klik mengganti foto utama & bisa buka lightbox. --}}
                     <div class="d-flex flex-wrap gap-1 px-3 pt-3" role="group" aria-label="Galeri foto">
-                        @foreach ($foto as $url)
-                            <button type="button" data-foto-listing="{{ $url }}"
-                                    class="btn p-0 border rounded overflow-hidden {{ $loop->first ? 'border-primary' : '' }}"
-                                    style="width: 52px; height: 52px;"
-                                    aria-label="Tampilkan foto {{ $loop->iteration }}">
-                                <img loading="lazy" decoding="async" src="{{ $url }}" alt="" style="width: 100%; height: 100%; object-fit: cover;">
-                            </button>
+                        @foreach ($foto as $i => $url)
+                            <a href="{{ $url }}" data-lightbox="listing" data-title="Foto {{ $listing->title }} ({{ $i + 1 }})"
+                               class="btn p-0 border rounded overflow-hidden {{ $loop->first ? 'border-primary' : '' }}"
+                               style="width: 52px; height: 52px; cursor: pointer;"
+                               aria-label="Tampilkan foto {{ $loop->iteration }}">
+                                <img loading="lazy" decoding="async" src="{{ $url }}" alt=""
+                                     style="width: 100%; height: 100%; object-fit: cover;">
+                            </a>
                         @endforeach
                     </div>
                 @endif
@@ -113,8 +114,11 @@
                 <div class="card-body">
                     <div class="d-flex align-items-center gap-3">
                         @if ($listing->store->photo)
-                            <img loading="lazy" decoding="async" src="{{ $listing->store->photo }}" alt="Foto {{ $listing->store->name }}"
-                                 class="rounded border flex-shrink-0" style="width: 56px; height: 56px; object-fit: cover;">
+                            <a href="{{ $listing->store->photo }}" data-lightbox="listing-store-{{ $listing->id }}"
+                               data-title="Foto {{ $listing->store->name }}">
+                                <img loading="lazy" decoding="async" src="{{ $listing->store->photo }}" alt="Foto {{ $listing->store->name }}"
+                                     class="rounded border flex-shrink-0" style="width: 56px; height: 56px; object-fit: cover; cursor: pointer;">
+                            </a>
                         @else
                             <span class="rounded bg-primary-subtle text-primary d-inline-flex align-items-center justify-content-center flex-shrink-0 fw-bold fs-6"
                                   style="width: 56px; height: 56px;" aria-hidden="true">
@@ -292,25 +296,21 @@
             </div>
         </div>
     </div>
+@include('admin.partials._lightbox')
 @endsection
 
 @push('scripts')
 <script>
     // Galeri: klik thumbnail mengganti foto utama beserta tautan ukuran
-    // penuhnya, tanpa muat ulang halaman. Delegated listener agar tombol
-    // tetap berfungsi walau markup galeri berubah.
+    // penuhnya, tanpa muat ulang halaman.
     document.addEventListener('click', function (e) {
-        const tombol = e.target.closest('[data-foto-listing]');
-        if (!tombol) return;
+        const tautan = e.target.closest('[data-lightbox="listing"]');
+        if (!tautan) return;
 
         const utama  = document.getElementById('fotoUtamaListing');
-        const tautan = document.getElementById('tautanFotoUtama');
-        if (utama)  utama.src    = tombol.dataset.fotoListing;
-        if (tautan) tautan.href  = tombol.dataset.fotoListing;
-
-        document.querySelectorAll('[data-foto-listing]').forEach(function (t) {
-            t.classList.toggle('border-primary', t === tombol);
-        });
+        const tautanUtama = document.getElementById('tautanFotoUtama');
+        if (utama)  utama.src    = tautan.href;
+        if (tautanUtama) tautanUtama.href = tautan.href;
     });
 </script>
 @endpush

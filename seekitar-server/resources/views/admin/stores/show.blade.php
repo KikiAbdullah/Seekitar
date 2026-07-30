@@ -66,10 +66,9 @@
         <div class="col-lg-4">
             <div class="card">
                 @if ($store->photo)
-                    <a href="{{ $store->photo }}" target="_blank" rel="noopener"
-                       title="Buka ukuran penuh di tab baru">
+                    <a href="{{ $store->photo }}" data-lightbox data-title="Foto Toko {{ $store->name }}">
                         <img src="{{ $store->photo }}" alt="Foto toko {{ $store->name }}"
-                             class="card-img-top" style="max-height: 240px; object-fit: cover;">
+                             class="card-img-top" style="max-height: 240px; object-fit: cover; cursor: pointer;">
                     </a>
                 @else
                     <div class="bg-light-primary text-primary d-flex align-items-center justify-content-center"
@@ -319,6 +318,7 @@
             </div>
         </div>
     </div>
+@include('admin.partials._lightbox')
 @endsection
 
 @push('scripts')

@@ -201,6 +201,8 @@ Route::middleware(['auth', 'role:admin|super-admin'])->group(function (): void {
     // --- Pesanan (hanya baca) ---------------------------------------------
     Route::middleware('permission:manage-orders')->group(function (): void {
         Route::resource('orders', OrderController::class)->only(['index', 'show']);
+        Route::get('orders/{order}/payment-proof', [OrderController::class, 'paymentProofMedia'])
+            ->name('orders.payment-proof');
     });
 
     // --- Ulasan -----------------------------------------------------------

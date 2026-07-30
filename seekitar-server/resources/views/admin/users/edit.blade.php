@@ -44,10 +44,12 @@
                      sumber salah sasaran paling sering di panel admin. --}}
                 <div class="card">
                     <div class="card-body d-flex align-items-center gap-3">
-                        <img src="{{ $user->avatar_url }}" alt="Foto profil {{ $user->name ?? 'pengguna' }}"
-                             class="rounded-circle flex-shrink-0 border" width="56" height="56"
-                             style="object-fit: cover;"
-                             data-avatar-pratinjau>
+                        <a href="{{ $user->avatar_url }}" data-lightbox data-title="Foto {{ $user->name ?? 'pengguna' }}">
+                            <img src="{{ $user->avatar_url }}" alt="Foto profil {{ $user->name ?? 'pengguna' }}"
+                                 class="rounded-circle flex-shrink-0 border" width="56" height="56"
+                                 style="object-fit: cover; cursor: pointer;"
+                                 data-avatar-pratinjau>
+                        </a>
                         <div class="flex-grow-1" style="min-width: 0;">
                             <div class="fw-semibold text-truncate d-inline-flex align-items-center">
                                 {{ $user->name ?? '(belum mengisi nama)' }}
@@ -214,10 +216,11 @@
                                     <label for="ktp_image" class="form-label fw-semibold">Foto KTP</label>
                                     @if ($user->ktp_image)
                                         <a href="{{ route('admin.verifications.users.media', [$user, 'ktp']) }}"
-                                           target="_blank" rel="noopener" class="d-block mb-2">
+                                           data-lightbox="edit-ktp-{{ $user->id }}"
+                                           data-title="KTP {{ $user->name }}" class="d-block mb-2">
                                             <img src="{{ route('admin.verifications.users.media', [$user, 'ktp']) }}"
                                                  alt="KTP {{ $user->name }}" class="img-fluid rounded border"
-                                                 style="max-height: 120px; object-fit: cover;">
+                                                 style="max-height: 120px; object-fit: cover; cursor: pointer;">
                                         </a>
                                     @else
                                         <div class="border rounded text-muted text-center py-3 small mb-2">Belum diunggah</div>
@@ -232,10 +235,11 @@
                                     <label for="selfie_image" class="form-label fw-semibold">Foto Wajah</label>
                                     @if ($user->selfie_image)
                                         <a href="{{ route('admin.verifications.users.media', [$user, 'selfie']) }}"
-                                           target="_blank" rel="noopener" class="d-block mb-2">
+                                           data-lightbox="edit-selfie-{{ $user->id }}"
+                                           data-title="Foto Wajah {{ $user->name }}" class="d-block mb-2">
                                             <img src="{{ route('admin.verifications.users.media', [$user, 'selfie']) }}"
                                                  alt="Foto wajah {{ $user->name }}" class="img-fluid rounded border"
-                                                 style="max-height: 120px; object-fit: cover;">
+                                                 style="max-height: 120px; object-fit: cover; cursor: pointer;">
                                         </a>
                                     @else
                                         <div class="border rounded text-muted text-center py-3 small mb-2">Belum diunggah</div>
@@ -352,6 +356,7 @@
         </div>
     </form>
 
+    @include('admin.partials._lightbox')
 @endsection
 
 @push('scripts')

@@ -39,18 +39,24 @@
                         <div class="text-muted fw-semibold mb-1" style="font-size: 11px;">FOTO PROFIL</div>
                         {{-- avatar_url accessor selalu mengembalikan URL
                              (placeholder bila kosong). --}}
-                        <img src="{{ $user->avatar_url }}" alt="Foto profil {{ $user->name }}"
-                             class="img-fluid rounded border" style="max-height: 180px; object-fit: cover;"
-                             loading="lazy" decoding="async">
+                        <a href="{{ $user->avatar_url }}" data-lightbox="verif-user-modal-{{ $user->id }}"
+                           data-title="Foto Profil {{ $user->name }}">
+                            <img src="{{ $user->avatar_url }}" alt="Foto profil {{ $user->name }}"
+                                 class="img-fluid rounded border" style="max-height: 180px; object-fit: cover; cursor: pointer;"
+                                 loading="lazy" decoding="async">
+                        </a>
                     </div>
                     <div class="col-md-4">
                         <div class="text-muted fw-semibold mb-1" style="font-size: 11px;">FOTO WAJAH</div>
                         @if ($user->selfie_image)
                             <a href="{{ route('admin.verifications.users.media', [$user, 'selfie']) }}"
-                               target="_blank" rel="noopener" title="Buka ukuran penuh di tab baru">
+                               data-lightbox="verif-{{ $user->id }}"
+                               data-title="Foto Wajah {{ $user->name }}">
                                 <img src="{{ route('admin.verifications.users.media', [$user, 'selfie']) }}"
                                      alt="Foto wajah {{ $user->name }}" class="img-fluid rounded border"
-                                     style="max-height: 180px; object-fit: cover;">
+                                     style="max-height: 180px; object-fit: cover; background: #f0f0f0; cursor: pointer;"
+                                     onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+                                <div class="border rounded text-muted text-center py-3 small" style="display:none">Gambar tidak dapat dimuat</div>
                             </a>
                         @else
                             <div class="border rounded text-muted text-center py-4 small">Belum diunggah</div>
@@ -60,10 +66,13 @@
                         <div class="text-muted fw-semibold mb-1" style="font-size: 11px;">FOTO KTP</div>
                         @if ($user->ktp_image)
                             <a href="{{ route('admin.verifications.users.media', [$user, 'ktp']) }}"
-                               target="_blank" rel="noopener" title="Buka ukuran penuh di tab baru">
+                               data-lightbox="verif-{{ $user->id }}"
+                               data-title="KTP {{ $user->name }}">
                                 <img src="{{ route('admin.verifications.users.media', [$user, 'ktp']) }}"
                                      alt="KTP {{ $user->name }}" class="img-fluid rounded border"
-                                     style="max-height: 180px; object-fit: cover;">
+                                     style="max-height: 180px; object-fit: cover; background: #f0f0f0; cursor: pointer;"
+                                     onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+                                <div class="border rounded text-muted text-center py-3 small" style="display:none">Gambar tidak dapat dimuat</div>
                             </a>
                         @else
                             <div class="border rounded text-muted text-center py-4 small">Belum diunggah</div>

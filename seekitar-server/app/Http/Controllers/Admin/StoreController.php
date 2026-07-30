@@ -12,7 +12,6 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class StoreController extends Controller
@@ -169,8 +168,7 @@ class StoreController extends Controller
         if ($request->hasFile('photo')) {
             // Foto lama diganti SETELAH yang baru tersimpan — salah hapus
             // lebih mahal daripada berkas sisa.
-            $path = $request->file('photo')->store('stores', 'public');
-            $store->photo = Storage::disk('public')->url($path);
+            $store->photo = $request->file('photo')->store('stores', 'public');
         }
 
         $store->save();

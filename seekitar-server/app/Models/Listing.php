@@ -47,10 +47,12 @@ class Listing extends Model
      */
     protected function images(): Attribute
     {
-        return Attribute::get(function (array|string|null $value) {
-            $images = is_string($value) ? json_decode($value, true) : $value;
+        return Attribute::get(function (array|string|null $value): array {
+            $images = is_string($value) ? json_decode($value, true) : ($value ?? []);
 
-            return $images ?: [PlaceholderImg::url('listing-'.$this->getKey(), 800, 600, 'Listing')];
+            return $images
+                ? array_map(fn (mixed $img): string => PlaceholderImg::storageUrl($img) ?? $img, $images)
+                : [PlaceholderImg::url('listing-'.$this->getKey(), 800, 600, 'Listing')];
         });
     }
 

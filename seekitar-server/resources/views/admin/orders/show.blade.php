@@ -82,8 +82,11 @@
                         <span class="text-end">
                             <span class="d-inline-flex align-items-center">
                                 @if ($order->store?->photo)
-                                    <img loading="lazy" decoding="async" src="{{ $order->store->photo }}" alt="" class="rounded me-1"
-                                         style="width: 28px; height: 28px; object-fit: cover;">
+                                    <a href="{{ $order->store->photo }}" data-lightbox="order-store-{{ $order->id }}"
+                                       data-title="Foto {{ $order->store->name }}">
+                                        <img loading="lazy" decoding="async" src="{{ $order->store->photo }}" alt="" class="rounded me-1"
+                                             style="width: 28px; height: 28px; object-fit: cover; cursor: pointer;">
+                                    </a>
                                 @endif
                                 @can('manage-stores')
                                     <a href="{{ route('admin.stores.show', $order->store) }}" class="text-decoration-none">
@@ -105,8 +108,11 @@
                         <span class="text-end">
                             @if ($order->listing)
                                 <span class="d-inline-flex align-items-center gap-2">
-                                    <img loading="lazy" decoding="async" src="{{ $order->listing->images[0] }}" alt=""
-                                         class="rounded border" style="width: 40px; height: 40px; object-fit: cover;">
+                                    <a href="{{ $order->listing->images[0] }}" data-lightbox="order-listing-{{ $order->id }}"
+                                       data-title="Foto {{ $order->listing->title }}">
+                                        <img loading="lazy" decoding="async" src="{{ $order->listing->images[0] }}" alt=""
+                                             class="rounded border" style="width: 40px; height: 40px; object-fit: cover; cursor: pointer;">
+                                    </a>
                                     @can('manage-listings')
                                         <a href="{{ route('admin.listings.show', $order->listing) }}" class="text-decoration-none">
                                             {{ $order->listing->title }}
@@ -249,13 +255,22 @@
                     <div class="card h-100">
                         <div class="card-header fw-semibold">Bukti Pembayaran</div>
                         <div class="card-body">
-                            {{-- payment_proof_url accessor selalu mengembalikan
-                                 URL (placeholder bila belum ada unggahan). --}}
-                            <a href="{{ $order->payment_proof_url }}" target="_blank" rel="noopener"
-                               title="Buka ukuran penuh di tab baru">
-                                <img loading="lazy" decoding="async" src="{{ $order->payment_proof_url }}" alt="Bukti pembayaran {{ $order->order_number }}"
-                                     class="rounded border w-100" style="max-height: 180px; object-fit: cover;">
-                            </a>
+                            @php $proofRaw = $order->getRawOriginal('payment_proof_url'); @endphp
+                            @if ($proofRaw)
+                                <a href="{{ route('admin.orders.payment-proof', $order) }}"
+                                   data-lightbox data-title="Bukti Bayar {{ $order->order_number }}">
+                                    <img src="{{ route('admin.orders.payment-proof', $order) }}"
+                                         alt="Bukti pembayaran {{ $order->order_number }}"
+                                         class="rounded border w-100" style="max-height: 180px; object-fit: cover; cursor: pointer;">
+                                </a>
+                            @else
+                                <a href="{{ $order->payment_proof_url }}"
+                                   data-lightbox data-title="Bukti Bayar {{ $order->order_number }}">
+                                    <img src="{{ $order->payment_proof_url }}"
+                                         alt="Bukti pembayaran {{ $order->order_number }}"
+                                         class="rounded border w-100" style="max-height: 180px; object-fit: cover; cursor: pointer;">
+                                </a>
+                            @endif
                             <div class="d-flex align-items-center justify-content-between mt-2 fs-3">
                                 <span class="text-muted">{{ $order->payment_method?->label() }}</span>
                                 @if ($order->payment_confirmed_at)
@@ -366,6 +381,7 @@
             </div>
         </div>
     </div>
+@include('admin.partials._lightbox')
 @endsection
 
 @if ($order->latitude !== null)

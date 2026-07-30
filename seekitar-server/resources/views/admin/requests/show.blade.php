@@ -131,11 +131,11 @@
                     <div class="card-body border-top">
                         <div class="text-muted fw-semibold mb-2" style="font-size: 11px;">LAMPIRAN FOTO</div>
                         <div class="d-flex flex-wrap gap-2">
-                            @foreach ($request->images as $url)
-                                <a href="{{ $url }}" target="_blank" rel="noopener"
-                                   title="Buka ukuran penuh di tab baru">
+                            @foreach ($request->images as $i => $url)
+                                <a href="{{ $url }}" data-lightbox="request-{{ $request->id }}"
+                                   data-title="Lampiran {{ $request->title }} ({{ $i + 1 }})">
                                     <img loading="lazy" decoding="async" src="{{ $url }}" alt="Lampiran {{ $request->title }}"
-                                         class="rounded border" style="width: 84px; height: 84px; object-fit: cover;">
+                                         class="rounded border" style="width: 84px; height: 84px; object-fit: cover; cursor: pointer;">
                                 </a>
                             @endforeach
                         </div>
@@ -219,8 +219,11 @@
                                     <tr class="{{ $offer->status?->value === 'accepted' ? 'table-success' : '' }}">
                                         <td>
                                             @if ($offer->store?->photo)
-                                                <img loading="lazy" decoding="async" src="{{ $offer->store->photo }}" alt="" class="rounded me-1"
-                                                     style="width: 28px; height: 28px; object-fit: cover;">
+                                                <a href="{{ $offer->store->photo }}" data-lightbox="request-offer-{{ $offer->id }}"
+                                                   data-title="Foto {{ $offer->store->name }}">
+                                                    <img loading="lazy" decoding="async" src="{{ $offer->store->photo }}" alt="" class="rounded me-1"
+                                                         style="width: 28px; height: 28px; object-fit: cover; cursor: pointer;">
+                                                </a>
                                             @endif
                                             @can('manage-stores')
                                                 <a href="{{ route('admin.stores.show', $offer->store) }}"
@@ -281,6 +284,7 @@
             </div>
         </div>
     </div>
+@include('admin.partials._lightbox')
 @endsection
 
 @push('scripts')

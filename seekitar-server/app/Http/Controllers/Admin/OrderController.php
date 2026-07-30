@@ -8,6 +8,8 @@ use App\Models\Order;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OrderController extends Controller
 {
@@ -43,5 +45,24 @@ class OrderController extends Controller
             ->findOrFail($order->id);
 
         return view('admin.orders.show', compact('order'));
+    }
+
+    /**
+     * Sajikan bukti bayar dari disk privat (local).
+     *
+     * Berkas tidak bisa diakses lewat URL publik — route ini adalah
+     * satu-satunya jalan untuk melihatnya di panel admin.
+     */
+    public function paymentProofMedia(Order $order): StreamedResponse
+    {
+        $path = $order->getRawOriginal('payment_proof_url');
+
+        abort_if($path === null || ! Storage::disk('local')->exists($path), 404);
+
+        $response = Storage::disk('local')->response($path);
+        $response->headers->set('Content-Type', Storage::disk('local')->mimeType($path));
+        $response->headers->set('Content-Disposition', 'inline');
+
+        return $response;
     }
 }
