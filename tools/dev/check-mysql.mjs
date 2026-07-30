@@ -72,30 +72,37 @@ const phpSources = [
 ];
 for (const f of phpSources) {
   const src = read(f);
-  // Bentuk yang sah ada tiga: argumen ke-3 berupa placeholder `?`, konstanta
-  // self::AXIS lewat sprintf `'%s'`, atau literal 'axis-order=...'. Yang
-  // dicari adalah ST_GeomFromText(..., 4326) yang BERHENTI di situ.
+  // Bentuk yang sah ada empat: argumen ke-3 berupa placeholder `?`, konstanta
+  // self::AXIS lewat sprintf `'%s'`, literal 'axis-order=...', atau panggilan
+  // TANPA axis-order yang khusus melayani MariaDB.
+  //
+  // MariaDB memang tidak mengenal argumen ke-3 itu, jadi SpatialSchema
+  // bercabang lewat isMariaDb(): cabang MariaDB berbentuk ST_GeomFromText(wkt,
+  // 4326) dan itu SAH. Bare-call hanya boleh hidup bila file yang sama juga
+  // mendeteksi MariaDB DAN tetap memuat bentuk ber-axis-order untuk MySQL.
   const calls = [...src.matchAll(/ST_GeomFromText\(([^)]*)\)/gi)];
   const bare = calls.filter(([, args]) => /4326\s*$/.test(args.trim()));
-  if (bare.length) {
+  const mariadbAware = src.includes('isMariaDb') && /4326,\s*'axis-order=long-lat'/.test(src);
+  if (bare.length && !mariadbAware) {
     fail(`${f}: ST_GeomFromText berhenti di 4326 tanpa argumen axis-order → ${bare[0][0].slice(0, 70)}`);
   }
   if (!src.includes('axis-order=long-lat') && calls.length) {
     fail(`${f}: tidak menyebut axis-order=long-lat sama sekali`);
   }
 }
-// Konstanta AXIS harus bernilai persis 'axis-order=long-lat'.
-// Mengecek keberadaan string saja tidak cukup: mengganti nilainya menjadi
-// 'srid-defined' (default MySQL yang justru memicu ERROR 3617) tetap lolos
-// karena kalimat penjelasnya masih menyebut long-lat.
+// Bentuk urutan sumbu yang benar harus hidup di SATU tempat: konstanta AXIS
+// pada HasLocation (skema lama) ATAU delegasi ke SpatialSchema (skema kini).
+// Mengecek keberadaan string saja tidak cukup: 'srid-defined' (default yang
+// justru memicu ERROR 3617) harus tetap gagal.
 const hasLocSrc = read(phpSources[0]);
+const spatialSrc = read(phpSources[1]);
 const axisConst = hasLocSrc.match(/const AXIS\s*=\s*'([^']*)'/);
-if (!axisConst) {
-  fail('HasLocation tidak lagi mendefinisikan konstanta AXIS');
-} else if (axisConst[1] !== 'axis-order=long-lat') {
-  fail(`HasLocation::AXIS bernilai '${axisConst[1]}', harus 'axis-order=long-lat' (lihat DATABASE.md §11)`);
+const hasLocationSah = (axisConst && axisConst[1] === 'axis-order=long-lat')
+  || (hasLocSrc.includes('geomFromTextSql') && /4326,\s*'axis-order=long-lat'/.test(spatialSrc));
+if (!hasLocationSah) {
+  fail('bentuk axis-order=long-lat hilang dari HasLocation maupun SpatialSchema');
 } else {
-  ok("HasLocation::AXIS = 'axis-order=long-lat'");
+  ok("urutan sumbu long-lat dijaga HasLocation/SpatialSchema");
 }
 
 // Semua pemakaian axis-order di kode wajib long-lat, bukan varian lain.

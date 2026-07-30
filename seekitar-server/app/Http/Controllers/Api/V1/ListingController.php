@@ -12,9 +12,10 @@ use App\Http\Resources\ListingResource;
 use App\Models\Listing;
 use App\Models\Store;
 use App\Services\SettingService;
-use App\Support\SpatialSchema;
+use App\Support\Jarak;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class ListingController extends Controller
 {
@@ -46,8 +47,10 @@ class ListingController extends Controller
         $maxRadius = $this->settings->int('max_search_radius_km', 25);
         $radius    = min((float) ($data['radius'] ?? $maxRadius), $maxRadius);
 
-        // Radius berlaku pada LOKASI TOKO, jadi penyaringan spasial dilakukan
-        // lewat relasi — listing sendiri tidak punya kolom koordinat.
+        // Radius berlaku pada LOKASI TOKO, jadi penyaringannya lewat relasi —
+        // listing sendiri tidak punya kolom koordinat. Pra-filternya kotak
+        // pembatas (withinBox, Eloquent murni); lingkaran akuratnya diputus
+        // PHP di bawah — tanpa SQL mentah (keputusan skema 2.3).
         $query = Listing::query()
             ->with('store')
             ->where('status', ListingStatus::Active)
@@ -56,13 +59,11 @@ class ListingController extends Controller
                 // menyeret listingnya keluar dari pencarian (Store::isVisible).
                 $q->where('is_active', true)
                     ->where('status', StoreStatus::Verified->value)
-                    ->nearby($lat, $lng, $radius);
+                    ->withinBox($lat, $lng, $radius);
             });
 
         if (isset($data['category'])) {
-            $query->whereHas('store', fn ($q) => $q->whereRaw(
-                'JSON_CONTAINS(category_ids, ?)', [(string) $data['category']]
-            ));
+            $query->whereHas('store', fn ($q) => $q->whereJsonContains('category_ids', (int) $data['category']));
         }
 
         if (isset($data['type'])) {
@@ -75,25 +76,43 @@ class ListingController extends Controller
             $query->whereFullText(['title', 'description'], $data['keyword']);
         }
 
-        match ($data['sort'] ?? 'nearest') {
-            // `price IS NULL` lebih dulu: jasa berharga null tidak boleh
-            // menempati urutan teratas "termurah".
-            'cheapest' => $query->orderByRaw('listings.price IS NULL, listings.price ASC'),
-            'newest'   => $query->latest('listings.created_at'),
+        /*
+         * Lingkaran akurat & pengurutan diputus di PHP atas koleksi kandidat
+         * kotak, persis pola StoreController::nearby — paginasi manual,
+         * karena halaman SQL akan salah potong kandidat yang sesungguhnya
+         * jatuh di luar lingkaran.
+         */
+        $kandidat = $query->get()
+            ->map(function (Listing $l) use ($lat, $lng): Listing {
+                $l->setAttribute('distance_km', Jarak::haversineKm(
+                    $lat, $lng, (float) $l->store->latitude, (float) $l->store->longitude
+                ));
+                return $l;
+            })
+            // Sudut kotak pembatas bisa berada di luar lingkaran — buang.
+            ->filter(fn (Listing $l) => $l->distance_km <= $radius)
+            ->values();
 
-            // Jarak ada di tabel stores, jadi di-JOIN sekali — bukan subquery
-            // berkorelasi yang dievaluasi ulang untuk tiap baris listing.
-            default => $query
-                ->join('stores', 'stores.id', '=', 'listings.store_id')
-                ->select('listings.*')
-                ->selectRaw(
-                    'ST_Distance_Sphere(stores.location, '.SpatialSchema::geomFromTextSql().') / 1000 AS distance_km',
-                    [sprintf('POINT(%F %F)', $lng, $lat)],
-                )
-                ->orderBy('distance_km'),
+        $kandidat = match ($data['sort'] ?? 'nearest') {
+            // Harga null (jasa) tidak boleh menempati urutan teratas
+            // "termurah" — didorong ke ekor dengan nilai penjaga.
+            'cheapest' => $kandidat->sortBy(
+                fn (Listing $l) => $l->price === null ? PHP_FLOAT_MAX : (float) $l->price, SORT_NUMERIC
+            )->values(),
+            'newest'   => $kandidat->sortByDesc('created_at')->values(),
+            default    => $kandidat->sortBy('distance_km', SORT_NUMERIC)->values(),
         };
 
-        return $this->paginated($query->paginate($this->perPage()), ListingResource::class);
+        $halaman  = (int) $request->integer('page', 1);
+        $paginasi = new LengthAwarePaginator(
+            $kandidat->forPage($halaman, $this->perPage())->values(),
+            $kandidat->count(),
+            $this->perPage(),
+            $halaman,
+            ['path' => $request->url(), 'query' => $request->query()],
+        );
+
+        return $this->paginated($paginasi, ListingResource::class);
     }
 
     /** GET /listings/{listing} */
