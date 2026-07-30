@@ -8,11 +8,14 @@ namespace App\Support;
  *
  * Dua keputusan sengaja:
  *
- * 1. Memakai URL BERSEED (picsum.photos/seed/{seed}/{w}/{h}), bukan URL
- *    polos. Versi polos memilih foto acak di SETIAP kali dimuat — satu
- *    baris tabel yang "tanpa foto" berganti-ganti gambarnya setiap refresh,
- *    dan tidak ada yang bisa di-cache peramban. Seed (di sini id record)
- *    menguncinya: entitas yang sama selalu mendapat foto yang sama.
+ * 1. Memakai placehold.co DENGAN SEED, bukan URL polos tanpa identitas.
+ *    Seed (id record) dipetakan secara deterministik ke satu dari beberapa
+ *    pasangan warna palet, jadi sifat yang dulu dijaga foto berseed tetap
+ *    berlaku: entitas yang sama SELALU mendapat warna yang sama, antrian
+ *    berisi kartu yang tidak seragam, dan peramban bisa meng-cache URL-nya.
+ *
+ *    placehold.co diganti kepadanannya karena ia statis & cepat — bukan
+ *    galeri foto acak — sehingga tabel tidak "bernapas" setiap refresh.
  *
  * 2. HANYA untuk foto tampilan (avatar, toko, listing, bukti bayar).
  *    Dokumen verifikasi (KTP/selfie) sengaja tidak diberi placeholder —
@@ -21,13 +24,31 @@ namespace App\Support;
  */
 final class PlaceholderImg
 {
-    public static function url(string $seed, int $width, int $height): string
+    /**
+     * Pasangan [latar, teks] — dipilih dari seed. Empat nada hijau brand
+     * untuk foto tampilan, satu abu netral untuk dokumen seperti bukti bayar.
+     *
+     * @var list<array{0: string, 1: string}>
+     */
+    private const PALET = [
+        ['E7F6EC', '168A4A'],
+        ['DCFCE7', '166534'],
+        ['F0FDF4', '15803D'],
+        ['16A34A', 'FFFFFF'],
+        ['F3F4F6', '6B7280'],
+    ];
+
+    public static function url(string $seed, int $width, int $height, ?string $text = null): string
     {
+        [$bg, $fg] = self::PALET[abs(crc32($seed)) % count(self::PALET)];
+
         return sprintf(
-            'https://picsum.photos/seed/%s/%d/%d',
-            rawurlencode($seed),
+            'https://placehold.co/%dx%d/%s/%s?text=%s',
             $width,
             $height,
+            $bg,
+            $fg,
+            rawurlencode($text ?? 'Seekitar'),
         );
     }
 }

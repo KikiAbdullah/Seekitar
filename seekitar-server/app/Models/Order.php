@@ -65,7 +65,7 @@ class Order extends Model
     protected function paymentProofUrl(): Attribute
     {
         return Attribute::get(
-            fn (?string $v) => $v ?: PlaceholderImg::url('bukti-'.$this->getKey(), 600, 400)
+            fn (?string $v) => $v ?: PlaceholderImg::url('bukti-'.$this->getKey(), 600, 400, 'Bukti Bayar')
         );
     }
 

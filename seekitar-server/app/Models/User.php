@@ -65,7 +65,7 @@ class User extends Authenticatable
     protected function avatarUrl(): Attribute
     {
         return Attribute::get(
-            fn (?string $v) => $v ?: PlaceholderImg::url('pengguna-'.$this->getKey(), 240, 240)
+            fn (?string $v) => $v ?: PlaceholderImg::url('pengguna-'.$this->getKey(), 240, 240, 'Pengguna')
         );
     }
 

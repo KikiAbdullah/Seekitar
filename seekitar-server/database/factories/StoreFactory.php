@@ -6,6 +6,7 @@ use App\Enums\StoreStatus;
 use App\Enums\StoreType;
 use App\Models\Store;
 use App\Models\User;
+use App\Support\PlaceholderImg;
 use Database\Factories\Support\Wilayah;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -100,7 +101,7 @@ class StoreFactory extends Factory
         return $this->state(fn () => [
             'status'      => StoreStatus::Pending,
             'verified_at' => null,
-            'photo'       => 'https://picsum.photos/seed/toko-'.Str::lower(Str::random(8)).'/600/400',
+            'photo'       => PlaceholderImg::url('toko-'.Str::lower(Str::random(8)), 600, 400, 'Foto Toko'),
         ]);
     }
 

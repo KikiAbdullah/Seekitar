@@ -50,7 +50,7 @@ class Listing extends Model
         return Attribute::get(function (array|string|null $value) {
             $images = is_string($value) ? json_decode($value, true) : $value;
 
-            return $images ?: [PlaceholderImg::url('listing-'.$this->getKey(), 800, 600)];
+            return $images ?: [PlaceholderImg::url('listing-'.$this->getKey(), 800, 600, 'Listing')];
         });
     }
 

@@ -104,7 +104,7 @@ class Store extends Model
     protected function photo(): Attribute
     {
         return Attribute::get(
-            fn (?string $v) => $v ?: PlaceholderImg::url('toko-'.$this->getKey(), 600, 400)
+            fn (?string $v) => $v ?: PlaceholderImg::url('toko-'.$this->getKey(), 600, 400, 'Foto Toko')
         );
     }
 
