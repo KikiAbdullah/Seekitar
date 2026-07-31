@@ -93,6 +93,7 @@
           <table class="table table-sm table-sm table-bordered align-middle text-nowrap table-hover" id="users-table" style="width: 100%;">
             <thead>
               <tr>
+                <th>ID</th>
                 <th>Nama Pengguna</th>
                 <th>Nomor HP</th>
                 <th>Email</th>

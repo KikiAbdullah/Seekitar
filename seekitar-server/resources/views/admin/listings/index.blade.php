@@ -87,13 +87,14 @@
           <table class="table table-sm table-sm table-bordered align-middle text-nowrap" id="listings-table" style="width: 100%;">
             <thead>
               <tr>
-                <th>Nama Listing / Produk</th>
-                <th>Nama Toko</th>
+                <th>ID</th>
+                <th>Judul Listing</th>
+                <th>Toko</th>
                 <th>Tipe</th>
                 <th>Harga</th>
                 <th>Favorit</th>
                 <th>Status</th>
-                <th>Tanggal Dibuat</th>
+                <th>Tanggal</th>
               </tr>
             </thead>
           </table>

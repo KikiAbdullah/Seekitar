@@ -93,13 +93,14 @@
           <table class="table table-sm table-sm table-bordered align-middle text-nowrap" id="stores-table" style="width: 100%;">
             <thead>
               <tr>
+                <th>ID</th>
                 <th>Nama Toko</th>
-                <th>Pemilik</th>
-                <th>Kabupaten</th>
+                <th>Owner</th>
+                <th>Kota</th>
                 <th>Rating</th>
-                <th>Keaktifan</th>
                 <th>Status</th>
-                <th>Tanggal Terdaftar</th>
+                <th>Tanggal Dibuat</th>
+                <th>Aksi</th>
               </tr>
             </thead>
           </table>

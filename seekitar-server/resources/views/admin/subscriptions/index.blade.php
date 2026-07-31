@@ -87,6 +87,7 @@
           <table class="table table-sm table-sm table-bordered align-middle text-nowrap" id="subscriptions-table" style="width: 100%;">
             <thead>
               <tr>
+                <th>ID</th>
                 <th>Pengguna</th>
                 <th>Toko</th>
                 <th>Paket</th>
