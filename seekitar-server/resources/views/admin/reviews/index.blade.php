@@ -76,6 +76,7 @@
             <table class="table table-sm table-bordered align-middle text-nowrap" id="reviews-table" style="width: 100%;">
               <thead>
                 <tr>
+                  <th style="display:none">ID</th>
                   <th>No Pesanan</th>
                   <th>Pengulas</th>
                   <th>Pihak Dinilai (Toko)</th>

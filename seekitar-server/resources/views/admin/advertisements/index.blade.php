@@ -95,6 +95,7 @@
             <table class="table table-sm table-bordered align-middle text-nowrap" id="ads-table" style="width: 100%;">
               <thead>
                 <tr>
+                  <th style="display:none">ID</th>
                   <th>Judul Iklan</th>
                   <th>Posisi</th>
                   <th>Tarif/Hari</th>

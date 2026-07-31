@@ -89,6 +89,7 @@
           <table class="table table-sm table-bordered align-middle text-nowrap" id="offers-table" style="width: 100%;">
             <thead>
               <tr>
+                <th style="display:none">ID</th>
                 <th>Toko Penawar</th>
                 <th>Permintaan Asal</th>
                 <th>Harga Penawaran</th>
