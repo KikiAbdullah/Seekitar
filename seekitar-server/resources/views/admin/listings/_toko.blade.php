@@ -1,0 +1,8 @@
+<div class="d-flex align-items-center gap-1">
+  <span>{{ $listing->store?->name ?? '—' }}</span>
+  @if ($listing->store && $listing->store->status->value === 'verified')
+    <span class="text-success" title="Toko Terverifikasi">
+      <i class="fa-solid fa-circle-check fs-2"></i>
+    </span>
+  @endif
+</div>

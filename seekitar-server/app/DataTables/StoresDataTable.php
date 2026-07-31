@@ -37,8 +37,7 @@ class StoresDataTable
                 ? sprintf('★ %s (%d)', number_format((float) $s->rating_avg, 1, ',', '.'), $s->total_reviews)
                 : '—')
             ->editColumn('created_at', fn (Store $s) => $s->created_at?->format('d M Y'))
-            ->addColumn('action', fn (Store $s) => view('admin.stores._actions', ['store' => $s])->render())
-            ->rawColumns(['name', 'status', 'action'])
+            ->rawColumns(['name', 'status'])
             ->toJson();
     }
 }
