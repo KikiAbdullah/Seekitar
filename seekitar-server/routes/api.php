@@ -9,12 +9,17 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CustomerRequestController;
 use App\Http\Controllers\Api\V1\DeviceController;
 use App\Http\Controllers\Api\V1\FavoriteController;
+use App\Http\Controllers\Api\V1\ConversationController;
+use App\Http\Controllers\Api\V1\CouponController;
 use App\Http\Controllers\Api\V1\ListingController;
+use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\OfferController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\StoreController;
 use App\Http\Controllers\Api\V1\UploadController;
+use App\Http\Controllers\Api\V1\UserAddressController;
 use App\Http\Controllers\Api\V1\VerificationController;
+use App\Http\Controllers\Api\V1\WalletController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -65,6 +70,12 @@ Route::prefix('v1')->group(function (): void {
             ->middleware('throttle:otp');
         Route::post('auth/phone/verify-otp', [AuthController::class, 'verifyPhoneChangeOtp'])
             ->middleware('throttle:otp-verify');
+        // --- Privasi dan kepatuhan (UU PDP) --------------------------------
+        // Ekspor data portabilitas (Pasal 8) — unduh JSON data pribadi.
+        Route::get('auth/export-data', [AuthController::class, 'exportData']);
+        // Hak dilupakan (right to erasure) — anonimisasi akun.
+        Route::delete('auth/account', [AuthController::class, 'requestDeletion']);
+
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::post('auth/fcm-token', [DeviceController::class, 'store']);
         Route::delete('auth/fcm-token', [DeviceController::class, 'destroy']);
@@ -76,6 +87,7 @@ Route::prefix('v1')->group(function (): void {
 
         // --- Penjelajahan (boleh profil belum lengkap) -----------------
         Route::get('stores/nearby', [StoreController::class, 'nearby']);
+        Route::get('stores/mine', [StoreController::class, 'mine']);
         Route::get('stores/{store}', [StoreController::class, 'show']);
         Route::get('stores/{store}/reviews', [StoreController::class, 'reviews']);
         Route::get('listings', [ListingController::class, 'index']);
@@ -86,6 +98,19 @@ Route::prefix('v1')->group(function (): void {
         Route::get('favorites', [FavoriteController::class, 'index']);
         Route::post('listings/{listing}/favorite', [FavoriteController::class, 'store']);
         Route::delete('listings/{listing}/favorite', [FavoriteController::class, 'destroy']);
+
+        // --- Notifikasi (boleh profil belum lengkap) -------------------
+        Route::get('notifications', [NotificationController::class, 'index']);
+        Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::patch('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+        Route::patch('notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+
+        // --- Chat / percakapan (boleh profil belum lengkap) ------------
+        Route::get('conversations', [ConversationController::class, 'index']);
+        Route::post('conversations', [ConversationController::class, 'store']);
+        Route::get('conversations/{conversation}', [ConversationController::class, 'show']);
+        Route::get('conversations/{conversation}/messages', [ConversationController::class, 'messages']);
+        Route::post('conversations/{conversation}/messages', [ConversationController::class, 'send']);
 
         // --- Transaksional (wajib profil lengkap) ----------------------
         // Lokasi & nama dibutuhkan untuk pencocokan dan pengiriman, jadi
@@ -107,11 +132,14 @@ Route::prefix('v1')->group(function (): void {
             // Rute statis didaftarkan SEBELUM {customerRequest}, kalau tidak
             // 'mine' akan tertangkap sebagai id permintaan.
             Route::get('requests/{customerRequest}', [CustomerRequestController::class, 'show']);
+            Route::patch('requests/{customerRequest}', [CustomerRequestController::class, 'update']);
+            Route::delete('requests/{customerRequest}', [CustomerRequestController::class, 'destroy']);
             Route::post('requests/{customerRequest}/extend', [CustomerRequestController::class, 'extend']);
             Route::get('requests/{customerRequest}/offers', [CustomerRequestController::class, 'offers']);
 
             Route::post('requests/{customerRequest}/offers', [OfferController::class, 'store'])
                 ->middleware('throttle:offers');
+            Route::get('offers/{offer}', [OfferController::class, 'show']);
             Route::patch('offers/{offer}/accept', [OfferController::class, 'accept']);
 
             Route::get('orders', [OrderController::class, 'index']);
@@ -121,6 +149,23 @@ Route::prefix('v1')->group(function (): void {
             Route::post('orders/{order}/payment-proof', [OrderController::class, 'uploadPaymentProof']);
             Route::post('orders/{order}/review', [OrderController::class, 'review']);
             Route::post('orders/{order}/disputes', [OrderController::class, 'dispute']);
+
+            // --- Dompet & transaksi keuangan --------------------------------
+            Route::get('wallet', [WalletController::class, 'show']);
+            Route::get('wallet/transactions', [WalletController::class, 'transactions']);
+            Route::post('wallet/topup', [WalletController::class, 'topup']);
+            Route::post('wallet/withdraw', [WalletController::class, 'withdraw']);
+
+            // --- Alamat tersimpan --------------------------------------------
+            Route::get('addresses', [UserAddressController::class, 'index']);
+            Route::post('addresses', [UserAddressController::class, 'store']);
+            Route::patch('addresses/{address}', [UserAddressController::class, 'update']);
+            Route::delete('addresses/{address}', [UserAddressController::class, 'destroy']);
+            Route::patch('addresses/{address}/default', [UserAddressController::class, 'setDefault']);
+
+            // --- Kupon / voucher -----------------------------------------------
+            Route::post('coupons/validate', [CouponController::class, 'validate']);
+            Route::post('coupons/apply', [CouponController::class, 'apply']);
         });
 
         /*

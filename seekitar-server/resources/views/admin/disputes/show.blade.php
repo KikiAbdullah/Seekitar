@@ -226,7 +226,8 @@
                                           rows="4" required maxlength="2000"
                                           placeholder="Alasan keputusan — tercatat permanen untuk kedua pihak."></textarea>
                             </div>
-                            <button type="submit" class="btn btn-seekitar">Selesaikan</button>
+                            <button type="submit" class="btn btn-seekitar"
+                                    data-seekitar-confirm="Keputusan ini akan tercatat permanen untuk kedua pihak.">Selesaikan</button>
                         </form>
                     @endif
                 </div>

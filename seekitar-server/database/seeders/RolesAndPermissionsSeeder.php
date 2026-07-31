@@ -22,7 +22,7 @@ use Spatie\Permission\PermissionRegistrar;
  */
 class RolesAndPermissionsSeeder extends Seeder
 {
-    /** 12 permission, persis seperti Server_Implementation_Guide.md §6.2. */
+    /** 16 permission — 12 original + 3 monetisasi + 1 blog. */
     public const PERMISSIONS = [
         'manage-users',
         'verify-users',
@@ -36,6 +36,10 @@ class RolesAndPermissionsSeeder extends Seeder
         'manage-disputes',
         'manage-reviews',
         'manage-settings',
+        'manage-subscriptions',
+        'manage-advertisements',
+        'manage-fees',
+        'manage-blog',
     ];
 
     /**
@@ -44,9 +48,11 @@ class RolesAndPermissionsSeeder extends Seeder
      * `manage-users` ditahan agar admin biasa tidak bisa menghapus atau
      * mengubah sesama admin; `manage-settings` karena halaman pengaturan
      * dibatasi super-admin (`API_DOCUMENTATION.md` §10.5).
+     * Monetisasi (`manage-fees`) dibatasi super-admin karena menyangkut
+     * harga platform.
      * Keduanya tetap bisa memverifikasi pengguna lewat `verify-users`.
      */
-    private const ADMIN_EXCLUDED = ['manage-users', 'manage-settings'];
+    private const ADMIN_EXCLUDED = ['manage-users', 'manage-settings', 'manage-fees'];
 
     private const GUARD = 'web';
 

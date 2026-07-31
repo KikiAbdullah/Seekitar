@@ -1,6 +1,6 @@
 # Seekitar
 
-**Marketplace hyperlocal dua arah berbasis geolokasi**, dikunci dalam satu
+**Pasar lokal dua arah berbasis geolokasi**, dikunci dalam satu
 wilayah kabupaten.
 
 > _“Yang kamu butuhkan, ada di sekitar.”_

@@ -735,7 +735,7 @@ GET /listings?lat=-6.200&lng=106.850&radius=15&category=5&type=product&sort=near
 | `per_page` | – | `15` | Maks `50` |
 
 > ⚠️ **`lat` & `lng` selalu wajib** — bukan hanya untuk `sort=nearest`.
-> Seekitar bersifat *hyperlocal*: tanpa koordinat, filter radius tidak bisa
+> Seekitar bersifat *lokal*: tanpa koordinat, filter radius tidak bisa
 > dijalankan dan hasilnya tidak bermakna. Permintaan tanpa keduanya
 > menghasilkan `422`, bukan menampilkan seluruh katalog.
 >

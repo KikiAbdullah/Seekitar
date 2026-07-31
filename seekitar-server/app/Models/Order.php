@@ -31,7 +31,8 @@ class Order extends Model
 
     protected $fillable = [
         'order_number', 'buyer_id', 'store_id', 'offer_id', 'listing_id',
-        'order_type', 'quantity', 'total_amount', 'status',
+        'order_type', 'quantity', 'total_amount', 'discount_amount',
+        'coupon_id', 'status',
         'payment_method', 'delivery_method', 'shipping_address',
         'payment_proof_url', 'payment_confirmed_at', 'notes',
         'completed_at', 'cancelled_at', 'cancelled_by', 'cancel_reason',
@@ -51,6 +52,7 @@ class Order extends Model
             'payment_method'       => PaymentMethod::class,
             'delivery_method'      => DeliveryMethod::class,
             'total_amount'         => 'decimal:2',
+            'discount_amount'      => 'decimal:2',
             'payment_confirmed_at' => 'datetime',
             'completed_at'         => 'datetime',
             'cancelled_at'         => 'datetime',
@@ -106,6 +108,11 @@ class Order extends Model
     public function cancelledBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'cancelled_by');
+    }
+
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(Coupon::class);
     }
 
     public function disputes(): HasMany

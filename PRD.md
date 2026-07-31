@@ -46,7 +46,7 @@ _“Yang kamu butuhkan, ada di sekitar.”_
 
 ## 1. RINGKASAN EKSEKUTIF
 
-**Seekitar** adalah platform _hyperlocal two-way marketplace_ yang secara geografis dikunci dalam satu wilayah kabupaten. Platform ini menggabungkan dua model transaksi:
+**Seekitar** adalah _pasar lokal dua arah_ yang secara geografis dikunci dalam satu wilayah kabupaten. Platform ini menggabungkan dua model transaksi:
 
 - **Marketplace Katalog (Jelajahi)** – penjual memajang produk/jasa, pembeli mencari dan memesan.
 - **Papan Kebutuhan / Reverse Marketplace (Pasang Kebutuhan)** – pembeli mengajukan kebutuhan spesifik, penyedia lokal memberikan penawaran kompetitif.

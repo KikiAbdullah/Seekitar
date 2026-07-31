@@ -83,6 +83,8 @@ class ListingController extends Controller
          * jatuh di luar lingkaran.
          */
         $kandidat = $query->get()
+            // Safety limit: jangan muat >500 listing ke memori
+            ->take(config('query-cache.max_collection', 500))
             ->map(function (Listing $l) use ($lat, $lng): Listing {
                 $l->setAttribute('distance_km', Jarak::haversineKm(
                     $lat, $lng, (float) $l->store->latitude, (float) $l->store->longitude

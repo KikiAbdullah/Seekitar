@@ -1,6 +1,6 @@
 # Seekitar Server
 
-Backend **Seekitar** — marketplace hyperlocal dua arah berbasis geolokasi:
+Backend **Seekitar** — pasar lokal dua arah berbasis geolokasi:
 REST API untuk aplikasi Flutter (`/api/v1`) + panel admin web (`/admin`).
 
 ## Tumpukan

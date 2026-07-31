@@ -7,6 +7,7 @@
         'tableId'  => 'stores-table',
         'ajax'     => route('admin.stores.data'),
         'order'    => [[5, 'desc']],
+        'exportRoute' => 'admin.stores.export',
         'filterView' => 'admin.stores._filter',
         'columns'  => [
             ['data' => 'name',       'label' => 'Nama'],

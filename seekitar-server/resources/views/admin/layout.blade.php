@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#168A4A">
     <title>@yield('title', 'Panel Admin') — Seekitar Admin</title>
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
 
@@ -23,11 +24,20 @@
     <link rel="stylesheet" href="{{ asset('vendor/modernize/css/icons/tabler-icons/tabler-icons.min.css') }}">
     <link id="themeColors" rel="stylesheet" href="{{ asset('vendor/modernize/css/style.min.css') }}">
 
-    <link href="https://cdn.datatables.net/2.1.8/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/2.1.8/css/dataTables.bootstrap5.min.css" rel="stylesheet"
+          media="print" onload="this.media='all';this.onload=null"
+          onerror="this.onerror=null;this.href='{{ asset('vendor/datatables/dataTables.bootstrap5.min.css') }}'">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet"
+          media="print" onload="this.media='all';this.onload=null">
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet"
+          media="print" onload="this.media='all';this.onload=null">
 
     <link href="{{ asset('css/admin.css') }}" rel="stylesheet">
+    <noscript>
+        <link href="https://cdn.datatables.net/2.1.8/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet">
+        <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+    </noscript>
     @stack('styles')
 </head>
 <body>
@@ -74,17 +84,22 @@
 <script src="{{ asset('vendor/sweetalert2/sweetalert2.all.min.js') }}"></script>
 <script src="{{ asset('js/seekitar-flash.js') }}"></script>
 
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/simplebar@6.3.3/dist/simplebar.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        onerror="this.remove();document.body.appendChild(function(){var s=document.createElement('script');s.src='{{ asset('vendor/jquery.min.js') }}';return s}())"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        onerror="this.remove();document.body.appendChild(function(){var s=document.createElement('script');s.src='{{ asset('vendor/bootstrap/bootstrap.bundle.min.js') }}';return s}())"></script>
+<script src="https://cdn.jsdelivr.net/npm/simplebar@6.3.3/dist/simplebar.min.js"
+        onerror="this.remove();document.body.appendChild(function(){var s=document.createElement('script');s.src='{{ asset('vendor/simplebar.min.js') }}';return s}())"></script>
 
 <script src="{{ asset('vendor/modernize/js/app.min.js') }}"></script>
 <script src="{{ asset('vendor/modernize/js/seekitar.init.js') }}"></script>
 <script src="{{ asset('vendor/modernize/js/sidebarmenu.js') }}"></script>
 <script src="{{ asset('vendor/modernize/js/custom.js') }}"></script>
 
-<script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/2.1.8/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"
+        onerror="this.remove();document.body.appendChild(function(){var s=document.createElement('script');s.src='{{ asset('vendor/datatables/dataTables.min.js') }}';return s}())"></script>
+<script src="https://cdn.datatables.net/2.1.8/js/dataTables.bootstrap5.min.js"
+        onerror="this.remove();document.body.appendChild(function(){var s=document.createElement('script');s.src='{{ asset('vendor/datatables/dataTables.bootstrap5.min.js') }}';return s}())"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/i18n/id.js"></script>
 

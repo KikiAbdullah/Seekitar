@@ -20,7 +20,8 @@
     @if ($store->status === \App\Enums\StoreStatus::Pending)
         <form action="{{ route('admin.stores.approve', $store) }}" method="POST" class="d-inline">
             @csrf
-            <button type="submit" class="btn btn-sm btn-outline-success">
+            <button type="submit" class="btn btn-sm btn-outline-success"
+                    data-seekitar-confirm="Setujui toko {{ $store->name }}?">
                 <i class="ti ti-circle-check me-1" aria-hidden="true"></i> Setujui
             </button>
         </form>

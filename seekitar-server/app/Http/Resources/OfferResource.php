@@ -34,6 +34,7 @@ class OfferResource extends JsonResource
 
             'expires_at' => $this->expires_at?->format('Y-m-d\TH:i:s\Z'),
             'store'      => new StoreResource($this->whenLoaded('store')),
+            'request'    => new CustomerRequestResource($this->whenLoaded('request')),
             'created_at' => $this->created_at?->format('Y-m-d\TH:i:s\Z'),
         ];
     }

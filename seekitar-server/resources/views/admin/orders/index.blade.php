@@ -7,6 +7,7 @@
         'tableId'  => 'orders-table',
         'ajax'     => route('admin.orders.data'),
         'order'    => [[5, 'desc']],
+        'exportRoute' => 'admin.orders.export',
         'filterView' => 'admin.orders._filter',
         'columns'  => [
             ['data' => 'order_number', 'label' => 'Pesanan'],

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\BlogController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CustomerRequestController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -10,10 +11,13 @@ use App\Http\Controllers\Admin\OfferController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PasswordController;
 use App\Http\Controllers\Admin\ProfileController;
+use App\Http\Controllers\Admin\AdvertisementController;
+use App\Http\Controllers\Admin\FeeController;
 use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\StoreController;
 use App\Http\Controllers\Admin\StoreMapController;
+use App\Http\Controllers\Admin\SubscriptionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VerificationController;
 use Illuminate\Support\Facades\Route;
@@ -98,6 +102,7 @@ Route::middleware(['auth', 'role:admin|super-admin'])->group(function (): void {
 
     // --- Pengguna -------------------------------------------------------
     Route::middleware('permission:manage-users')->group(function (): void {
+        Route::get('users/export', [UserController::class, 'exportCsv'])->name('users.export');
         Route::get('users', [UserController::class, 'index'])->name('users.index');
         Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
         Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
@@ -106,6 +111,9 @@ Route::middleware(['auth', 'role:admin|super-admin'])->group(function (): void {
     });
 
     // --- Toko -------------------------------------------------------------
+    Route::get('stores/export', [StoreController::class, 'exportCsv'])
+        ->middleware('permission:manage-stores')
+        ->name('stores.export');
     Route::get('stores', [StoreController::class, 'index'])
         ->middleware('permission:manage-stores')
         ->name('stores.index');
@@ -194,12 +202,15 @@ Route::middleware(['auth', 'role:admin|super-admin'])->group(function (): void {
     });
 
     // --- Penawaran (hanya baca, §9.8) --------------------------------------
-    Route::get('offers', [OfferController::class, 'index'])
-        ->middleware('permission:manage-offers')
-        ->name('offers.index');
+    Route::middleware('permission:manage-offers')->group(function (): void {
+        Route::get('offers/export', [OfferController::class, 'exportCsv'])->name('offers.export');
+        Route::get('offers', [OfferController::class, 'index'])->name('offers.index');
+        Route::get('offers/{offer}', [OfferController::class, 'show'])->name('offers.show');
+    });
 
     // --- Pesanan (hanya baca) ---------------------------------------------
     Route::middleware('permission:manage-orders')->group(function (): void {
+        Route::get('orders/export', [OrderController::class, 'exportCsv'])->name('orders.export');
         Route::resource('orders', OrderController::class)->only(['index', 'show']);
         Route::get('orders/{order}/payment-proof', [OrderController::class, 'paymentProofMedia'])
             ->name('orders.payment-proof');
@@ -208,6 +219,14 @@ Route::middleware(['auth', 'role:admin|super-admin'])->group(function (): void {
     // --- Ulasan -----------------------------------------------------------
     Route::middleware('permission:manage-reviews')->group(function (): void {
         Route::resource('reviews', ReviewController::class)->only(['index', 'destroy']);
+    });
+
+    // --- Blog -------------------------------------------------------------
+    Route::middleware('permission:manage-blog')->group(function (): void {
+        Route::get('blog/data', [BlogController::class, 'data'])->name('blog.data');
+        Route::resource('blog', BlogController::class)
+            ->parameters(['blog' => 'post'])
+            ->except(['show']);
     });
 
     // --- Pengaturan sistem (hanya super-admin lewat permission) -----------
@@ -221,5 +240,27 @@ Route::middleware(['auth', 'role:admin|super-admin'])->group(function (): void {
         Route::get('disputes', [DisputeController::class, 'index'])->name('disputes.index');
         Route::get('disputes/{dispute}', [DisputeController::class, 'show'])->name('disputes.show');
         Route::post('disputes/{dispute}/resolve', [DisputeController::class, 'resolve'])->name('disputes.resolve');
+    });
+
+    // --- Langganan & Boost Listing -----------------------------------------
+    Route::middleware('permission:manage-subscriptions')->group(function (): void {
+        Route::get('subscriptions/data', [SubscriptionController::class, 'data'])->name('subscriptions.data');
+        Route::get('subscriptions', [SubscriptionController::class, 'index'])->name('subscriptions.index');
+        Route::get('subscriptions/{subscription}', [SubscriptionController::class, 'show'])->name('subscriptions.show');
+        Route::post('subscriptions/{subscription}/cancel', [SubscriptionController::class, 'cancel'])->name('subscriptions.cancel');
+    });
+
+    // --- Iklan Banner ------------------------------------------------------
+    Route::middleware('permission:manage-advertisements')->group(function (): void {
+        Route::get('advertisements/data', [AdvertisementController::class, 'data'])->name('advertisements.data');
+        Route::resource('advertisements', AdvertisementController::class)
+            ->parameters(['advertisements' => 'advertisement']);
+    });
+
+    // --- Biaya Layanan -----------------------------------------------------
+    Route::middleware('permission:manage-fees')->group(function (): void {
+        Route::get('fees/data', [FeeController::class, 'data'])->name('fees.data');
+        Route::get('fees', [FeeController::class, 'index'])->name('fees.index');
+        Route::post('fees/update-settings', [FeeController::class, 'updateSettings'])->name('fees.update-settings');
     });
 });

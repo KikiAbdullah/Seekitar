@@ -16,24 +16,24 @@
     <section class="py-5">
         <div class="container" style="max-width: 960px;">
 
-            {{-- Empat kanal email. Seluruh kartu bisa diklik (stretched-link):
-                 target sentuh lebih besar dari sekadar teks alamatnya. --}}
+            {{-- Empat kanal email --}}
             <div class="row g-4 mb-4">
                 @foreach ([
-                    ['ti ti-mail', 'hijau', 'Pengaduan umum', 'complaint', '2×24 jam'],
-                    ['ti ti-flag', 'merah', 'Pelaporan konten ilegal', 'abuse', '1×24 jam'],
-                    ['ti ti-lock', 'biru', 'Data pribadi (UU PDP)', 'privacy', '3×24 jam'],
-                    ['ti ti-shield', 'kuning', 'Celah keamanan', 'security', '1×24 jam'],
-                ] as [$ikon, $tone, $keperluan, $kunci, $tenggat])
-                    <div class="col-md-6">
+                    ['ti ti-mail', 'hijau', 'Pengaduan umum', 'complaint', '2×24 jam', 'Laporkan masalah terkait transaksi, akun, atau fitur.'],
+                    ['ti ti-flag', 'merah', 'Pelaporan konten ilegal', 'abuse', '1×24 jam', 'Laporkan barang/jasa terlarang, penipuan, atau penyalahgunaan.'],
+                    ['ti ti-lock', 'biru', 'Data pribadi (UU PDP)', 'privacy', '3×24 jam', 'Akses, koreksi, atau penghapusan data pribadi.'],
+                    ['ti ti-shield', 'kuning', 'Celah keamanan', 'security', '1×24 jam', 'Laporkan kerentanan atau insiden keamanan sistem.'],
+                ] as $i => [$ikon, $tone, $keperluan, $kunci, $tenggat, $deskripsi])
+                    <div class="col-md-6 sr-reveal sr-reveal-delay-{{ $i + 1 }}">
                         <div class="lp-kanal">
                             <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
                                 <span class="lp-fitur-ikon lp-tone-{{ $tone }}" aria-hidden="true">
                                     <i class="{{ $ikon }}"></i>
                                 </span>
-                                <span class="badge text-bg-light border">≤ {{ $tenggat }}</span>
+                                <span class="badge text-bg-light border" style="font-size: 12px;">≤ {{ $tenggat }}</span>
                             </div>
                             <h2 class="h6 fw-bold mb-1">{{ $keperluan }}</h2>
+                            <p class="mb-2" style="color: var(--teks-secondary); font-size: 13px;">{{ $deskripsi }}</p>
                             <a href="mailto:{{ config('seekitar.contacts.' . $kunci) }}"
                                class="stretched-link text-decoration-none fw-semibold"
                                style="color: var(--hijau-lokal); word-break: break-all;">
@@ -44,10 +44,8 @@
                 @endforeach
             </div>
 
-            {{-- Sengketa transaksi: BUKAN email — lewat aplikasi agar pesanan
-                 langsung membeku. Ditampilkan menonjol karena paling sering
-                 keliru dikirim ke email. --}}
-            <div class="lp-kanal mb-4" style="border-color: var(--kuning); background: #FFFBEB;">
+            {{-- Sengketa transaksi --}}
+            <div class="lp-kanal mb-4 sr-reveal" style="border-color: var(--kuning); background: #FFFBEB;">
                 <div class="d-flex gap-3">
                     <span class="lp-fitur-ikon lp-tone-kuning flex-shrink-0" aria-hidden="true">
                         <i class="ti ti-gavel"></i>
@@ -55,9 +53,9 @@
                     <div>
                         <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
                             <h2 class="h6 fw-bold mb-0">Sengketa transaksi</h2>
-                            <span class="badge text-bg-light border">≤ 1×24 jam</span>
+                            <span class="badge text-bg-light border" style="font-size: 12px;">≤ 1×24 jam</span>
                         </div>
-                        <p class="mb-0">
+                        <p class="mb-0" style="font-size: 14px;">
                             <strong>Laporkan lewat aplikasi: buka pesanan → Laporkan Masalah.</strong>
                             Sebaiknya bukan lewat email — laporan dari aplikasi otomatis membekukan
                             pesanan, sehingga statusnya tidak bisa berubah sampai admin memutuskan.
@@ -66,15 +64,15 @@
                 </div>
             </div>
 
-            {{-- Penyelenggara (wajib tercantum untuk PSE). --}}
-            <div class="lp-kanal">
+            {{-- Penyelenggara --}}
+            <div class="lp-kanal sr-reveal">
                 <div class="d-flex gap-3">
                     <span class="lp-fitur-ikon lp-tone-abu flex-shrink-0" aria-hidden="true">
                         <i class="ti ti-building"></i>
                     </span>
                     <div>
                         <h2 class="h6 fw-bold mb-1">Penyelenggara</h2>
-                        <p class="mb-0">
+                        <p class="mb-0" style="font-size: 14px;">
                             {{ config('seekitar.company.name') }}<br>
                             {{ config('seekitar.company.address') }}
                         </p>

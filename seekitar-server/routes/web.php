@@ -34,10 +34,23 @@ Route::name('web.')->group(function (): void {
     // --- Halaman legal (wajib) -------------------------------------------
     Route::get('/kebijakan-privasi', [PageController::class, 'privacy'])->name('privacy');
     Route::get('/syarat-ketentuan', [PageController::class, 'terms'])->name('terms');
+    Route::get('/kebijakan-cookie', [PageController::class, 'cookie'])->name('cookie');
+    Route::get('/pedoman-komunitas', [PageController::class, 'guidelines'])->name('guidelines');
+    Route::get('/kebijakan-pengembalian', [PageController::class, 'refund'])->name('refund');
+    Route::get('/kebijakan-verifikasi', [PageController::class, 'verification'])->name('verification');
+
+    // --- Bisnis & kepercayaan --------------------------------------------
+    Route::get('/untuk-penjual', [PageController::class, 'forSellers'])->name('for-sellers');
+    Route::get('/biaya', [PageController::class, 'pricing'])->name('pricing');
+    Route::get('/keamanan', [PageController::class, 'security'])->name('security');
+    Route::get('/status', [PageController::class, 'status'])->name('status');
+
+    // --- Konten & engagement ---------------------------------------------
+    Route::get('/blog', [PageController::class, 'blog'])->name('blog');
+    Route::get('/blog/{slug}', [PageController::class, 'blogPost'])->name('blog.post');
+    Route::get('/karier', [PageController::class, 'careers'])->name('careers');
 
     // --- Berkas SEO -------------------------------------------------------
-    // Dilayani route, bukan berkas statis di public/, supaya isinya bisa
-    // berbeda per environment — staging tidak boleh terindeks.
     Route::get('/robots.txt', [PageController::class, 'robots'])->name('robots');
     Route::get('/sitemap.xml', [PageController::class, 'sitemap'])->name('sitemap');
 });

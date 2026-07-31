@@ -7,6 +7,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
@@ -87,8 +88,39 @@ return Application::configure(basePath: dirname(__DIR__))
                 $e instanceof NotFoundHttpException => [
                     404, 'Data tidak ditemukan.', null,
                 ],
+                // Business rule violations — let this match BEFORE generic
+                // HttpExceptionInterface since BusinessException extends HttpException.
+                $e instanceof \App\Exceptions\BusinessException => [
+                    $e->getStatusCode(), $e->getMessage(), null,
+                ],
+                // Rate limiting
+                $e instanceof \Illuminate\Http\Exceptions\ThrottleRequestsException => [
+                    429, 'Terlalu banyak permintaan. Silakan coba beberapa saat lagi.', null,
+                ],
+                // HTTP 409 Conflict
+                $e instanceof \Symfony\Component\HttpKernel\Exception\ConflictHttpException => [
+                    409, $e->getMessage() ?: 'Konflik data.', null,
+                ],
+                // HTTP 410 Gone
+                $e instanceof \Symfony\Component\HttpKernel\Exception\GoneHttpException => [
+                    410, $e->getMessage() ?: 'Data sudah tidak tersedia.', null,
+                ],
+                // HTTP 423 Locked
+                $e instanceof \Symfony\Component\HttpKernel\Exception\LockedHttpException => [
+                    423, $e->getMessage() ?: 'Sumber daya terkunci.', null,
+                ],
+                // HTTP 429 Too Many Requests (backup)
+                $e instanceof \Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException => [
+                    429, 'Terlalu banyak permintaan.', null,
+                ],
+                // Generic HTTP exception catch-all — must come after all
+                // specific Symfony/Illuminate HTTP exceptions above.
                 $e instanceof HttpExceptionInterface => [
                     $e->getStatusCode(), $e->getMessage() ?: 'Permintaan gagal diproses.', null,
+                ],
+                // Database query error
+                $e instanceof \Illuminate\Database\QueryException => [
+                    500, app()->isProduction() ? 'Kesalahan basis data.' : $e->getMessage(), null,
                 ],
                 default => [500, 'Terjadi kesalahan pada server.', null],
             };
@@ -103,5 +135,14 @@ return Application::configure(basePath: dirname(__DIR__))
                 'message' => $message,
                 'errors'  => $errors,
             ], $status);
+        });
+
+        $exceptions->report(function (Throwable $e) {
+            if ($e instanceof \Illuminate\Database\QueryException && $e->getCode() === '23000') {
+                Log::channel('security')->warning('Integrity constraint violation', [
+                    'message' => $e->getMessage(),
+                    'sql'     => $e->getSql(),
+                ]);
+            }
         });
     })->create();

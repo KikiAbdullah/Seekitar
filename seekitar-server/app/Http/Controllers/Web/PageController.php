@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Web;
 use App\Enums\ListingStatus;
 use App\Enums\StoreStatus;
 use App\Http\Controllers\Controller;
+use App\Models\BlogPost;
 use App\Models\Category;
 use App\Models\Listing;
 use App\Models\Store;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Response;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -90,6 +92,103 @@ class PageController extends Controller
         return view('web.contact');
     }
 
+    // -----------------------------------------------------------------------
+    //  Halaman legal tambahan
+    // -----------------------------------------------------------------------
+
+    public function cookie(): View
+    {
+        return view('web.cookie');
+    }
+
+    public function guidelines(): View
+    {
+        return view('web.guidelines');
+    }
+
+    public function refund(): View
+    {
+        return view('web.refund');
+    }
+
+    public function verification(): View
+    {
+        return view('web.verification');
+    }
+
+    // -----------------------------------------------------------------------
+    //  Bisnis & kepercayaan
+    // -----------------------------------------------------------------------
+
+    public function forSellers(): View
+    {
+        $stats = Cache::remember('web.for-sellers.stats', self::STATIC_CACHE_SECONDS, fn () => [
+            'toko'    => Store::query()->where('status', StoreStatus::Verified->value)->where('is_active', true)->count(),
+            'listing' => Listing::query()->where('status', ListingStatus::Active->value)->count(),
+        ]);
+
+        return view('web.for-sellers', ['stats' => $stats]);
+    }
+
+    public function pricing(): View
+    {
+        return view('web.pricing');
+    }
+
+    public function security(): View
+    {
+        return view('web.security');
+    }
+
+    public function status(): View
+    {
+        return view('web.status');
+    }
+
+    // -----------------------------------------------------------------------
+    //  Konten & engagement
+    // -----------------------------------------------------------------------
+
+    public function blog(): View
+    {
+        $posts = BlogPost::published()->latest()->get()->map(fn ($p) => [
+            'slug'     => $p->slug,
+            'title'    => $p->title,
+            'excerpt'  => $p->excerpt,
+            'author'   => $p->author,
+            'date'     => $p->published_at?->format('j F Y') ?? $p->created_at->format('j F Y'),
+            'category' => $p->category,
+            'image'    => $p->image ?? asset('img/web/blog-default.webp'),
+            'imageAlt' => $p->image_alt ?? 'Ilustrasi artikel ' . $p->title,
+        ]);
+
+        return view('web.blog', ['posts' => $posts]);
+    }
+
+    public function blogPost(string $slug): View
+    {
+        $record = BlogPost::published()->where('slug', $slug)->firstOrFail();
+
+        $post = [
+            'slug'     => $record->slug,
+            'title'    => $record->title,
+            'excerpt'  => $record->excerpt,
+            'author'   => $record->author,
+            'date'     => $record->published_at?->format('j F Y') ?? $record->created_at->format('j F Y'),
+            'category' => $record->category,
+            'image'    => $record->image ?? asset('img/web/blog-default.webp'),
+            'imageAlt' => $record->image_alt ?? 'Ilustrasi artikel ' . $record->title,
+            'body'     => $record->body,
+        ];
+
+        return view('web.blog-post', ['post' => $post]);
+    }
+
+    public function careers(): View
+    {
+        return view('web.careers');
+    }
+
     /**
      * robots.txt dinamis.
      *
@@ -122,12 +221,22 @@ class PageController extends Controller
     public function sitemap(): Response
     {
         $pages = [
-            ['loc' => route('web.home'),    'priority' => '1.0', 'freq' => 'daily'],
-            ['loc' => route('web.about'),   'priority' => '0.6', 'freq' => 'monthly'],
-            ['loc' => route('web.help'),    'priority' => '0.7', 'freq' => 'weekly'],
-            ['loc' => route('web.privacy'), 'priority' => '0.4', 'freq' => 'yearly'],
-            ['loc' => route('web.terms'),   'priority' => '0.4', 'freq' => 'yearly'],
-            ['loc' => route('web.contact'), 'priority' => '0.5', 'freq' => 'monthly'],
+            ['loc' => route('web.home'),       'priority' => '1.0', 'freq' => 'daily'],
+            ['loc' => route('web.about'),      'priority' => '0.6', 'freq' => 'monthly'],
+            ['loc' => route('web.help'),       'priority' => '0.7', 'freq' => 'weekly'],
+            ['loc' => route('web.privacy'),    'priority' => '0.4', 'freq' => 'yearly'],
+            ['loc' => route('web.terms'),      'priority' => '0.4', 'freq' => 'yearly'],
+            ['loc' => route('web.contact'),    'priority' => '0.5', 'freq' => 'monthly'],
+            ['loc' => route('web.cookie'),     'priority' => '0.3', 'freq' => 'yearly'],
+            ['loc' => route('web.guidelines'), 'priority' => '0.4', 'freq' => 'yearly'],
+            ['loc' => route('web.refund'),     'priority' => '0.4', 'freq' => 'yearly'],
+            ['loc' => route('web.verification'), 'priority' => '0.4', 'freq' => 'yearly'],
+            ['loc' => route('web.for-sellers'), 'priority' => '0.7', 'freq' => 'monthly'],
+            ['loc' => route('web.pricing'),    'priority' => '0.5', 'freq' => 'monthly'],
+            ['loc' => route('web.security'),   'priority' => '0.5', 'freq' => 'monthly'],
+            ['loc' => route('web.status'),     'priority' => '0.3', 'freq' => 'weekly'],
+            ['loc' => route('web.blog'),       'priority' => '0.6', 'freq' => 'weekly'],
+            ['loc' => route('web.careers'),    'priority' => '0.3', 'freq' => 'monthly'],
         ];
 
         return response()

@@ -2,7 +2,7 @@
     <div>
         <div class="brand-logo d-flex align-items-center justify-content-between">
             <a href="{{ route('admin.dashboard') }}" class="text-nowrap logo-img d-flex align-items-center gap-2">
-                <img src="{{ asset('img/brand/logo-lockup.png') }}" alt="Seekitar" class="admin-brand-lockup">
+                <img src="{{ asset('img/brand/logo-lockup.png') }}" alt="Seekitar" width="618" height="144" class="admin-brand-lockup">
             </a>
             <div class="close-btn d-xl-none d-block sidebartoggler cursor-pointer" id="sidebarCollapse"
                  role="button" tabindex="0" aria-label="Tutup menu">
@@ -69,7 +69,7 @@
                 @canany([
                     'manage-users', 'manage-categories', 'manage-stores', 'manage-listings',
                     'manage-requests', 'manage-offers', 'manage-orders', 'manage-disputes',
-                    'manage-reviews',
+                    'manage-reviews', 'manage-blog',
                 ])
                     <li class="nav-small-cap">
                         <i class="ti ti-dots nav-small-cap-icon fs-4" aria-hidden="true"></i>
@@ -176,6 +176,53 @@
                            href="{{ route('admin.reviews.index') }}" aria-expanded="false">
                             <span class="d-flex"><i class="ti ti-star" aria-hidden="true"></i></span>
                             <span class="hide-menu">Ulasan</span>
+                        </a>
+                    </li>
+                @endcan
+
+                @can('manage-blog')
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('admin.blog.*') ? 'active' : '' }}"
+                           href="{{ route('admin.blog.index') }}" aria-expanded="false">
+                            <span class="d-flex"><i class="ti ti-news" aria-hidden="true"></i></span>
+                            <span class="hide-menu">Blog</span>
+                        </a>
+                    </li>
+                @endcan
+
+                @canany(['manage-subscriptions', 'manage-advertisements', 'manage-fees'])
+                    <li class="nav-small-cap">
+                        <i class="ti ti-dots nav-small-cap-icon fs-4" aria-hidden="true"></i>
+                        <span class="hide-menu">Monetisasi</span>
+                    </li>
+                @endcanany
+
+                @can('manage-subscriptions')
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('admin.subscriptions.*') ? 'active' : '' }}"
+                           href="{{ route('admin.subscriptions.index') }}" aria-expanded="false">
+                            <span class="d-flex"><i class="ti ti-crown" aria-hidden="true"></i></span>
+                            <span class="hide-menu">Langganan</span>
+                        </a>
+                    </li>
+                @endcan
+
+                @can('manage-advertisements')
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('admin.advertisements.*') ? 'active' : '' }}"
+                           href="{{ route('admin.advertisements.index') }}" aria-expanded="false">
+                            <span class="d-flex"><i class="ti ti-ad" aria-hidden="true"></i></span>
+                            <span class="hide-menu">Iklan</span>
+                        </a>
+                    </li>
+                @endcan
+
+                @can('manage-fees')
+                    <li class="sidebar-item">
+                        <a class="sidebar-link {{ request()->routeIs('admin.fees.*') ? 'active' : '' }}"
+                           href="{{ route('admin.fees.index') }}" aria-expanded="false">
+                            <span class="d-flex"><i class="ti ti-currency-dollar" aria-hidden="true"></i></span>
+                            <span class="hide-menu">Biaya</span>
                         </a>
                     </li>
                 @endcan

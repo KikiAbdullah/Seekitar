@@ -7,10 +7,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\RequestOtpRequest;
 use App\Http\Requests\Api\UpdateProfileRequest;
 use App\Http\Requests\Api\VerifyOtpRequest;
+use App\Http\Resources\UserExportResource;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\Contracts\WhatsAppGateway;
 use App\Services\OtpService;
+use App\Services\PrivacyService;
 use App\Exceptions\OtpDeliveryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -32,6 +34,7 @@ class AuthController extends Controller
     public function __construct(
         private readonly OtpService $otp,
         private readonly WhatsAppGateway $whatsapp,
+        private readonly PrivacyService $privacy,
     ) {}
 
     /** POST /auth/request-otp — publik. */
@@ -242,5 +245,39 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()?->delete();
 
         return $this->ok(null, 'Berhasil keluar.');
+    }
+
+    /**
+     * GET /auth/export-data — portabilitas data (UU PDP pasal 8).
+     * Mengembalikan data pribadi pengguna dalam format JSON untuk diunduh.
+     */
+    public function exportData(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $user->load([
+            'stores.listings', 'stores.offers',
+            'customerRequests', 'orders' => fn ($q) => $q->with('store', 'listing', 'reviews'),
+        ]);
+
+        return $this->ok([
+            'exported_at' => now()->toIso8601ZuluString(),
+            'data'        => new UserExportResource($user),
+        ]);
+    }
+
+    /**
+     * DELETE /auth/account — hak dilupakan (right to erasure).
+     * Anonimisasi semua data pribadi pengguna dan mencabut semua token.
+     * Akun tetap ada di database untuk kepentingan audit tetapi tidak bisa
+     * diidentifikasi kembali.
+     */
+    public function requestDeletion(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $this->privacy->anonymizeUser($user);
+
+        return $this->ok(null, 'Akun Anda telah dianonimkan sesuai permintaan.');
     }
 }

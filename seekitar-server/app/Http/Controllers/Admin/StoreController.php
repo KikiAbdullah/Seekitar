@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\DataTables\StoresDataTable;
 use App\Enums\StoreType;
+use App\Exports\DataTableExport;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Store;
@@ -13,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StoreController extends Controller
 {
@@ -21,6 +23,32 @@ class StoreController extends Controller
     public function index(): View
     {
         return view('admin.stores.index');
+    }
+
+    public function exportCsv(Request $request): StreamedResponse
+    {
+        $stores = Store::query()
+            ->with('owner:id,name')
+            ->select(['id', 'user_id', 'name', 'regency', 'status',
+                      'rating_avg', 'total_reviews', 'is_active', 'created_at'])
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
+            ->get();
+
+        $headers = ['ID', 'Nama', 'Pemilik', 'Kabupaten', 'Status', 'Rating', 'Aktif', 'Dibuat'];
+        $rows = $stores->map(fn (Store $s) => [
+            $s->id,
+            $s->name,
+            $s->owner?->name ?? '—',
+            $s->regency ?? '—',
+            $s->status?->label() ?? '—',
+            (int) $s->total_reviews > 0
+                ? sprintf('★ %s (%d)', number_format((float) $s->rating_avg, 1, ',', '.'), $s->total_reviews)
+                : '—',
+            $s->is_active ? 'Ya' : 'Tidak',
+            $s->created_at?->format('d M Y H:i') ?? '—',
+        ]);
+
+        return app(DataTableExport::class)->csv('toko-'.now()->format('Y-m-d').'.csv', $headers, $rows);
     }
 
     public function data(Request $request, StoresDataTable $table): JsonResponse

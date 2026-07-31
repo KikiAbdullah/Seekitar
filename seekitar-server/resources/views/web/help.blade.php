@@ -14,12 +14,6 @@
     ])
 
     @php
-        /*
-         * FAQ dikelompokkan per topik: sepuluh pertanyaan berderet tanpa
-         * pembagi memaksa pengunjung membaca semuanya; dengan topik, cukup
-         * memindai tiga-tiga. Item pertama topik pertama terbuka sebagai
-         * contoh bentuk jawaban.
-         */
         $grupFaq = [
             'Akun & Keamanan' => [
                 ['ti ti-device-mobile', 'Bagaimana cara masuk ke aplikasi?',
@@ -55,19 +49,19 @@
     <section class="py-5">
         <div class="container" style="max-width: 820px;">
             @foreach ($grupFaq as $gJudul => $items)
-                <h2 class="h5 fw-bold {{ $loop->first ? 'mb-3' : 'mt-5 mb-3' }}">{{ $gJudul }}</h2>
+                <h2 class="h5 fw-bold {{ $loop->first ? 'mb-3' : 'mt-5 mb-3' }} sr-reveal">{{ $gJudul }}</h2>
 
                 <div class="accordion accordion-seekitar mb-4" id="faq-{{ $loop->index }}">
                     @foreach ($items as $j => [$ikon, $tanya, $jawab])
                         @php $terbuka = $loop->parent->first && $loop->first; @endphp
-                        <div class="accordion-item">
+                        <div class="accordion-item sr-reveal">
                             <h3 class="accordion-header" id="faq-{{ $loop->parent->index }}-h{{ $j }}">
                                 <button class="accordion-button {{ $terbuka ? '' : 'collapsed' }}" type="button"
                                         data-bs-toggle="collapse"
                                         data-bs-target="#faq-{{ $loop->parent->index }}-c{{ $j }}"
                                         aria-expanded="{{ $terbuka ? 'true' : 'false' }}"
                                         aria-controls="faq-{{ $loop->parent->index }}-c{{ $j }}">
-                                    <i class="{{ $ikon }} me-2 text-secondary" aria-hidden="true"></i>
+                                    <i class="{{ $ikon }} me-2" aria-hidden="true" style="color: var(--hijau-lokal);"></i>
                                     {{ $tanya }}
                                 </button>
                             </h3>
@@ -87,10 +81,10 @@
     {{-- CTA berlanjut ke kontak --}}
     <section class="pb-5">
         <div class="container" style="max-width: 820px;">
-            <div class="lp-cta text-center px-4 py-5">
+            <div class="lp-cta text-center px-4 py-5 sr-reveal">
                 <div class="position-relative">
                     <h2 class="h4 fw-bold mb-2">Masih ada pertanyaan?</h2>
-                    <p class="text-secondary mb-4">Kanal pengaduan kami punya tenggat tanggapan yang mengikat.</p>
+                    <p class="mb-4" style="color: var(--teks-secondary);">Kanal pengaduan kami punya tenggat tanggapan yang mengikat.</p>
                     <div class="d-flex flex-wrap justify-content-center gap-2">
                         <a href="{{ route('web.contact') }}" class="btn btn-seekitar px-4">Lihat Kanal Kontak</a>
                         <a href="{{ route('web.home') }}#cara-kerja" class="btn btn-outline-dark px-4">Cara Kerja</a>

@@ -16,6 +16,7 @@
         'tableId' => 'offers-table',
         'ajax'    => route('admin.offers.data'),
         'order'   => [[7, 'desc']],
+        'exportRoute' => 'admin.offers.export',
         'filterView' => 'admin.offers._filter',
         'columns' => [
             ['data' => 'request_title',   'label' => 'Permintaan'],
@@ -28,6 +29,7 @@
             ['data' => 'status',          'label' => 'Status'],
             ['data' => 'expires_at',      'label' => 'Kedaluwarsa'],
             ['data' => 'created_at',      'label' => 'Dibuat'],
+            ['data' => 'action',          'label' => '', 'orderable' => false, 'searchable' => false],
         ],
     ])
 @endsection

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\DataTables\OrdersDataTable;
+use App\Exports\DataTableExport;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use Illuminate\Contracts\View\View;
@@ -16,6 +17,34 @@ class OrderController extends Controller
     public function index(): View
     {
         return view('admin.orders.index');
+    }
+
+    public function exportCsv(Request $request): StreamedResponse
+    {
+        $orders = Order::query()
+            ->select(['id', 'order_number', 'buyer_id', 'store_id', 'order_type',
+                      'delivery_method', 'quantity', 'total_amount', 'status', 'created_at'])
+            ->with(['buyer:id,name', 'store:id,name'])
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
+            ->when($request->filled('order_type'), fn ($q) => $q->where('order_type', $request->string('order_type')))
+            ->when($request->filled('delivery_method'), fn ($q) => $q->where('delivery_method', $request->string('delivery_method')))
+            ->get();
+
+        $headers = ['ID', 'Pesanan', 'Pembeli', 'Toko', 'Tipe', 'Pengiriman', 'Qty', 'Total', 'Status', 'Dibuat'];
+        $rows = $orders->map(fn (Order $o) => [
+            $o->id,
+            $o->order_number,
+            $o->buyer?->name ?? '—',
+            $o->store?->name ?? '—',
+            $o->order_type?->label() ?? '—',
+            $o->delivery_method?->label() ?? '—',
+            $o->quantity,
+            number_format((float) $o->total_amount, 0, ',', '.'),
+            $o->status?->label() ?? '—',
+            $o->created_at?->format('d M Y H:i') ?? '—',
+        ]);
+
+        return app(DataTableExport::class)->csv('pesanan-'.now()->format('Y-m-d').'.csv', $headers, $rows);
     }
 
     public function data(Request $request, OrdersDataTable $table): JsonResponse

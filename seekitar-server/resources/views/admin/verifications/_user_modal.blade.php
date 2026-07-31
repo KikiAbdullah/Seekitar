@@ -191,7 +191,8 @@
                             Alasan ini tampil di aplikasi pengguna agar ia tahu apa yang diperbaiki;
                             kedudukannya jatuh ke <strong>Ditolak</strong> dan keluar dari antrian.
                         </div>
-                        <button type="submit" class="btn btn-danger btn-sm mt-2">Kirim penolakan</button>
+                        <button type="submit" class="btn btn-danger btn-sm mt-2"
+                                        data-seekitar-confirm="Pengguna akan diberi tahu alasan ini dan dapat mengirim ulang berkas.">Kirim penolakan</button>
                     </form>
                 </div>
             </div>

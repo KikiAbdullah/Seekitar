@@ -6,6 +6,7 @@ use App\Enums\RequestStatus;
 use App\Http\Concerns\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreCustomerRequestRequest;
+use App\Http\Requests\Api\UpdateCustomerRequestRequest;
 use App\Http\Resources\CustomerRequestResource;
 use App\Http\Resources\OfferResource;
 use App\Models\CustomerRequest;
@@ -117,6 +118,39 @@ class CustomerRequestController extends Controller
         )->save();
 
         return $this->created(['request' => new CustomerRequestResource($customerRequest->fresh())]);
+    }
+
+    /** PATCH /requests/{customerRequest} */
+    public function update(UpdateCustomerRequestRequest $request, CustomerRequest $customerRequest): JsonResponse
+    {
+        $this->authorize('update', $customerRequest);
+
+        $customerRequest->fill($request->safe()->except(['latitude', 'longitude']));
+
+        if ($request->hasAny(['latitude', 'longitude'])) {
+            $customerRequest->setLocation(
+                (float) $request->validated('latitude'),
+                (float) $request->validated('longitude'),
+            );
+        }
+
+        $customerRequest->save();
+
+        return $this->ok(['request' => new CustomerRequestResource($customerRequest->fresh())]);
+    }
+
+    /** DELETE /requests/{customerRequest} */
+    public function destroy(CustomerRequest $customerRequest): JsonResponse
+    {
+        $this->authorize('delete', $customerRequest);
+
+        if ($customerRequest->status === RequestStatus::Closed) {
+            return $this->fail('Permintaan yang sudah selesai tidak dapat dihapus.', 422);
+        }
+
+        $customerRequest->delete();
+
+        return $this->noContent();
     }
 
     /** POST /requests/{customerRequest}/extend */

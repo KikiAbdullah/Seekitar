@@ -62,7 +62,7 @@
 
 ## 1. VISI & FILOSOFI DATABASE
 
-Database Seekitar dirancang sebagai **Single Source of Truth** untuk seluruh data transaksi marketplace hyperlocal. Filosofi inti kami:
+Database Seekitar dirancang sebagai **Single Source of Truth** untuk seluruh data transaksi pasar lokal. Filosofi inti kami:
 
 - **Integritas di level database** – Bukan hanya di aplikasi. Setiap aturan bisnis yang bisa diwakili oleh constraint (CHECK, UNIQUE, FOREIGN KEY) HARUS ada di database.
 - **Tak kenal kompromi pada data yatim** – Setiap baris yang ada selalu merujuk ke entitas yang sah.
@@ -405,7 +405,7 @@ pernah menimpa siapa & kapan yang sudah tercatat.
 > yang konsisten dengan default 5 km.
 >
 > Menyamakan keduanya jadi 15 km akan membuat toko kelontong muncul di
-> pencarian sejauh 15 km — bertentangan dengan premis *hyperlocal* produk ini.
+> pencarian sejauh 15 km — bertentangan dengan premis *lokal* produk ini.
 
 **Kapabilitas layanan (`accepts_cod`, `offers_delivery`, `allows_pickup`).**
 Ketiganya menggambarkan **kemampuan toko**, berbeda dari

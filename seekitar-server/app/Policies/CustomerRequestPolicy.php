@@ -8,9 +8,20 @@ use App\Models\User;
 
 class CustomerRequestPolicy
 {
-    public function update(User $user, CustomerRequest $request): bool
+    public function view(User $user, CustomerRequest $request): bool
     {
         return $request->user_id === $user->id;
+    }
+
+    public function create(User $user): bool
+    {
+        return true;
+    }
+
+    public function update(User $user, CustomerRequest $request): bool
+    {
+        return $request->user_id === $user->id
+            && $request->status !== RequestStatus::Closed;
     }
 
     /**
@@ -26,6 +37,6 @@ class CustomerRequestPolicy
     public function delete(User $user, CustomerRequest $request): bool
     {
         return $request->user_id === $user->id
-            || $user->can('manage-requests');
+            && $request->status !== RequestStatus::Closed;
     }
 }

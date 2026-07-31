@@ -73,6 +73,18 @@ return [
             'replace_placeholders' => true,
         ],
 
+        /*
+        | Kanal kepatuhan privasi: penghapusan akun, hak dilupakan, ekspor
+        | data, dan retensi (UU PDP). Dipisah agar audit privasi mudah ditinjau.
+        */
+        'privacy' => [
+            'driver' => 'daily',
+            'path'   => storage_path('logs/privacy.log'),
+            'level'  => 'info',
+            'days'   => env('LOG_PRIVACY_DAILY_DAYS', 365),
+            'replace_placeholders' => true,
+        ],
+
         'single' => [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),

@@ -59,6 +59,16 @@ class OfferController extends Controller
         return $this->created(['offer' => new OfferResource($offer->load('store'))]);
     }
 
+    /** GET /offers/{offer} */
+    public function show(Offer $offer): JsonResponse
+    {
+        $this->authorize('view', $offer);
+
+        $offer->load(['store', 'request']);
+
+        return $this->ok(['offer' => new OfferResource($offer)]);
+    }
+
     /**
      * PATCH /offers/{offer}/accept
      *

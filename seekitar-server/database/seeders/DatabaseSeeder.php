@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             RolesAndPermissionsSeeder::class,  // 1. role, permission, super-admin
             CategorySeeder::class,             // 2. 24 kategori (wajib produksi)
             SettingSeeder::class,              // 3. nilai default tabel settings
+            BlogPostSeeder::class,             // 4. blog awal yang sudah ditulis
         ]);
 
         // Data contoh HANYA untuk pengembangan — jangan pernah di produksi.

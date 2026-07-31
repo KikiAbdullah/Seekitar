@@ -79,4 +79,46 @@ return [
         'address' => env('SEEKITAR_COMPANY_ADDRESS', 'Bangil, Kabupaten Pasuruan, Jawa Timur'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Registrasi PSE Kominfo
+    |--------------------------------------------------------------------------
+    |
+    | Nomor tanda daftar PSE (Penyelenggara Sistem Elektronik) wajib
+    | ditampilkan di situs dan aplikasi. Diisi setelah pendaftaran PSE
+    | Lingkup Privat selesai (Permenkominfo 5/2020 ps. 7).
+    |
+    */
+
+    'pse' => [
+        'registration_number' => env('SEEKITAR_PSE_NUMBER', ''),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Monetisasi & Harga
+    |--------------------------------------------------------------------------
+    |
+    | Seekitar Fase 1 gratis 100%. Harga di bawah mulai berlaku di Fase 2
+    | dan dapat diubah lewat pengaturan admin.
+    |
+    */
+
+    'monetization' => [
+        // Pro Monthly (langganan toko)
+        'pro_monthly_price'    => (int) env('SEEKITAR_PRO_MONTHLY_PRICE', 30000),
+        'pro_monthly_duration' => 30, // hari
+
+        // Boost Listing (per 7 hari)
+        'boost_listing_price'    => (int) env('SEEKITAR_BOOST_LISTING_PRICE', 7500),
+        'boost_listing_duration' => 7, // hari
+
+        // Biaya Flat per Transaksi
+        'service_fee_enabled' => (bool) env('SEEKITAR_SERVICE_FEE_ENABLED', false),
+        'service_fee_amount'  => (int) env('SEEKITAR_SERVICE_FEE_AMOUNT', 1500),
+
+        // Iklan Banner Lokal
+        'banner_price_per_day' => (int) env('SEEKITAR_BANNER_PRICE_PER_DAY', 50000),
+    ],
+
 ];

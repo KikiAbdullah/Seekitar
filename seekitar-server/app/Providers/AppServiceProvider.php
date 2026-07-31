@@ -10,10 +10,14 @@ use App\Events\OrderStatusChanged;
 use App\Listeners\DispatchRequestBroadcast;
 use App\Listeners\SendOfferAcceptedNotification;
 use App\Listeners\SendOrderStatusNotification;
+use App\Models\CustomerRequest;
 use App\Models\Order;
 use App\Models\Review;
+use App\Policies\CustomerRequestPolicy;
 use App\Observers\OrderObserver;
 use App\Observers\ReviewObserver;
+use App\Services\ActivityLogger;
+use App\Services\CacheService;
 use App\Services\Contracts\NotificationSender;
 use App\Services\Contracts\WhatsAppGateway;
 use App\Services\Notifications\LogNotificationSender;
@@ -62,6 +66,13 @@ class AppServiceProvider extends ServiceProvider
         // catatan di LogNotificationSender; kontraknya sudah tetap sehingga
         // penggantinya cukup di-bind di sini.
         $this->app->bind(NotificationSender::class, LogNotificationSender::class);
+
+        // Pencatat aktivitas — dapat diresolusi lewat DI di mana saja.
+        $this->app->singleton(ActivityLogger::class);
+
+        // Cache terpusat dengan dukungan grup — singleton agar state
+        // (daftar key per grup) konsisten sepanjang request.
+        $this->app->singleton(CacheService::class);
 
         /*
          * Migrasi bawaan Sanctum memakai tokenable_id BIGINT — tidak cocok
@@ -134,6 +145,8 @@ class AppServiceProvider extends ServiceProvider
      */
     private function registerAuthorization(): void
     {
+        Gate::policy(CustomerRequest::class, CustomerRequestPolicy::class);
+
         Gate::before(function ($user, string $ability) {
             // WAJIB null, BUKAN false. Mengembalikan false memutus rantai:
             // Policy tidak akan pernah dipanggil dan SEMUA orang selain

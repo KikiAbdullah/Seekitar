@@ -60,6 +60,8 @@ class StoreController extends Controller
             ->withinBox($lat, $lng, $radius)
             ->when(isset($data['type']), fn ($q) => $q->whereStoreType($data['type']))
             ->get()
+            // Safety limit: jangan muat >500 toko ke memori
+            ->take(config('query-cache.max_collection', 500))
             ->map(function (Store $s) use ($lat, $lng): Store {
                 $s->setAttribute('distance_km', \App\Support\Jarak::haversineKm(
                     $lat, $lng, (float) $s->latitude, (float) $s->longitude
@@ -81,6 +83,15 @@ class StoreController extends Controller
         );
 
         return $this->paginated($paginasi, StoreResource::class);
+    }
+
+    /** GET /stores/mine */
+    public function mine(Request $request): JsonResponse
+    {
+        $stores = Store::where('user_id', $request->user()->id)
+            ->paginate($this->perPage());
+
+        return $this->paginated($stores, StoreResource::class);
     }
 
     /** GET /stores/{store} */

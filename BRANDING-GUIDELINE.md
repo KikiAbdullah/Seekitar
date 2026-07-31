@@ -198,7 +198,7 @@ Persona merek Seekitar berbicara seperti **“tetangga yang selalu tahu solusi�
 **Contoh Penerapan:**
 | Situasi | ✅ Nada Seekitar | ❌ Hindari |
 | :--- | :--- | :--- |
-| Onboarding | “Halo, selamat datang! Kita cari kebutuhanmu di sekitar, yuk.” | “Selamat bergabung di platform hyperlocal marketplace kami.” |
+| Onboarding | “Halo, selamat datang! Kita cari kebutuhanmu di sekitar, yuk.” | “Selamat bergabung di platform pasar lokal kami.” |
 | Pencarian kosong | “Wah, belum ada yang jual nih di dekatmu. Coba perluas radius, atau pasang kebutuhan aja.” | “0 results found. Please refine your search parameters.” |
 | Promosi | “Lapakmu bisa makin ramai. Naikkan ke halaman utama kecamatan cuma Rp9.900.” | “Paket Boost Listing kini tersedia. Klik untuk informasi lebih lanjut.” |
 
@@ -253,7 +253,7 @@ Logo **Seekitar** adalah kombinasi **logomark (ikon)** dan **wordmark (tulisan)*
 
 **Elemen Logomark:**
 
-- **Pin Lokasi** → melambangkan hyperlocal, kedekatan geografis.
+- **Pin Lokasi** → melambangkan lokalitas, kedekatan geografis.
 - **Kaca Pembesar** → melambangkan “seek”, pencarian aktif.  
   Kedua elemen menyatu dalam bentuk sederhana.  
   _Catatan:_ Dua huruf “e” pada wordmark juga berperan sebagai elemen ikonik opsional (e ganda sebagai “dua pin” atau “mata yang melihat sekitar”).

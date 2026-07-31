@@ -33,7 +33,8 @@ class OffersDataTable
             ->editColumn('status', fn (Offer $o) => $o->status?->label() ?? '—')
             ->editColumn('expires_at', fn (Offer $o) => $o->expires_at?->format('d M Y H:i'))
             ->editColumn('created_at', fn (Offer $o) => $o->created_at?->format('d M Y'))
-            // Tidak ada kolom aksi: halaman ini hanya baca (§9.8).
+            ->addColumn('action', fn (Offer $o) => view('admin.offers._actions', ['offer' => $o])->render())
+            ->rawColumns(['action'])
             ->toJson();
     }
 }

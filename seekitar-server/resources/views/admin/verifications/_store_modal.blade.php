@@ -238,7 +238,8 @@
                                   rows="3" required minlength="10" maxlength="500"
                                   placeholder="Contoh: Foto toko tidak jelas, lokasi pin tidak sesuai alamat."></textarea>
                         <div class="form-text">Pemilik dapat memperbaiki data lalu mengajukan ulang.</div>
-                        <button type="submit" class="btn btn-danger btn-sm mt-2">Kirim penolakan</button>
+                        <button type="submit" class="btn btn-danger btn-sm mt-2"
+                                        data-seekitar-confirm="Pemilik toko akan diberi tahu alasan ini dan dapat mengajukan ulang.">Kirim penolakan</button>
                     </form>
                 </div>
             </div>

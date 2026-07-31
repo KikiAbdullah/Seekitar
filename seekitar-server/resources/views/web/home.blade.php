@@ -4,42 +4,22 @@
 @section('description', 'Cari barang, jasa, dan sewaan dari warga di sekitar ' . config('seekitar.regency') . '. Pasang kebutuhan, terima penawaran, transaksi langsung.')
 
 @push('head')
-    {{-- Data terstruktur: membantu mesin pencari menampilkan cuplikan kaya.
-
-         Array disusun di blok kode terlebih dahulu, BUKAN langsung di dalam
-         @json(): Blade memotong argumen direktif pada kurung penutup
-         pertama, sehingga array multi-baris menghasilkan PHP yang tidak
-         bisa di-parse. --}}
     @php
         $jsonLd = [
             '@context'    => 'https://schema.org',
             '@type'       => 'WebSite',
             'name'        => 'Seekitar',
             'url'         => route('web.home'),
-            'description' => 'Marketplace hyperlocal dua arah di '.config('seekitar.regency'),
+            'description' => 'Pasar lokal dua arah di '.config('seekitar.regency'),
             'inLanguage'  => 'id-ID',
         ];
     @endphp
     <script type="application/ld+json">@json($jsonLd)</script>
-
-
-    {{--
-        Gaya landing page (mengacu template Modernize "frontend-landingpage"
-        yang di-recolor Seekitar). Dekorasi latar murni CSS; konten visual
-        memakai ilustrasi WebP lokal (< 100 KB per berkas) di public/img/web/
-        — halaman tetap ratusan KB sehingga cepat di koneksi lambat.
-        Prefiks .lp- menjaganya tidak menabrak gaya halaman lain.
-    --}}
 @endpush
 
 @section('content')
 
     {{-- ================================ HERO ================================ --}}
-    {{-- Ilustrasi memenuhi SELURUH latar hero (bukan kolom terpisah): teks
-         menumpang di atasnya, dilindungi scrim putih yang memudar ke kanan
-         supaya keterbacaan tidak bergantung pada sibuk-tidaknya gambar.
-         Gradasi hijau .lp-hero tetap di belakang sebagai warna cadangan
-         selama gambar dimuat. --}}
     <section class="lp-hero lp-hero-full pt-5 pb-4 pb-lg-5">
         <img src="{{ asset('img/web/hero.webp') }}"
              alt="Ilustrasi warga memakai Seekitar: barang, jasa, dan sewa dari toko sekitar dalam satu genggaman"
@@ -50,43 +30,45 @@
         <div class="container position-relative py-4 py-lg-5">
             <div class="row">
                 <div class="col-lg-7 col-xl-6 text-center text-lg-start">
-                    <span class="lp-pill mb-3">Marketplace hyperlocal · {{ config('seekitar.regency') }}</span>
+                    <span class="lp-pill mb-3">Pasar lokal · {{ config('seekitar.regency') }}</span>
 
-                    <h1 class="display-5 fw-bold mb-3 lh-sm">
+                    <h1 class="display-5 fw-bold mb-3 lh-sm" style="animation: fade-up .6s ease-out .1s both;">
                         Yang kamu butuhkan,<br class="d-none d-lg-block">
                         ada di sekitar.
                     </h1>
 
-                    <p class="lead text-secondary mb-4" style="max-width: 34rem;">
+                    <p class="lead mb-4" style="color: var(--teks-secondary); max-width: 34rem; animation: fade-up .6s ease-out .2s both;">
                         Seekitar menghubungkan warga {{ config('seekitar.regency') }} dengan
                         penjual, penyedia jasa, dan penyewaan terdekat — tanpa perantara.
                     </p>
 
-                    <div class="d-flex flex-wrap justify-content-center justify-content-lg-start gap-2 mb-4">
-                        <a href="#unduh" class="btn btn-seekitar btn-lg px-4">
-                            <i class="ti ti-download me-1" aria-hidden="true"></i> Mulai Sekarang
-                        </a>
-                        <a href="#cara-kerja" class="btn btn-outline-dark btn-lg px-4">
-                            Lihat Cara Kerja
-                        </a>
-                    </div>
+                    <div style="animation: fade-up .6s ease-out .3s both;">
+                        <div class="d-flex flex-wrap justify-content-center justify-content-lg-start gap-2 mb-4">
+                            <a href="#unduh" class="btn btn-seekitar btn-lg px-4">
+                                <i class="ti ti-download me-1" aria-hidden="true"></i> Mulai Sekarang
+                            </a>
+                            <a href="#cara-kerja" class="btn btn-outline-dark btn-lg px-4">
+                                Lihat Cara Kerja
+                            </a>
+                        </div>
 
-                    <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start gap-3 mb-5">
-                        <span class="lp-avatar-stack" aria-hidden="true">
-                            <span style="background: var(--hijau-lokal);">W</span>
-                            <span style="background: #B45309;">S</span>
-                            <span style="background: #2563EB;">R</span>
-                            <span style="background: #4B5563;">D</span>
-                        </span>
-                        <span class="text-secondary" style="max-width: 22rem;">
-                            Dibuat khusus untuk warga dan pelaku usaha {{ config('seekitar.regency') }}.
-                        </span>
-                    </div>
+                        <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start gap-3 mb-5">
+                            <span class="lp-avatar-stack" aria-hidden="true">
+                                <span style="background: var(--hijau-lokal);">W</span>
+                                <span style="background: #B45309;">S</span>
+                                <span style="background: #2563EB;">R</span>
+                                <span style="background: #4B5563;">D</span>
+                            </span>
+                            <span style="color: var(--teks-secondary); max-width: 22rem;">
+                                Dibuat khusus untuk warga dan pelaku usaha {{ config('seekitar.regency') }}.
+                            </span>
+                        </div>
 
-                    <div class="lp-iconbar pb-lg-2 justify-content-lg-start">
-                        <span><i class="ti ti-package" aria-hidden="true"></i>Barang</span>
-                        <span><i class="ti ti-tools" aria-hidden="true"></i>Jasa</span>
-                        <span><i class="ti ti-key" aria-hidden="true"></i>Sewa</span>
+                        <div class="lp-iconbar pb-lg-2 justify-content-lg-start">
+                            <span><i class="ti ti-package" aria-hidden="true"></i>Barang</span>
+                            <span><i class="ti ti-tools" aria-hidden="true"></i>Jasa</span>
+                            <span><i class="ti ti-key" aria-hidden="true"></i>Sewa</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -96,61 +78,60 @@
     {{-- ============================ KEUNGGULAN ============================ --}}
     <section id="keunggulan" class="py-5">
         <div class="container py-lg-3">
-            <div class="text-center mb-5">
-                <div class="fw-bold text-uppercase mb-2" style="color: var(--hijau-lokal); font-size: 13px; letter-spacing: .08em;">
-                    Kenapa Seekitar
-                </div>
+            <div class="text-center mb-5 sr-reveal">
+                <div class="lp-kicker mb-2">Kenapa Seekitar</div>
                 <h2 class="h3 fw-bold mb-2">Aman dari hulu ke hilir</h2>
-                <p class="text-secondary mb-0 mx-auto" style="max-width: 36rem;">
+                <div class="lp-divider"></div>
+                <p class="mb-0 mx-auto" style="color: var(--teks-secondary); max-width: 36rem;">
                     Setiap sisi transaksi dirancang agar warga berani bertransaksi
                     dengan orang yang belum dikenal.
                 </p>
             </div>
 
             <div class="row g-4">
-                <div class="col-md-6 col-lg-3">
+                <div class="col-md-6 col-lg-3 sr-reveal sr-reveal-delay-1">
                     <div class="lp-kartu-fitur">
                         <div class="lp-fitur-ikon lp-tone-hijau mb-3" aria-hidden="true">
                             <i class="ti ti-shield-check"></i>
                         </div>
                         <h3 class="h5 fw-bold">Verifikasi Berlapis</h3>
-                        <p class="text-secondary mb-0">
+                        <p class="mb-0" style="color: var(--teks-secondary);">
                             Nomor HP, KTP, dan NIK ditinjau admin satu per satu.
                             Penjual terverifikasi memakai tanda khusus.
                         </p>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-3">
+                <div class="col-md-6 col-lg-3 sr-reveal sr-reveal-delay-2">
                     <div class="lp-kartu-fitur">
                         <div class="lp-fitur-ikon lp-tone-kuning mb-3" aria-hidden="true">
                             <i class="ti ti-star"></i>
                         </div>
                         <h3 class="h5 fw-bold">Rating Dua Arah</h3>
-                        <p class="text-secondary mb-0">
+                        <p class="mb-0" style="color: var(--teks-secondary);">
                             Pembeli dan toko saling menilai 1–5 bintang, jadi
                             reputasi baik terjaga di kedua sisi.
                         </p>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-3">
+                <div class="col-md-6 col-lg-3 sr-reveal sr-reveal-delay-3">
                     <div class="lp-kartu-fitur">
                         <div class="lp-fitur-ikon lp-tone-biru mb-3" aria-hidden="true">
                             <i class="ti ti-map-pin"></i>
                         </div>
-                        <h3 class="h5 fw-bold">Hyperlocal</h3>
-                        <p class="text-secondary mb-0">
+                        <h3 class="h5 fw-bold">Berbasis Lokasi</h3>
+                        <p class="mb-0" style="color: var(--teks-secondary);">
                             Semua dicari dalam radius kilometer dari lokasimu —
                             dekat berarti cepat, murah, dan bisa dicek langsung.
                         </p>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-3">
+                <div class="col-md-6 col-lg-3 sr-reveal sr-reveal-delay-4">
                     <div class="lp-kartu-fitur">
                         <div class="lp-fitur-ikon lp-tone-merah mb-3" aria-hidden="true">
                             <i class="ti ti-gavel"></i>
                         </div>
                         <h3 class="h5 fw-bold">Ada Penengah</h3>
-                        <p class="text-secondary mb-0">
+                        <p class="mb-0" style="color: var(--teks-secondary);">
                             Sengketa ditinjau tim admin dengan batas respons yang
                             jelas — kamu tidak dibiarkan sendirian.
                         </p>
@@ -163,10 +144,11 @@
     {{-- ========================= TIGA LAYANAN ========================= --}}
     <section id="layanan" class="py-5 bg-light">
         <div class="container py-lg-3">
-            <div class="text-center mb-5">
+            <div class="text-center mb-5 sr-reveal">
                 <div class="lp-kicker mb-2">Apa Saja Ada</div>
                 <h2 class="h3 fw-bold mb-2">Barang, jasa, dan sewaan</h2>
-                <p class="text-secondary mb-0 mx-auto" style="max-width: 36rem;">
+                <div class="lp-divider"></div>
+                <p class="mb-0 mx-auto" style="color: var(--teks-secondary); max-width: 36rem;">
                     Bukan katalog kota sebelah — semua ini benar-benar ada
                     di sekitar tempat tinggalmu.
                 </p>
@@ -180,8 +162,8 @@
                      'Tukang pipa, servis motor, jahit pakaian, sampai guru les — keahlian warga sekitar yang sudah terverifikasi.'],
                     ['img/web/layanan-sewa.webp', 'Ilustrasi tenda lipat, tumpukan kursi plastik, dan pengeras suara untuk disewa', 'ti ti-key', 'kuning', 'Sewa',
                      'Tenda hajatan, kursi, sound system, sampai alat pertanian — pakai sebentar, bayar seperlunya.'],
-                ] as [$berkas, $alt, $ikon, $tone, $judulLayanan, $isi])
-                    <div class="col-md-4">
+                ] as $i => [$berkas, $alt, $ikon, $tone, $judulLayanan, $isi])
+                    <div class="col-md-4 sr-reveal sr-reveal-delay-{{ $i + 1 }}">
                         <div class="lp-kartu-layanan">
                             <img src="{{ asset($berkas) }}" alt="{{ $alt }}"
                                  width="900" height="600" loading="lazy" decoding="async">
@@ -193,7 +175,7 @@
                                     </span>
                                     <h3 class="h5 fw-bold mb-0">{{ $judulLayanan }}</h3>
                                 </div>
-                                <p class="text-secondary mb-0">{{ $isi }}</p>
+                                <p class="mb-0" style="color: var(--teks-secondary);">{{ $isi }}</p>
                             </div>
                         </div>
                     </div>
@@ -205,17 +187,16 @@
     {{-- ============================ CARA KERJA ============================ --}}
     <section id="cara-kerja" class="py-5">
         <div class="container py-lg-3">
-            <div class="text-center mb-5">
-                <div class="fw-bold text-uppercase mb-2" style="color: var(--hijau-lokal); font-size: 13px; letter-spacing: .08em;">
-                    Cara Kerja
-                </div>
+            <div class="text-center mb-5 sr-reveal">
+                <div class="lp-kicker mb-2">Cara Kerja</div>
                 <h2 class="h3 fw-bold mb-2">Dua arah, satu aplikasi</h2>
-                <p class="text-secondary mb-0">Untuk pencari kebutuhan maupun pemilik usaha.</p>
+                <div class="lp-divider"></div>
+                <p class="mb-0" style="color: var(--teks-secondary);">Untuk pencari kebutuhan maupun pemilik usaha.</p>
             </div>
 
             <div class="row g-4">
-                <div class="col-lg-6">
-                    <div class="h-100 bg-white border rounded-4 p-4">
+                <div class="col-lg-6 sr-reveal sr-reveal-delay-1">
+                    <div class="h-100 bg-white border rounded-4 p-4" style="transition: box-shadow var(--transition), transform var(--transition);">
                         <img src="{{ asset('img/web/pencari.webp') }}"
                              alt="Ilustrasi pencari duduk santai membandingkan tiga penawaran yang masuk di ponselnya"
                              class="lp-foto-kerja mb-4" width="900" height="600"
@@ -235,15 +216,15 @@
                                 <span class="lp-langkah-no" aria-hidden="true">{{ $i + 1 }}</span>
                                 <div>
                                     <div class="fw-semibold">{{ $judul }}</div>
-                                    <div class="text-secondary" style="font-size: 14px;">{{ $isi }}</div>
+                                    <div style="color: var(--teks-secondary); font-size: 14px;">{{ $isi }}</div>
                                 </div>
                             </div>
                         @endforeach
                     </div>
                 </div>
 
-                <div class="col-lg-6">
-                    <div class="h-100 bg-white border rounded-4 p-4">
+                <div class="col-lg-6 sr-reveal sr-reveal-delay-2">
+                    <div class="h-100 bg-white border rounded-4 p-4" style="transition: box-shadow var(--transition), transform var(--transition);">
                         <img src="{{ asset('img/web/penyedia.webp') }}"
                              alt="Ilustrasi pemilik warung menerima penawaran masuk dari ponselnya di depan tokonya"
                              class="lp-foto-kerja mb-4" width="900" height="600"
@@ -263,7 +244,7 @@
                                 <span class="lp-langkah-no" aria-hidden="true">{{ $i + 1 }}</span>
                                 <div>
                                     <div class="fw-semibold">{{ $judul }}</div>
-                                    <div class="text-secondary" style="font-size: 14px;">{{ $isi }}</div>
+                                    <div style="color: var(--teks-secondary); font-size: 14px;">{{ $isi }}</div>
                                 </div>
                             </div>
                         @endforeach
@@ -277,15 +258,15 @@
     <section class="lp-stats py-5">
         <div class="container">
             <div class="row text-center g-4">
-                <div class="col-4">
+                <div class="col-4 sr-reveal sr-reveal-delay-1">
                     <div class="lp-angka">{{ number_format($statistik['toko']) }}</div>
                     <div class="lp-label">Toko Terverifikasi</div>
                 </div>
-                <div class="col-4">
+                <div class="col-4 sr-reveal sr-reveal-delay-2">
                     <div class="lp-angka">{{ number_format($statistik['listing']) }}</div>
                     <div class="lp-label">Listing Aktif</div>
                 </div>
-                <div class="col-4">
+                <div class="col-4 sr-reveal sr-reveal-delay-3">
                     <div class="lp-angka">{{ number_format($categories->count()) }}</div>
                     <div class="lp-label">Kategori Kebutuhan</div>
                 </div>
@@ -293,18 +274,19 @@
         </div>
     </section>
 
-    {{-- Kategori dari basis data: daftar yang berbeda dari isi aplikasi
-         justru merusak kepercayaan. --}}
+    {{-- ============================ KATEGORI ============================ --}}
     @if ($categories->isNotEmpty())
         <section id="kategori" class="py-5">
             <div class="container">
-                <div class="text-center mb-4">
+                <div class="text-center mb-4 sr-reveal">
                     <h2 class="h3 fw-bold mb-2">Jelajahi kategori</h2>
-                    <p class="text-secondary mb-0">Semua kebutuhan sehari-hari, dari yang dijual sampai yang disewakan.</p>
+                    <div class="lp-divider"></div>
+                    <p class="mb-0" style="color: var(--teks-secondary);">Semua kebutuhan sehari-hari, dari yang dijual sampai yang disewakan.</p>
                 </div>
-                <div class="d-flex flex-wrap justify-content-center gap-2">
+                <div class="d-flex flex-wrap justify-content-center gap-2 sr-reveal">
                     @foreach ($categories as $category)
-                        <span class="badge rounded-pill text-bg-light border py-2 px-3 fs-6">
+                        <span class="badge rounded-pill py-2 px-3 fs-6"
+                              style="background: var(--hijau-muda); color: var(--hijau-gelap); font-weight: 500; border: 1px solid rgba(22,138,74,.15);">
                             {{ $category->name }}
                         </span>
                     @endforeach
@@ -316,10 +298,10 @@
     {{-- ================================ CTA ================================ --}}
     <section id="unduh" class="pb-5">
         <div class="container">
-            <div class="lp-cta text-center px-4 py-5">
+            <div class="lp-cta text-center px-4 py-5 sr-reveal">
                 <div class="position-relative">
                     <h2 class="h3 fw-bold mb-3">Mulai dari sekarang</h2>
-                    <p class="text-secondary mb-4 mx-auto" style="max-width: 32rem;">
+                    <p class="mb-4 mx-auto" style="color: var(--teks-secondary); max-width: 32rem;">
                         Aplikasi Seekitar sedang dalam tahap pengembangan.
                         Ada pertanyaan atau ingin jadi penyedia pertama? Kami siap membantu.
                     </p>
@@ -330,6 +312,10 @@
                         <a href="{{ route('web.help') }}" class="btn btn-outline-dark btn-lg px-4">
                             Pusat Bantuan
                         </a>
+                    </div>
+                    <div class="mt-4" style="font-size: 13px;">
+                        <a href="{{ route('web.privacy') }}" class="text-secondary text-decoration-underline me-3">Kebijakan Privasi</a>
+                        <a href="{{ route('web.terms') }}" class="text-secondary text-decoration-underline">Syarat &amp; Ketentuan</a>
                     </div>
                 </div>
             </div>

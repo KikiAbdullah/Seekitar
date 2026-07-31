@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\DataTables\UsersDataTable;
+use App\Exports\DataTableExport;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\VerifikasiTokoService;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class UserController extends Controller
 {
@@ -22,6 +24,32 @@ class UserController extends Controller
     public function index(): View
     {
         return view('admin.users.index');
+    }
+
+    public function exportCsv(Request $request): StreamedResponse
+    {
+        $users = User::query()
+            ->select(['id', 'phone', 'name', 'email', 'address',
+                      'rating_avg', 'total_reviews', 'status', 'verified_at', 'created_at'])
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
+            ->get();
+
+        $headers = ['ID', 'Nama', 'Telepon', 'Email', 'Alamat', 'Rating', 'Status', 'Terverifikasi', 'Terdaftar'];
+        $rows = $users->map(fn (User $u) => [
+            $u->id,
+            $u->name,
+            $u->phone,
+            $u->email ?? '—',
+            $u->address ?? '—',
+            (int) $u->total_reviews > 0
+                ? sprintf('★ %s (%d)', number_format((float) $u->rating_avg, 1, ',', '.'), $u->total_reviews)
+                : '—',
+            $u->status?->label() ?? '—',
+            $u->verified_at?->format('d M Y H:i') ?? '—',
+            $u->created_at?->format('d M Y H:i') ?? '—',
+        ]);
+
+        return app(DataTableExport::class)->csv('pengguna-'.now()->format('Y-m-d').'.csv', $headers, $rows);
     }
 
     /** Endpoint AJAX Datatables. */

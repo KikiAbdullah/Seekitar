@@ -123,12 +123,14 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
+    overflow: hidden;    /* cegah double scroll — simplebar di dalam yang mengatur gulir */
 }
 
 .left-sidebar .scroll-sidebar {
     flex: 1 1 auto;
     min-height: 0;       /* tanpa ini flex item menolak menyusut */
     height: auto;        /* menimpa calc(100vh - 80px) milik template */
+    overflow: hidden;    /* cegah native scroll bertarung dengan simplebar */
 }
 
 .left-sidebar .sidebar-ad { flex: 0 0 auto; }

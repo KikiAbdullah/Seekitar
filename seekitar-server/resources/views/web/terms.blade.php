@@ -14,8 +14,6 @@
     <section class="py-5">
         <div class="container" style="max-width: 860px;">
 
-            {{-- Daftar isi: dokumen panjang harus bisa dilompat — pil kecil
-                 tetap membungkus rapi di layar sempit. --}}
             <nav class="lp-toc mb-4" aria-label="Daftar isi">
                 @foreach ([
                     'Peran Seekitar', 'Akun', 'Pembayaran', 'Yang dilarang',
@@ -25,7 +23,15 @@
                 @endforeach
             </nav>
 
-            <div class="lp-doc">
+            <div class="lp-doc sr-reveal">
+                <p style="color: var(--teks-secondary); font-size: 13px;">Terakhir diperbarui: 30 Juli 2026</p>
+
+                <div class="alert alert-warning">
+                    <i class="ti ti-info-circle me-1" aria-hidden="true"></i>
+                    Dengan membuat akun atau memakai layanan Seekitar, kamu menyetujui
+                    seluruh ketentuan di bawah ini.
+                </div>
+
                 <h2 id="ketentuan-1" class="h5 fw-bold">1. Peran Seekitar</h2>
                 <p>
                     Seekitar adalah <strong>platform penghubung</strong>. Kami
@@ -50,6 +56,7 @@
                     menampung dana dan tidak menyediakan rekening bersama.
                 </p>
                 <div class="alert alert-warning">
+                    <i class="ti ti-alert-triangle me-1" aria-hidden="true"></i>
                     Karena dana tidak melewati Seekitar, kami <strong>tidak dapat
                     mengembalikan uang</strong> secara otomatis. Bila terjadi masalah,
                     laporkan lewat fitur Laporkan Masalah agar kami dapat menengahi.

@@ -15,6 +15,20 @@
     --hijau-muda:  #D1FAE5;
     --kuning:      #F5B83D;
     --teks:        #1F2933;
+    --teks-secondary: #6B7280;
+    --border:      #E5E7EB;
+    --latar:       #F9FAFB;
+
+    --shadow-sm:   0 2px 10px rgba(31, 41, 51, .06);
+    --shadow-md:   0 6px 24px rgba(31, 41, 51, .08);
+    --shadow-lg:   0 14px 34px rgba(31, 41, 51, .10);
+    --shadow-xl:   0 24px 48px rgba(31, 41, 51, .12);
+    --radius-sm:   12px;
+    --radius-md:   18px;
+    --radius-lg:   24px;
+    --radius-xl:   32px;
+
+    --transition: .22s cubic-bezier(.4, 0, .2, 1);
 
     /* Font UI tunggal: Plus Jakarta Sans dimuat di <head> layout (bobot
        300–800). body di bawah mematoknya, tetapi Bootstrap juga membaca
@@ -27,17 +41,66 @@
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
+html { scroll-behavior: smooth; }
+
 body {
     font-family: var(--bs-font-sans-serif);
     color: var(--teks);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 /* Tidak ada teks di bawah 11px (BRANDING §4). */
 .small, footer { font-size: 14px; }
 
+::selection { background: var(--hijau-muda); color: var(--hijau-gelap); }
+
+:focus-visible {
+    outline: 2px solid var(--hijau-lokal);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
 /* ------------------------------------------------------------- Kerangka */
 
-.navbar-seekitar { background: #fff; border-bottom: 1px solid #E5E7EB; }
+.navbar-seekitar {
+    background: rgba(255, 255, 255, .96);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 1px 4px rgba(31, 41, 51, .04);
+}
+.navbar-seekitar .nav-link {
+    position: relative;
+    color: var(--teks-secondary);
+    font-weight: 500;
+    padding: .5rem .75rem;
+    border-radius: 8px;
+    transition: color var(--transition), background var(--transition);
+}
+.navbar-seekitar .nav-link:hover {
+    color: var(--hijau-lokal);
+    background: var(--hijau-muda);
+}
+.navbar-seekitar .nav-link.active {
+    color: var(--hijau-lokal);
+    background: var(--hijau-muda);
+}
+.navbar-seekitar .nav-link.active::after {
+    content: ""; position: absolute; bottom: 2px; left: 50%;
+    transform: translateX(-50%);
+    width: 20px; height: 3px;
+    background: var(--hijau-lokal);
+    border-radius: 999px;
+}
+.navbar-toggler {
+    border: none; padding: .4rem;
+    color: var(--teks);
+}
+.navbar-toggler:focus { box-shadow: 0 0 0 .15rem rgba(22, 138, 74, .3); }
+.navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Cpath stroke='%231F2933' stroke-width='2.5' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E") !important;
+}
 
 /* Logo aplikasi (public/img/brand/logo-mark.png): transparan di luar tile
    rounded — tidak perlu radius atau latar tambahan di sini. */
@@ -48,23 +111,92 @@ body {
    lipat resolusi pakai agar tajam di layar retina. */
 .brand-lockup { height: 36px; width: auto; display: block; }
 
-.btn-seekitar { background: var(--hijau-lokal); color: #fff; }
-.btn-seekitar:hover, .btn-seekitar:focus { background: var(--hijau-gelap); color: #fff; }
+.btn-seekitar {
+    background: var(--hijau-lokal); color: #fff; border: none;
+    transition: all var(--transition);
+    position: relative; overflow: hidden;
+}
+.btn-seekitar::before {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,.15) 0%, transparent 50%);
+    pointer-events: none;
+}
+.btn-seekitar:hover, .btn-seekitar:focus {
+    background: var(--hijau-gelap); color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(22, 138, 74, .25);
+}
+.btn-seekitar:active { transform: translateY(0); }
 
-footer { background: var(--teks); color: #D1D5DB; }
-footer a { color: #fff; text-decoration: none; }
-footer a:hover { text-decoration: underline; }
+.btn-outline-dark {
+    transition: all var(--transition);
+}
+.btn-outline-dark:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(31, 41, 51, .10);
+}
+
+footer {
+    background: var(--teks);
+    color: #D1D5DB;
+    position: relative;
+}
+footer::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--hijau-lokal), var(--kuning), var(--hijau-lokal));
+}
+footer a { color: #fff; text-decoration: none; transition: opacity var(--transition); }
+footer a:hover { opacity: .8; text-decoration: underline; }
+footer h2 { letter-spacing: .04em; text-transform: uppercase; font-size: 12px; opacity: .7; }
+footer hr { border-color: rgba(255, 255, 255, .12); }
 
 /* Lewati navigasi — pengguna pembaca layar tidak perlu menelusuri seluruh
    menu di tiap halaman. */
 .skip-link {
     position: absolute; left: -999px;
     background: var(--hijau-lokal); color: #fff; padding: .5rem 1rem;
+    z-index: 1090;
 }
-.skip-link:focus { left: 1rem; top: 1rem; z-index: 1080; }
+.skip-link:focus { left: 1rem; top: 1rem; }
 
 /* Navbar sticky menutupi judul anchor — beri ruang sebesar navbar. */
-section[id], h2[id] { scroll-margin-top: 88px; }
+section[id], h2[id] { scroll-margin-top: 96px; }
+
+/* ======================================================= Animasi masuk */
+
+@keyframes fade-up {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+@keyframes scale-in {
+    from { opacity: 0; transform: scale(.92); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+.sr-reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity .6s cubic-bezier(.4, 0, .2, 1),
+                transform .6s cubic-bezier(.4, 0, .2, 1);
+}
+.sr-reveal.sr-tampil {
+    opacity: 1;
+    transform: translateY(0);
+}
+.sr-reveal-delay-1 { transition-delay: .1s; }
+.sr-reveal-delay-2 { transition-delay: .2s; }
+.sr-reveal-delay-3 { transition-delay: .3s; }
+.sr-reveal-delay-4 { transition-delay: .4s; }
+
+@media (prefers-reduced-motion: reduce) {
+    .sr-reveal { opacity: 1; transform: none; transition: none; }
+    html { scroll-behavior: auto; }
+}
 
 /* ================================================= LANDING (prefiks .lp-)
  *
@@ -99,12 +231,23 @@ section[id], h2[id] { scroll-margin-top: 88px; }
 .lp-blob-hijau {
     width: 360px; height: 360px; top: -120px; left: -100px;
     background: radial-gradient(circle at 35% 35%, #D1FAE5 0%, rgba(209, 250, 229, 0) 70%);
+    animation: blob-hijau 8s ease-in-out infinite alternate;
 }
 .lp-blob-kuning {
     width: 420px; height: 420px; bottom: -160px; right: -120px;
     background: radial-gradient(circle at 60% 60%, #FEF3C7 0%, rgba(254, 243, 199, 0) 70%);
+    animation: blob-kuning 10s ease-in-out infinite alternate;
 }
 .lp-hero-mini .lp-blob-kuning { bottom: auto; top: -160px; }
+
+@keyframes blob-hijau {
+    0%   { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(20px, 15px) scale(1.06); }
+}
+@keyframes blob-kuning {
+    0%   { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(-15px, -10px) scale(1.05); }
+}
 
 /* Pola titik halus pengganti ornamen garis template. */
 .lp-dots {
@@ -118,6 +261,14 @@ section[id], h2[id] { scroll-margin-top: 88px; }
 .lp-dots-atas { top: 48px; right: 12%; }
 @media (max-width: 991.98px) { .lp-dots { display: none; } }
 
+/* Remah roti (breadcrumb) */
+.lp-hero .breadcrumb { font-size: 14px; }
+.lp-hero .breadcrumb-item + .breadcrumb-item::before {
+    color: var(--teks-secondary);
+    content: "→";
+}
+.lp-hero .breadcrumb-item.active { color: var(--teks); font-weight: 600; }
+
 /* ------------------------------------------------- Latar penuh beranda */
 .lp-hero-full { min-height: 0; }
 
@@ -128,6 +279,7 @@ section[id], h2[id] { scroll-margin-top: 88px; }
     position: absolute; inset: 0;
     width: 100%; height: 100%;
     object-fit: cover; object-position: center 38%;
+    animation: fade-in .8s ease-out;
 }
 
 /* Keterbacaan teks JANGAN bergantung pada bagian gambar mana yang kebetulan
@@ -149,14 +301,21 @@ section[id], h2[id] { scroll-margin-top: 88px; }
 /* Pill pengumuman di atas judul (pola "New — …" pada template). */
 .lp-pill {
     display: inline-flex; align-items: center; gap: .5rem;
-    background: #fff; border: 1px solid #E5E7EB; border-radius: 999px;
+    background: #fff; border: 1px solid var(--border);
+    border-radius: 999px;
     padding: .35rem .9rem; font-size: 14px; font-weight: 600;
     color: var(--hijau-lokal);
-    box-shadow: 0 2px 10px rgba(31, 41, 51, .06);
+    box-shadow: var(--shadow-sm);
+    animation: fade-up .6s ease-out both;
 }
 .lp-pill::before {
     content: ""; width: 8px; height: 8px; border-radius: 50%;
     background: var(--kuning);
+    animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: .6; transform: scale(.85); }
 }
 
 /* Kicker kecil di atas judul section. */
@@ -172,30 +331,38 @@ section[id], h2[id] { scroll-margin-top: 88px; }
     width: 42px; height: 42px; border-radius: 50%;
     border: 2px solid #fff; display: grid; place-items: center;
     color: #fff; font-weight: 700; font-size: 15px;
-    box-shadow: 0 2px 6px rgba(31, 41, 51, .12);
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition);
 }
+.lp-avatar-stack span:hover { transform: translateY(-3px); z-index: 1; }
 .lp-avatar-stack span + span { margin-left: -12px; }
 
 /* Bar ikon tiga layanan (pengganti baris ikon teknologi template). */
 .lp-iconbar {
     display: flex; flex-wrap: wrap; justify-content: center;
-    gap: 1.25rem 2.5rem; color: #6B7280; font-weight: 600;
+    gap: 1.25rem 2.5rem; color: var(--teks-secondary); font-weight: 600;
 }
-.lp-iconbar .ti { font-size: 22px; vertical-align: -3px; margin-right: .35rem; }
+.lp-iconbar .ti {
+    font-size: 22px; vertical-align: -3px; margin-right: .35rem;
+    transition: transform var(--transition);
+}
+.lp-iconbar span:hover .ti { transform: scale(1.2); }
 
 /* Foto/ilustrasi di atas kartu alur cara-kerja: dipotong 2:1 supaya kedua
    kartu (pencari & penyedia) sejajar rapi walau sumbernya tidak identik. */
 .lp-foto-kerja {
     width: 100%; display: block;
     aspect-ratio: 2 / 1; object-fit: cover;
-    border-radius: 14px;
+    border-radius: var(--radius-sm);
 }
 
 /* ------------------------------------------------------- Kartu keunggulan */
 .lp-fitur-ikon {
-    width: 52px; height: 52px; border-radius: 14px;
+    width: 52px; height: 52px; border-radius: var(--radius-sm);
     display: grid; place-items: center; font-size: 25px;
+    transition: transform var(--transition), box-shadow var(--transition);
 }
+.lp-kartu-fitur:hover .lp-fitur-ikon { transform: scale(1.08); }
 .lp-tone-hijau  { background: #D1FAE5; color: var(--hijau-lokal); }
 .lp-tone-kuning { background: #FEF3C7; color: #B45309; }
 .lp-tone-biru   { background: #DBEAFE; color: #2563EB; }
@@ -203,16 +370,15 @@ section[id], h2[id] { scroll-margin-top: 88px; }
 .lp-tone-abu    { background: #F3F4F6; color: #4B5563; }
 
 .lp-kartu-fitur {
-    height: 100%; background: #fff; border: 1px solid #E5E7EB;
-    border-radius: 18px; padding: 1.5rem;
-    transition: box-shadow .18s ease-in-out, transform .18s ease-in-out;
+    height: 100%; background: #fff; border: 1px solid var(--border);
+    border-radius: var(--radius-md); padding: 1.5rem;
+    transition: box-shadow var(--transition), transform var(--transition),
+                border-color var(--transition);
 }
 .lp-kartu-fitur:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 14px 34px rgba(31, 41, 51, .10);
-}
-@media (prefers-reduced-motion: reduce) {
-    .lp-kartu-fitur, .lp-kartu-fitur:hover { transition: none; transform: none; }
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--hijau-muda);
 }
 
 /* ----------------------------------------------------- Kartu layanan */
@@ -220,46 +386,70 @@ section[id], h2[id] { scroll-margin-top: 88px; }
    .lp-kartu-fitur — dua pola hover berbeda di halaman yang sama terasa
    tidak konsisten. */
 .lp-kartu-layanan {
-    height: 100%; background: #fff; border: 1px solid #E5E7EB;
-    border-radius: 18px; overflow: hidden;
-    transition: box-shadow .18s ease-in-out, transform .18s ease-in-out;
+    height: 100%; background: #fff; border: 1px solid var(--border);
+    border-radius: var(--radius-md); overflow: hidden;
+    transition: box-shadow var(--transition), transform var(--transition);
 }
 .lp-kartu-layanan:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 14px 34px rgba(31, 41, 51, .10);
-}
-@media (prefers-reduced-motion: reduce) {
-    .lp-kartu-layanan, .lp-kartu-layanan:hover { transition: none; transform: none; }
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
 }
 .lp-kartu-layanan img {
     width: 100%; display: block;
     aspect-ratio: 3 / 2; object-fit: cover;
+    transition: transform .4s ease-out;
 }
+.lp-kartu-layanan:hover img { transform: scale(1.04); }
+.lp-kartu-layanan .p-4 { position: relative; }
 
 /* ------------------------------------------------------------ Cara kerja */
 .lp-langkah-no {
     width: 34px; height: 34px; border-radius: 50%; flex: 0 0 auto;
     display: grid; place-items: center; font-weight: 700; font-size: 15px;
     background: var(--hijau-muda); color: var(--hijau-lokal);
+    transition: transform var(--transition), background var(--transition);
+}
+.lp-kartu-fitur:hover .lp-langkah-no,
+.bg-white.border.rounded-4:hover .lp-langkah-no {
+    background: var(--hijau-lokal);
+    color: #fff;
 }
 
 /* -------------------------------------------------------- Pita statistik */
 .lp-stats {
-    background: linear-gradient(135deg, #11703C 0%, #0B5A30 100%);
+    background: linear-gradient(135deg, var(--hijau-gelap) 0%, #0B5A30 100%);
     color: #fff;
+    position: relative;
 }
-.lp-stats .lp-angka { font-size: clamp(1.6rem, 4vw, 2.4rem); font-weight: 800; }
-.lp-stats .lp-label { color: rgba(255, 255, 255, .78); }
+.lp-stats::before {
+    content: ""; position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(255,255,255,.06) 2px, transparent 2.2px);
+    background-size: 32px 32px;
+    pointer-events: none;
+}
+.lp-stats .lp-angka {
+    font-size: clamp(1.8rem, 5vw, 3rem);
+    font-weight: 800;
+    line-height: 1.1;
+}
+.lp-stats .lp-label { color: rgba(255, 255, 255, .78); font-size: 14px; }
 
 /* ------------------------------------------------------------------- CTA */
 .lp-cta {
     position: relative; overflow: hidden;
-    background: var(--hijau-muda); border-radius: 24px;
+    background: var(--hijau-muda); border-radius: var(--radius-lg);
 }
 .lp-cta::before {
     content: ""; position: absolute; inset: 0;
     background-image: radial-gradient(rgba(22, 138, 74, .16) 2px, transparent 2.2px);
     background-size: 24px 24px;
+    pointer-events: none;
+}
+.lp-cta::after {
+    content: ""; position: absolute;
+    width: 300px; height: 300px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(22, 138, 74, .08) 0%, transparent 70%);
+    top: -80px; right: -80px;
     pointer-events: none;
 }
 
@@ -268,26 +458,40 @@ section[id], h2[id] { scroll-margin-top: 88px; }
 /* Kanal kontak: seluruh kartu adalah tautan (stretched-link), jadi hover
    harus terasa — sama alasannya dengan .lp-kartu-fitur. */
 .lp-kanal {
-    height: 100%; background: #fff; border: 1px solid #E5E7EB;
-    border-radius: 18px; padding: 1.5rem; position: relative;
-    transition: box-shadow .18s ease-in-out, transform .18s ease-in-out;
+    height: 100%; background: #fff; border: 1px solid var(--border);
+    border-radius: var(--radius-md); padding: 1.5rem; position: relative;
+    transition: box-shadow var(--transition), transform var(--transition),
+                border-color var(--transition);
 }
 .lp-kanal:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 14px 34px rgba(31, 41, 51, .10);
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--hijau-muda);
 }
-@media (prefers-reduced-motion: reduce) {
-    .lp-kanal, .lp-kanal:hover { transition: none; transform: none; }
+.lp-kanal .badge {
+    font-size: 12px; font-weight: 600;
+    padding: .35rem .7rem;
 }
 
 /* Dokumen legal: kontainer baca dengan lebar kalimat nyaman (~70 karakter),
    judul bagian yang bisa ditaut, dan daftar yang lega. */
 .lp-doc {
-    background: #fff; border: 1px solid #E5E7EB; border-radius: 24px;
+    background: #fff; border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
     padding: clamp(1.5rem, 4vw, 3rem);
+    line-height: 1.75;
+    font-size: 15px;
 }
-.lp-doc h2 { scroll-margin-top: 88px; }
+.lp-doc h2 {
+    scroll-margin-top: 96px;
+    padding-bottom: .5rem;
+    border-bottom: 2px solid var(--hijau-muda);
+    display: inline-block;
+}
+.lp-doc h2:not(:first-child) { margin-top: 2.5rem; }
 .lp-doc li { margin-bottom: .5rem; }
+.lp-doc a { color: var(--hijau-lokal); }
+.lp-doc .alert { border-radius: var(--radius-sm); font-size: 14px; }
 
 /* Daftar isi pil — ringkas di atas dokumen; pada layar kecil ia membungkus
    alami sehingga tidak perlu versi sidebar terpisah. */
@@ -296,12 +500,17 @@ section[id], h2[id] { scroll-margin-top: 88px; }
 }
 .lp-toc a {
     display: inline-flex; align-items: center; gap: .35rem;
-    border: 1px solid #E5E7EB; border-radius: 999px; background: #fff;
-    padding: .35rem .9rem; font-size: 14px; font-weight: 600;
+    border: 1px solid var(--border); border-radius: 999px; background: #fff;
+    padding: .4rem 1rem; font-size: 14px; font-weight: 600;
     color: var(--teks); text-decoration: none;
+    transition: all var(--transition);
+    box-shadow: var(--shadow-sm);
 }
 .lp-toc a:hover, .lp-toc a:focus {
-    border-color: var(--hijau-lokal); color: var(--hijau-lokal);
+    border-color: var(--hijau-lokal);
+    color: var(--hijau-lokal);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 .lp-toc a .lp-no {
     color: var(--hijau-lokal); font-weight: 700;
@@ -311,12 +520,18 @@ section[id], h2[id] { scroll-margin-top: 88px; }
    terpisah, bukan strip tabel — lebih mudah dipindai di pembaca layar
    maupun layar kecil. */
 .accordion-seekitar .accordion-item {
-    border: 1px solid #E5E7EB; border-radius: 16px !important;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm) !important;
     overflow: hidden; margin-bottom: .75rem;
     background: #fff;
+    transition: box-shadow var(--transition);
+}
+.accordion-seekitar .accordion-item:hover {
+    box-shadow: var(--shadow-sm);
 }
 .accordion-seekitar .accordion-button {
     font-weight: 600; padding: 1.1rem 1.25rem;
+    transition: background var(--transition), color var(--transition);
 }
 .accordion-seekitar .accordion-button:not(.collapsed) {
     background: var(--hijau-muda); color: var(--hijau-gelap);
@@ -328,7 +543,79 @@ section[id], h2[id] { scroll-margin-top: 88px; }
     z-index: 3;
 }
 .accordion-seekitar .accordion-button::after {
-    /* Chevron hijau alih-alih panah abu bawaan — konsisten merek. */
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23168A4A'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+    transition: transform var(--transition);
 }
-.accordion-seekitar .accordion-body { color: #374151; }
+.accordion-seekitar .accordion-button:not(.collapsed)::after {
+    transform: rotate(-180deg);
+}
+.accordion-seekitar .accordion-body {
+    color: #374151;
+    padding: 1.25rem;
+    font-size: 15px;
+    line-height: 1.7;
+}
+.accordion-seekitar .accordion-button .ti {
+    font-size: 20px;
+    transition: transform var(--transition);
+}
+.accordion-seekitar .accordion-button:not(.collapsed) .ti {
+    transform: scale(1.1);
+}
+
+/* -------------------------------------------------- Cookie consent banner
+   Muncul dari bawah setelah layar selesai digambar — tidak menghalangi
+   navigasi awal. Setelah ditutup, localStorage menyimpan preferensi. */
+.lp-cookie {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 1070;
+    background: #fff; border-top: 1px solid var(--border);
+    padding: 1rem 1.5rem;
+    box-shadow: 0 -8px 24px rgba(31, 41, 51, .12);
+    transform: translateY(100%);
+    transition: transform .4s cubic-bezier(.4, 0, .2, 1);
+}
+.lp-cookie--tampil { transform: translateY(0); }
+.lp-cookie p { font-size: 14px; line-height: 1.6; }
+.lp-cookie a { color: var(--hijau-lokal); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) {
+    .lp-cookie { transition: none; }
+}
+
+/* --------------------------------------------------- Pembatas dekoratif */
+.lp-divider {
+    width: 60px; height: 4px;
+    background: linear-gradient(90deg, var(--hijau-lokal), var(--kuning));
+    border-radius: 999px;
+    margin: 0 auto 1rem;
+}
+
+/* ---------------------------------------------------------------- Tombol balik-atas */
+#backToTop {
+    position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 1060;
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--hijau-lokal); color: #fff; border: none;
+    display: grid; place-items: center;
+    box-shadow: var(--shadow-md);
+    opacity: 0; visibility: hidden;
+    transform: translateY(12px);
+    transition: all var(--transition);
+    cursor: pointer;
+}
+#backToTop.show {
+    opacity: 1; visibility: visible;
+    transform: translateY(0);
+}
+#backToTop:hover {
+    background: var(--hijau-gelap);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* ============================================================ Responsif */
+
+@media (max-width: 575.98px) {
+    .lp-hero h1 { font-size: 1.8rem; }
+    .lp-doc { padding: 1.25rem; font-size: 14px; }
+    .lp-kanal { padding: 1.1rem; }
+    .lp-kartu-fitur { padding: 1.1rem; }
+}
