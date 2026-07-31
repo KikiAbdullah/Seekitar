@@ -5,7 +5,7 @@
     <div class="card bg-light-warning shadow-none border-0 mb-4">
         <div class="card-body py-3 px-4">
             <div class="d-flex align-items-start gap-3">
-                <i class="ti ti-alert-triangle fs-6 text-warning mt-1" aria-hidden="true"></i>
+                <i class="fa-regular fa-circle-xmark fs-6 text-warning mt-1" aria-hidden="true"></i>
                 <p class="mb-0 fs-3">Menghapus ulasan otomatis menghitung ulang rating toko terkait.</p>
             </div>
         </div>

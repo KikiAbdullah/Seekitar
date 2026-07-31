@@ -1,14 +1,23 @@
 #!/usr/bin/env node
 /**
- * Warnai ulang CSS template Modernize menjadi hijau Seekitar.
+ * Warnai ulang CSS template Mordenize menjadi hijau Seekitar.
  *
  * KENAPA SKRIP, BUKAN SUNTINGAN TANGAN
  * ------------------------------------
- * `style.min.css` memuat 117 kemunculan biru `#5D87FF` yang ditulis
- * langsung (bukan lewat variabel), tersebar di ratusan aturan. Menyuntingnya
- * dengan tangan berarti: tidak bisa diulang saat template diperbarui, dan
- * satu-dua kemunculan pasti terlewat lalu muncul sebagai tombol biru nyasar
- * di halaman yang jarang dibuka.
+ * `style-green.min.css` memuat 113 kemunculan teal `#0a7ea4` (primary) dan
+ * 15 kemunculan lime `#ccda4e` (secondary) yang ditulis langsung (bukan
+ * lewat variabel), tersebar di ratusan aturan. Menyuntingnya dengan tangan
+ * berarti: tidak bisa diulang saat template diperbarui, dan satu-dua
+ * kemunculan pasti terlewat lalu muncul sebagai tombol teal/biru nyasar di
+ * halaman yang jarang dibuka.
+ *
+ * Nama varian "green" bawaan template MENYESATKAN: `--bs-primary`-nya teal
+ * `#0a7ea4` (terbaca biru di layar) dan `--bs-secondary`-nya lime `#ccda4e`.
+ * Template `vendor/modernize` yang digantikan adalah acuan hasil recolor yang
+ * benar — 30 warna turunan teal/lime di berkas baru berkorespondensi 1:1
+ * dengan 30 warna hijau/biru di berkas lama (jumlah literal identik, 2651).
+ * Nilai sasaran diambil dari sana; dua pengecualian yang sengaja berubah
+ * menjadi hijau (bukan biru peninggalan) dijelaskan di PETA.
  *
  * Dijalankan ulang kapan pun berkas vendor diperbarui:
  *   node tools/dev/recolor-modernize.mjs
@@ -20,7 +29,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
-const CSS = path.join(ROOT, 'seekitar-server/public/vendor/modernize/css/style.min.css');
+const CSS = path.join(ROOT, 'seekitar-server/public/vendor/mordenize/css/style-green.min.css');
 
 /*
  * Palet.
@@ -30,25 +39,71 @@ const CSS = path.join(ROOT, 'seekitar-server/public/vendor/modernize/css/style.m
  * (hover, active, subtle, emphasis) tetap serasi.
  */
 const PETA = {
-  // Primary: biru Modernize -> hijau Seekitar
-  '#5D87FF': '#168A4A',   // primary
+  // Primary: teal template -> hijau Seekitar
+  '#0a7ea4': '#168A4A',   // primary / link (113x)
+  '#086583': '#11703C',   // link-hover, btn-hover-border, btn-active-bg
+  '#096b8b': '#11703C',   // btn-hover-bg
+  '#085f7b': '#0C5A30',   // btn-active-border
+  '#043242': '#0C5A30',   // primary-text-emphasis (terang)
+  '#cee5ed': '#d3ecdd',   // primary-bg-subtle (terang)
+  '#9dcbdb': '#b9e0ca',   // primary-border-subtle (terang)
+  '#021921': '#0a2418',   // primary-bg-subtle (mode gelap)
+  '#064c62': '#12603a',   // primary-border-subtle (mode gelap)
+  '#6cb2c8': '#7cc79b',   // link & primary-text-emphasis (mode gelap)
+  '#89c1d3': '#7cc79b',   // link-hover (mode gelap)
+
+  /*
+   * Fokus kotak isian: #85bfd2. Berkas lama memakai #aec3ff — BIRU yang
+   * lolos dari recolor dan sudah dicatat sebagai cacat di admin.css
+   * ("setiap kotak isian berkedip biru"). Daripada mewarisi biru itu,
+   * diperbaiki di sumbernya jadi hijau; admin.css tetap menimpanya untuk
+   * form-control/form-select/form-check-input, aturan ini menutup sisanya
+   * (border fokus accordion).
+   */
+  '#85bfd2': '#b9e0ca',
+  // Thumb form-range saat ditekan — hijau, bukan biru peninggalan.
+  '#b6d8e4': '#b9e0ca',
+
+  // Primary: sisa biru template lama yang ikut tersalin di berkas baru
+  '#5D87FF': '#168A4A',
   '#5d87ff': '#168a4a',
-  '#4570EA': '#11703C',   // primary hover / active (versi gelap)
-  '#4570ea': '#11703c',
-  '#ECF2FF': '#E3F3EA',   // primary-subtle (latar lembut)
+  '#ECF2FF': '#E3F3EA',   // light-primary (latar lembut)
   '#ecf2ff': '#e3f3ea',
-  '#dfe7ff': '#d3ecdd',   // primary-bg-subtle
-  '#becfff': '#b9e0ca',   // primary-border-subtle
-  '#253666': '#0C5A30',   // primary-text-emphasis
-  '#9eb7ff': '#7cc79b',   // primary-text-emphasis (mode gelap)
-  '#131b33': '#0a2418',   // primary-bg-subtle (mode gelap)
-  '#385199': '#12603a',   // primary-border-subtle (mode gelap)
+
+  // Secondary: lime template -> biru muda, mengikuti template lama
+  '#ccda4e': '#49BEFF',   // secondary
+  '#d4e069': '#3ea2d9',   // btn-secondary hover-bg
+  '#d6e171': '#3a98cc',   // btn-secondary active-bg
+  '#d1de60': '#3a98cc',   // btn-secondary hover/active border
+  '#f5f8dc': '#dbf2ff',   // secondary-bg-subtle (terang)
+  '#ebf0b8': '#b6e5ff',   // secondary-border-subtle (terang)
+  '#52571f': '#1d4c66',   // secondary-text-emphasis (terang)
+  '#e0e995': '#92d8ff',   // secondary-text-emphasis (mode gelap)
+  '#292c10': '#0f2633',   // secondary-bg-subtle (mode gelap)
+  '#7a832f': '#2c7299',   // secondary-border-subtle (mode gelap)
+
+  // Tabel kontekstual — nuansa tabel primary/secondary (meniru template lama)
+  '#b9ced5': '#c9d0e6',   // table-primary: border & active
+  '#c4dae1': '#d4dbf2',   // table-primary: striped
+  '#bfd4db': '#ced6ec',   // table-primary: hover
+  '#e9ecd1': '#d0e6f2',   // table-secondary: striped
+  '#e3e5cc': '#cbe0ec',   // table-secondary: hover
+  '#dddfc6': '#c5dae6',   // table-secondary: border & active
 
   // rgb() yang ditulis terpisah dari heksa
-  '93,135,255': '22,138,74',
+  '10,126,164': '22,138,74',
+  '10, 126, 164': '22, 138, 74',
+  '8,101,131': '17,112,60',
+  '8, 101, 131': '17, 112, 60',
+  '47,145,178': '22,138,74',   // btn-primary focus-shadow-rgb
+  '108,178,200': '124,199,155', // link-color-rgb (mode gelap)
+  '137,193,211': '124,199,155', // link-hover-rgb (mode gelap)
+  '93,135,255': '22,138,74',   // sisa rgb biru template lama
   '93, 135, 255': '22, 138, 74',
-  '69,112,234': '17,112,60',
-  '69, 112, 234': '17, 112, 60',
+  '204,218,78': '73,190,255',
+  '204, 218, 78': '73, 190, 255',
+  '173,185,66': '100,200,255', // btn-secondary focus-shadow-rgb
+  '214,225,113': '58,152,204',
 };
 
 if (!fs.existsSync(CSS)) {
@@ -74,10 +129,11 @@ for (const [dari, ke] of Object.entries(PETA)) {
  * Path font Tabler diarahkan ke woff2 saja.
  *
  * Repo aslinya membawa eot/ttf/woff/woff2 (total 4,9 MB) untuk mendukung
- * IE8. Hanya woff2 yang disalin (640 KB); tanpa perbaikan ini browser akan
- * meminta tiga berkas yang tidak ada dan menghasilkan 404 di setiap halaman.
+ * IE8. Semua format memang ada di vendor, tetapi browser modern hanya
+ * memakai woff2; @font-face ini dipangkas supaya server tidak menyajikan
+ * 4,9 MB padahal 640 KB cukup.
  */
-const TI = path.join(ROOT, 'seekitar-server/public/vendor/modernize/css/icons/tabler-icons/tabler-icons.min.css');
+const TI = path.join(ROOT, 'seekitar-server/public/vendor/mordenize/css/tabler-icons/tabler-icons.min.css');
 if (fs.existsSync(TI)) {
   let ti = fs.readFileSync(TI, 'utf8');
   const asli = ti;
@@ -122,7 +178,7 @@ if (fs.existsSync(TI)) {
  * Dilakukan lewat skrip yang sama, dan bukan dengan tangan, supaya menyalin
  * ulang aset dari repositori template tetap menghasilkan gambar hijau.
  */
-const SVG = path.join(ROOT, 'seekitar-server/public/vendor/modernize/images/backgrounds/login-security.svg');
+const SVG = path.join(ROOT, 'seekitar-server/public/vendor/mordenize/images/backgrounds/login-security.svg');
 
 const PETA_SVG = {
   '#8d95ff': '#3FA46E',   // celana — ungu ke hijau sedang
@@ -154,16 +210,19 @@ if (fs.existsSync(SVG)) {
 fs.writeFileSync(CSS, css);
 
 const total = Object.values(hitung).reduce((a, b) => a + b, 0);
-console.log(`\nstyle.min.css: ${total} penggantian warna`);
+console.log(`\nstyle-green.min.css: ${total} penggantian warna`);
 for (const [dari, n] of Object.entries(hitung)) {
   console.log(`  ${dari.padEnd(16)} x${n}`);
 }
 console.log(`ukuran ${sebelum} -> ${css.length} byte`);
 
-// Verifikasi: tidak boleh ada sisa biru primary.
-const sisa = (css.match(/#5[dD]87[fF][fF]/g) || []).length;
-if (sisa > 0) {
-  console.error(`\nGAGAL: masih ada ${sisa} kemunculan #5D87FF`);
+// Verifikasi: tidak boleh ada sisa teal primary, lime secondary, atau biru legacy.
+const sisa = ['#0a7ea4', '#ccda4e', '#5d87ff', '#5D87FF']
+  .map((c) => ({ warna: c, n: css.split(c).length - 1 }))
+  .filter((x) => x.n > 0);
+if (sisa.length > 0) {
+  console.error('\nGAGAL, masih ada warna sumber:');
+  for (const { warna, n } of sisa) console.error(`  ${warna} x${n}`);
   process.exit(1);
 }
-console.log('\nOK — tidak ada sisa biru #5D87FF');
+console.log('\nOK — tidak ada sisa teal #0a7ea4, lime #ccda4e, atau biru #5D87FF');

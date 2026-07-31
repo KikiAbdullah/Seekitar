@@ -11,7 +11,7 @@
     $user — model User (yang dibaca hanya verified_at).
 --}}
 @if (($user->verified_at ?? null) !== null)
-    <i class="ti ti-circle-check-filled text-success ms-1 flex-shrink-0"
+    <i class="fa-regular fa-circle-check text-success ms-1 flex-shrink-0"
        title="Identitas terverifikasi admin"
        role="img" aria-label="Identitas terverifikasi"></i>
 @endif

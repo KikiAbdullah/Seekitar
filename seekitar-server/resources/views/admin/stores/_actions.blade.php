@@ -9,10 +9,10 @@
 --}}
 @can('manage-stores')
     <a href="{{ route('admin.stores.show', $store) }}" class="btn btn-sm btn-outline-primary">
-        <i class="ti ti-eye me-1" aria-hidden="true"></i> Detail
+        <i class="fa-regular fa-eye me-1" aria-hidden="true"></i> Detail
     </a>
     <a href="{{ route('admin.stores.edit', $store) }}" class="btn btn-sm btn-outline-secondary">
-        <i class="ti ti-pencil me-1" aria-hidden="true"></i> Sunting
+        <i class="fa-regular fa-pen-to-square me-1" aria-hidden="true"></i> Sunting
     </a>
 @endcan
 
@@ -22,14 +22,14 @@
             @csrf
             <button type="submit" class="btn btn-sm btn-outline-success"
                     data-seekitar-confirm="Setujui toko {{ $store->name }}?">
-                <i class="ti ti-circle-check me-1" aria-hidden="true"></i> Setujui
+                <i class="fa-regular fa-circle-check me-1" aria-hidden="true"></i> Setujui
             </button>
         </form>
 
         <button type="button" class="btn btn-sm btn-outline-danger js-tolak-toko"
                 data-action="{{ route('admin.stores.reject', $store) }}"
                 data-nama="{{ $store->name }}">
-            <i class="ti ti-ban me-1" aria-hidden="true"></i> Tolak
+            <i class="fa-regular fa-circle-stop me-1" aria-hidden="true"></i> Tolak
         </button>
     @endif
 @endcan

@@ -15,7 +15,7 @@
                 </p>
                 <div class="d-flex flex-wrap justify-content-center gap-2">
                     <a href="{{ route('web.home') }}" class="btn btn-seekitar btn-lg px-4">
-                        <i class="ti ti-arrow-left me-1" aria-hidden="true"></i> Ke Beranda
+                        <i class="fa-regular fa-arrow-alt-circle-left me-1" aria-hidden="true"></i> Ke Beranda
                     </a>
                     <a href="{{ route('web.contact') }}" class="btn btn-outline-dark btn-lg px-4">
                         Hubungi Kami

@@ -46,7 +46,7 @@
                 <div class="col-md-6 sr-reveal sr-reveal-delay-1">
                     <div class="lp-kartu-fitur">
                         <div class="lp-fitur-ikon lp-tone-abu mb-3" aria-hidden="true">
-                            <i class="ti ti-arrow-right"></i>
+                            <i class="fa-regular fa-arrow-alt-circle-right"></i>
                         </div>
                         <h3 class="h5 fw-bold">Marketplace biasa</h3>
                         <p class="mb-0" style="color: var(--teks-secondary);">
@@ -58,7 +58,7 @@
                 <div class="col-md-6 sr-reveal sr-reveal-delay-2">
                     <div class="lp-kartu-fitur" style="border-color: var(--hijau-lokal);">
                         <div class="lp-fitur-ikon lp-tone-hijau mb-3" aria-hidden="true">
-                            <i class="ti ti-arrows-left-right"></i>
+                            <i class="fa-regular fa-handshake"></i>
                         </div>
                         <h3 class="h5 fw-bold">Seekitar</h3>
                         <p class="mb-0" style="color: var(--teks-secondary);">
@@ -88,7 +88,7 @@
                 <div class="col-md-6 sr-reveal sr-reveal-delay-1">
                     <div class="lp-kartu-fitur text-center">
                         <div class="lp-fitur-ikon lp-tone-biru mb-3 mx-auto" aria-hidden="true">
-                            <i class="ti ti-current-location"></i>
+                            <i class="fa-regular fa-compass"></i>
                         </div>
                         <h3 class="h6 fw-bold">Radius pilihanmu</h3>
                         <p class="mb-0" style="color: var(--teks-secondary);">
@@ -100,7 +100,7 @@
                 <div class="col-md-6 sr-reveal sr-reveal-delay-2">
                     <div class="lp-kartu-fitur text-center">
                         <div class="lp-fitur-ikon lp-tone-hijau mb-3 mx-auto" aria-hidden="true">
-                            <i class="ti ti-building-store"></i>
+                            <i class="fa-regular fa-building"></i>
                         </div>
                         <h3 class="h6 fw-bold">Radius layanan toko</h3>
                         <p class="mb-0" style="color: var(--teks-secondary);">
@@ -128,16 +128,16 @@
 
             <div class="row g-4">
                 @foreach ([
-                    ['ti-device-mobile', 'hijau', 'Nomor Terverifikasi', 'Masuk dengan kode OTP WhatsApp. Tidak ada kata sandi yang bisa bocor.'],
-                    ['ti-id', 'biru', 'Identitas Terverifikasi', 'KTP dan NIK ditinjau admin maksimal 1×24 jam; berkas disimpan privat.'],
-                    ['ti-building-store', 'kuning', 'Usaha Terverifikasi', 'Alamat, foto toko, dan titik lokasi dicocokkan dengan peta sebelum toko tayang.'],
+                    ['fa-regular fa-comment-dots', 'hijau', 'Nomor Terverifikasi', 'Masuk dengan kode OTP WhatsApp. Tidak ada kata sandi yang bisa bocor.'],
+                    ['fa-regular fa-id-card', 'biru', 'Identitas Terverifikasi', 'KTP dan NIK ditinjau admin maksimal 1×24 jam; berkas disimpan privat.'],
+                    ['fa-regular fa-building', 'kuning', 'Usaha Terverifikasi', 'Alamat, foto toko, dan titik lokasi dicocokkan dengan peta sebelum toko tayang.'],
                 ] as $i => [$ikon, $tone, $judulLangkah, $isi])
                     <div class="col-md-4 sr-reveal sr-reveal-delay-{{ $i + 1 }}">
                         <div class="lp-kartu-fitur text-center">
                             <div class="d-flex align-items-center justify-content-center gap-2 mb-3">
                                 <span class="lp-langkah-no" aria-hidden="true">{{ $i + 1 }}</span>
                                 <span class="lp-fitur-ikon lp-tone-{{ $tone }}" style="width: 44px; height: 44px;" aria-hidden="true">
-                                    <i class="ti {{ $ikon }}"></i>
+                                    <i class="{{ $ikon }}"></i>
                                 </span>
                             </div>
                             <h3 class="h6 fw-bold">{{ $judulLangkah }}</h3>

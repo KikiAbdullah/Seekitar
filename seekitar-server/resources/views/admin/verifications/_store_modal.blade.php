@@ -74,7 +74,7 @@
                         <span class="font-monospace text-muted">{{ $store->owner?->phone }}</span>
                         @if ($pemilikTerverifikasi)
                             <span class="badge bg-success-subtle text-success ms-1">
-                                <i class="ti ti-circle-check" aria-hidden="true"></i>
+                                <i class="fa-regular fa-circle-check" aria-hidden="true"></i>
                                 KTP terverifikasi
                             </span>
                         @else
@@ -144,7 +144,7 @@
                         </a>
                     @else
                         <div class="alert alert-warning py-2 fs-3 mb-0">
-                            <i class="ti ti-photo-off" aria-hidden="true"></i>
+                            <i class="fa-regular fa-image" aria-hidden="true"></i>
                             Foto toko belum diunggah — syarat belum terpenuhi sehingga pengajuan
                             ini tidak bisa disetujui; tolak agar pemilik memperbaikinya.
                         </div>
@@ -179,13 +179,13 @@
                         <a class="btn btn-sm btn-outline-primary"
                            href="https://www.google.com/maps/search/?api=1&query={{ $store->latitude }},{{ $store->longitude }}"
                            target="_blank" rel="noopener">
-                            <i class="ti ti-map-pin" aria-hidden="true"></i>
+                            <i class="fa-regular fa-map" aria-hidden="true"></i>
                             Cek Titik di Google Maps
                         </a>
                         <a class="btn btn-sm btn-outline-secondary"
                            href="https://www.google.com/maps/search/?api=1&query={{ rawurlencode(trim($store->name.' '.($store->address ?? '').' '.$store->regency)) }}"
                            target="_blank" rel="noopener">
-                            <i class="ti ti-search" aria-hidden="true"></i>
+                            <i class="fa-regular fa-compass" aria-hidden="true"></i>
                             Cari Nama Toko
                         </a>
                     </div>
@@ -200,10 +200,10 @@
                          persetujuan, jadi tidak bisa dilompat lewat DevTools. --}}
                     <div class="d-flex align-items-center gap-2 fs-3 mb-3">
                         @if ($pemilikTerverifikasi)
-                            <i class="ti ti-circle-check text-success" aria-hidden="true"></i>
+                            <i class="fa-regular fa-circle-check text-success" aria-hidden="true"></i>
                             <span>Pemilik terverifikasi (nomor HP + KTP)</span>
                         @else
-                            <i class="ti ti-alert-triangle text-danger" aria-hidden="true"></i>
+                            <i class="fa-regular fa-circle-xmark text-danger" aria-hidden="true"></i>
                             <span class="text-danger fw-semibold">Pemilik belum terverifikasi — toko belum bisa disetujui</span>
                         @endif
                     </div>
@@ -260,7 +260,7 @@
                             <button type="submit" class="btn btn-success" disabled
                                     data-tombol-verifikasi
                                     title="Centang ketiga konfirmasi pemeriksaan dulu">
-                                <i class="ti ti-circle-check" aria-hidden="true"></i>
+                                <i class="fa-regular fa-circle-check" aria-hidden="true"></i>
                                 Verifikasi Toko
                             </button>
                         @else
@@ -268,7 +268,7 @@
                                  checklist tidak pernah bisa membukanya. --}}
                             <button type="button" class="btn btn-success" disabled
                                     title="{{ $pemilikTerverifikasi ? 'Foto toko belum diunggah pemilik' : 'Pemilik belum terverifikasi (nomor HP + KTP)' }}">
-                                <i class="ti ti-lock" aria-hidden="true"></i>
+                                <i class="fa-regular fa-circle-stop" aria-hidden="true"></i>
                                 Verifikasi Toko
                             </button>
                         @endif

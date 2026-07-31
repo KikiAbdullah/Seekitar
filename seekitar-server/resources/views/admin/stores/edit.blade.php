@@ -43,7 +43,7 @@
             @else
                 <span class="rounded bg-light-primary text-primary d-inline-flex align-items-center justify-content-center flex-shrink-0"
                       style="width: 72px; height: 54px;" aria-hidden="true">
-                    <i class="ti ti-building-store" aria-hidden="true"></i>
+                    <i class="fa-regular fa-building" aria-hidden="true"></i>
                 </span>
             @endif
             <div class="lh-sm">
@@ -336,10 +336,10 @@
 
         <div class="d-flex justify-content-between align-items-center mt-1 mb-4">
             <a href="{{ route('admin.stores.show', $store) }}" class="btn btn-link text-muted">
-                <i class="ti ti-arrow-left" aria-hidden="true"></i> Kembali ke detail
+                <i class="fa-regular fa-arrow-alt-circle-left" aria-hidden="true"></i> Kembali ke detail
             </a>
             <button type="submit" class="btn btn-primary px-4">
-                <i class="ti ti-device-floppy me-1" aria-hidden="true"></i> Simpan Perubahan
+                <i class="fa-regular fa-floppy-disk me-1" aria-hidden="true"></i> Simpan Perubahan
             </button>
         </div>
     </form>

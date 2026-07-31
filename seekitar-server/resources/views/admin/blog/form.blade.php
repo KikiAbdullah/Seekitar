@@ -62,7 +62,7 @@
                                    placeholder="Otomatis dari judul" id="slug-artikel">
                             <button type="button" class="btn btn-outline-secondary" id="isi-slug"
                                     title="Isi slug dari judul">
-                                <i class="ti ti-refresh" aria-hidden="true"></i>
+                                <i class="fa-regular fa-arrow-alt-circle-right" aria-hidden="true"></i>
                             </button>
                         </div>
                         @error('slug') <div class="invalid-feedback">{{ $message }}</div> @enderror

@@ -16,7 +16,7 @@
 
             <div class="lp-doc sr-reveal">
                 <div class="alert alert-success">
-                    <i class="ti ti-circle-check me-1" aria-hidden="true"></i>
+                    <i class="fa-regular fa-circle-check me-1" aria-hidden="true"></i>
                     Seekitar <strong>gratis</strong> untuk semua pengguna — baik pembeli
                     maupun penjual. Tidak ada biaya tersembunyi.
                 </div>
@@ -39,7 +39,7 @@
 
                 <h2 class="h5 fw-bold mt-4">Biaya untuk penjual / penyedia</h2>
                 <div class="alert alert-info mb-3">
-                    <i class="ti ti-info-circle me-1" aria-hidden="true"></i>
+                    <i class="fa-regular fa-circle-question me-1" aria-hidden="true"></i>
                     Saat ini seluruh layanan <strong>gratis 100%</strong>.
                     Fitur premium di bawah belum aktif — akan diumumkan sebelum berlaku.
                 </div>
@@ -102,7 +102,7 @@
                 </p>
 
                 <div class="alert alert-warning mt-4">
-                    <i class="ti ti-info-circle me-1" aria-hidden="true"></i>
+                    <i class="fa-regular fa-circle-question me-1" aria-hidden="true"></i>
                     Satu-satunya biaya yang pasti kamu keluarkan adalah <strong>biaya
                     transfer bank</strong> jika pembayaran lewat transfer — biaya tersebut
                     milik bank, bukan Seekitar.

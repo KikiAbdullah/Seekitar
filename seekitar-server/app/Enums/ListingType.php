@@ -31,13 +31,13 @@ enum ListingType: string
         };
     }
 
-    /** Ikon Tabler yang bermakna sekilas: paket, perkakas, kalender sewa. */
+    /** Ikon Font Awesome yang bermakna sekilas: paket, perkakas, kalender sewa. */
     public function icon(): string
     {
         return match ($this) {
-            self::Product => 'ti-package',
-            self::Service => 'ti-tools',
-            self::Rental  => 'ti-calendar-time',
+            self::Product => 'fa-regular fa-clipboard',
+            self::Service => 'fa-regular fa-lightbulb',
+            self::Rental  => 'fa-regular fa-calendar-days',
         };
     }
 

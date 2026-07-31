@@ -95,7 +95,7 @@
                             @csrf
                             <button type="submit" class="btn btn-danger"
                                     data-seekitar-confirm="Langganan ini akan dibatalkan.">
-                                <i class="ti ti-ban me-1" aria-hidden="true"></i> Batalkan Langganan
+                                <i class="fa-regular fa-circle-stop me-1" aria-hidden="true"></i> Batalkan Langganan
                             </button>
                         </form>
                     </div>

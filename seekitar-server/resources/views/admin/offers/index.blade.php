@@ -5,7 +5,7 @@
     <div class="card bg-light-info shadow-none border-0 mb-4">
         <div class="card-body py-3 px-4">
             <div class="d-flex align-items-start gap-3">
-                <i class="ti ti-info-circle fs-6 text-info mt-1" aria-hidden="true"></i>
+                <i class="fa-regular fa-circle-question fs-6 text-info mt-1" aria-hidden="true"></i>
                 <p class="mb-0 fs-3">Halaman ini <strong>hanya baca</strong>. Penawaran adalah kesepakatan harga antara penyedia dan pembeli. Untuk penawaran bermasalah, tangani lewat toko terkait atau penyelesaian laporan agar alasannya tercatat.</p>
             </div>
         </div>

@@ -87,7 +87,7 @@
                     <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
                         <span class="text-muted">Difavoritkan</span>
                         <span class="text-end d-inline-flex align-items-center">
-                            <i class="ti ti-heart-filled text-danger me-1" aria-hidden="true"></i>
+                            <i class="fa-regular fa-heart text-danger me-1" aria-hidden="true"></i>
                             {{ number_format((int) $listing->favorites_count, 0, ',', '.') }} pengguna
                         </span>
                     </li>
@@ -135,7 +135,7 @@
                                     {{ $listing->store->name }}
                                 @endcan
                                 @if ($listing->store->status === \App\Enums\StoreStatus::Verified)
-                                    <i class="ti ti-circle-check-filled text-success ms-1 flex-shrink-0"
+                                    <i class="fa-regular fa-circle-check text-success ms-1 flex-shrink-0"
                                        title="Toko terverifikasi" role="img" aria-label="Toko terverifikasi"></i>
                                 @endif
                             </div>
@@ -152,7 +152,7 @@
                         @can('manage-stores')
                             <a href="{{ route('admin.stores.show', $listing->store) }}"
                                class="btn btn-sm btn-outline-primary ms-auto flex-shrink-0">
-                                <i class="ti ti-building-store me-1" aria-hidden="true"></i> Buka Toko
+                                <i class="fa-regular fa-building me-1" aria-hidden="true"></i> Buka Toko
                             </a>
                         @endcan
                     </div>

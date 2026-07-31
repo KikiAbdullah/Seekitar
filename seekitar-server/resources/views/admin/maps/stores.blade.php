@@ -22,7 +22,7 @@
                     </nav>
                 </div>
                 <div class="col-3 text-end">
-                    <i class="ti ti-map-2 fs-9 text-primary" aria-hidden="true"></i>
+                    <i class="fa-regular fa-map fs-9 text-primary" aria-hidden="true"></i>
                 </div>
             </div>
         </div>

@@ -53,7 +53,7 @@
                                 @csrf
                                 <button type="submit" class="btn btn-outline-secondary btn-sm"
                                         data-seekitar-confirm="Tenggat permintaan diperpanjang 24 jam.">
-                                    <i class="ti ti-history me-1" aria-hidden="true"></i> Perpanjang 24 Jam
+                                    <i class="fa-regular fa-clock me-1" aria-hidden="true"></i> Perpanjang 24 Jam
                                 </button>
                             </form>
                         @endif
@@ -63,7 +63,7 @@
                 @if ($request->acceptedOffer)
                     <div class="alert alert-success mb-0 rounded-0 fs-3">
                         <div class="fw-semibold mb-1">
-                            <i class="ti ti-circle-check me-1" aria-hidden="true"></i> Penawaran diterima pembeli
+                            <i class="fa-regular fa-circle-check me-1" aria-hidden="true"></i> Penawaran diterima pembeli
                         </div>
                         {{ $request->acceptedOffer->store?->name ?? '—' }}
                         · Rp {{ number_format((int) $request->acceptedOffer->total_amount, 0, ',', '.') }}
@@ -185,7 +185,7 @@
                     <a class="btn btn-sm btn-outline-primary"
                        href="https://www.google.com/maps/search/?api=1&query={{ $request->latitude }},{{ $request->longitude }}"
                        target="_blank" rel="noopener">
-                        <i class="ti ti-map-pin" aria-hidden="true"></i> Google Maps
+                        <i class="fa-regular fa-map" aria-hidden="true"></i> Google Maps
                     </a>
                 </div>
                 <div class="card-body">
@@ -263,7 +263,7 @@
                                         <td>
                                             @if ($offer->status?->value === 'accepted')
                                                 <span class="badge bg-success-subtle text-success">
-                                                    <i class="ti ti-check" aria-hidden="true"></i> {{ $offer->status->label() }}
+                                                    <i class="fa-regular fa-circle-check" aria-hidden="true"></i> {{ $offer->status->label() }}
                                                 </span>
                                             @elseif ($offer->status?->value === 'pending')
                                                 <span class="badge bg-warning-subtle text-warning">{{ $offer->status->label() }}</span>
@@ -311,7 +311,7 @@
         if (radius > 0) {
             L.circle([lat, lng], {
                 radius: radius * 1000,
-                color: '#5d87ff',
+                color: '#168A4A',
                 weight: 1,
                 fillOpacity: 0.06,
             }).addTo(peta);

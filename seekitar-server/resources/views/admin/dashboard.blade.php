@@ -17,7 +17,7 @@
                     </h3>
                     <p class="mb-0 fs-2 text-muted">{{ $sorotan['label'] }}</p>
 
-                    <img src="{{ asset('vendor/modernize/images/backgrounds/welcome-bg2.png') }}"
+                    <img src="{{ asset('vendor/mordenize/images/backgrounds/welcome-bg2.png') }}"
                          alt="" class="admin-sambutan-img" width="282" height="196">
                 </div>
             </div>
@@ -38,7 +38,7 @@
                                     <a href="{{ $item['url'] }}"
                                        class="admin-antrian d-block h-100 p-3 rounded-2 bg-light-{{ $item['tone'] }} text-decoration-none">
                                         <span class="d-flex align-items-center gap-2 mb-1">
-                                            <i class="ti {{ $item['icon'] }} text-{{ $item['tone'] }} fs-5" aria-hidden="true"></i>
+                                            <i class="{{ $item['icon'] }} text-{{ $item['tone'] }} fs-5" aria-hidden="true"></i>
                                             <span class="fs-6 fw-semibold text-dark lh-1">
                                                 {{ \App\Support\Angka::bulat($item['value']) }}
                                             </span>
@@ -61,7 +61,7 @@
                     <div class="card w-100 mb-0">
                         <div class="card-body p-3 d-flex align-items-center gap-3">
                             <span class="p-6 bg-light-{{ $card['tone'] }} rounded-2 d-flex align-items-center justify-content-center flex-shrink-0">
-                                <i class="ti {{ $card['icon'] }} text-{{ $card['tone'] }} fs-6" aria-hidden="true"></i>
+                                <i class="{{ $card['icon'] }} text-{{ $card['tone'] }} fs-6" aria-hidden="true"></i>
                             </span>
                             <div class="min-w-0">
                                 <h4 class="fw-semibold mb-0 lh-1">
@@ -224,7 +224,7 @@
     @if (count($stats) === 0 && count($antrian) === 0)
         <div class="card bg-light-info shadow-none">
             <div class="card-body text-center py-5">
-                <i class="ti ti-info-circle fs-9 text-info d-block mb-3" aria-hidden="true"></i>
+                <i class="fa-regular fa-circle-question fs-9 text-info d-block mb-3" aria-hidden="true"></i>
                 <h5 class="fw-semibold mb-1">Belum ada izin</h5>
                 <p class="mb-0 text-muted">
                     Akun Anda belum diberi izin apa pun di panel ini.

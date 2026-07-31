@@ -27,7 +27,7 @@
                 <p style="color: var(--teks-secondary); font-size: 13px;">Terakhir diperbarui: 30 Juli 2026</p>
 
                 <div class="alert alert-warning">
-                    <i class="ti ti-users me-1" aria-hidden="true"></i>
+                    <i class="fa-regular fa-address-book me-1" aria-hidden="true"></i>
                     Pedoman ini berlaku untuk semua pengguna Seekitar. Pelanggaran dapat
                     berakibat pada peringatan, pembatasan fitur, atau pemblokiran akun.
                 </div>

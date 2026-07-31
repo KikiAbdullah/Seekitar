@@ -29,7 +29,7 @@
                  aria-live="polite"></div>
 
             <a href="{{ route('admin.categories.create') }}" class="btn btn-seekitar btn-sm">
-                <i class="ti ti-plus me-1" aria-hidden="true"></i> Kategori
+                <i class="fa-regular fa-plus-square me-1" aria-hidden="true"></i> Kategori
             </a>
         </div>
     </div>

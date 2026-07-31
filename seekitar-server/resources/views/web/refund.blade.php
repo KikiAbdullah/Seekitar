@@ -27,7 +27,7 @@
                 <p style="color: var(--teks-secondary); font-size: 13px;">Terakhir diperbarui: 30 Juli 2026</p>
 
                 <div class="alert alert-warning">
-                    <i class="ti ti-alert-triangle me-1" aria-hidden="true"></i>
+                    <i class="fa-regular fa-circle-xmark me-1" aria-hidden="true"></i>
                     Karena pembayaran dilakukan <strong>langsung</strong> antara pembeli
                     dan penjual (COD/transfer), Seekitar tidak menampung dana dan tidak
                     dapat mengembalikan uang secara otomatis.

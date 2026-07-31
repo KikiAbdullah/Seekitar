@@ -16,7 +16,7 @@
 
             <div class="lp-doc sr-reveal">
                 <div class="text-center mb-4">
-                    <i class="ti ti-users" style="font-size: 48px; color: var(--hijau-lokal); opacity: .6;" aria-hidden="true"></i>
+                    <i class="fa-regular fa-address-book" style="font-size: 48px; color: var(--hijau-lokal); opacity: .6;" aria-hidden="true"></i>
                     <h2 class="h4 fw-bold mt-2">Belum ada lowongan terbuka</h2>
                     <p class="mb-0" style="color: var(--teks-secondary);">
                         Seekitar masih dalam tahap pengembangan. Belum ada posisi yang

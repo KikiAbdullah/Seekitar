@@ -11,8 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="{{ asset('vendor/modernize/css/icons/tabler-icons/tabler-icons.min.css') }}">
-    <link id="themeColors" rel="stylesheet" href="{{ asset('vendor/modernize/css/style.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/fontawesome/css/all.min.css') }}">
+    <link id="themeColors" rel="stylesheet" href="{{ asset('vendor/mordenize/css/style-green.min.css') }}">
     <link href="{{ asset('css/admin.css') }}" rel="stylesheet">
 </head>
 <body>
@@ -30,7 +30,7 @@
                     </a>
 
                     <div class="d-none d-xl-flex align-items-center justify-content-center admin-login-art">
-                        <img src="{{ asset('vendor/modernize/images/backgrounds/login-security.svg') }}"
+                        <img src="{{ asset('vendor/mordenize/images/backgrounds/login-security.svg') }}"
                              alt="" class="img-fluid" width="500" height="500">
                     </div>
                 </div>
@@ -45,7 +45,7 @@
                             @if ($errors->any())
                                 <div class="alert alert-danger bg-light-danger text-danger border-0 d-flex align-items-start gap-2 mb-4"
                                      role="alert">
-                                    <i class="ti ti-alert-triangle fs-4 mt-1" aria-hidden="true"></i>
+                                    <i class="fa-regular fa-circle-xmark fs-4 mt-1" aria-hidden="true"></i>
                                     <span class="fs-3">{{ $errors->first() }}</span>
                                 </div>
                             @endif
@@ -53,7 +53,7 @@
                             @if (session('status'))
                                 <div class="alert alert-success bg-light-success text-success border-0 d-flex align-items-start gap-2 mb-4"
                                      role="alert">
-                                    <i class="ti ti-circle-check fs-4 mt-1" aria-hidden="true"></i>
+                                    <i class="fa-regular fa-circle-check fs-4 mt-1" aria-hidden="true"></i>
                                     <span class="fs-3">{{ session('status') }}</span>
                                 </div>
                             @endif
@@ -92,7 +92,7 @@
                                 </button>
 
                                 <div class="d-flex align-items-start gap-2 text-muted">
-                                    <i class="ti ti-info-circle fs-4 mt-1 flex-shrink-0" aria-hidden="true"></i>
+                                    <i class="fa-regular fa-circle-question fs-4 mt-1 flex-shrink-0" aria-hidden="true"></i>
                                     <p class="fs-2 mb-0">
                                         Halaman ini hanya untuk admin. Pengguna aplikasi Seekitar
                                         masuk lewat OTP WhatsApp, bukan dari sini.

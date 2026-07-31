@@ -21,8 +21,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="{{ asset('vendor/modernize/css/icons/tabler-icons/tabler-icons.min.css') }}">
-    <link id="themeColors" rel="stylesheet" href="{{ asset('vendor/modernize/css/style.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/fontawesome/css/all.min.css') }}">
+    <link id="themeColors" rel="stylesheet" href="{{ asset('vendor/mordenize/css/style-green.min.css') }}">
 
     <link href="https://cdn.datatables.net/2.1.8/css/dataTables.bootstrap5.min.css" rel="stylesheet"
           media="print" onload="this.media='all';this.onload=null"
@@ -41,6 +41,12 @@
     @stack('styles')
 </head>
 <body>
+
+<div class="preloader">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Memuat…</span>
+    </div>
+</div>
 
 <a href="#konten-utama" class="visually-hidden-focusable admin-skip">Lewati ke konten</a>
 
@@ -88,13 +94,10 @@
         onerror="this.remove();document.body.appendChild(function(){var s=document.createElement('script');s.src='{{ asset('vendor/jquery.min.js') }}';return s}())"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         onerror="this.remove();document.body.appendChild(function(){var s=document.createElement('script');s.src='{{ asset('vendor/bootstrap/bootstrap.bundle.min.js') }}';return s}())"></script>
-<script src="https://cdn.jsdelivr.net/npm/simplebar@6.3.3/dist/simplebar.min.js"
-        onerror="this.remove();document.body.appendChild(function(){var s=document.createElement('script');s.src='{{ asset('vendor/simplebar.min.js') }}';return s}())"></script>
-
-<script src="{{ asset('vendor/modernize/js/app.min.js') }}"></script>
-<script src="{{ asset('vendor/modernize/js/seekitar.init.js') }}"></script>
-<script src="{{ asset('vendor/modernize/js/sidebarmenu.js') }}"></script>
-<script src="{{ asset('vendor/modernize/js/custom.js') }}"></script>
+<script src="{{ asset('vendor/mordenize/js/app.min.js') }}"></script>
+<script src="{{ asset('vendor/mordenize/js/seekitar.init.js') }}"></script>
+<script src="{{ asset('vendor/mordenize/js/sidebarmenu.js') }}"></script>
+<script src="{{ asset('vendor/mordenize/js/custom.js') }}"></script>
 
 <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"
         onerror="this.remove();document.body.appendChild(function(){var s=document.createElement('script');s.src='{{ asset('vendor/datatables/dataTables.min.js') }}';return s}())"></script>

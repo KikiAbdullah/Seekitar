@@ -37,7 +37,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('vendor/modernize/css/icons/tabler-icons/tabler-icons.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/fontawesome/css/all.min.css') }}">
     <link rel="stylesheet" href="{{ asset('css/web.css') }}">
     @stack('head')
 </head>
@@ -90,7 +90,7 @@
 </main>
 
 <button id="backToTop" aria-label="Kembali ke atas" title="Kembali ke atas">
-    <i class="ti ti-chevron-up"></i>
+    <i class="fa-regular fa-arrow-alt-circle-up"></i>
 </button>
 
 <footer class="pt-5 pb-4">

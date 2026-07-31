@@ -21,7 +21,7 @@
 
     <div class="mt-3">
         <a href="{{ route('admin.advertisements.create') }}" class="btn btn-seekitar">
-            <i class="ti ti-plus me-1" aria-hidden="true"></i> Iklan Baru
+            <i class="fa-regular fa-plus-square me-1" aria-hidden="true"></i> Iklan Baru
         </a>
     </div>
 @endsection

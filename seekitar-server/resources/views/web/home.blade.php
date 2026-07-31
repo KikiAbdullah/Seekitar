@@ -45,7 +45,7 @@
                     <div style="animation: fade-up .6s ease-out .3s both;">
                         <div class="d-flex flex-wrap justify-content-center justify-content-lg-start gap-2 mb-4">
                             <a href="#unduh" class="btn btn-seekitar btn-lg px-4">
-                                <i class="ti ti-download me-1" aria-hidden="true"></i> Mulai Sekarang
+                                <i class="fa-regular fa-arrow-alt-circle-down me-1" aria-hidden="true"></i> Mulai Sekarang
                             </a>
                             <a href="#cara-kerja" class="btn btn-outline-dark btn-lg px-4">
                                 Lihat Cara Kerja
@@ -65,9 +65,9 @@
                         </div>
 
                         <div class="lp-iconbar pb-lg-2 justify-content-lg-start">
-                            <span><i class="ti ti-package" aria-hidden="true"></i>Barang</span>
-                            <span><i class="ti ti-tools" aria-hidden="true"></i>Jasa</span>
-                            <span><i class="ti ti-key" aria-hidden="true"></i>Sewa</span>
+                            <span><i class="fa-regular fa-clipboard" aria-hidden="true"></i>Barang</span>
+                            <span><i class="fa-regular fa-lightbulb" aria-hidden="true"></i>Jasa</span>
+                            <span><i class="fa-regular fa-calendar-days" aria-hidden="true"></i>Sewa</span>
                         </div>
                     </div>
                 </div>
@@ -92,7 +92,7 @@
                 <div class="col-md-6 col-lg-3 sr-reveal sr-reveal-delay-1">
                     <div class="lp-kartu-fitur">
                         <div class="lp-fitur-ikon lp-tone-hijau mb-3" aria-hidden="true">
-                            <i class="ti ti-shield-check"></i>
+                            <i class="fa-regular fa-square-check"></i>
                         </div>
                         <h3 class="h5 fw-bold">Verifikasi Berlapis</h3>
                         <p class="mb-0" style="color: var(--teks-secondary);">
@@ -104,7 +104,7 @@
                 <div class="col-md-6 col-lg-3 sr-reveal sr-reveal-delay-2">
                     <div class="lp-kartu-fitur">
                         <div class="lp-fitur-ikon lp-tone-kuning mb-3" aria-hidden="true">
-                            <i class="ti ti-star"></i>
+                            <i class="fa-regular fa-star"></i>
                         </div>
                         <h3 class="h5 fw-bold">Rating Dua Arah</h3>
                         <p class="mb-0" style="color: var(--teks-secondary);">
@@ -116,7 +116,7 @@
                 <div class="col-md-6 col-lg-3 sr-reveal sr-reveal-delay-3">
                     <div class="lp-kartu-fitur">
                         <div class="lp-fitur-ikon lp-tone-biru mb-3" aria-hidden="true">
-                            <i class="ti ti-map-pin"></i>
+                            <i class="fa-regular fa-map"></i>
                         </div>
                         <h3 class="h5 fw-bold">Berbasis Lokasi</h3>
                         <p class="mb-0" style="color: var(--teks-secondary);">
@@ -128,7 +128,7 @@
                 <div class="col-md-6 col-lg-3 sr-reveal sr-reveal-delay-4">
                     <div class="lp-kartu-fitur">
                         <div class="lp-fitur-ikon lp-tone-merah mb-3" aria-hidden="true">
-                            <i class="ti ti-gavel"></i>
+                            <i class="fa-regular fa-file-lines"></i>
                         </div>
                         <h3 class="h5 fw-bold">Ada Penengah</h3>
                         <p class="mb-0" style="color: var(--teks-secondary);">
@@ -156,11 +156,11 @@
 
             <div class="row g-4">
                 @foreach ([
-                    ['img/web/layanan-barang.webp', 'Ilustrasi etalase warung berisi sembako, sayur segar, dan camilan', 'ti ti-package', 'hijau', 'Barang',
+                    ['img/web/layanan-barang.webp', 'Ilustrasi etalase warung berisi sembako, sayur segar, dan camilan', 'fa-regular fa-clipboard', 'hijau', 'Barang',
                      'Sembako, sayur kebun tetangga, kue rumahan, sampai barang bekas layak pakai — semua etalase warga sekitar.'],
-                    ['img/web/layanan-jasa.webp', 'Ilustrasi tukang memperbaiki pipa air dengan sepeda motor dan kotak perkakas', 'ti ti-tools', 'biru', 'Jasa',
+                    ['img/web/layanan-jasa.webp', 'Ilustrasi tukang memperbaiki pipa air dengan sepeda motor dan kotak perkakas', 'fa-regular fa-lightbulb', 'biru', 'Jasa',
                      'Tukang pipa, servis motor, jahit pakaian, sampai guru les — keahlian warga sekitar yang sudah terverifikasi.'],
-                    ['img/web/layanan-sewa.webp', 'Ilustrasi tenda lipat, tumpukan kursi plastik, dan pengeras suara untuk disewa', 'ti ti-key', 'kuning', 'Sewa',
+                    ['img/web/layanan-sewa.webp', 'Ilustrasi tenda lipat, tumpukan kursi plastik, dan pengeras suara untuk disewa', 'fa-regular fa-calendar-days', 'kuning', 'Sewa',
                      'Tenda hajatan, kursi, sound system, sampai alat pertanian — pakai sebentar, bayar seperlunya.'],
                 ] as $i => [$berkas, $alt, $ikon, $tone, $judulLayanan, $isi])
                     <div class="col-md-4 sr-reveal sr-reveal-delay-{{ $i + 1 }}">
@@ -171,7 +171,7 @@
                                 <div class="d-flex align-items-center gap-2 mb-2">
                                     <span class="lp-fitur-ikon lp-tone-{{ $tone }}"
                                           style="width: 40px; height: 40px; font-size: 20px;" aria-hidden="true">
-                                        <i class="ti {{ $ikon }}"></i>
+                                        <i class="{{ $ikon }}"></i>
                                     </span>
                                     <h3 class="h5 fw-bold mb-0">{{ $judulLayanan }}</h3>
                                 </div>
@@ -203,7 +203,7 @@
                              loading="lazy" decoding="async">
                         <div class="d-flex align-items-center gap-2 mb-4">
                             <span class="lp-fitur-ikon lp-tone-biru" style="width: 44px; height: 44px;" aria-hidden="true">
-                                <i class="ti ti-shopping-bag"></i>
+                                <i class="fa-regular fa-credit-card"></i>
                             </span>
                             <h3 class="h5 fw-bold mb-0">Untuk Pencari</h3>
                         </div>
@@ -231,7 +231,7 @@
                              loading="lazy" decoding="async">
                         <div class="d-flex align-items-center gap-2 mb-4">
                             <span class="lp-fitur-ikon lp-tone-hijau" style="width: 44px; height: 44px;" aria-hidden="true">
-                                <i class="ti ti-building-store"></i>
+                                <i class="fa-regular fa-building"></i>
                             </span>
                             <h3 class="h5 fw-bold mb-0">Untuk Penyedia</h3>
                         </div>

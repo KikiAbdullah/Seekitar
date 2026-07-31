@@ -27,7 +27,7 @@
                 <p style="color: var(--teks-secondary); font-size: 13px;">Terakhir diperbarui: 30 Juli 2026</p>
 
                 <div class="alert alert-info">
-                    <i class="ti ti-cookie me-1" aria-hidden="true"></i>
+                    <i class="fa-regular fa-file-lines me-1" aria-hidden="true"></i>
                     Dokumen ini melengkapi
                     <a href="{{ route('web.privacy') }}">Kebijakan Privasi</a> dan menjelaskan
                     secara khusus penggunaan cookie serta teknologi penyimpanan lokal.

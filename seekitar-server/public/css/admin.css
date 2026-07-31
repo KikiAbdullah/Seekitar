@@ -2,17 +2,14 @@
  * Penyesuaian Seekitar di atas template Modernize.
  *
  * Sumber template: github.com/KikiAbdullah/mordenize-template-bs
- * (package/dist), disalin ke public/vendor/modernize/.
+ * (package/dist), disalin ke public/vendor/mordenize/.
  *
- * WARNA UTAMA TIDAK DITIMPA DI SINI. Biru bawaan template (#5D87FF) sudah
- * diganti hijau Seekitar (#168A4A) langsung di dalam style.min.css lewat
- * tools/dev/recolor-modernize.mjs — 164 penggantian, termasuk nilai heksa
- * yang ditulis langsung di ratusan aturan dan tidak bisa dijangkau variabel
- * CSS. Menimpanya lagi dari sini hanya menyisakan dua sumber kebenaran.
- *
- * Berkas ini dimuat TERAKHIR supaya menang atas style.min.css tanpa perlu
- * menyunting berkas vendor — pembaruan template nanti cukup menimpa
- * public/vendor/modernize/ lalu menjalankan ulang skrip pewarnaan.
+ * WARNA UTAMA. Nama varian "green" bawaan Mordenize MENYESATKAN: primary-nya
+ * teal #0a7ea4 (terbaca biru) dan secondary-nya lime #ccda4e. Warna merek
+ * hijau dicapai lewat tools/dev/recolor-modernize.mjs yang memetakan seluruh
+ * turunan teal -> hijau Seekitar dan lime -> biru muda (mengikuti template
+ * modernize sebelumnya). Jika template diperbarui: salin ulang berkas ke
+ * public/vendor/mordenize/, lalu jalankan skrip itu lagi.
  *
  * ⚠️ Ukuran huruf terkecil di berkas ini 11px. Batas itu bukan selera: target
  * pengguna Seekitar berusia 40+ dan umumnya sudah presbiopia
@@ -45,7 +42,6 @@
         'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans', 'Liberation Sans',
         Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
-}
 
     /* Umpan balik status (§3.5.3) — sengaja BUKAN hijau lokal, agar tombol
        aksi dan pesan status tidak tertukar. */
@@ -77,6 +73,24 @@
 .sidebar-nav ul .sidebar-item .sidebar-link.active {
     background-color: var(--seekitar-green);
     color: #fff;
+}
+
+/*
+ * Layar pemuat di tengah.
+ *
+ * Template hanya memusatkan `.lds-ripple` — spinner bawaan template yang
+ * tidak dipakai — sedangkan layout ini memakai `.spinner-border`. Tanpa
+ * aturan ini spinner tampil di pojok kiri atas. `.preloader` template
+ * memang `position:fixed` selayar penuh, tetapi tidak menulis `display`,
+ * jadi kita jadikan flex untuk memusatkan anaknya. Latar dibuat mengikuti
+ * tema (bukan putih mati) supaya peralihan ke halaman tidak menyala putih
+ * saat panel dalam mode gelap.
+ */
+.preloader {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bs-body-bg);
 }
 
 /*
@@ -123,14 +137,25 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
-    overflow: hidden;    /* cegah double scroll — simplebar di dalam yang mengatur gulir */
+    overflow: hidden;    /* cegah double scroll — nav-lah yang menggulir sendiri */
 }
 
+/*
+ * Area gulir pakai scroll NATIF, bukan SimpleBar.
+ *
+ * Template sendiri menyetel `overflow-y:auto` pada .scroll-sidebar, dan
+ * SimpleBar (bila aktif) tinggal menyempurnakannya. SimpleBar justru GAGAL
+ * menggulir saat .scroll-sidebar memakai `height:auto` (ukuran flex):
+ * .simplebar-wrapper-nya memakai `height:inherit`, yang bermakna `auto`
+ * pada induk flex — jadi tinggi pembungkusnya = tinggi isi, bukan ruang
+ * yang tersedia, dan isi yang meluap terpotong tanpa bisa digulir.
+ * Tinggi flex dipaksa oleh `min-height:0`, jadi overflow-y:auto cukup.
+ */
 .left-sidebar .scroll-sidebar {
     flex: 1 1 auto;
     min-height: 0;       /* tanpa ini flex item menolak menyusut */
     height: auto;        /* menimpa calc(100vh - 80px) milik template */
-    overflow: hidden;    /* cegah native scroll bertarung dengan simplebar */
+    overflow-y: auto;    /* gulir natif — tak bergantung pada simplebar */
 }
 
 .left-sidebar .sidebar-ad { flex: 0 0 auto; }
@@ -145,8 +170,8 @@
  *
  * Target setelah dipadatkan (link 37px, bagian 32px, brand 56px,
  * baris wilayah ≈46px): ≈ 736px — muat dengan napas. Di layar yang
- * lebih pendek simplebar tetap menggulir, itu wajar; yang dihapus di
- * sini adalah gulir yang muncul di layar NORMAL.
+ * lebih pendek bilah gulir muncul, itu wajar; yang dihapus di sini
+ * adalah gulir yang muncul di layar NORMAL.
  *
  * Judul bagian adalah beaya tersembunyi: margin-top 24px-nya lebih
  * besar dari tinggi teksnya sendiri, jadi dialah yang pertama dihemat.
@@ -167,6 +192,57 @@
 }
 
 /*
+ * Ikon sidebar kini Font Awesome (.fa-regular), bukan Tabler (.ti).
+ *
+ * Template memuat Tabler dan menyetel `font-size:21px` lewat
+ * `.sidebar-link .ti`. Aturan itu tidak berlaku lagi, jadi disetel ulang
+ * untuk .fa-regular — 21px menyamakan tinggi ikon dengan teks baris 22px,
+ * tidak beda dari tampilan Tabler sebelumnya.
+ */
+.sidebar-nav ul .sidebar-item .sidebar-link .fa-regular {
+    flex-shrink: 0;
+    font-size: 21px;
+}
+
+/*
+ * Rail ikon saat sidebar di-collapse (mini-sidebar).
+ *
+ * Template hanya menyisakan ikon 21px menempel di kiri, pil aktif selarik
+ * penuh, dan logo horizontal yang terpotong jadi sliver 40px. Di sini:
+ *   - SETIAP item menjadi keping 40×40 yang seragam dan terpusat, jadi
+ *     ikon aktif dan non-aktif sejajar di sumbu yang sama;
+ *   - ikon diperbesar sedikit (24px) agar tetap terbaca;
+ *   - item aktif memakai keping hijau (warna dari .sidebar-link.active
+ *     template), yang non-aktif transparan dengan hover hijau lembut
+ *     (warna dari .sidebar-link:hover template);
+ *   - logo merek berganti ke logo-mark.png (kotak), bukan lockup terpotong.
+ * Semua hanya berlaku di mode mini-sidebar yang TIDAK sedang di-hover;
+ * begitu rail dilebarkan (hover), aturan di bawah berhenti berlaku dan
+ * tampilan kembali penuh seperti template.
+ */
+#main-wrapper[data-sidebartype=mini-sidebar] .left-sidebar:not(:hover) .sidebar-nav ul .sidebar-item .sidebar-link {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+    border-radius: 10px;
+    margin-inline: auto;
+}
+
+#main-wrapper[data-sidebartype=mini-sidebar] .left-sidebar:not(:hover) .sidebar-nav ul .sidebar-item .sidebar-link .fa-regular {
+    font-size: 24px;
+}
+
+#main-wrapper[data-sidebartype=mini-sidebar] .left-sidebar:not(:hover) .admin-brand-lockup {
+    display: none;
+}
+
+#main-wrapper[data-sidebartype=mini-sidebar] .left-sidebar:not(:hover) .admin-brand-mark {
+    display: block;
+}
+
+/*
  * Ikon submenu harus terbaca.
  *
  * Template mengunci ikon di dalam .first-level ke `font-size: 7px`. Angka itu
@@ -182,7 +258,7 @@
  * ikonnya mengisi penuh tanpa meluber, dan tetap lebih kecil dari induknya
  * sehingga hierarki menu masih terbaca.
  */
-.sidebar-nav ul .sidebar-item .first-level .sidebar-link .ti {
+.sidebar-nav ul .sidebar-item .first-level .sidebar-link .fa-regular {
     font-size: 16px;
 }
 
@@ -215,6 +291,10 @@
    PNG-nya sendiri sudah berbentuk tile rounded transparan, jadi kelas ini
    hanya mematok ukuran — mengikuti dimensi .admin-brand-dot yang digantikan. */
 .admin-brand-logo { width: 34px; height: 34px; display: block; }
+
+/* Mark kotak untuk rail mini-sidebar: sembunyi di menu penuh, muncul saat
+   sidebar di-collapse (lihat blok mini-sidebar di bawah). */
+.admin-brand-mark { display: none; }
 
 /* Lockup horizontal (mark + kata "Seekitar"): lebar mengikuti rasio berkas,
    sedikit lebih pendek dari mark agar tidak mendominasi kolom sidebar. */
@@ -417,15 +497,16 @@
  * Dua cacat template yang hanya terlihat saat halaman benar-benar dirender,
  * keduanya terbukti lewat getComputedStyle di Chromium:
  *
- * 1. `.form-control:focus` memakai border #aec3ff — BIRU. Nilai itu lolos dari
- *    tools/dev/recolor-modernize.mjs karena petanya hanya memuat #5D87FF dan
- *    turunannya. Akibatnya setiap kotak isian di seluruh panel berkedip biru
- *    di atas antarmuka hijau.
+ * 1. `.form-control:focus` di template baru memakai border teal #85bfd2.
+ *    Recolor modernize sudah memetakannya ke hijau #b9e0ca, tetapi aturan
+ *    ini tetap dipasang sebagai jaring pengaman: fokus kotak isian harus
+ *    hijau kapan pun (mis. bila berkas vendor disalin ulang sebelum skrip
+ *    recolor dijalankan), dan `box-shadow`-nya dipaksa hadir.
  *
  * 2. Template memasang `:focus{outline:0;box-shadow:none!important}` untuk
  *    SEMUA elemen. Aturan itu membunuh cincin fokus hijau yang ditulisnya
  *    sendiri satu baris di bawahnya, sehingga satu-satunya penanda fokus yang
- *    tersisa adalah perubahan border #dfe5ef -> #aec3ff — kontras terlalu
+ *    tersisa adalah perubahan border #dfe5ef -> #b9e0ca — kontras terlalu
  *    tipis untuk dilihat, dan melanggar WCAG 2.4.7 (Focus Visible).
  *
  * `!important` di sini WAJIB: tanpa itu aturan global template menang.

@@ -24,4 +24,7 @@
             </div>
         </div>
     </div>
+    <div class="position-absolute top-0 end-0 d-none d-lg-block" aria-hidden="true">
+        <img src="{{ asset('vendor/mordenize/images/backgrounds/welcome-bg2.png') }}" alt="" width="160" height="120" style="opacity: .4;">
+    </div>
 </div>

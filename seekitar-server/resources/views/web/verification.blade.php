@@ -27,7 +27,7 @@
                 <p style="color: var(--teks-secondary); font-size: 13px;">Terakhir diperbarui: 30 Juli 2026</p>
 
                 <div class="alert alert-info">
-                    <i class="ti ti-id me-1" aria-hidden="true"></i>
+                    <i class="fa-regular fa-id-card me-1" aria-hidden="true"></i>
                     Verifikasi identitas hanya diperlukan untuk <strong>membuka toko</strong>.
                     Pengguna biasa (pembeli) cukup diverifikasi lewat nomor WhatsApp.
                 </div>

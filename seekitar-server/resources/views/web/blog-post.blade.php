@@ -45,7 +45,7 @@
 
             <div class="text-center mt-4">
                 <a href="{{ route('web.blog') }}" class="btn btn-outline-dark px-4">
-                    <i class="ti ti-arrow-left me-1" aria-hidden="true"></i> Kembali ke Blog
+                    <i class="fa-regular fa-arrow-alt-circle-left me-1" aria-hidden="true"></i> Kembali ke Blog
                 </a>
             </div>
         </div>

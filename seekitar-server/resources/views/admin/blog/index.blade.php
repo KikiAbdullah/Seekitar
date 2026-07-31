@@ -28,7 +28,7 @@
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <a href="{{ route('admin.blog.create') }}" class="btn btn-seekitar">
-                        <i class="ti ti-plus me-1" aria-hidden="true"></i> Artikel Baru
+                        <i class="fa-regular fa-plus-square me-1" aria-hidden="true"></i> Artikel Baru
                     </a>
                 </div>
             </div>

@@ -19,10 +19,10 @@
             {{-- Empat kanal email --}}
             <div class="row g-4 mb-4">
                 @foreach ([
-                    ['ti ti-mail', 'hijau', 'Pengaduan umum', 'complaint', '2×24 jam', 'Laporkan masalah terkait transaksi, akun, atau fitur.'],
-                    ['ti ti-flag', 'merah', 'Pelaporan konten ilegal', 'abuse', '1×24 jam', 'Laporkan barang/jasa terlarang, penipuan, atau penyalahgunaan.'],
-                    ['ti ti-lock', 'biru', 'Data pribadi (UU PDP)', 'privacy', '3×24 jam', 'Akses, koreksi, atau penghapusan data pribadi.'],
-                    ['ti ti-shield', 'kuning', 'Celah keamanan', 'security', '1×24 jam', 'Laporkan kerentanan atau insiden keamanan sistem.'],
+                    ['fa-regular fa-envelope', 'hijau', 'Pengaduan umum', 'complaint', '2×24 jam', 'Laporkan masalah terkait transaksi, akun, atau fitur.'],
+                    ['fa-regular fa-flag', 'merah', 'Pelaporan konten ilegal', 'abuse', '1×24 jam', 'Laporkan barang/jasa terlarang, penipuan, atau penyalahgunaan.'],
+                    ['fa-regular fa-circle-stop', 'biru', 'Data pribadi (UU PDP)', 'privacy', '3×24 jam', 'Akses, koreksi, atau penghapusan data pribadi.'],
+                    ['fa-regular fa-circle-check', 'kuning', 'Celah keamanan', 'security', '1×24 jam', 'Laporkan kerentanan atau insiden keamanan sistem.'],
                 ] as $i => [$ikon, $tone, $keperluan, $kunci, $tenggat, $deskripsi])
                     <div class="col-md-6 sr-reveal sr-reveal-delay-{{ $i + 1 }}">
                         <div class="lp-kanal">
@@ -48,7 +48,7 @@
             <div class="lp-kanal mb-4 sr-reveal" style="border-color: var(--kuning); background: #FFFBEB;">
                 <div class="d-flex gap-3">
                     <span class="lp-fitur-ikon lp-tone-kuning flex-shrink-0" aria-hidden="true">
-                        <i class="ti ti-gavel"></i>
+                        <i class="fa-regular fa-file-lines"></i>
                     </span>
                     <div>
                         <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
@@ -68,7 +68,7 @@
             <div class="lp-kanal sr-reveal">
                 <div class="d-flex gap-3">
                     <span class="lp-fitur-ikon lp-tone-abu flex-shrink-0" aria-hidden="true">
-                        <i class="ti ti-building"></i>
+                        <i class="fa-regular fa-building"></i>
                     </span>
                     <div>
                         <h2 class="h6 fw-bold mb-1">Penyelenggara</h2>

@@ -121,7 +121,7 @@
                  ditolak/diblokir sengaja paling mencolok. --}}
             @if ($user->isBlocked())
                 <div class="alert alert-dark d-flex align-items-start gap-3" role="alert">
-                    <i class="ti ti-ban fs-5 mt-1" aria-hidden="true"></i>
+                    <i class="fa-regular fa-circle-stop fs-5 mt-1" aria-hidden="true"></i>
                     <div>
                         <strong>Diblokir</strong>
                         oleh {{ $user->blockedBy?->name ?? '—' }} · {{ $user->blocked_at?->format('d M Y H:i') }}<br>
@@ -131,7 +131,7 @@
                 </div>
             @elseif ($user->rejected_at)
                 <div class="alert alert-warning d-flex align-items-start gap-3" role="alert">
-                    <i class="ti ti-alert-triangle fs-5 mt-1" aria-hidden="true"></i>
+                    <i class="fa-regular fa-circle-xmark fs-5 mt-1" aria-hidden="true"></i>
                     <div>
                         <strong>Berkas ditolak</strong>
                         oleh {{ $user->rejectedBy?->name ?? '—' }} · {{ $user->rejected_at->format('d M Y H:i') }}<br>
@@ -148,14 +148,14 @@
                          "tahap"; bukti OTP-nya keberadaan akun itu sendiri. --}}
                     <ul class="list-unstyled mb-0 fs-3">
                         <li class="d-flex align-items-start gap-2 mb-2">
-                            <i class="ti ti-device-mobile-check text-success mt-1" aria-hidden="true"></i>
+                            <i class="fa-regular fa-comment-dots text-success mt-1" aria-hidden="true"></i>
                             <span>
                                 <strong>Nomor HP dibuktikan OTP</strong><br>
                                 <span class="text-muted">Kode hanya dikirim ke nomornya sendiri — {{ $user->phone }}</span>
                             </span>
                         </li>
                         <li class="d-flex align-items-start gap-2">
-                            <i class="ti {{ $user->verified_at ? 'ti-circle-check text-success' : 'ti-clock-hour-4 text-warning' }} mt-1" aria-hidden="true"></i>
+                            <i class="fa-regular {{ $user->verified_at ? 'fa-circle-check text-success' : 'fa-clock text-warning' }} mt-1" aria-hidden="true"></i>
                             <span>
                                 <strong>Identitas (wajah, KTP, alamat, titik domisili)</strong><br>
                                 @if ($user->verified_at)
@@ -254,7 +254,7 @@
                             <a class="btn btn-sm btn-outline-primary"
                                href="https://www.google.com/maps/search/?api=1&query={{ $user->latitude }},{{ $user->longitude }}"
                                target="_blank" rel="noopener">
-                                <i class="ti ti-map-pin" aria-hidden="true"></i>
+                                <i class="fa-regular fa-map" aria-hidden="true"></i>
                                 Buka di Google Maps
                             </a>
                         </div>
@@ -282,7 +282,7 @@
                             @else
                                 <span class="rounded bg-light-primary text-primary d-inline-flex align-items-center justify-content-center"
                                       style="width: 56px; height: 42px;" aria-hidden="true">
-                                    <i class="ti ti-building-store" aria-hidden="true"></i>
+                                    <i class="fa-regular fa-building" aria-hidden="true"></i>
                                 </span>
                             @endif
                         </td>

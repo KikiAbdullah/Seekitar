@@ -41,7 +41,7 @@
     <div class="card bg-light-info shadow-none border-0 mb-4">
         <div class="card-body py-3 px-4">
             <div class="d-flex align-items-start gap-3">
-                <i class="ti ti-info-circle fs-6 text-info mt-1" aria-hidden="true"></i>
+                <i class="fa-regular fa-circle-question fs-6 text-info mt-1" aria-hidden="true"></i>
                 <p class="mb-0 fs-3">Admin tidak mengubah status pesanan dari halaman ini. Gunakan penyelesaian laporan bila perlu intervensi.</p>
             </div>
         </div>
@@ -96,7 +96,7 @@
                                     {{ $order->store?->name }}
                                 @endcan
                                 @if ($order->store?->status === \App\Enums\StoreStatus::Verified)
-                                    <i class="ti ti-circle-check-filled text-success ms-1 flex-shrink-0"
+                                    <i class="fa-regular fa-circle-check text-success ms-1 flex-shrink-0"
                                        title="Toko terverifikasi" role="img" aria-label="Toko terverifikasi"></i>
                                 @endif
                             </span>
@@ -176,7 +176,7 @@
                             <ul class="list-unstyled mb-0 fs-3 position-relative"
                                 style="padding-inline-start: .25rem; border-inline-start: 2px solid var(--bs-border-color); margin-inline-start: .55rem;">
                                 <li class="d-flex gap-2 mb-3">
-                                    <i class="ti ti-circle-check text-success mt-1 bg-body flex-shrink-0" style="margin-inline-start: -1.1rem;" aria-hidden="true"></i>
+                                    <i class="fa-regular fa-circle-check text-success mt-1 bg-body flex-shrink-0" style="margin-inline-start: -1.1rem;" aria-hidden="true"></i>
                                     <div>
                                         <div class="fw-semibold">Dibuat</div>
                                         <div class="text-muted" style="font-size: 11px;">
@@ -186,7 +186,7 @@
                                 </li>
                                 <li class="d-flex gap-2 mb-3">
                                     @if ($order->payment_confirmed_at)
-                                        <i class="ti ti-circle-check text-success mt-1 bg-body flex-shrink-0" style="margin-inline-start: -1.1rem;" aria-hidden="true"></i>
+                                        <i class="fa-regular fa-circle-check text-success mt-1 bg-body flex-shrink-0" style="margin-inline-start: -1.1rem;" aria-hidden="true"></i>
                                         <div>
                                             <div class="fw-semibold">Pembayaran dikonfirmasi</div>
                                             <div class="text-muted" style="font-size: 11px;">
@@ -194,7 +194,7 @@
                                             </div>
                                         </div>
                                     @else
-                                        <i class="ti ti-clock text-muted mt-1 bg-body flex-shrink-0" style="margin-inline-start: -1.1rem;" aria-hidden="true"></i>
+                                        <i class="fa-regular fa-clock text-muted mt-1 bg-body flex-shrink-0" style="margin-inline-start: -1.1rem;" aria-hidden="true"></i>
                                         <div>
                                             <div class="text-muted">Menunggu konfirmasi pembayaran</div>
                                         </div>
@@ -202,7 +202,7 @@
                                 </li>
                                 @if ($order->disputes->where('status.value', 'open')->isNotEmpty())
                                     <li class="d-flex gap-2 mb-3">
-                                        <i class="ti ti-alert-triangle text-warning mt-1 bg-body flex-shrink-0" style="margin-inline-start: -1.1rem;" aria-hidden="true"></i>
+                                        <i class="fa-regular fa-circle-xmark text-warning mt-1 bg-body flex-shrink-0" style="margin-inline-start: -1.1rem;" aria-hidden="true"></i>
                                         <div>
                                             <div class="fw-semibold text-warning">Ada laporan terbuka</div>
                                             <div class="text-muted" style="font-size: 11px;">
@@ -213,7 +213,7 @@
                                 @endif
                                 <li class="d-flex gap-2">
                                     @if ($order->status?->value === 'selesai')
-                                        <i class="ti ti-circle-check text-success mt-1 bg-body flex-shrink-0" style="margin-inline-start: -1.1rem;" aria-hidden="true"></i>
+                                        <i class="fa-regular fa-circle-check text-success mt-1 bg-body flex-shrink-0" style="margin-inline-start: -1.1rem;" aria-hidden="true"></i>
                                         <div>
                                             <div class="fw-semibold">Selesai</div>
                                             <div class="text-muted" style="font-size: 11px;">
@@ -221,7 +221,7 @@
                                             </div>
                                         </div>
                                     @elseif ($order->status?->value === 'dibatalkan')
-                                        <i class="ti ti-circle-x text-danger mt-1 bg-body flex-shrink-0" style="margin-inline-start: -1.1rem;" aria-hidden="true"></i>
+                                        <i class="fa-regular fa-circle-xmark text-danger mt-1 bg-body flex-shrink-0" style="margin-inline-start: -1.1rem;" aria-hidden="true"></i>
                                         <div>
                                             <div class="fw-semibold text-danger">Dibatalkan</div>
                                             <div class="text-muted" style="font-size: 11px;">
@@ -239,7 +239,7 @@
                                             @endif
                                         </div>
                                     @else
-                                        <i class="ti ti-clock text-muted mt-1 bg-body flex-shrink-0" style="margin-inline-start: -1.1rem;" aria-hidden="true"></i>
+                                        <i class="fa-regular fa-clock text-muted mt-1 bg-body flex-shrink-0" style="margin-inline-start: -1.1rem;" aria-hidden="true"></i>
                                         <div>
                                             <div class="text-muted">Dalam proses</div>
                                         </div>
@@ -294,7 +294,7 @@
                         <a class="btn btn-sm btn-outline-primary"
                            href="https://www.google.com/maps/search/?api=1&query={{ $order->latitude }},{{ $order->longitude }}"
                            target="_blank" rel="noopener">
-                            <i class="ti ti-map-pin" aria-hidden="true"></i> Google Maps
+                            <i class="fa-regular fa-map" aria-hidden="true"></i> Google Maps
                         </a>
                     </div>
                     <div class="card-body">
@@ -339,7 +339,7 @@
                                             @can('manage-disputes')
                                                 <a href="{{ route('admin.disputes.show', $dispute) }}"
                                                    class="btn btn-sm btn-outline-primary">
-                                                    <i class="ti ti-gavel" aria-hidden="true"></i> Tinjau
+                                                    <i class="fa-regular fa-file-lines" aria-hidden="true"></i> Tinjau
                                                 </a>
                                             @endcan
                                         </td>

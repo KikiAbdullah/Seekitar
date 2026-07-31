@@ -5,7 +5,7 @@
             <li class="nav-item">
                 <a class="nav-link sidebartoggler nav-icon-hover ms-n3" id="headerCollapse"
                    href="javascript:void(0)" aria-label="Buka menu navigasi">
-                    <i class="ti ti-menu-2" aria-hidden="true"></i>
+                    <i class="fa-regular fa-list-alt" aria-hidden="true"></i>
                 </a>
             </li>
 
@@ -22,7 +22,7 @@
                 data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false"
                 aria-label="Buka menu pengguna">
             <span class="p-2">
-                <i class="ti ti-dots fs-7" aria-hidden="true"></i>
+                <i class="fa-regular fa-circle-dot fs-7" aria-hidden="true"></i>
             </span>
         </button>
 
@@ -36,7 +36,7 @@
                             <a class="nav-link nav-icon-hover" href="javascript:void(0)" id="dropNotifikasi"
                                data-bs-toggle="dropdown" aria-expanded="false"
                                aria-label="Notifikasi">
-                                <i class="ti ti-bell-ringing" aria-hidden="true"></i>
+                                <i class="fa-regular fa-bell" aria-hidden="true"></i>
                                 @if (($laporanLewatSla ?? 0) > 0)
                                     <div class="notification bg-danger rounded-circle"></div>
                                 @endif
@@ -59,7 +59,7 @@
                                            class="py-6 px-7 d-flex align-items-center dropdown-item">
                                             <span class="me-3">
                                                 <span class="d-flex align-items-center justify-content-center bg-light-danger rounded-circle p-6">
-                                                    <i class="ti ti-alert-triangle text-danger fs-6" aria-hidden="true"></i>
+                                                    <i class="fa-regular fa-circle-xmark text-danger fs-6" aria-hidden="true"></i>
                                                 </span>
                                             </span>
                                             <div class="w-75 d-inline-block v-middle">
@@ -75,7 +75,7 @@
                                                class="py-6 px-7 d-flex align-items-center dropdown-item">
                                                 <span class="me-3">
                                                     <span class="d-flex align-items-center justify-content-center bg-light-warning rounded-circle p-6">
-                                                        <i class="ti ti-id text-warning fs-6" aria-hidden="true"></i>
+                                                        <i class="fa-regular fa-id-card text-warning fs-6" aria-hidden="true"></i>
                                                     </span>
                                                 </span>
                                                 <div class="w-75 d-inline-block v-middle">
@@ -104,7 +104,7 @@
                                     {{-- Ikon generik, bukan inisial — inisial
                                          pernah bermasalah saat nama kosong. --}}
                                     <span class="admin-avatar" aria-hidden="true">
-                                        <i class="ti ti-user" style="font-size: 18px;" aria-hidden="true"></i>
+                                        <i class="fa-regular fa-user" style="font-size: 18px;" aria-hidden="true"></i>
                                     </span>
                                 </div>
                             </div>
@@ -120,7 +120,7 @@
 
                                 <div class="d-flex align-items-center py-9 mx-7 border-bottom">
                                     <span class="admin-avatar admin-avatar-lg" aria-hidden="true">
-                                        <i class="ti ti-user" style="font-size: 38px;" aria-hidden="true"></i>
+                                        <i class="fa-regular fa-user" style="font-size: 38px;" aria-hidden="true"></i>
                                     </span>
                                     <div class="ms-3">
                                         <h5 class="mb-1 fs-3">{{ auth()->user()?->name }}</h5>
@@ -128,7 +128,7 @@
                                             {{ auth()->user()?->getRoleNames()->implode(', ') }}
                                         </span>
                                         <p class="mb-0 d-flex text-dark align-items-center gap-2 fs-2">
-                                            <i class="ti ti-mail fs-4" aria-hidden="true"></i>
+                                            <i class="fa-regular fa-envelope fs-4" aria-hidden="true"></i>
                                             {{ auth()->user()?->email }}
                                         </p>
                                     </div>
@@ -138,7 +138,7 @@
                                     <a href="{{ route('admin.profile.edit') }}"
                                        class="py-8 px-7 mt-8 d-flex align-items-center">
                                         <span class="d-flex align-items-center justify-content-center bg-light rounded-1 p-6">
-                                            <i class="ti ti-user-circle fs-6" aria-hidden="true"></i>
+                                            <i class="fa-regular fa-circle-user fs-6" aria-hidden="true"></i>
                                         </span>
                                         <div class="w-75 d-inline-block v-middle ps-3">
                                             <h6 class="mb-1 bg-hover-primary fw-semibold">Profil Saya</h6>
@@ -149,7 +149,7 @@
                                     <a href="{{ route('admin.password.edit') }}"
                                        class="py-8 px-7 d-flex align-items-center">
                                         <span class="d-flex align-items-center justify-content-center bg-light rounded-1 p-6">
-                                            <i class="ti ti-key fs-6" aria-hidden="true"></i>
+                                            <i class="fa-regular fa-id-card fs-6" aria-hidden="true"></i>
                                         </span>
                                         <div class="w-75 d-inline-block v-middle ps-3">
                                             <h6 class="mb-1 bg-hover-primary fw-semibold">Ubah Kata Sandi</h6>
@@ -161,7 +161,7 @@
                                         <a href="{{ route('admin.settings') }}"
                                            class="py-8 px-7 d-flex align-items-center">
                                             <span class="d-flex align-items-center justify-content-center bg-light rounded-1 p-6">
-                                                <i class="ti ti-settings fs-6" aria-hidden="true"></i>
+                                                <i class="fa-regular fa-list-alt fs-6" aria-hidden="true"></i>
                                             </span>
                                             <div class="w-75 d-inline-block v-middle ps-3">
                                                 <h6 class="mb-1 bg-hover-primary fw-semibold">Pengaturan Sistem</h6>

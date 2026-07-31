@@ -16,7 +16,7 @@
 
             <div class="lp-doc sr-reveal">
                 <div class="alert alert-success">
-                    <i class="ti ti-circle-check me-1" aria-hidden="true"></i>
+                    <i class="fa-regular fa-circle-check me-1" aria-hidden="true"></i>
                     Seluruh layanan berjalan normal.
                 </div>
 

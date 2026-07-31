@@ -342,11 +342,11 @@ section[id], h2[id] { scroll-margin-top: 96px; }
     display: flex; flex-wrap: wrap; justify-content: center;
     gap: 1.25rem 2.5rem; color: var(--teks-secondary); font-weight: 600;
 }
-.lp-iconbar .ti {
+.lp-iconbar .fa-regular {
     font-size: 22px; vertical-align: -3px; margin-right: .35rem;
     transition: transform var(--transition);
 }
-.lp-iconbar span:hover .ti { transform: scale(1.2); }
+.lp-iconbar span:hover .fa-regular { transform: scale(1.2); }
 
 /* Foto/ilustrasi di atas kartu alur cara-kerja: dipotong 2:1 supaya kedua
    kartu (pencari & penyedia) sejajar rapi walau sumbernya tidak identik. */
@@ -555,11 +555,11 @@ section[id], h2[id] { scroll-margin-top: 96px; }
     font-size: 15px;
     line-height: 1.7;
 }
-.accordion-seekitar .accordion-button .ti {
+.accordion-seekitar .accordion-button .fa-regular {
     font-size: 20px;
     transition: transform var(--transition);
 }
-.accordion-seekitar .accordion-button:not(.collapsed) .ti {
+.accordion-seekitar .accordion-button:not(.collapsed) .fa-regular {
     transform: scale(1.1);
 }
 

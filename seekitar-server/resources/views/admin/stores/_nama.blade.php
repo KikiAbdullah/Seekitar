@@ -10,7 +10,7 @@
 <span class="d-inline-flex align-items-center">
     {{ $store->name }}
     @if ($store->status === \App\Enums\StoreStatus::Verified)
-        <i class="ti ti-circle-check-filled text-success ms-1 flex-shrink-0"
+        <i class="fa-regular fa-circle-check text-success ms-1 flex-shrink-0"
            title="Toko terverifikasi"
            role="img" aria-label="Toko terverifikasi"></i>
     @endif

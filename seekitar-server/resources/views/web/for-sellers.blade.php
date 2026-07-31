@@ -28,7 +28,7 @@
                     <div style="animation: fade-up .6s ease-out .3s both;">
                         <div class="d-flex flex-wrap justify-content-center justify-content-lg-start gap-2 mb-4">
                             <a href="{{ route('web.home') }}#unduh" class="btn btn-seekitar btn-lg px-4">
-                                <i class="ti ti-building-store me-1" aria-hidden="true"></i> Buka Toko Gratis
+                                <i class="fa-regular fa-building me-1" aria-hidden="true"></i> Buka Toko Gratis
                             </a>
                             <a href="#benefit" class="btn btn-outline-dark btn-lg px-4">
                                 Lihat Keuntungan
@@ -71,19 +71,19 @@
 
             <div class="row g-4">
                 @foreach ([
-                    ['ti ti-currency-dollar', 'hijau', 'Gratis Selamanya',
+                    ['fa-regular fa-money-bill-1', 'hijau', 'Gratis Selamanya',
                      'Tidak ada biaya pendaftaran, biaya langganan, atau komisi. Pembayaran langsung antara kamu dan pembeli — tanpa potongan apa pun.'],
-                    ['ti ti-radar-2', 'biru', 'Pelanggan Terdekat',
+                    ['fa-regular fa-map', 'biru', 'Pelanggan Terdekat',
                      'Tokomu tampil ke warga yang benar-benar di sekitar — dalam radius yang kamu tentukan sendiri. Tidak ada persaingan dengan toko dari kota lain.'],
-                    ['ti ti-shield-check', 'kuning', 'Verifikasi Terpercaya',
+                    ['fa-regular fa-square-check', 'kuning', 'Verifikasi Terpercaya',
                      'Badge terverifikasi meningkatkan kepercayaan pembeli. Admin meninjau identitasmu, jadi pembeli tahu kamu nyata.'],
-                    ['ti ti-broadcast', 'hijau', 'Siaran Kebutuhan',
+                    ['fa-regular fa-bell', 'hijau', 'Siaran Kebutuhan',
                      'Kami kirimkan pemberitahuan saat warga mencari barang/jasa yang kamu tawarkan. Kamu tidak perlu menunggu pembeli datang.'],
-                    ['ti ti-phone', 'biru', 'Transaksi Terpantau',
+                    ['fa-regular fa-comment', 'biru', 'Transaksi Terpantau',
                      'Riwayat pesanan, rating, dan ulasan tercatat rapi. Bila ada masalah, admin siap menengahi.'],
-                    ['ti ti-star', 'kuning', 'Rating & Reputasi',
+                    ['fa-regular fa-star', 'kuning', 'Rating & Reputasi',
                      'Semakin baik pelayananmu, semakin tinggi ratingmu — dan semakin sering tokumu muncul di pencarian.'],
-                    ['ti ti-crown', 'hijau', 'Fitur Premium (Opsional)',
+                    ['fa-regular fa-gem', 'hijau', 'Fitur Premium (Opsional)',
                      'Boost listing agar tokumu tampil di atas, atau langganan Pro untuk prioritas siaran. Fitur berbagai — pakai yang gratis saja juga bisa.'],
                 ] as [$ikon, $tone, $judul, $isi])
                     <div class="col-md-6 col-lg-4 sr-reveal">
@@ -111,10 +111,10 @@
 
             <div class="row g-4">
                 @foreach ([
-                    ['ti ti-download', 'hijau', '1', 'Unduh & Daftar', 'Unduh aplikasi Seekitar, daftar dengan nomor WhatsApp — hanya perlu 1 menit.'],
-                    ['ti ti-id', 'biru', '2', 'Verifikasi Identitas', 'Unggah foto KTP dan swafoto. Admin tinjau maksimal 1×24 jam.'],
-                    ['ti ti-building-store', 'kuning', '3', 'Atur Toko', 'Pasang foto toko, tentukan radius layanan, dan atur jam buka.'],
-                    ['ti ti-package', 'hijau', '4', 'Listing Barang', 'Upload barang atau jasa yang ingin kamu jual atau sewakan. Selesai!'],
+                    ['fa-regular fa-arrow-alt-circle-down', 'hijau', '1', 'Unduh & Daftar', 'Unduh aplikasi Seekitar, daftar dengan nomor WhatsApp — hanya perlu 1 menit.'],
+                    ['fa-regular fa-id-card', 'biru', '2', 'Verifikasi Identitas', 'Unggah foto KTP dan swafoto. Admin tinjau maksimal 1×24 jam.'],
+                    ['fa-regular fa-building', 'kuning', '3', 'Atur Toko', 'Pasang foto toko, tentukan radius layanan, dan atur jam buka.'],
+                    ['fa-regular fa-clipboard', 'hijau', '4', 'Listing Barang', 'Upload barang atau jasa yang ingin kamu jual atau sewakan. Selesai!'],
                 ] as [$ikon, $tone, $no, $judul, $isi])
                     <div class="col-md-6 col-lg-3 sr-reveal">
                         <div class="lp-kartu-fitur text-center">
@@ -180,7 +180,7 @@
                     </p>
                     <div class="d-flex flex-wrap justify-content-center gap-2">
                         <a href="{{ route('web.home') }}#unduh" class="btn btn-seekitar btn-lg px-4">
-                            <i class="ti ti-building-store me-1" aria-hidden="true"></i> Buka Toko Gratis
+                            <i class="fa-regular fa-building me-1" aria-hidden="true"></i> Buka Toko Gratis
                         </a>
                         <a href="{{ route('web.pricing') }}" class="btn btn-outline-dark btn-lg px-4">
                             Lihat Detail Biaya

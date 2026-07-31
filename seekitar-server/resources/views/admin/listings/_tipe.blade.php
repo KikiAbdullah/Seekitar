@@ -7,5 +7,5 @@
     $listing — model Listing (listing_type sudah ikut di-select querynya).
 --}}
 <span class="badge bg-{{ $listing->listing_type->color() }}-subtle text-{{ $listing->listing_type->color() }}">
-    <i class="ti {{ $listing->listing_type->icon() }} me-1" aria-hidden="true"></i>{{ $listing->listing_type->label() }}
+    <i class="{{ $listing->listing_type->icon() }} me-1" aria-hidden="true"></i>{{ $listing->listing_type->label() }}
 </span>

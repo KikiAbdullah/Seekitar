@@ -30,7 +30,7 @@
     <div class="card bg-light-info shadow-none border-0 mb-4">
         <div class="card-body py-3 px-4">
             <div class="d-flex align-items-start gap-3">
-                <i class="ti ti-info-circle fs-6 text-info mt-1" aria-hidden="true"></i>
+                <i class="fa-regular fa-circle-question fs-6 text-info mt-1" aria-hidden="true"></i>
                 <p class="mb-0 fs-3">Antrian ini <strong>hanya memuat toko yang pemiliknya sudah terverifikasi identitas</strong> — yang belum, dinilai dulu di Verifikasi Pengguna. <strong>Klik baris</strong> untuk membuka berkas (foto toko &amp; peta lokasi) dan tombol Verifikasi.</p>
             </div>
         </div>
@@ -79,7 +79,7 @@
                                 @else
                                     <span class="rounded bg-light-primary text-primary d-inline-flex align-items-center justify-content-center flex-shrink-0"
                                           style="width: 52px; height: 40px;" aria-hidden="true">
-                                        <i class="ti ti-building-store" aria-hidden="true"></i>
+                                        <i class="fa-regular fa-building" aria-hidden="true"></i>
                                     </span>
                                 @endif
 
@@ -106,7 +106,7 @@
                                 {{-- Antrian sudah menyaring pemilik terverifikasi di SQL (poin 1),
                                      jadi lencananya selalu hijau — bukan kebetulan desain. --}}
                                 <span class="badge bg-success-subtle text-success mt-1" style="font-size: 11px;">
-                                    <i class="ti ti-circle-check" aria-hidden="true"></i>
+                                    <i class="fa-regular fa-circle-check" aria-hidden="true"></i>
                                     Pemilik terverifikasi
                                 </span>
                             </div>
@@ -155,7 +155,7 @@
                 @empty
                     <tr>
                         <td colspan="5" class="text-center text-muted py-5">
-                            <i class="ti ti-circle-check fs-7 d-block mb-2 opacity-25" aria-hidden="true"></i>
+                            <i class="fa-regular fa-circle-check fs-7 d-block mb-2 opacity-25" aria-hidden="true"></i>
                             Tidak ada pengajuan toko menunggu.<br>
                             <span style="font-size: 12px;">
                                 Pengajuan yang pemiliknya belum terverifikasi tidak tampil di sini —
@@ -223,7 +223,7 @@
                     if (radius > 0) {
                         L.circle([lat, lng], {
                             radius: radius * 1000,
-                            color: '#5d87ff',
+                            color: '#168A4A',
                             weight: 1,
                             fillOpacity: 0.06,
                         }).addTo(peta);

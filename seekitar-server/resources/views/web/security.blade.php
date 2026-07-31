@@ -51,10 +51,10 @@
                 <h2 id="keamanan-3" class="h5 fw-bold mt-4">3. Tips transaksi aman</h2>
                 <div class="row g-3 mb-3">
                     @foreach ([
-                        ['ti ti-map-pin', 'Temu di tempat umum', 'Pilih lokasi ramai untuk bertemu — depan masjid, pusat desa, atau area perkantoran.'],
-                        ['ti ti-box', 'Cek barang sebelum bayar', 'Buka kemasan, periksa kondisi, pastikan sesuai deskripsi.'],
-                        ['ti ti-cash', 'Siapkan uang pas', 'COD dengan uang pas meminimalkan risiko kesalahan kembalian.'],
-                        ['ti ti-phone', 'Gunakan fitur Laporkan', 'Jika ada masalah, jangan selesaikan sendiri — laporkan lewat aplikasi.'],
+                        ['fa-regular fa-map', 'Temu di tempat umum', 'Pilih lokasi ramai untuk bertemu — depan masjid, pusat desa, atau area perkantoran.'],
+                        ['fa-regular fa-clipboard', 'Cek barang sebelum bayar', 'Buka kemasan, periksa kondisi, pastikan sesuai deskripsi.'],
+                        ['fa-regular fa-money-bill-1', 'Siapkan uang pas', 'COD dengan uang pas meminimalkan risiko kesalahan kembalian.'],
+                        ['fa-regular fa-comment', 'Gunakan fitur Laporkan', 'Jika ada masalah, jangan selesaikan sendiri — laporkan lewat aplikasi.'],
                     ] as [$ikon, $judul, $isi])
                         <div class="col-md-6">
                             <div class="d-flex gap-2">

@@ -17,7 +17,7 @@
         <div class="container" style="max-width: 860px;">
             @if (empty($posts))
                 <div class="text-center py-5">
-                    <i class="ti ti-news" style="font-size: 48px; color: var(--teks-secondary); opacity: .4;" aria-hidden="true"></i>
+                    <i class="fa-regular fa-newspaper" style="font-size: 48px; color: var(--teks-secondary); opacity: .4;" aria-hidden="true"></i>
                     <p class="mt-3" style="color: var(--teks-secondary);">Belum ada artikel. Kembali lagi nanti!</p>
                 </div>
             @else
@@ -45,7 +45,7 @@
                                     <p class="mb-3" style="color: var(--teks-secondary); font-size: 14px;">{{ $post['excerpt'] }}</p>
                                     <a href="{{ route('web.blog.post', $post['slug']) }}"
                                        class="fw-semibold text-decoration-none" style="color: var(--hijau-lokal); font-size: 14px;">
-                                        Baca selengkapnya <i class="ti ti-arrow-right" aria-hidden="true"></i>
+                                        Baca selengkapnya <i class="fa-regular fa-arrow-alt-circle-right" aria-hidden="true"></i>
                                     </a>
                                 </div>
                             </div>

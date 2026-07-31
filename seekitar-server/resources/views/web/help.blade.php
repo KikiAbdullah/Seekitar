@@ -16,31 +16,31 @@
     @php
         $grupFaq = [
             'Akun & Keamanan' => [
-                ['ti ti-device-mobile', 'Bagaimana cara masuk ke aplikasi?',
+                ['fa-regular fa-comment-dots', 'Bagaimana cara masuk ke aplikasi?',
                  'Masukkan nomor WhatsApp-mu, lalu kami kirim kode OTP 6 digit. Tidak ada kata sandi. Kode berlaku 5 menit dan hanya bisa dipakai sekali.'],
-                ['ti ti-shield-lock', 'Seekitar tidak pernah meminta kode OTP saya, benar?',
+                ['fa-regular fa-circle-check', 'Seekitar tidak pernah meminta kode OTP saya, benar?',
                  'Benar. Siapa pun yang meminta kode OTP-mu — termasuk yang mengaku petugas Seekitar — sedang berusaha mengambil alih akunmu. Jangan pernah membagikannya.'],
-                ['ti ti-user-x', 'Bagaimana menghapus akun dan data saya?',
+                ['fa-regular fa-user-circle', 'Bagaimana menghapus akun dan data saya?',
                  'Kirim permintaan ke ' . config('seekitar.contacts.privacy') . '. Kami menanggapi dalam 3×24 jam. Data transaksi yang sudah selesai tetap disimpan untuk keperluan audit dan sengketa.'],
             ],
             'Pembayaran' => [
-                ['ti ti-cash', 'Bagaimana cara membayar?',
+                ['fa-regular fa-money-bill-1', 'Bagaimana cara membayar?',
                  'Pembayaran langsung antara kamu dan penjual: tunai saat bertemu (COD) atau transfer ke rekening penjual. Seekitar tidak menampung dana dan tidak menyediakan rekening bersama.'],
-                ['ti ti-receipt-refund', 'Bisakah uang saya dikembalikan?',
+                ['fa-regular fa-money-bill-1', 'Bisakah uang saya dikembalikan?',
                  'Karena dana tidak melewati Seekitar, kami tidak dapat mengembalikannya secara otomatis. Bila barang atau jasa tidak sesuai, buka pesanan lalu pilih Laporkan Masalah. Pesanan akan dibekukan dan admin menengahi dalam 1×24 jam.'],
             ],
             'Permintaan & Penawaran' => [
-                ['ti ti-broadcast', 'Apa itu "Pasang Kebutuhan"?',
+                ['fa-regular fa-bell', 'Apa itu "Pasang Kebutuhan"?',
                  'Kalau barang atau jasa yang kamu cari belum ada di katalog, tulis saja kebutuhanmu. Permintaan itu disiarkan ke penyedia terdekat yang kategorinya cocok, lalu mereka mengirim penawaran.'],
-                ['ti ti-radar-2', 'Kenapa permintaan saya tidak dilihat penyedia jauh?',
+                ['fa-regular fa-map', 'Kenapa permintaan saya tidak dilihat penyedia jauh?',
                  'Pencocokan berlaku dua arah: penyedia harus berada dalam radius yang kamu pilih, dan kamu harus berada dalam radius layanan mereka. Warung dengan jangkauan 5 km tidak menerima permintaan dari 12 km.'],
-                ['ti ti-eye-off', 'Kapan nomor telepon saya terlihat penjual?',
+                ['fa-regular fa-eye-slash', 'Kapan nomor telepon saya terlihat penjual?',
                  'Sebelum penawaran diterima, penyedia hanya melihat namamu yang disingkat dan lokasi yang dibulatkan. Nomor dan alamat lengkap baru terbuka setelah pesanan terbentuk.'],
             ],
             'Verifikasi & Ulasan' => [
-                ['ti ti-id', 'Kenapa harus unggah KTP untuk membuka toko?',
+                ['fa-regular fa-id-card', 'Kenapa harus unggah KTP untuk membuka toko?',
                  'Agar setiap penjual punya jejak identitas yang bisa dipertanggungjawabkan. Foto KTP disimpan pada penyimpanan privat dan tidak pernah ditampilkan ke pengguna lain.'],
-                ['ti ti-star', 'Berapa lama saya bisa memberi ulasan?',
+                ['fa-regular fa-star', 'Berapa lama saya bisa memberi ulasan?',
                  '7 hari setelah pesanan berstatus selesai. Ulasan tidak dapat diubah setelah dikirim.'],
             ],
         ];

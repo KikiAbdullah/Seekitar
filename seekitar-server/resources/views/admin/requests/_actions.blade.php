@@ -1,6 +1,6 @@
 @can('manage-requests')
     <a href="{{ route('admin.requests.show', $request) }}" class="btn btn-sm btn-outline-primary">
-        <i class="ti ti-eye me-1" aria-hidden="true"></i> Lihat
+        <i class="fa-regular fa-eye me-1" aria-hidden="true"></i> Lihat
     </a>
 
     @if ($request->status !== \App\Enums\RequestStatus::Closed)
@@ -8,7 +8,7 @@
             @csrf
             <button type="submit" class="btn btn-sm btn-outline-secondary"
                     data-seekitar-confirm="Tenggat permintaan diperpanjang 24 jam.">
-                <i class="ti ti-history me-1" aria-hidden="true"></i> Perpanjang
+                <i class="fa-regular fa-clock me-1" aria-hidden="true"></i> Perpanjang
             </button>
         </form>
     @endif

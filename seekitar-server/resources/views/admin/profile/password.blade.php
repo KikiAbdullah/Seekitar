@@ -31,7 +31,7 @@
                 <div class="card-body">
 
                     <div class="alert alert-warning py-2 small" role="alert">
-                        <i class="ti ti-alert-triangle me-1" aria-hidden="true"></i>
+                        <i class="fa-regular fa-circle-xmark me-1" aria-hidden="true"></i>
                         Setelah berhasil, <strong>semua sesi di perangkat lain dikeluarkan</strong>
                         dan token aplikasi dicabut. Sesi di perangkat ini tetap berjalan.
                     </div>

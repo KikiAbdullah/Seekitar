@@ -56,7 +56,7 @@
                                 @include('admin.partials._cek_terverifikasi', ['user' => $user])
                             </div>
                             <div class="text-muted fs-3">
-                                <i class="ti ti-device-mobile me-1" aria-hidden="true"></i>{{ $user->phone }}
+                                <i class="fa-regular fa-comment-dots me-1" aria-hidden="true"></i>{{ $user->phone }}
                             </div>
                         </div>
                         @include('admin.users._status', ['user' => $user])
@@ -85,7 +85,7 @@
                             <label for="phone" class="form-label fw-semibold">Nomor WhatsApp</label>
                             <div class="input-group">
                                 <span class="input-group-text bg-light" aria-hidden="true">
-                                    <i class="ti ti-lock" aria-hidden="true"></i>
+                                    <i class="fa-regular fa-circle-stop" aria-hidden="true"></i>
                                 </span>
                                 <input type="text" id="phone" class="form-control" value="{{ $user->phone }}" readonly aria-describedby="phoneHelp">
                             </div>
@@ -174,7 +174,7 @@
                                 <div class="col-sm-auto">
                                     <button type="button" class="btn btn-outline-danger" data-hapus-titik
                                             title="Kosongkan titik domisili">
-                                        <i class="ti ti-map-pin-off" aria-hidden="true"></i>
+                                        <i class="fa-regular fa-map" aria-hidden="true"></i>
                                         Hapus Titik
                                     </button>
                                 </div>
@@ -270,7 +270,7 @@
 
                 <div class="d-flex align-items-center gap-2 mb-4">
                     <button type="submit" class="btn btn-seekitar">
-                        <i class="ti ti-device-floppy me-1" aria-hidden="true"></i> Simpan Perubahan
+                        <i class="fa-regular fa-floppy-disk me-1" aria-hidden="true"></i> Simpan Perubahan
                     </button>
                     <a href="{{ route('admin.users.show', $user) }}" class="btn btn-outline-dark">Batal</a>
                 </div>
@@ -314,20 +314,20 @@
                             <div class="text-muted fs-3 mb-1">IDENTITAS (KEPUTUSAN ADMIN)</div>
                             @if ($user->verified_at)
                                 <span class="fs-3">
-                                    <i class="ti ti-circle-check text-success" aria-hidden="true"></i>
+                                    <i class="fa-regular fa-circle-check text-success" aria-hidden="true"></i>
                                     Disetujui {{ $user->verified_at->translatedFormat('d M Y H:i') }}
                                     <span class="text-muted">oleh {{ $user->verifiedBy?->name ?? '—' }}</span>
                                 </span>
                             @elseif ($user->rejected_at)
                                 <span class="fs-3">
-                                    <i class="ti ti-circle-x text-danger" aria-hidden="true"></i>
+                                    <i class="fa-regular fa-circle-xmark text-danger" aria-hidden="true"></i>
                                     Ditolak {{ $user->rejected_at->translatedFormat('d M Y H:i') }}
                                     <span class="text-muted">oleh {{ $user->rejectedBy?->name ?? '—' }}</span>
                                 </span>
                                 <div class="text-danger fs-2 mt-1">{{ $user->rejected_reason }}</div>
                             @elseif ($user->ktp_submitted_at)
                                 <span class="fs-3 text-muted">
-                                    <i class="ti ti-clock-hour-4 text-warning" aria-hidden="true"></i>
+                                    <i class="fa-regular fa-clock text-warning" aria-hidden="true"></i>
                                     Menunggu tinjauan — berkas masuk {{ $user->ktp_submitted_at->translatedFormat('d M Y H:i') }}
                                 </span>
                             @else
@@ -338,7 +338,7 @@
                             <li class="list-group-item">
                                 <div class="text-muted fs-3 mb-1">BLOKIR</div>
                                 <span class="fs-3">
-                                    <i class="ti ti-ban text-dark" aria-hidden="true"></i>
+                                    <i class="fa-regular fa-circle-stop text-dark" aria-hidden="true"></i>
                                     {{ $user->blocked_at?->translatedFormat('d M Y H:i') }}
                                     <span class="text-muted">oleh {{ $user->blockedBy?->name ?? '—' }}</span>
                                 </span>

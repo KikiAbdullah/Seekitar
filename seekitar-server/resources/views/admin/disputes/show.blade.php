@@ -30,7 +30,7 @@
         <div class="card bg-light-danger shadow-none border-0 mb-4">
             <div class="card-body py-3 px-4">
                 <div class="d-flex align-items-start gap-3">
-                    <i class="ti ti-alert-circle fs-6 text-danger mt-1" aria-hidden="true"></i>
+                    <i class="fa-regular fa-circle-question fs-6 text-danger mt-1" aria-hidden="true"></i>
                     <p class="mb-0 fs-3">
                         <strong>SLA respons sudah terlewat</strong> — batasnya
                         {{ $dispute->response_deadline?->format('d M Y H:i') }}. Tangani segera.
@@ -42,7 +42,7 @@
         <div class="card bg-light-warning shadow-none border-0 mb-4">
             <div class="card-body py-3 px-4">
                 <div class="d-flex align-items-start gap-3">
-                    <i class="ti ti-clock fs-6 text-warning mt-1" aria-hidden="true"></i>
+                    <i class="fa-regular fa-clock fs-6 text-warning mt-1" aria-hidden="true"></i>
                     <p class="mb-0 fs-3">
                         Laporan terbuka — batas respons sampai
                         <strong>{{ $dispute->response_deadline?->format('d M Y H:i') }}</strong>.
@@ -127,7 +127,7 @@
                     @can('manage-orders')
                         <a href="{{ route('admin.orders.show', $dispute->order) }}"
                            class="btn btn-sm btn-outline-primary">
-                            <i class="ti ti-eye" aria-hidden="true"></i> Detail Pesanan
+                            <i class="fa-regular fa-eye" aria-hidden="true"></i> Detail Pesanan
                         </a>
                     @endcan
                 </div>
@@ -190,7 +190,7 @@
                         {{-- Hasil diturunkan dari status pesanan: transisi
                              final pesanan adalah keputusan dispute-nya. --}}
                         <div class="d-flex align-items-center gap-2 mb-3">
-                            <i class="ti ti-circle-check fs-6 text-success" aria-hidden="true"></i>
+                            <i class="fa-regular fa-circle-check fs-6 text-success" aria-hidden="true"></i>
                             <div>
                                 <div class="fw-semibold">Sudah diselesaikan</div>
                                 <div class="text-muted fs-2">

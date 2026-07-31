@@ -121,13 +121,13 @@
                         <a class="btn btn-sm btn-outline-primary"
                            href="https://www.google.com/maps/search/?api=1&query={{ $user->latitude }},{{ $user->longitude }}"
                            target="_blank" rel="noopener">
-                            <i class="ti ti-map-pin" aria-hidden="true"></i>
+                            <i class="fa-regular fa-map" aria-hidden="true"></i>
                             Cek Titik di Google Maps
                         </a>
                         <a class="btn btn-sm btn-outline-secondary"
                            href="https://www.google.com/maps/search/?api=1&query={{ rawurlencode(trim(($user->address ?? '').' '.config('seekitar.regency'))) }}"
                            target="_blank" rel="noopener">
-                            <i class="ti ti-map-search" aria-hidden="true"></i>
+                            <i class="fa-regular fa-compass" aria-hidden="true"></i>
                             Cari Alamatnya
                         </a>
                     </div>
@@ -212,7 +212,7 @@
                         <button type="submit" class="btn btn-success" disabled
                                 data-tombol-verifikasi
                                 title="Centang seluruh konfirmasi pemeriksaan dulu">
-                            <i class="ti ti-circle-check" aria-hidden="true"></i>
+                            <i class="fa-regular fa-circle-check" aria-hidden="true"></i>
                             Setujui Identitas
                         </button>
                     </form>

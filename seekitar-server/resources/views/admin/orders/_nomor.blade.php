@@ -13,9 +13,9 @@
     <small class="text-muted text-nowrap">
         {{ $order->order_type?->label() }} · × {{ $order->quantity }} ·
         @if ($order->delivery_method === \App\Enums\DeliveryMethod::Delivery)
-            <i class="ti ti-truck-delivery" aria-hidden="true"></i> diantar
+            <i class="fa-regular fa-paper-plane" aria-hidden="true"></i> diantar
         @else
-            <i class="ti ti-shopping-bag" aria-hidden="true"></i> ambil sendiri
+            <i class="fa-regular fa-credit-card" aria-hidden="true"></i> ambil sendiri
         @endif
     </small>
 </span>

@@ -27,7 +27,7 @@
                 <p style="color: var(--teks-secondary); font-size: 13px;">Terakhir diperbarui: 30 Juli 2026</p>
 
                 <div class="alert alert-warning">
-                    <i class="ti ti-info-circle me-1" aria-hidden="true"></i>
+                    <i class="fa-regular fa-circle-question me-1" aria-hidden="true"></i>
                     Dengan membuat akun atau memakai layanan Seekitar, kamu menyetujui
                     seluruh ketentuan di bawah ini.
                 </div>
@@ -56,7 +56,7 @@
                     menampung dana dan tidak menyediakan rekening bersama.
                 </p>
                 <div class="alert alert-warning">
-                    <i class="ti ti-alert-triangle me-1" aria-hidden="true"></i>
+                    <i class="fa-regular fa-circle-xmark me-1" aria-hidden="true"></i>
                     Karena dana tidak melewati Seekitar, kami <strong>tidak dapat
                     mengembalikan uang</strong> secara otomatis. Bila terjadi masalah,
                     laporkan lewat fitur Laporkan Masalah agar kami dapat menengahi.

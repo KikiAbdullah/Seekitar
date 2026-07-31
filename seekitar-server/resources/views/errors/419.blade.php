@@ -15,7 +15,7 @@
                 </p>
                 <div class="d-flex flex-wrap justify-content-center gap-2">
                     <a href="{{ url()->current() }}" class="btn btn-seekitar btn-lg px-4">
-                        <i class="ti ti-refresh me-1" aria-hidden="true"></i> Muat Ulang
+                        <i class="fa-regular fa-arrow-alt-circle-right me-1" aria-hidden="true"></i> Muat Ulang
                     </a>
                     <a href="{{ route('web.home') }}" class="btn btn-outline-dark btn-lg px-4">
                         Ke Beranda

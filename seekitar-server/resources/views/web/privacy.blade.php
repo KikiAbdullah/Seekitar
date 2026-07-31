@@ -28,7 +28,7 @@
                 <p style="color: var(--teks-secondary); font-size: 13px;">Terakhir diperbarui: 30 Juli 2026</p>
 
                 <div class="alert alert-info">
-                    <i class="ti ti-shield-lock me-1" aria-hidden="true"></i>
+                    <i class="fa-regular fa-circle-check me-1" aria-hidden="true"></i>
                     Dokumen ini menjelaskan pemrosesan data pribadi menurut
                     <strong>UU No. 27 Tahun 2022 tentang Pelindungan Data Pribadi</strong>.
                     Dengan memakai Seekitar, kamu menyetujui ketentuan di bawah ini.

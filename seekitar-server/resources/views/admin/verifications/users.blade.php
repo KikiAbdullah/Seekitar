@@ -25,7 +25,7 @@
     <div class="card bg-light-warning shadow-none border-0 mb-4">
         <div class="card-body py-3 px-4">
             <div class="d-flex align-items-start gap-3">
-                <i class="ti ti-clock-hour-4 fs-6 text-warning mt-1" aria-hidden="true"></i>
+                <i class="fa-regular fa-clock fs-6 text-warning mt-1" aria-hidden="true"></i>
                 <p class="mb-0 fs-3">
                     SLA peninjauan <strong>1&times;24 jam</strong> — diurutkan dari pengajuan terlama.
                     <strong>Klik baris</strong> untuk membuka berkas: nilai wajah, KTP, alamat, dan
@@ -127,7 +127,7 @@
                 @empty
                     <tr>
                         <td colspan="4" class="text-center text-muted py-5">
-                            <i class="ti ti-circle-check fs-7 d-block mb-2 opacity-25" aria-hidden="true"></i>
+                            <i class="fa-regular fa-circle-check fs-7 d-block mb-2 opacity-25" aria-hidden="true"></i>
                             Tidak ada pengajuan menunggu.
                         </td>
                     </tr>

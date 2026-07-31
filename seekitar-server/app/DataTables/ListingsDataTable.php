@@ -52,7 +52,7 @@ class ListingsDataTable
             ->editColumn('price', fn (Listing $l) => $l->price === null
                 ? '—' : 'Rp '.number_format((float) $l->price, 0, ',', '.'))
             ->editColumn('favorites_count', fn (Listing $l) => '<span class="d-inline-flex align-items-center text-nowrap">'
-                .'<i class="ti ti-heart-filled text-danger me-1" aria-hidden="true"></i>'
+                .'<i class="fa-regular fa-heart text-danger me-1" aria-hidden="true"></i>'
                 .number_format((int) $l->favorites_count, 0, ',', '.').'</span>')
             ->editColumn('created_at', fn (Listing $l) => $l->created_at?->format('d M Y'))
             ->addColumn('action', fn (Listing $l) => view('admin.listings._actions', ['listing' => $l])->render())

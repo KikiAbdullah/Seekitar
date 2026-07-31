@@ -32,7 +32,7 @@
          membuat admin membuka halaman ini. --}}
     @if ($store->status === \App\Enums\StoreStatus::Blocked)
         <div class="alert alert-danger d-flex align-items-start gap-3" role="alert">
-            <i class="ti ti-ban fs-6 mt-1" aria-hidden="true"></i>
+            <i class="fa-regular fa-circle-stop fs-6 mt-1" aria-hidden="true"></i>
             <div>
                 <div class="fw-semibold">Toko ini diblokir bersama pemiliknya</div>
                 <div class="fs-3 mb-0">
@@ -46,7 +46,7 @@
         </div>
     @elseif ($store->status === \App\Enums\StoreStatus::Rejected)
         <div class="alert alert-warning d-flex align-items-start gap-3" role="alert">
-            <i class="ti ti-alert-triangle fs-6 mt-1" aria-hidden="true"></i>
+            <i class="fa-regular fa-circle-xmark fs-6 mt-1" aria-hidden="true"></i>
             <div>
                 <div class="fw-semibold">Pengajuan toko ini ditolak</div>
                 <div class="fs-3 mb-0">
@@ -73,7 +73,7 @@
                 @else
                     <div class="bg-light-primary text-primary d-flex align-items-center justify-content-center"
                          style="height: 160px;" aria-hidden="true">
-                        <i class="ti ti-building-store fs-10" aria-hidden="true"></i>
+                        <i class="fa-regular fa-building fs-10" aria-hidden="true"></i>
                     </div>
                 @endif
 
@@ -308,7 +308,7 @@
                     <a class="btn btn-sm btn-outline-primary"
                        href="https://www.google.com/maps/search/?api=1&query={{ (float) $store->latitude }},{{ (float) $store->longitude }}"
                        target="_blank" rel="noopener">
-                        <i class="ti ti-map-pin" aria-hidden="true"></i> Google Maps
+                        <i class="fa-regular fa-map" aria-hidden="true"></i> Google Maps
                     </a>
                 </div>
                 <div class="card-body">
@@ -347,7 +347,7 @@
             // sekaligus dengan letak tokonya.
             L.circle([lat, lng], {
                 radius: radius * 1000,
-                color: '#5d87ff',
+                color: '#168A4A',
                 weight: 1,
                 fillOpacity: 0.06,
             }).addTo(peta);

@@ -46,7 +46,7 @@
             <div class="d-flex align-items-center gap-2">
                 @isset($exportRoute)
                     <a href="{{ route($exportRoute) }}" class="btn btn-sm btn-outline-success" target="_blank">
-                        <i class="ti ti-download me-1" aria-hidden="true"></i> Export CSV
+                        <i class="fa-regular fa-arrow-alt-circle-down me-1" aria-hidden="true"></i> Export CSV
                     </a>
                 @endisset
 
