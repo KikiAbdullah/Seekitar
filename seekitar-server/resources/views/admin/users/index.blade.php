@@ -90,7 +90,7 @@
           </div>
         </div>
         <div class="table-responsive">
-          <table class="table table-sm table-bordered align-middle text-nowrap" id="users-table" style="width: 100%;">
+          <table class="table table-sm table-sm table-bordered align-middle text-nowrap table-hover" id="users-table" style="width: 100%;">
             <thead>
               <tr>
                 <th>Nama Pengguna</th>
@@ -103,6 +103,21 @@
               </tr>
             </thead>
           </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Detail Pengguna -->
+  <div class="modal fade" id="userDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Detail Pengguna</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="user-detail-content">Memuat...</div>
         </div>
       </div>
     </div>
@@ -183,12 +198,23 @@
           
           // Update URL dan tampilkan tombol aksi
           var baseUrl = "{{ url('admin/users') }}";
-          $('#action-show').attr('href', baseUrl + '/' + selectedRow.id);
+          $('#action-show').attr('data-id', selectedRow.id).attr('href', '#');
+          $('#action-show').off('click').on('click', function(e) {
+            e.preventDefault();
+            var id = $(this).attr('data-id');
+            $('#userDetailModal').modal('show');
+            $('#user-detail-content').html('<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>');
+            $.get("{{ url('admin/users') }}/" + id, function(data){
+              $('#user-detail-content').html('<p><strong>Nama:</strong> ' + selectedRow.name + '</p><p><strong>HP:</strong> ' + selectedRow.phone + '</p><p><strong>Email:</strong> ' + (selectedRow.email || '-') + '</p>');
+            });
+          });
           @can('manage-users')
           $('#action-edit').attr('href', baseUrl + '/' + selectedRow.id + '/edit');
-          // Untuk aksi blokir, kita mungkin perlu form POST, jadi untuk sementara
-          // linknya bisa diatur atau di-handle dengan JS lebih lanjut.
-          $('#action-block').attr('href', baseUrl + '/' + selectedRow.id + '/block'); // Contoh
+          $('#action-block').attr('data-id', selectedRow.id).attr('href', '#');
+          $('#action-block').off('click').on('click', function(e) {
+            e.preventDefault();
+            alert('Blokir pengguna ID: ' + $(this).attr('data-id'));
+          });
           @endcan
           
           $('#table-actions').removeClass('d-none');

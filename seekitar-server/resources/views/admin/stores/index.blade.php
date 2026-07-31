@@ -90,7 +90,7 @@
           </div>
         </div>
         <div class="table-responsive">
-          <table class="table table-sm table-bordered align-middle text-nowrap" id="stores-table" style="width: 100%;">
+          <table class="table table-sm table-sm table-bordered align-middle text-nowrap" id="stores-table" style="width: 100%;">
             <thead>
               <tr>
                 <th>Nama Toko</th>

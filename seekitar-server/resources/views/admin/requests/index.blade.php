@@ -40,7 +40,7 @@
           </div>
           
           <div class="table-responsive">
-            <table class="table table-striped table-bordered align-middle text-nowrap" id="requests-table" style="width: 100%;">
+            <table class="table table-striped table-sm table-bordered align-middle text-nowrap" id="requests-table" style="width: 100%;">
               <thead>
                 <tr>
                   <th>Judul Permintaan</th>
