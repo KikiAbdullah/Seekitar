@@ -199,19 +199,6 @@
       opacity: .55;
       pointer-events: none;
     }
-    .page-hero::after {
-      content: "";
-      position: absolute;
-      width: 520px;
-      height: 520px;
-      bottom: -200px;
-      left: -160px;
-      border-radius: 50%;
-      background: radial-gradient(circle, #fbeecd, transparent 70%);
-      filter: blur(80px);
-      opacity: .55;
-      pointer-events: none;
-    }
     .page-hero .container {
       position: relative;
       z-index: 1;
