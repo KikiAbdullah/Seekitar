@@ -19,8 +19,8 @@
   <meta property="og:image" content="@yield('og_image', asset('img/web/og.jpg'))">
   <meta name="twitter:card" content="summary_large_image">
 
-  <link rel="shortcut icon" type="image/png" href="{{ asset('vendor/mordenize-lp/images/logos/favicon.ico') }}">
-  <link rel="apple-touch-icon" href="{{ asset('vendor/mordenize-lp/images/logos/favicon.ico') }}">
+  <link rel="shortcut icon" type="image/png" href="{{ asset('img/brand/logo-mark.png') }}">
+  <link rel="apple-touch-icon" href="{{ asset('img/brand/logo-mark.png') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet"
@@ -38,7 +38,7 @@
       <nav class="navbar navbar-expand-lg py-0">
         <div class="container">
           <a class="navbar-brand me-0 py-0" href="{{ route('web.home') }}">
-            <img src="{{ asset('vendor/mordenize-lp/images/logos/logo-dark.svg') }}" alt="Seekitar">
+            <img src="{{ asset('img/brand/logo-lockup.png') }}" alt="Seekitar" width="150" height="36">
           </a>
           <button class="navbar-toggler border-0 p-0 shadow-none" type="button" data-bs-toggle="offcanvas"
             data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar">
@@ -94,8 +94,8 @@
           <div class="col-lg-4">
             <div class="text-center text-lg-start">
               <a href="{{ route('web.home') }}">
-                <img src="{{ asset('vendor/mordenize-lp/images/logos/favicon.ico') }}" alt="Seekitar"
-                  class="img-fluid pb-3">
+              <img src="{{ asset('img/brand/logo-mark.png') }}" alt="Seekitar"
+                class="img-fluid pb-3" width="48" height="48">
               </a>
               <p class="mb-1 text-dark">
                 {{ config('seekitar.company.name') }} — pasar lokal
@@ -173,8 +173,8 @@
     <div class="offcanvas offcanvas-start modernize-lp-offcanvas" tabindex="-1" id="offcanvasNavbar"
       aria-labelledby="offcanvasNavbarLabel">
       <div class="offcanvas-header p-4">
-        <img src="{{ asset('vendor/mordenize-lp/images/logos/logo-dark.svg') }}" alt="Seekitar" class="img-fluid"
-          width="150">
+        <img src="{{ asset('img/brand/logo-lockup.png') }}" alt="Seekitar" class="img-fluid"
+          width="150" height="36">
       </div>
       <div class="offcanvas-body p-4">
         <ul class="navbar-nav justify-content-end flex-grow-1">
