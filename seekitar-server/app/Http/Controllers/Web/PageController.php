@@ -198,7 +198,6 @@ class PageController extends Controller
             'category' => ['required', Rule::in(['umum', 'abuse', 'privacy', 'security'])],
             'message' => ['required', 'string', 'max:5000'],
         ]);
-        //         // dd($request->all(), $request->hasSession(), $request->session()->token(), $request->input('_token'));
 
         ContactMessage::create($data);
 
@@ -261,7 +260,7 @@ class PageController extends Controller
             'storage' => $this->checkStorage(),
             'notifications' => $this->checkNotifications(),
         ];
-        $healthy = !collect($checks)->contains('ok', false); // null is not false, so not unhealthy
+        $healthy = !collect($checks)->containsStrict('ok', false); // null is not false, so not unhealthy
         return view('web.status', [
             'checks' => $checks,
             'healthy' => $healthy,
