@@ -5,17 +5,17 @@
 @section('content')
   <div class="row">
     <div class="col-12">
-      <div class="card w-100 shadow-sm">
-        <div class="card-body">
+      <div class="card w-100 shadow-sm border-0">
+        <div class="card-body p-4">
           <div class="d-md-flex align-items-center justify-content-between mb-4">
             <div>
-              <h4 class="card-title">Antrian Verifikasi Toko</h4>
-              <p class="card-subtitle">Daftar toko baru yang mengajukan verifikasi operasional. Hanya menampilkan toko yang identitas pemiliknya sudah terverifikasi.</p>
+              <h4 class="card-title mb-1">Antrian Verifikasi Toko</h4>
+              <p class="card-subtitle text-muted mb-0">Daftar toko baru yang mengajukan verifikasi operasional. Hanya menampilkan toko yang identitas pemiliknya sudah terverifikasi.</p>
             </div>
           </div>
 
           <div class="table-responsive">
-            <table class="table table-striped table-bordered align-middle text-nowrap" style="width: 100%;">
+            <table class="table table-hover table-bordered align-middle text-nowrap" style="width: 100%;">
               <thead>
                 <tr class="text-muted fw-semibold">
                   <th scope="col">Nama Toko</th>
@@ -167,8 +167,13 @@
                 @empty
                   <tr>
                     <td colspan="4" class="p-5 text-center text-muted">
-                      <i class="ti ti-circle-check text-success fs-9 mb-3 d-block"></i>
-                      <p class="mb-0 fs-4">Antrian kosong! Tidak ada toko baru yang menunggu verifikasi.</p>
+                      <div class="mb-3">
+                        <span class="rounded-circle bg-success bg-opacity-10 text-success d-inline-flex align-items-center justify-content-center" style="width:72px;height:72px;">
+                          <i class="ti ti-check fs-4"></i>
+                        </span>
+                      </div>
+                      <h5 class="fw-semibold text-dark mb-1">Antrian Kosong</h5>
+                      <p class="mb-0 text-muted">Tidak ada toko baru yang menunggu verifikasi.</p>
                     </td>
                   </tr>
                 @endforelse
