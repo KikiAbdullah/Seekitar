@@ -30,6 +30,10 @@ Route::name('web.')->group(function (): void {
     Route::get('/tentang', [PageController::class, 'about'])->name('about');
     Route::get('/bantuan', [PageController::class, 'help'])->name('help');
     Route::get('/kontak', [PageController::class, 'contact'])->name('contact');
+    Route::post('/kontak', [PageController::class, 'contactStore'])->name('contact.store');
+
+    // --- Katalog publik -----------------------------------------------------
+    Route::get('/cari', [PageController::class, 'listings'])->name('listings');
 
     // --- Halaman legal (wajib) -------------------------------------------
     Route::get('/kebijakan-privasi', [PageController::class, 'privacy'])->name('privacy');

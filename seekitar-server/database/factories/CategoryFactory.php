@@ -28,7 +28,7 @@ class CategoryFactory extends Factory
             // mengulang kombinasi yang sama pada jumlah besar.
             'slug'       => Str::slug($nama).'-'.Str::lower(Str::random(4)),
             'parent_id'  => null,
-            'icon'       => 'squares-2x2',
+            'icon'       => 'stack-2',
             'sort_order' => fake()->numberBetween(0, 99),
         ];
     }
