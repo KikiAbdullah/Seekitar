@@ -68,7 +68,6 @@ final appRouter = GoRouter(
     GoRoute(path: '/settings', builder: (_, __) => const FullSettingsScreen()),
     GoRoute(path: '/about', builder: (_, __) => const AboutScreen()),
     GoRoute(path: '/help-legal', builder: (_, __) => const HelpLegalScreen()),
-    GoRoute(path: '/legal-webview', builder: (_, s) => LegalWebViewAdapter(extra: s.extra as Map<String,dynamic>)),
   ],
 );
 

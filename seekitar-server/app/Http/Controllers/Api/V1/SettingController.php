@@ -32,9 +32,14 @@ class SettingController extends Controller
             'regency'                 => config('seekitar.regency'),
             'regency_code'            => config('seekitar.regency_code'),
             'company_name'            => config('seekitar.company.name'),
+            'company_address'         => config('seekitar.company.address'),
             'play_store_url'          => config('seekitar.play_store_url'),
             'whatsapp'                => config('seekitar.contacts.whatsapp'),
             'email_complaint'         => config('seekitar.contacts.complaint'),
+            'email_abuse'             => config('seekitar.contacts.abuse'),
+            'email_privacy'           => config('seekitar.contacts.privacy'),
+            'email_security'          => config('seekitar.contacts.security'),
+            'pse_registration_number' => config('seekitar.pse.registration_number'),
         ]);
     }
 }
