@@ -9,7 +9,7 @@
     'kicker'    => 'Pusat Bantuan',
     'judul'     => 'Pertanyaan yang sering diajukan',
     'subjudul'  => 'Belum menemukan jawaban? Hubungi kanal pengaduan kami — setiap laporan ditinjau oleh tim manusia.',
-    'gambar'    => asset('img/web/bantuan.webp'),
+    'gambar'    => asset('img/web/bantuan-baru.jpg'),
     'gambarAlt' => 'Ilustrasi pusat bantuan Seekitar',
   ])
 

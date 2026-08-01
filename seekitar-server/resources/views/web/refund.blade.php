@@ -9,6 +9,8 @@
     'kicker'   => 'Legal',
     'judul'    => 'Kebijakan Pengembalian & Sengketa',
     'subjudul' => 'Mekanisme penyelesaian masalah transaksi antara pembeli dan penjual.',
+    'gambar'   => asset('img/web/legal-baru.jpg'),
+    'gambarAlt' => 'Ilustrasi kebijakan pengembalian Seekitar',
   ])
 
   <section class="py-8 py-lg-11">

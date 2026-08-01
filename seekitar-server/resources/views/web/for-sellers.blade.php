@@ -9,7 +9,7 @@
     'kicker'   => 'Gratis · Tanpa Komisi',
     'judul'    => 'Buka toko, jangkau tetangga',
     'subjudul' => 'Daftarkan usahamu dan dapatkan pelanggan baru dari warga sekitar ' . config('seekitar.regency') . ' — gratis, tanpa potongan apa pun.',
-    'gambar'   => asset('img/web/penyedia.webp'),
+    'gambar'   => asset('img/web/penyedia-baru.jpg'),
     'gambarAlt' => 'Ilustrasi penjual dan penyedia jasa di pasar lokal Seekitar',
   ])
 

@@ -151,7 +151,7 @@
         </div>
         <div class="col-lg-6" data-aos="fade-left" data-aos-duration="1000" data-aos-delay="150">
           <div class="hero-figure ms-lg-4">
-            <img src="{{ asset('img/web/hero.webp') }}" class="hero-img" alt="Pasar lokal Seekitar di sekitar Anda" fetchpriority="high" decoding="async">
+            <img src="{{ asset('img/web/hero-baru.jpg') }}" class="hero-img" alt="Pasar lokal Seekitar di sekitar Anda" fetchpriority="high" decoding="async">
             <div class="hero-badge badge-top">
               <span class="badge-icon bg-primary-subtle text-primary"><i class="ti ti-shield-check"></i></span>
               <div>
@@ -238,7 +238,7 @@
         <div class="col-md-4" data-aos="fade-up" data-aos-delay="100" data-aos-duration="1000">
           <div class="card service-card card-lift border-0 shadow-sm h-100 overflow-hidden position-relative">
             <div class="service-thumb position-relative">
-              <img src="{{ asset('img/web/layanan-barang.webp') }}" alt="Jual beli barang" loading="lazy">
+              <img src="{{ asset('img/web/layanan-barang-baru.jpg') }}" alt="Jual beli barang" loading="lazy">
               <span class="service-icon position-absolute"><i class="ti ti-shopping-bag"></i></span>
             </div>
             <div class="card-body p-4">
@@ -253,7 +253,7 @@
         <div class="col-md-4" data-aos="fade-up" data-aos-delay="250" data-aos-duration="1000">
           <div class="card service-card card-lift border-0 shadow-sm h-100 overflow-hidden position-relative">
             <div class="service-thumb position-relative">
-              <img src="{{ asset('img/web/layanan-jasa.webp') }}" alt="Jasa rumah dan bengkel" loading="lazy">
+              <img src="{{ asset('img/web/layanan-jasa-baru.jpg') }}" alt="Jasa rumah dan bengkel" loading="lazy">
               <span class="service-icon position-absolute"><i class="ti ti-tool"></i></span>
             </div>
             <div class="card-body p-4">
@@ -268,7 +268,7 @@
         <div class="col-md-4" data-aos="fade-up" data-aos-delay="400" data-aos-duration="1000">
           <div class="card service-card card-lift border-0 shadow-sm h-100 overflow-hidden position-relative">
             <div class="service-thumb position-relative">
-              <img src="{{ asset('img/web/layanan-sewa.webp') }}" alt="Sewa tenda dan peralatan" loading="lazy">
+              <img src="{{ asset('img/web/layanan-sewa-baru.jpg') }}" alt="Sewa tenda dan peralatan" loading="lazy">
               <span class="service-icon position-absolute"><i class="ti ti-calendar-month"></i></span>
             </div>
             <div class="card-body p-4">
@@ -371,7 +371,7 @@
         <div class="col-lg-6" data-aos="fade-up" data-aos-delay="100" data-aos-duration="1000">
           <div class="card side-card card-lift border-0 shadow-sm h-100 overflow-hidden">
             <div class="side-thumb">
-              <img src="{{ asset('img/web/pencari.webp') }}" alt="Untuk pembeli dan pencari kebutuhan" loading="lazy">
+              <img src="{{ asset('img/web/pencari-baru.jpg') }}" alt="Untuk pembeli dan pencari kebutuhan" loading="lazy">
             </div>
             <div class="card-body p-4 p-lg-5">
               <h4 class="fs-6 fw-bold mb-3">Untuk Pembeli</h4>
@@ -400,7 +400,7 @@
         <div class="col-lg-6" data-aos="fade-up" data-aos-delay="250" data-aos-duration="1000">
           <div class="card side-card card-lift border-0 shadow-sm h-100 overflow-hidden">
             <div class="side-thumb">
-              <img src="{{ asset('img/web/penyedia.webp') }}" alt="Untuk penjual dan penyedia jasa" loading="lazy">
+              <img src="{{ asset('img/web/penyedia-baru.jpg') }}" alt="Untuk penjual dan penyedia jasa" loading="lazy">
             </div>
             <div class="card-body p-4 p-lg-5">
               <h4 class="fs-6 fw-bold mb-3">Untuk Penjual</h4>

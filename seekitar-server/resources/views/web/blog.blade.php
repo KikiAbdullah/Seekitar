@@ -45,8 +45,8 @@
     'kicker'   => 'Blog',
     'judul'    => 'Cerita dari pasar sekitar',
     'subjudul' => 'Tips, panduan, dan cerita seputar belanja dan jualan di sekitar ' . config('seekitar.regency') . '.',
-    'gambar'   => asset('img/web/tentang.webp'),
-    'gambarAlt' => 'Ilustrasi blog Seekitar',
+    'gambar'   => asset('img/web/blog-baru.jpg'),
+    'gambarAlt' => 'Ilustrasi blog dan artikel Seekitar',
   ])
 
   <section class="pb-8 pb-lg-11">

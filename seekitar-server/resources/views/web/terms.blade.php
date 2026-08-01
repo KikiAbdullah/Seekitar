@@ -9,6 +9,8 @@
     'kicker'   => 'Legal',
     'judul'    => 'Syarat & Ketentuan',
     'subjudul' => 'Berlaku sejak kamu membuat akun Seekitar.',
+    'gambar'   => asset('img/web/legal-baru.jpg'),
+    'gambarAlt' => 'Ilustrasi syarat dan ketentuan Seekitar',
   ])
 
   <section class="py-8 py-lg-11">

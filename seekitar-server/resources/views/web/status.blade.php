@@ -9,6 +9,8 @@
     'kicker'   => 'Status Layanan',
     'judul'    => 'Pemantauan status layanan',
     'subjudul' => 'Halaman ini menyajikan status real-time komponen layanan utama Seekitar.',
+    'gambar'   => asset('img/web/status-baru.jpg'),
+    'gambarAlt' => 'Ilustrasi pemantauan status layanan Seekitar',
   ])
 
   <section class="py-8 py-lg-11">

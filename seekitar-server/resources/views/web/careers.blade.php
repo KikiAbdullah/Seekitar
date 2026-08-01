@@ -9,8 +9,8 @@
     'kicker'   => 'Karier',
     'judul'    => 'Membangun pasar lokal bersama',
     'subjudul' => 'Kami selalu mencari individu bersemangat yang peduli pada pertumbuhan ekonomi komunitas.',
-    'gambar'   => asset('img/web/tentang.webp'),
-    'gambarAlt' => 'Ilustrasi karier di Seekitar',
+    'gambar'   => asset('img/web/karir-baru.jpg'),
+    'gambarAlt' => 'Ilustrasi karier dan tim Seekitar',
   ])
 
   <section class="py-8 py-lg-11">

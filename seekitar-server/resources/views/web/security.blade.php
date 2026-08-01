@@ -9,8 +9,8 @@
     'kicker'    => 'Keamanan',
     'judul'     => 'Pusat Keamanan',
     'subjudul'  => 'Panduan lengkap menjaga keamanan akun dan bertransaksi dengan aman di Seekitar.',
-    'gambar'    => asset('img/web/kontak.webp'),
-    'gambarAlt' => 'Ilustrasi keamanan Seekitar',
+    'gambar'    => asset('img/web/keamanan-baru.jpg'),
+    'gambarAlt' => 'Ilustrasi keamanan akun dan transaksi Seekitar',
   ])
 
   <section class="py-8 py-lg-11">

@@ -9,6 +9,8 @@
     'kicker'   => 'Pedoman',
     'judul'    => 'Pedoman Komunitas',
     'subjudul' => 'Aturan main agar Seekitar tetap aman dan nyaman untuk semua warga.',
+    'gambar'   => asset('img/web/legal-baru.jpg'),
+    'gambarAlt' => 'Ilustrasi pedoman komunitas Seekitar',
   ])
 
   <section class="py-8 py-lg-11">

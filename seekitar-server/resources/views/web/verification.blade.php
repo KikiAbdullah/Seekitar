@@ -9,6 +9,8 @@
     'kicker'   => 'Legal · Verifikasi',
     'judul'    => 'Kebijakan Verifikasi Identitas',
     'subjudul' => 'Proses, tenggat, dan perlindungan data verifikasi toko di Seekitar.',
+    'gambar'   => asset('img/web/verifikasi-baru.jpg'),
+    'gambarAlt' => 'Ilustrasi verifikasi identitas Seekitar',
   ])
 
   <section class="py-8 py-lg-11">

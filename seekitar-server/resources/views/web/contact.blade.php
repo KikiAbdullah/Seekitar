@@ -9,7 +9,7 @@
     'kicker'    => 'Kontak & Pengaduan',
     'judul'     => 'Kami dengar, kami tangani',
     'subjudul'  => 'Setiap kanal punya tenggat tanggapan yang kami patuhi. Semua laporan ditinjau oleh tim manusia — bukan bot.',
-    'gambar'    => asset('img/web/kontak.webp'),
+    'gambar'    => asset('img/web/kontak-baru.jpg'),
     'gambarAlt' => 'Ilustrasi kontak Seekitar',
   ])
 

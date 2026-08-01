@@ -9,7 +9,7 @@
     'kicker'   => 'Tentang Kami',
     'judul'    => 'Pasar lokal dua arah dalam satu kabupaten',
     'subjudul' => 'Seekitar hadir untuk menghidupkan kembali kebiasaan bertransaksi dengan tetangga sendiri.',
-    'gambar'   => asset('img/web/tentang.webp'),
+    'gambar'   => asset('img/web/tentang-baru.jpg'),
     'gambarAlt' => 'Ilustrasi pasar lokal Seekitar',
   ])
 

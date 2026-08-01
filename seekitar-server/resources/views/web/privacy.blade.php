@@ -9,6 +9,8 @@
     'kicker'   => 'Legal · UU PDP',
     'judul'    => 'Kebijakan Privasi',
     'subjudul' => 'Berlaku untuk aplikasi dan situs Seekitar.',
+    'gambar'   => asset('img/web/legal-baru.jpg'),
+    'gambarAlt' => 'Ilustrasi kebijakan privasi Seekitar',
   ])
 
   <section class="py-8 py-lg-11">

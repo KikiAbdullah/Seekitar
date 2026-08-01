@@ -9,6 +9,8 @@
     'kicker'   => 'Informasi Biaya',
     'judul'    => 'Biaya & Harga',
     'subjudul' => 'Transparansi penuh: semua layanan Seekitar saat ini GRATIS tanpa pengecualian.',
+    'gambar'   => asset('img/web/harga-baru.jpg'),
+    'gambarAlt' => 'Ilustrasi biaya gratis Seekitar',
   ])
 
   {{-- ============================ BANNER GRATIS ============================ --}}
