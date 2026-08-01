@@ -178,7 +178,7 @@
           <a href="{{ route('web.listings', ['type' => 'rental']) }}" class="btn btn-sm btn-outline-secondary rounded-pill px-3 {{ ($filters['type'] ?? null) === 'rental' ? 'active' : '' }}">
             📅 Sewa
           </a>
-          @if ($filters['keyword'] || $filters['category'] || $filters['type'])
+          @if (($filters['keyword'] ?? null) || ($filters['category'] ?? null) || ($filters['type'] ?? null))
             <a href="{{ route('web.listings') }}" class="btn btn-sm btn-outline-danger rounded-pill px-3">
               <i class="ti ti-x me-1"></i> Reset
             </a>
@@ -240,14 +240,14 @@
                 </div>
                 <h5 class="fw-semibold mb-2">Tidak ada listing ditemukan</h5>
                 <p class="mb-4 text-muted fs-4">
-                  @if ($filters['keyword'] || $filters['category'] || $filters['type'])
+                  @if (($filters['keyword'] ?? null) || ($filters['category'] ?? null) || ($filters['type'] ?? null))
                     Coba kata kunci atau filter yang berbeda.
                   @else
                     Belum ada listing yang terpasang. Jadilah yang pertama!
                   @endif
                 </p>
                 <div class="d-flex justify-content-center gap-2">
-                  @if ($filters['keyword'] || $filters['category'] || $filters['type'])
+                  @if (($filters['keyword'] ?? null) || ($filters['category'] ?? null) || ($filters['type'] ?? null))
                     <a href="{{ route('web.listings') }}" class="btn btn-outline-primary">Lihat Semua Listing</a>
                   @endif
                   <a href="{{ route('web.for-sellers') }}" class="btn btn-primary btn-hover-shadow">Buka Toko Gratis</a>
