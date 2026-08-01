@@ -155,7 +155,7 @@
   </section>
 
   {{-- ============================ GRID LISTING ============================ --}}
-  <section class="bg-light py-8 py-lg-11" id="hasil">
+  <section class="py-8 py-lg-11" id="hasil">
     <div class="container">
       {{-- Info hasil & quick filter --}}
       <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-5">

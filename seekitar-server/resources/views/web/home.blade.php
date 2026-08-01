@@ -285,7 +285,7 @@
   </section>
 
   {{-- ============================ KATEGORI ============================ --}}
-  <section class="bg-light py-8 py-lg-11" id="kategori">
+  <section class="py-8 py-lg-11" id="kategori">
     <div class="container">
       <div class="row justify-content-center mb-6 mb-lg-9">
         <div class="col-lg-8 col-xxl-6 text-center" data-aos="fade-up" data-aos-duration="1000">
@@ -359,7 +359,7 @@
   </section>
 
   {{-- ============================ DUA SISI PASAR ============================ --}}
-  <section class="bg-light py-8 py-lg-11" id="komunitas">
+  <section class="py-8 py-lg-11" id="komunitas">
     <div class="container">
       <div class="row justify-content-center mb-6 mb-lg-9">
         <div class="col-lg-7 text-center" data-aos="fade-up" data-aos-duration="1000">
@@ -465,7 +465,7 @@
   </section>
 
   {{-- ============================ TESTIMONI ============================ --}}
-  <section class="bg-light py-8 py-lg-11" id="testimoni">
+  <section class="py-8 py-lg-11" id="testimoni">
     <div class="container">
       <div class="row justify-content-center mb-6 mb-lg-9">
         <div class="col-lg-8 text-center" data-aos="fade-up" data-aos-duration="1000">

@@ -89,7 +89,7 @@
   </section>
 
   {{-- ============================ CARA KERJA ============================ --}}
-  <section class="bg-light py-8 py-lg-11" id="cara-kerja">
+  <section class="py-8 py-lg-11" id="cara-kerja">
     <div class="container">
       <div class="row justify-content-center mb-6 mb-lg-9">
         <div class="col-lg-7 text-center" data-aos="fade-up" data-aos-duration="900">
@@ -173,7 +173,7 @@
   </section>
 
   {{-- ============================ TESTIMONI ============================ --}}
-  <section class="bg-light py-8 py-lg-11">
+  <section class="py-8 py-lg-11">
     <div class="container">
       <div class="row justify-content-center mb-6 mb-lg-9">
         <div class="col-lg-7 text-center" data-aos="fade-up" data-aos-duration="900">

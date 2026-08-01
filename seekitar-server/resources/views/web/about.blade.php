@@ -85,7 +85,7 @@
   </section>
 
   {{-- ============================ NILAI KAMI ============================ --}}
-  <section class="bg-light py-8 py-lg-11">
+  <section class="py-8 py-lg-11">
     <div class="container">
       <div class="row align-items-center g-5">
         <div class="col-lg-6" data-aos="fade-up" data-aos-delay="100" data-aos-duration="900">

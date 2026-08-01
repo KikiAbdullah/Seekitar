@@ -64,7 +64,7 @@
     </div>
   </section>
 
-  <section class="py-8 py-lg-11 bg-light">
+  <section class="py-8 py-lg-11">
     <div class="container">
       <div class="row justify-content-center">
         <div class="col-lg-8 text-center" data-aos="fade-up" data-aos-duration="900">

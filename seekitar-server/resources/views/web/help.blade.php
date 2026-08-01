@@ -335,7 +335,7 @@
   </section>
 
   {{-- ============================ KANAL BANTUAN ============================ --}}
-  <section class="bg-light py-8 py-lg-11">
+  <section class="py-8 py-lg-11">
     <div class="container">
       <div class="row justify-content-center mb-5 mb-lg-7">
         <div class="col-lg-7 text-center" data-aos="fade-up" data-aos-duration="900">

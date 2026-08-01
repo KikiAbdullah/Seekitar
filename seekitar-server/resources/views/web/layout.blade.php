@@ -89,7 +89,7 @@
     </div>
 
     {{-- ============================ FOOTER ============================ --}}
-    <footer class="footer-part pt-8 pb-5 bg-light">
+    <footer class="footer-part pt-8 pb-5">
       <div class="container">
         <div class="row g-5">
           <div class="col-lg-4">
