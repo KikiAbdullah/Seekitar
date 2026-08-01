@@ -30,7 +30,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   Future<void> _load() async {
     if (widget.listing != null) { setState(() { _detail = widget.listing; _loading = false; }); return; }
     setState(() => _loading = true);
-    try { final d = await _api.getListing(_id); setState(() { _detail = d; _loading = false; }); }
+    try { final d = await _api.getListing(widget.listingId); setState(() { _detail = d; _loading = false; }); }
     catch (_) { setState(() => _loading = false); }
   }
 
@@ -46,18 +46,18 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
 
   Future<void> _report() async {
     final reasonCtrl = TextEditingController();
-    final show = await showModalBottomSheet<String>(context: context, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))), builder: (ctx) => Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    final reason = await showModalBottomSheet<String>(context: context, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))), builder: (ctx) => Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))), const SizedBox(height: 20),
-      const Text('Laporkan Listing', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)), const SizedBox(height: 8),
-      const Text('Mengapa kamu melaporkan listing ini?', style: TextStyle(color: Colors.grey, fontSize: 14)), const SizedBox(height: 16),
-      ...['Penipuan', 'Konten tidak pantas', 'Barang ilegal', 'Spam', 'Lainnya'].map((r) => ListTile(title: Text(r), leading: const Icon(Icons.flag_outlined, size: 20), onTap: () => Navigator.pop(ctx, r), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))),
-      const SizedBox(height: 16),
-      OutlinedButton(onPressed: () => Navigator.pop(ctx, null), child: const Text('Batal')),
+      const Text('Laporkan Listing', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)), const SizedBox(height: 16),
+      ...[
+        ['Penipuan', 'scam'], ['Konten tidak pantas', 'inappropriate'], ['Barang ilegal', 'illegal'],
+        ['Spam', 'spam'], ['Lainnya', 'other'],
+      ].map((r) => ListTile(title: Text(r[0]), leading: const Icon(Icons.flag_outlined, size: 20), onTap: () => Navigator.pop(ctx, r[1]), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))),
     ])));
-    if (show != null && mounted) {
+    if (reason != null && mounted) {
       setState(() => _reporting = true);
       try {
-        await _api.report('listing', _id, show.toLowerCase().replaceAll(' ', '_'));
+        await _api.report('listing', _id, reason);
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Laporan terkirim. Tim kami akan meninjaunya.')));
       } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e'))); }
       if (mounted) setState(() => _reporting = false);

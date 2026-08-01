@@ -12,43 +12,68 @@ class OrdersScreen extends StatefulWidget {
 
 class _OrdersScreenState extends State<OrdersScreen> with SingleTickerProviderStateMixin {
   final _api = ApiProvider();
-  late TabController _tab; List<Order> _b = [], _s = []; bool _loading = true;
+  late TabController _tab;
+  List<Order> _b = [], _s = [];
+  bool _loading = true;
+  String? _error;
 
   @override void initState() { super.initState(); _tab = TabController(length: 2, vsync: this); _load(); }
+  @override void dispose() { _tab.dispose(); super.dispose(); }
+
   Future<void> _load() async {
-    setState(() => _loading = true);
-    try { final r = await Future.wait([_api.getOrders(role: 'buyer'), _api.getOrders(role: 'seller')]); if (mounted) setState(() { _b = r[0]; _s = r[1]; _loading = false; }); }
-    catch (_) { if (mounted) setState(() => _loading = false); }
+    setState(() { _loading = true; _error = null; });
+    try {
+      final r = await Future.wait([_api.getOrders(role: 'buyer'), _api.getOrders(role: 'seller')]);
+      if (mounted) setState(() { _b = r[0]; _s = r[1]; _loading = false; });
+    } catch (e) { if (mounted) setState(() { _error = e.toString(); _loading = false; }); }
   }
 
   @override Widget build(BuildContext ctx) => Scaffold(
     appBar: AppBar(title: const Text('Pesanan'), bottom: TabBar(controller: _tab, tabs: const [Tab(text: 'Pembelian'), Tab(text: 'Penjualan')])),
-    body: _loading ? const Center(child: CircularProgressIndicator()) : TabBarView(controller: _tab, children: [_list(_b, false), _list(_s, true)]),
+    body: _loading ? const Center(child: CircularProgressIndicator())
+      : _error != null ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.cloud_off, size: 48, color: Colors.grey), const SizedBox(height: 12), Text(_error!, style: const TextStyle(color: Colors.grey)), const SizedBox(height: 16), ElevatedButton.icon(onPressed: _load, icon: const Icon(Icons.refresh), label: const Text('Coba Lagi'))]))
+      : TabBarView(controller: _tab, children: [_list(_b, false), _list(_s, true)]),
   );
 
-  Widget _list(List<Order> orders, bool seller) => orders.isEmpty ? const Center(child: Text('Belum ada pesanan', style: TextStyle(color: Colors.grey))) : RefreshIndicator(onRefresh: _load, child: ListView.builder(itemCount: orders.length, itemBuilder: (_, i) {
-    final o = orders[i];
-    return Card(margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5), child: InkWell(borderRadius: BorderRadius.circular(24), onTap: () => ctx.push('/order-detail', extra: o).then((_) => _load()), child: Padding(padding: const EdgeInsets.all(14), child: Row(children: [
-      ClipRRect(borderRadius: BorderRadius.circular(14), child: (o.listingImages?.isNotEmpty == true) ? Image.network(o.listingImages!.first, width: 60, height: 60, fit: BoxFit.cover) : Container(width: 60, height: 60, color: Colors.green.shade50, child: const Icon(Icons.receipt, color: Colors.green))),
-      const SizedBox(width: 14),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(o.listingTitle ?? 'Pesanan #${o.id.substring(0, 8)}', maxLines: 1, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-        const SizedBox(height: 4),
-        Text(seller ? 'Pembeli: ${o.buyerName ?? '-'}' : 'Toko: ${o.storeName ?? '-'}', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
-        const SizedBox(height: 4),
-        Text(o.priceDisplay, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Theme.of(context).colorScheme.primary)),
-      ])),
-      const SizedBox(width: 8),
-      Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), decoration: BoxDecoration(color: AppConstants.orderStatusColor(o.status).withOpacity(0.1), borderRadius: BorderRadius.circular(12)), child: Text(o.statusLabel, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppConstants.orderStatusColor(o.status)))),
-    ]))));
-  }));
+  Widget _list(List<Order> orders, bool seller) => orders.isEmpty
+    ? const Center(child: Text('Belum ada pesanan', style: TextStyle(color: Colors.grey)))
+    : RefreshIndicator(onRefresh: _load, child: ListView.builder(itemCount: orders.length, itemBuilder: (_, i) {
+        final o = orders[i];
+        return Card(margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5), child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OrdDetail(order: o))).then((_) => _load()),
+          child: Padding(padding: const EdgeInsets.all(14), child: Row(children: [
+            ClipRRect(borderRadius: BorderRadius.circular(14), child: (o.listingImages?.isNotEmpty == true) ? Image.network(o.listingImages!.first, width: 60, height: 60, fit: BoxFit.cover) : Container(width: 60, height: 60, color: Colors.green.shade50, child: const Icon(Icons.receipt, color: Colors.green))),
+            const SizedBox(width: 14),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(o.listingTitle ?? 'Pesanan #${o.id.substring(0, 8)}', maxLines: 1, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              const SizedBox(height: 4),
+              Text(seller ? 'Pembeli: ${o.buyerName ?? '-'}' : 'Toko: ${o.storeName ?? '-'}', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+              const SizedBox(height: 4),
+              Text(o.priceDisplay, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Theme.of(context).colorScheme.primary)),
+            ])),
+            const SizedBox(width: 8),
+            Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), decoration: BoxDecoration(color: AppConstants.orderStatusColor(o.status).withOpacity(0.1), borderRadius: BorderRadius.circular(12)), child: Text(o.statusLabel, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppConstants.orderStatusColor(o.status)))),
+          ])),
+        ));
+      }));
+
+class OrdDetail extends StatefulWidget {
+  final Order order;
+  const OrdDetail({super.key, required this.order});
+  @override State<OrdDetail> createState() => _OrdDetailState();
 }
 
-class OrdDetail extends StatefulWidget { final Order order; const OrdDetail({required this.order}); @override State<OrdDetail> createState() => _OrdDetailState(); }
 class _OrdDetailState extends State<OrdDetail> {
   final _api = ApiProvider();
+  bool _processing = false;
 
-  Future<void> _update(String s) async { try { await _api.updateOrderStatus(widget.order.id, s); if (mounted) Navigator.pop(context); } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()))); } }
+  Future<void> _update(String s) async {
+    setState(() => _processing = true);
+    try { await _api.updateOrderStatus(widget.order.id, s); if (mounted) Navigator.pop(context); }
+    catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()))); }
+    if (mounted) setState(() => _processing = false);
+  }
 
   Future<void> _review() async {
     int r = 5; final c = TextEditingController();
@@ -71,7 +96,11 @@ class _OrdDetailState extends State<OrdDetail> {
           const SizedBox(height: 16), Text(o.priceDisplay, style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: t.colorScheme.primary)),
           const SizedBox(height: 16), _r('Toko', o.storeName ?? '-'), _r('Pembeli', o.buyerName ?? '-'), _r('Jumlah', '${o.quantity}'), _r('Pembayaran', o.paymentMethod ?? '-'), if (o.notes?.isNotEmpty == true) _r('Catatan', o.notes!),
         ]))),
-        if (o.status == 'menunggu_konfirmasi' || o.status == 'diproses') Padding(padding: const EdgeInsets.only(top: 16), child: Row(children: [if (o.status == 'menunggu_konfirmasi') Expanded(child: ElevatedButton(onPressed: () => _update('diproses'), style: ElevatedButton.styleFrom(backgroundColor: Colors.blue), child: const Text('Proses'))), const SizedBox(width: 12), Expanded(child: OutlinedButton(onPressed: () => _update('selesai'), child: const Text('Selesai')))])),
+        if (o.status == 'menunggu_konfirmasi' || o.status == 'diproses') Padding(padding: const EdgeInsets.only(top: 16), child: Row(children: [
+          if (o.status == 'menunggu_konfirmasi') Expanded(child: ElevatedButton(onPressed: _processing ? null : () => _update('diproses'), style: ElevatedButton.styleFrom(backgroundColor: Colors.blue), child: Text(_processing ? '...' : 'Proses'))),
+          const SizedBox(width: 12),
+          Expanded(child: OutlinedButton(onPressed: _processing ? null : () => _update('selesai'), child: Text(_processing ? '...' : 'Selesai'))),
+        ])),
         if (o.status == 'selesai') Padding(padding: const EdgeInsets.only(top: 16), child: ElevatedButton.icon(onPressed: _review, icon: const Icon(Icons.star, size: 20), label: const Text('Beri Ulasan'))),
       ]),
     );
