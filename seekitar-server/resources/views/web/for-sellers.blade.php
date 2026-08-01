@@ -275,31 +275,4 @@
     </div>
   </section>
 
-  {{-- ============================ CTA ============================ --}}
-  <section class="pb-8 pb-lg-11">
-    <div class="container">
-      <div class="row justify-content-center">
-        <div class="col-lg-8">
-          <div class="card c2a-box border-0 shadow-sm" data-aos="fade-up" data-aos-duration="900">
-            <div class="card-body text-center p-4 p-lg-8 py-8">
-              <h3 class="fs-7 fw-semibold">Siap buka toko?</h3>
-              <p class="mb-8 text-muted">
-                Bergabung dengan {{ number_format($stats['toko']) }} penjual lain di {{ config('seekitar.regency') }}.
-                Gratis, tanpa komitmen, tanpa komisi.
-              </p>
-              <div class="d-sm-flex align-items-center justify-content-center gap-3">
-                <a href="{{ config('seekitar.play_store_url') }}" target="_blank" rel="noopener"
-                  class="btn btn-primary px-5 d-block mb-3 mb-sm-0 btn-hover-shadow d-inline-flex align-items-center justify-content-center gap-2">
-                  <i class="ti ti-brand-google-play fs-5"></i> Download di Google Play
-                </a>
-                <a href="{{ route('web.pricing') }}"
-                  class="btn btn-outline-secondary px-5 d-block">Lihat Detail Biaya</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
 @endsection
