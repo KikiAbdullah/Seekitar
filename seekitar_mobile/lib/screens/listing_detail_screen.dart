@@ -37,7 +37,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   Future<void> _share() async {
     try {
       final res = await _api.shareListing(_id);
-      await SharePlus.instance.share(ShareParams(text: res['whatsapp_text']?.toString() ?? _detail?.title ?? ''));
+      final text = res['whatsapp_text']?.toString() ?? _detail?.title ?? '';
+      if (text.isNotEmpty) {
+        await Share.share(text, subject: _detail?.title ?? 'Listing Seekitar');
+      }
     } catch (_) {}
   }
 

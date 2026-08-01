@@ -16,6 +16,8 @@ import '../screens/favorites_screen.dart';
 import '../screens/wallet_screen.dart';
 import '../screens/address_screen.dart';
 import '../screens/conversations_screen.dart';
+import '../models/conversation.dart';
+import '../models/order.dart';
 import '../screens/blocked_screen.dart';
 import '../screens/notif_prefs_screen.dart';
 import '../screens/store_screen.dart';
@@ -54,6 +56,7 @@ final appRouter = GoRouter(
     GoRoute(path: '/wallet', builder: (_, __) => const WalletScreen()),
     GoRoute(path: '/addresses', builder: (_, __) => const AddressScreen()),
     GoRoute(path: '/conversations', builder: (_, __) => const ConversationsScreen()),
+    GoRoute(path: '/chat/:id', builder: (_, s) => ChatScreen(conversation: s.extra as Conversation)),
     GoRoute(path: '/blocked', builder: (_, __) => const BlockedUsersScreen()),
     GoRoute(path: '/notif-prefs', builder: (_, __) => const NotifPrefsScreen()),
     GoRoute(path: '/create-store', builder: (_, __) => const CreateStoreScreen()),

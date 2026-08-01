@@ -30,7 +30,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
         title: Text(c.otherUserName ?? 'Pengguna', style: TextStyle(fontWeight: c.hasUnread ? FontWeight.bold : FontWeight.normal)),
         subtitle: Text(c.lastMessage ?? '', maxLines: 1, overflow: TextOverflow.ellipsis),
         trailing: c.hasUnread ? Container(width: 10, height: 10, decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle)) : null,
-        onTap: () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => ChatScreen(conversation: c))),
+        onTap: () => ctx.push('/chat/${c.id}', extra: c),
       );
     })),
   );

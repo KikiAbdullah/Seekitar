@@ -7,6 +7,7 @@ import '../models/customer_request.dart';
 import '../services/api_compat.dart';
 import 'listing_detail_screen.dart';
 import 'request_detail_screen.dart';
+import '../widgets/offline_banner.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
