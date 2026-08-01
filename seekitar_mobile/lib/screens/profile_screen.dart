@@ -72,6 +72,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _tile(Icons.wallet_outlined, 'Dompet', ctx, '/wallet'),
         _tile(Icons.location_on_outlined, 'Alamat', ctx, '/addresses'),
         _tile(Icons.chat_outlined, 'Percakapan', ctx, '/conversations'),
+        _tile(Icons.explore_outlined, 'Toko Terdekat', ctx, '/stores-nearby'),
         _tile(Icons.verified_user_outlined, 'Verifikasi KTP', ctx, '/verification'),
         _tile(Icons.help_outline, 'Bantuan & Legal', ctx, '/help-legal'),
         _tile(Icons.block_outlined, 'Pengguna Diblokir', ctx, '/blocked'),

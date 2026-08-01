@@ -199,4 +199,8 @@ class ApiProvider {
 
   // ─── Wallet Extras ───
   Future<Map<String,dynamic>> withdraw(Map<String,dynamic> body) => _api.withdraw(body);
+
+  // ─── Phone Change ───
+  Future<void> requestPhoneChangeOtp(String phone) => _api.requestPhoneChangeOtp(phone);
+  Future<Map<String,dynamic>> verifyPhoneChangeOtp(String phone, String otp) => _api.verifyPhoneChangeOtp(phone, otp);
 }

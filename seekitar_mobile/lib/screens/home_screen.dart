@@ -61,6 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final t = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: Image.asset('assets/images/logo_lockup.png', height: 28), actions: [
+        IconButton(icon: const Icon(Icons.category_outlined, size: 22), onPressed: () => ctx.push('/categories')),
         IconButton(icon: const Icon(Icons.notifications_outlined, size: 22), onPressed: () => ctx.push('/notifications')),
         IconButton(icon: const Icon(Icons.favorite_outline, size: 22), onPressed: () => ctx.push('/favorites')),
       ]),
