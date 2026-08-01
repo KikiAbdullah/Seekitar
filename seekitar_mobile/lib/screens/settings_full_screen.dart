@@ -44,6 +44,8 @@ class _FullSettingsScreenState extends State<FullSettingsScreen> {
       ListTile(leading: const Icon(Icons.delete_forever, color: Colors.red), title: const Text('Hapus Akun', style: TextStyle(color: Colors.red)), trailing: const Icon(Icons.chevron_right, color: Colors.red), onTap: _confirmDelete),
       _section('Notifikasi'),
       ListTile(leading: const Icon(Icons.notifications_outlined), title: const Text('Preferensi Notifikasi'), trailing: const Icon(Icons.chevron_right), onTap: () => ctx.push('/notif-prefs')),
+      _section('Bantuan & Hukum'),
+      ListTile(leading: const Icon(Icons.help_outline), title: const Text('Pusat Bantuan & Legal'), subtitle: const Text('FAQ, privasi, syarat, kontak'), trailing: const Icon(Icons.chevron_right), onTap: () => context.push('/help-legal')),
       _section('Lainnya'),
       ListTile(leading: const Icon(Icons.info_outline), title: const Text('Tentang Seekitar'), trailing: const Icon(Icons.chevron_right), onTap: () => ctx.push('/about')),
       ListTile(leading: const Icon(Icons.logout, color: Colors.red), title: const Text('Keluar', style: TextStyle(color: Colors.red)), onTap: () async { await ctx.read<AppState>().logout(); if (ctx.mounted) ctx.go('/login'); }),

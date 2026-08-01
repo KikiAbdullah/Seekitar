@@ -13,6 +13,7 @@ import '../screens/create_listing_screen.dart';
 import '../screens/request_detail_screen.dart';
 import '../screens/notifications_screen.dart';
 import '../screens/favorites_screen.dart';
+import '../screens/legal_screen.dart';
 import '../screens/wallet_screen.dart';
 import '../screens/address_screen.dart';
 import '../screens/conversations_screen.dart';
@@ -66,6 +67,8 @@ final appRouter = GoRouter(
     GoRoute(path: '/coupon', builder: (_, s) { final a = s.extra as Map<String,dynamic>?; return CouponScreen(orderTotal: (a?['total'] as num?)?.toDouble() ?? 0, orderId: a?['orderId']?.toString() ?? ''); }),
     GoRoute(path: '/settings', builder: (_, __) => const FullSettingsScreen()),
     GoRoute(path: '/about', builder: (_, __) => const AboutScreen()),
+    GoRoute(path: '/help-legal', builder: (_, __) => const HelpLegalScreen()),
+    GoRoute(path: '/legal-webview', builder: (_, s) => LegalWebViewAdapter(extra: s.extra as Map<String,dynamic>)),
   ],
 );
 

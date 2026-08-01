@@ -73,6 +73,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _tile(Icons.location_on_outlined, 'Alamat', ctx, '/addresses'),
         _tile(Icons.chat_outlined, 'Percakapan', ctx, '/conversations'),
         _tile(Icons.verified_user_outlined, 'Verifikasi KTP', ctx, '/verification'),
+        _tile(Icons.help_outline, 'Bantuan & Legal', ctx, '/help-legal'),
         _tile(Icons.block_outlined, 'Pengguna Diblokir', ctx, '/blocked'),
         _tile(Icons.settings_outlined, 'Pengaturan Lengkap', ctx, '/settings'),
         const SizedBox(height: 20),
