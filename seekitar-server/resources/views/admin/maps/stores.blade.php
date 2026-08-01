@@ -36,7 +36,7 @@
           <div class="row">
             <div class="col-md-3">
               <label for="filter-status" class="form-label">Saring Status Toko</label>
-              <select class="form-select" id="filter-status">
+              <select class="form-select js-select2" id="filter-status">
                 <option value="">Semua Status</option>
                 @foreach ($status as $st)
                   <option value="{{ $st->value }}">{{ $st->label() }}</option>
@@ -143,7 +143,7 @@
                                      `<span class="badge bg-light-${p.status === 'verified' ? 'success' : (p.status === 'pending' ? 'warning' : (p.status === 'blocked' ? 'dark' : 'danger'))} text-${p.status === 'verified' ? 'success' : (p.status === 'pending' ? 'warning' : (p.status === 'blocked' ? 'dark' : 'danger'))} fw-semibold fs-1 me-2">${p.label}</span>` +
                                      `<span class="badge bg-${p.aktif ? 'success' : 'secondary'} text-white fw-semibold fs-1">${p.aktif ? 'Aktif' : 'Nonaktif'}</span>` +
                                      `</div>` +
-                                     `<a href="${detailUrl}" class="btn btn-xs btn-primary text-white w-100 py-1"><i class="ti ti-store me-1"></i> Tinjau Toko</a>` +
+                                     `<a href="${detailUrl}" class="btn btn-xs btn-primary text-white w-100 py-1"><i class="ti ti-building-store me-1" aria-hidden="true"></i> Tinjau Toko</a>` +
                                      `</div>`;
                                      
                   layer.bindPopup(popupContent);

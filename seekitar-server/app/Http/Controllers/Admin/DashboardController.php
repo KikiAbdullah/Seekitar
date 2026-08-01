@@ -16,11 +16,13 @@ use App\Models\Order;
 use App\Models\Review;
 use App\Models\Store;
 use App\Models\User;
+use App\Support\Angka;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 
 /**
  * Dasbor panel admin (Server_Implementation_Guide.md §9.1).
@@ -99,7 +101,7 @@ class DashboardController extends Controller
             $cards['users'] = [
                 'label' => 'Total Pengguna',
                 'value' => User::count(),
-                'icon'  => 'fa-regular fa-address-book',
+                'icon'  => 'ti ti-address-book',
                 'tone'  => 'primary',
                 'hint'  => User::whereDate('created_at', today())->count().' baru hari ini',
                 'url'   => route('admin.users.index'),
@@ -112,7 +114,7 @@ class DashboardController extends Controller
                 'value' => Store::where('is_active', true)
                     ->where('status', StoreStatus::Verified)
                     ->count(),
-                'icon'  => 'fa-regular fa-building',
+                'icon'  => 'ti ti-building',
                 'tone'  => 'primary',
                 'hint'  => Store::count().' toko terdaftar',
                 'url'   => route('admin.stores.index'),
@@ -127,7 +129,7 @@ class DashboardController extends Controller
             $cards['orders'] = [
                 'label' => 'Pesanan Bulan Ini',
                 'value' => $bulanIni,
-                'icon'  => 'fa-regular fa-credit-card',
+                'icon'  => 'ti ti-credit-card',
                 'tone'  => 'info',
                 'hint'  => Order::whereDate('created_at', today())->count().' hari ini',
                 'url'   => route('admin.orders.index'),
@@ -140,7 +142,7 @@ class DashboardController extends Controller
                 'value' => CustomerRequest::where('status', RequestStatus::Open)
                     ->where('expires_at', '>', now())
                     ->count(),
-                'icon'  => 'fa-regular fa-rectangle-list',
+                'icon'  => 'ti ti-list-check',
                 'tone'  => 'secondary',
                 'hint'  => 'kedaluwarsa otomatis 24 jam',
                 'url'   => route('admin.requests.index'),
@@ -156,7 +158,7 @@ class DashboardController extends Controller
             $cards['disputes'] = [
                 'label' => 'Laporan Lewat SLA',
                 'value' => $lewatSla,
-                'icon'  => 'fa-regular fa-circle-xmark',
+                'icon'  => 'ti ti-circle-x',
                 'tone'  => $lewatSla > 0 ? 'danger' : 'primary',
                 'hint'  => Dispute::where('status', DisputeStatus::Open)->count().' laporan terbuka',
                 'url'   => route('admin.disputes.index'),
@@ -167,7 +169,7 @@ class DashboardController extends Controller
             $cards['reviews'] = [
                 'label' => 'Ulasan Masuk',
                 'value' => Review::where('created_at', '>=', now()->startOfMonth())->count(),
-                'icon'  => 'fa-regular fa-star',
+                'icon'  => 'ti ti-star',
                 'tone'  => 'warning',
                 'hint'  => 'bulan berjalan',
                 'url'   => route('admin.reviews.index'),
@@ -178,7 +180,7 @@ class DashboardController extends Controller
             $cards['listings'] = [
                 'label' => 'Listing Aktif',
                 'value' => Listing::where('status', \App\Enums\ListingStatus::Active)->count(),
-                'icon'  => 'fa-regular fa-clipboard',
+                'icon'  => 'ti ti-clipboard',
                 'tone'  => 'info',
                 'hint'  => Listing::count().' total listing',
                 'url'   => route('admin.listings.index'),
@@ -191,7 +193,7 @@ class DashboardController extends Controller
                 'value' => Offer::where('status', OfferStatus::Pending)
                     ->where('expires_at', '>', now())
                     ->count(),
-                'icon'  => 'fa-regular fa-handshake',
+                'icon'  => 'ti ti-arrows-exchange',
                 'tone'  => 'secondary',
                 'hint'  => 'belum diputuskan pembeli',
                 'url'   => route('admin.offers.index'),
@@ -220,7 +222,7 @@ class DashboardController extends Controller
                 'value' => $this->ktpMenunggu(),
                 'url'   => route('admin.verifications.users'),
                 'tone'  => 'warning',
-                'icon'  => 'fa-regular fa-id-card',
+                'icon'  => 'ti ti-id',
             ];
         }
 
@@ -231,7 +233,7 @@ class DashboardController extends Controller
                 'value' => Store::pendingVerification()->count(),
                 'url'   => route('admin.verifications.stores'),
                 'tone'  => 'warning',
-                'icon'  => 'fa-regular fa-building',
+                'icon'  => 'ti ti-building',
             ];
         }
 
@@ -241,7 +243,7 @@ class DashboardController extends Controller
                 'value' => Dispute::where('status', DisputeStatus::Open)->count(),
                 'url'   => route('admin.disputes.index'),
                 'tone'  => 'danger',
-                'icon'  => 'fa-regular fa-circle-xmark',
+                'icon'  => 'ti ti-circle-x',
             ];
         }
 
@@ -251,7 +253,7 @@ class DashboardController extends Controller
                 'value' => Order::where('status', OrderStatus::Dispute)->count(),
                 'url'   => route('admin.orders.index').'?status='.OrderStatus::Dispute->value,
                 'tone'  => 'danger',
-                'icon'  => 'fa-regular fa-credit-card',
+                'icon'  => 'ti ti-credit-card',
             ];
         }
 
@@ -263,9 +265,11 @@ class DashboardController extends Controller
      *
      * Kolomnya dibatasi `select()` — dasbor tidak butuh deskripsi lengkap,
      * dan menariknya berarti memuat TEXT panjang untuk lima baris yang hanya
-     * menampilkan judul.
+     * menampilkan judul. Nilai tampilan (label status, nominal rupiah, dan
+     * relatif waktu) dirakit DI SINI, bukan di Blade, supaya view hanya
+     * membaca variabel yang benar-benar disediakan controller.
      *
-     * @return array{requests: \Illuminate\Support\Collection, offers: \Illuminate\Support\Collection}
+     * @return array{requests: \Illuminate\Support\Collection<int, array>, offers: \Illuminate\Support\Collection<int, array>}
      */
     private function ringkas(): array
     {
@@ -279,7 +283,14 @@ class DashboardController extends Controller
                 ->withCount('offers')
                 ->latest()
                 ->limit(self::RINGKAS_LIMIT)
-                ->get();
+                ->get()
+                ->map(fn (CustomerRequest $r) => [
+                    'title'    => Str::limit($r->title, 30),
+                    'dibuat'   => 'Dibuat '.$r->created_at->diffForHumans(),
+                    'pembeli'  => $r->user?->name ?: 'Pengguna',
+                    'kategori' => $r->category?->name ?: 'Umum',
+                    'penawaran'=> Angka::bulat($r->offers_count),
+                ]);
         }
 
         if (Gate::allows('manage-offers')) {
@@ -288,7 +299,18 @@ class DashboardController extends Controller
                 ->select(['id', 'request_id', 'store_id', 'price', 'additional_cost', 'status', 'created_at'])
                 ->latest()
                 ->limit(self::RINGKAS_LIMIT)
-                ->get();
+                ->get()
+                ->map(fn (Offer $o) => [
+                    'toko'     => $o->store?->name ?: 'Toko',
+                    'request'  => Str::limit($o->request?->title ?: 'Permintaan', 25),
+                    'nilai'    => Angka::rupiah($o->price + $o->additional_cost),
+                    'status_class' => match ($o->status) {
+                        OfferStatus::Accepted => 'success',
+                        OfferStatus::Rejected => 'danger',
+                        default               => 'warning',
+                    },
+                    'status_label' => $o->status?->label() ?? 'Menunggu',
+                ]);
         }
 
         return ['requests' => $requests, 'offers' => $offers];

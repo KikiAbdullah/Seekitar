@@ -15,7 +15,7 @@
                 <h3 class="fw-bold mb-0 text-dark">{{ $store->name }}</h3>
                 @if ($store->status->value === 'verified')
                   <span class="text-success" title="Toko Terverifikasi">
-                    <i class="fa-solid fa-circle-check fs-6"></i>
+                    <i class="ti ti-circle-check fs-6" role="img" aria-label="Terverifikasi"></i>
                   </span>
                 @endif
               </div>
@@ -66,7 +66,7 @@
                     @if ($store->latitude && $store->longitude)
                       <code>{{ $store->latitude }}, {{ $store->longitude }}</code>
                       <a href="https://www.google.com/maps/search/?api=1&query={{ $store->latitude }},{{ $store->longitude }}" target="_blank" class="ms-2 btn btn-xs btn-outline-primary py-0">
-                        <i class="ti ti-map-pin"></i> Lihat Peta
+                        <i class="ti ti-map-pin" aria-hidden="true"></i> Lihat Peta
                       </a>
                     @else
                       <span class="text-muted">belum disetel</span>
@@ -81,9 +81,9 @@
                   <td class="text-muted ps-0">Metode Pengiriman</td>
                   <td class="text-dark">
                     <div class="d-flex gap-3">
-                      <span class="text-{{ $store->allows_pickup ? 'success' : 'muted' }}"><i class="fa-solid fa-{{ $store->allows_pickup ? 'circle-check' : 'circle-xmark' }} me-1"></i> Ambil di Tempat (Pickup)</span>
-                      <span class="text-{{ $store->offers_delivery ? 'success' : 'muted' }}"><i class="fa-solid fa-{{ $store->offers_delivery ? 'circle-check' : 'circle-xmark' }} me-1"></i> Pengiriman Toko</span>
-                      <span class="text-{{ $store->accepts_cod ? 'success' : 'muted' }}"><i class="fa-solid fa-{{ $store->accepts_cod ? 'circle-check' : 'circle-xmark' }} me-1"></i> Bayar di Tempat (COD)</span>
+                      <span class="text-{{ $store->allows_pickup ? 'success' : 'muted' }}"><i class="ti ti-{{ $store->allows_pickup ? 'circle-check' : 'circle-x' }} me-1" aria-hidden="true"></i> Ambil di Tempat (Pickup)</span>
+                      <span class="text-{{ $store->offers_delivery ? 'success' : 'muted' }}"><i class="ti ti-{{ $store->offers_delivery ? 'circle-check' : 'circle-x' }} me-1" aria-hidden="true"></i> Pengiriman Toko</span>
+                      <span class="text-{{ $store->accepts_cod ? 'success' : 'muted' }}"><i class="ti ti-{{ $store->accepts_cod ? 'circle-check' : 'circle-x' }} me-1" aria-hidden="true"></i> Bayar di Tempat (COD)</span>
                     </div>
                   </td>
                 </tr>
@@ -163,14 +163,14 @@
                 <h6 class="fw-bold mb-0 text-dark">{{ $store->owner?->name }}</h6>
                 @if ($store->owner?->verified_at)
                   <span class="text-success" title="KTP Terverifikasi">
-                    <i class="fa-solid fa-circle-check fs-4"></i>
+                    <i class="ti ti-circle-check fs-4" role="img" aria-label="Terverifikasi"></i>
                   </span>
                 @endif
               </div>
               <span class="fs-2 text-muted">{{ $store->owner?->phone }}</span>
             </div>
           </div>
-          <a href="{{ route('admin.users.show', $store->user_id) }}" class="btn btn-sm btn-outline-primary w-100"><i class="ti ti-user me-1"></i> Lihat Akun Pemilik</a>
+          <a href="{{ route('admin.users.show', $store->user_id) }}" class="btn btn-sm btn-outline-primary w-100"><i class="ti ti-user me-1" aria-hidden="true"></i> Lihat Akun Pemilik</a>
         </div>
       </div>
 
@@ -199,10 +199,10 @@
                 <form action="{{ route('admin.stores.approve', $store) }}" method="POST" class="mb-3">
                   @csrf
                   <button type="submit" class="btn btn-success w-100 btn-hover-shadow py-2 fw-semibold" {{ !$store->owner?->verified_at ? 'disabled' : '' }}>
-                    <i class="ti ti-circle-check fs-5 me-1"></i> Setujui Toko
+                    <i class="ti ti-circle-check fs-5 me-1" aria-hidden="true"></i> Setujui Toko
                   </button>
                   @if (!$store->owner?->verified_at)
-                    <div class="form-text text-danger fs-2 mt-1"><i class="ti ti-info-circle"></i> Pemilik harus diverifikasi identitasnya terlebih dahulu.</div>
+                    <div class="form-text text-danger fs-2 mt-1"><i class="ti ti-info-circle" aria-hidden="true"></i> Pemilik harus diverifikasi identitasnya terlebih dahulu.</div>
                   @endif
                 </form>
                 
@@ -216,7 +216,7 @@
                     <textarea class="form-control" id="reason" name="reason" rows="3" placeholder="Sebutkan alasan penolakan, minimal 10 karakter..." required></textarea>
                   </div>
                   <button type="submit" class="btn btn-outline-danger w-100 py-2 fw-semibold">
-                    <i class="ti ti-circle-x fs-5 me-1"></i> Tolak Toko
+                    <i class="ti ti-circle-x fs-5 me-1" aria-hidden="true"></i> Tolak Toko
                   </button>
                 </form>
               </div>

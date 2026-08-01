@@ -49,8 +49,9 @@ class OrdersDataTable
             ->addColumn('status_label', fn (Order $o) => view('admin.partials._order_badge', ['order' => $o])->render())
             ->editColumn('total_amount', fn (Order $o) => '<span class="fw-semibold text-nowrap">Rp '
                 .number_format((float) $o->total_amount, 0, ',', '.').'</span>')
+            ->addColumn('action', fn (Order $o) => view('admin.orders._actions', ['order' => $o])->render())
             ->editColumn('created_at', fn (Order $o) => $o->created_at?->format('d M Y H:i'))
-            ->rawColumns(['order_number', 'buyer_name', 'store_name', 'status_label', 'total_amount'])
+            ->rawColumns(['order_number', 'buyer_name', 'store_name', 'status_label', 'total_amount', 'action'])
             ->toJson();
     }
 }

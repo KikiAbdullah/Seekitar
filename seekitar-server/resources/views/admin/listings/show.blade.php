@@ -68,7 +68,7 @@
             <div class="col-sm-6">
               <div class="border rounded p-2 bg-light">
                 <span class="text-muted fs-2 d-block">Jumlah Favorit</span>
-                <span class="fw-bold text-dark fs-4"><i class="fa-solid fa-heart text-danger me-1"></i> {{ $listing->favorites_count }} pengguna</span>
+                <span class="fw-bold text-dark fs-4"><i class="ti ti-heart text-danger me-1" aria-hidden="true"></i> {{ $listing->favorites_count }} pengguna</span>
               </div>
             </div>
           </div>
@@ -86,7 +86,7 @@
           <div class="card border-0 bg-light-primary shadow-sm h-100">
             <div class="card-body p-4">
               <span class="text-muted fs-3 d-block mb-1">Total Pesanan</span>
-              <h3 class="fw-bold mb-0 text-dark">{{ number_format($statistik['total']) }}</h3>
+              <h3 class="fw-bold mb-0 text-dark">{{ \App\Support\Angka::bulat($statistik['total']) }}</h3>
               <span class="fs-2 text-muted mt-2 d-block">Semua status</span>
             </div>
           </div>
@@ -95,7 +95,7 @@
           <div class="card border-0 bg-light-success shadow-sm h-100">
             <div class="card-body p-4">
               <span class="text-muted fs-3 d-block mb-1">Pesanan Selesai</span>
-              <h3 class="fw-bold mb-0 text-dark">{{ number_format($statistik['selesai']) }}</h3>
+              <h3 class="fw-bold mb-0 text-dark">{{ \App\Support\Angka::bulat($statistik['selesai']) }}</h3>
               <span class="fs-2 text-muted mt-2 d-block">Selesai transaksi</span>
             </div>
           </div>
@@ -189,21 +189,21 @@
                 <h6 class="fw-bold mb-0 text-dark">{{ $listing->store?->name }}</h6>
                 @if ($listing->store?->status->value === 'verified')
                   <span class="text-success" title="Toko Terverifikasi">
-                    <i class="fa-solid fa-circle-check fs-4"></i>
+                    <i class="ti ti-circle-check fs-4" role="img" aria-label="Terverifikasi"></i>
                   </span>
                 @endif
               </div>
               <span class="fs-2 text-muted">{{ $listing->store?->regency }}</span>
             </div>
           </div>
-          <a href="{{ route('admin.stores.show', $listing->store_id) }}" class="btn btn-sm btn-outline-primary w-100"><i class="ti ti-store me-1"></i> Detail Toko</a>
+          <a href="{{ route('admin.stores.show', $listing->store_id) }}" class="btn btn-sm btn-outline-primary w-100"><i class="ti ti-building-store me-1" aria-hidden="true"></i> Detail Toko</a>
         </div>
       </div>
 
       <!-- Fans Card -->
       <div class="card shadow-sm mb-4">
         <div class="card-body p-4">
-          <h5 class="fw-bold mb-3 text-dark"><i class="fa-regular fa-heart text-danger me-1"></i> Favorit Pengguna</h5>
+          <h5 class="fw-bold mb-3 text-dark"><i class="ti ti-heart text-danger me-1" aria-hidden="true"></i> Favorit Pengguna</h5>
           <p class="card-subtitle mb-4">Daftar pengguna terakhir yang memfavoritkan listing ini.</p>
           
           @if ($penggemar->isEmpty())
@@ -218,7 +218,7 @@
                     </span>
                     <span class="fw-semibold text-dark fs-3">{{ $fav->user?->name }}</span>
                   </div>
-                  <a href="{{ route('admin.users.show', $fav->user_id) }}" class="btn btn-xs btn-light-info text-info"><i class="ti ti-eye"></i></a>
+                  <a href="{{ route('admin.users.show', $fav->user_id) }}" class="btn btn-xs btn-light-info text-info"><i class="ti ti-search" aria-hidden="true"></i></a>
                 </div>
               @endforeach
             </div>
@@ -237,7 +237,7 @@
               @csrf
               @method('DELETE')
               <button type="submit" class="btn btn-danger w-100 btn-hover-shadow py-2 fw-semibold">
-                <i class="ti ti-trash fs-5 me-1"></i> Hapus Listing Permanen
+                <i class="ti ti-trash fs-5 me-1" aria-hidden="true"></i> Hapus Listing Permanen
               </button>
             </form>
           </div>

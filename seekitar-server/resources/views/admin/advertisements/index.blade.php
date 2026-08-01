@@ -7,24 +7,17 @@
   <style>
     .table-action-btn {
       display: inline-flex;
-      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      text-align: center;
-      width: 80px;
-      height: 70px;
-      border-radius: 0.25rem;
-      font-size: 0.75rem;
-      padding: 0.5rem 0.25rem;
+      gap: 0.5rem;
     }
     .table-action-btn .ti {
-      font-size: 1.5rem;
-      margin-bottom: 0.25rem;
+      font-size: 1.125rem;
     }
     #ads-table tbody tr {
       cursor: pointer;
     }
-    .row-selected {
+    .row-selected,
+    .row-selected td {
       background-color: #fcefe2 !important; /* Mordenize primary-light */
       font-weight: 600;
     }
@@ -34,65 +27,57 @@
 @section('content')
   <div class="row">
     <div class="col-12">
-      <!-- Filter Card -->
-      <div class="card mb-4 shadow-sm">
-        <div class="card-body p-4">
-          <div class="d-md-flex align-items-center justify-content-between mb-3">
-            <div>
-              <h4 class="card-title">Filter Iklan</h4>
-              <p class="card-subtitle mb-0">Saring daftar iklan berdasarkan posisi penempatan atau status keaktifan.</p>
-            </div>
-            <div class="mt-3 mt-md-0">
-              @can('manage-advertisements')
-                <a href="{{ route('admin.advertisements.create') }}" class="btn btn-primary d-flex align-items-center gap-2">
-                  <i class="ti ti-plus fs-4"></i> Buat Iklan Baru
-                </a>
-              @endcan
-            </div>
-          </div>
-          
-          <div class="row g-3">
-            <div class="col-md-3">
-              <label for="filter-position" class="form-label">Posisi Iklan</label>
-              <select class="form-select" id="filter-position">
-                <option value="">Semua Posisi</option>
-                <option value="feed">Feed Utama</option>
-                <option value="sidebar">Sidebar</option>
-                <option value="search">Halaman Pencarian</option>
-                <option value="category">Halaman Kategori</option>
-              </select>
-            </div>
-            <div class="col-md-3">
-              <label for="filter-status" class="form-label">Status</label>
-              <select class="form-select" id="filter-status">
-                <option value="">Semua Status</option>
-                <option value="available">Tersedia (Available)</option>
-                <option value="active">Aktif (Active)</option>
-                <option value="inactive">Nonaktif (Inactive)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Table Card -->
       <div class="card w-100 shadow-sm">
         <div class="card-body border-bottom">
           <div class="d-flex align-items-center justify-content-between">
             <h5 class="card-title fw-semibold mb-0">Daftar Iklan Banner</h5>
-            <!-- Contextual Actions -->
-            <div id="table-actions" class="d-none">
+            <div class="d-flex align-items-center gap-2">
+              <!-- Contextual Actions -->
+              <div id="table-actions" class="d-none">
+                @can('manage-advertisements')
+                <a id="action-show" href="#" class="btn btn-outline-info table-action-btn" title="Lihat Detail">
+                  <i class="ti ti-search" aria-hidden="true"></i>
+                  <span>Detail</span>
+                </a>
+                <a id="action-edit" href="#" class="btn btn-outline-warning table-action-btn" title="Edit Iklan">
+                  <i class="ti ti-pencil" aria-hidden="true"></i>
+                  <span>Edit</span>
+                </a>
+                @endcan
+              </div>
               @can('manage-advertisements')
-              <a id="action-edit" href="#" class="btn btn-outline-warning table-action-btn" title="Edit Iklan">
-                <i class="ti ti-pencil"></i>
-                <span>Edit</span>
-              </a>
+                <a href="{{ route('admin.advertisements.create') }}" class="btn btn-primary d-flex align-items-center gap-2">
+                  <i class="ti ti-plus fs-4" aria-hidden="true"></i> Buat Iklan Baru
+                </a>
               @endcan
             </div>
           </div>
         </div>
-        <div class="table-responsive">
-            <table class="table table-sm table-bordered align-middle text-nowrap" id="ads-table" style="width: 100%;">
+        <div class="card-body">
+          <div id="ads-toolbar" class="d-none">
+            <div class="d-flex flex-wrap align-items-center gap-3">
+              <div>
+                <select class="form-select js-select2" id="filter-position">
+                  <option value="">Semua Posisi</option>
+                  <option value="feed">Feed Utama</option>
+                  <option value="sidebar">Sidebar</option>
+                  <option value="search">Halaman Pencarian</option>
+                  <option value="category">Halaman Kategori</option>
+                </select>
+              </div>
+              <div>
+                <select class="form-select js-select2" id="filter-status">
+                  <option value="">Semua Status</option>
+                  <option value="available">Tersedia (Available)</option>
+                  <option value="active">Aktif (Active)</option>
+                  <option value="inactive">Nonaktif (Inactive)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table align-middle text-nowrap search-table" id="ads-table" style="width: 100%;">
               <thead>
                 <tr>
                   <th style="display:none">ID</th>
@@ -164,8 +149,12 @@
           { data: 'created_at', name: 'created_at' },
         ],
         order: [[7, 'desc']],
-        language: {
-          url: "https://cdn.datatables.net/plug-ins/1.13.4/i18n/id.json"
+        dom: "<'d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3'f<'.dt-filters'>>rt<'d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3'<'d-flex align-items-center gap-2'l><'d-flex align-items-center gap-2'i><'d-flex align-items-center gap-2'p>>",
+        initComplete: function () {
+          var $slot = $('#ads-table_wrapper').find('.dt-filters');
+          $('#ads-toolbar').children().appendTo($slot);
+          $('#ads-toolbar').remove();
+          $slot.filter(':empty').remove();
         },
         drawCallback: function(settings) {
           $('#table-actions').addClass('d-none');
@@ -193,6 +182,7 @@
           
           var baseUrl = "{{ url('admin/advertisements') }}";
           @can('manage-advertisements')
+          $('#action-show').attr('href', baseUrl + '/' + selectedRow.id);
           $('#action-edit').attr('href', baseUrl + '/' + selectedRow.id + '/edit');
           @endcan
           

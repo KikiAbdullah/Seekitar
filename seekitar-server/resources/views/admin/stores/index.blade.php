@@ -7,25 +7,18 @@
   <style>
     .table-action-btn {
       display: inline-flex;
-      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      text-align: center;
-      width: 80px;
-      height: 70px;
-      border-radius: 0.25rem;
-      font-size: 0.75rem;
-      padding: 0.5rem 0.25rem;
+      gap: 0.5rem;
     }
     .table-action-btn .ti {
-      font-size: 1.5rem;
-      margin-bottom: 0.25rem;
+      font-size: 1.125rem;
     }
     #stores-table tbody tr {
       cursor: pointer;
     }
-    .row-selected {
-      background-color: #fcefe2 !important; /* Mordenize primary-light */
+    .row-selected,
+    .row-selected td {
+      background-color: #fcefe2 !important;
       font-weight: 600;
     }
   </style>
@@ -34,76 +27,63 @@
 @section('content')
   <div class="row">
     <div class="col-12">
-      <!-- Filter & Export Card -->
-      <div class="card mb-4 shadow-sm">
-        <div class="card-body p-4">
-          <div class="d-md-flex align-items-center justify-content-between mb-3">
-            <div>
-              <h4 class="card-title">Filter Toko</h4>
-              <p class="card-subtitle mb-0">Saring toko berdasarkan status verifikasi mereka.</p>
-            </div>
-            <div class="mt-3 mt-md-0">
-              @can('manage-stores')
-                <a href="{{ route('admin.stores.export') }}" id="export-csv-btn" class="btn btn-outline-secondary d-flex align-items-center gap-2">
-                  <i class="ti ti-download fs-4"></i> Ekspor CSV
-                </a>
-              @endcan
-            </div>
-          </div>
-          
-          <div class="row">
-            <div class="col-md-3">
-              <label for="filter-status" class="form-label">Status Toko</label>
-              <select class="form-select" id="filter-status">
-                <option value="">Semua Status</option>
-                @foreach (\App\Enums\StoreStatus::cases() as $status)
-                  <option value="{{ $status->value }}">{{ $status->label() }}</option>
-                @endforeach
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Table Card -->
       <div class="card w-100 shadow-sm">
         <div class="card-body border-bottom">
           <div class="d-flex align-items-center justify-content-between">
             <h5 class="card-title fw-semibold mb-0">Daftar Toko</h5>
-            <!-- Contextual Actions -->
-            <div id="table-actions" class="d-none">
-              <a id="action-show" href="#" class="btn btn-outline-info table-action-btn" title="Lihat Detail">
-                <i class="ti ti-eye"></i>
-                <span>Detail</span>
-              </a>
+            <div class="d-flex align-items-center gap-2">
               @can('manage-stores')
-              <a id="action-edit" href="#" class="btn btn-outline-warning table-action-btn" title="Edit Toko">
-                <i class="ti ti-pencil"></i>
-                <span>Edit</span>
-              </a>
-              <a id="action-block" href="#" class="btn btn-outline-danger table-action-btn" title="Blokir/Buka Blokir">
-                <i class="ti ti-building-store-off"></i>
-                <span>Blokir</span>
-              </a>
+                <a href="{{ route('admin.stores.export') }}" id="export-csv-btn" class="btn btn-outline-secondary table-action-btn" title="Ekspor CSV" target="_blank">
+                  <i class="ti ti-download fs-4" aria-hidden="true"></i> Ekspor CSV
+                </a>
               @endcan
+              <!-- Contextual Actions -->
+              <div id="table-actions" class="d-none">
+                @can('manage-stores')
+                <a id="action-show" href="#" class="btn btn-outline-info table-action-btn" title="Lihat Detail">
+                  <i class="ti ti-search" aria-hidden="true"></i>
+                  <span>Detail</span>
+                </a>
+                <a id="action-edit" href="#" class="btn btn-outline-warning table-action-btn" title="Edit Toko">
+                  <i class="ti ti-pencil" aria-hidden="true"></i>
+                  <span>Edit</span>
+                </a>
+                @endcan
+              </div>
             </div>
           </div>
         </div>
-        <div class="table-responsive">
-          <table class="table table-sm table-bordered align-middle text-nowrap" id="stores-table" style="width: 100%;">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nama Toko</th>
-                <th>Owner</th>
-                <th>Kota</th>
-                <th>Rating</th>
-                <th>Status</th>
-                <th>Tanggal Dibuat</th>
-                <th>Aksi</th>
-              </tr>
-            </thead>
-          </table>
+        <div class="card-body">
+          <div id="stores-table-toolbar" class="d-none">
+            <div class="d-flex flex-wrap align-items-center gap-3">
+              <div>
+                <label for="filter-status" class="visually-hidden">Saring status</label>
+                <select class="form-select js-select2" id="filter-status">
+                  <option value="">Semua Status</option>
+                  @foreach (\App\Enums\StoreStatus::cases() as $status)
+                    <option value="{{ $status->value }}">{{ $status->label() }}</option>
+                  @endforeach
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table align-middle text-nowrap search-table" id="stores-table" style="width: 100%;">
+              <thead>
+                <tr>
+                  <th style="display:none">ID</th>
+                  <th>Nama Toko</th>
+                  <th>Owner</th>
+                  <th>Kota</th>
+                  <th>Rating</th>
+                  <th>Status Aktif</th>
+                  <th>Status</th>
+                  <th>Tanggal Dibuat</th>
+                </tr>
+              </thead>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -126,25 +106,24 @@
         columns: [
           { data: 'id', name: 'id', visible: false },
           { data: 'name', name: 'name' },
-          { data: 'owner', name: 'owner' },
+          { data: 'owner', name: 'owner.name' },
           { data: 'regency', name: 'regency' },
-          { data: 'rating', name: 'rating_avg' },
-          { 
-            data: 'is_active', 
-            name: 'is_active',
+          { data: 'rating', name: 'rating_avg', orderable: false, searchable: false },
+          { data: 'is_active', name: 'is_active',
             render: function(data, type, row) {
-              if (data) {
-                return '<span class="badge bg-success text-white fw-semibold fs-2">Aktif</span>';
-              }
-              return '<span class="badge bg-secondary text-white fw-semibold fs-2">Nonaktif</span>';
+              return data ? '<span class="badge bg-success text-white fw-semibold fs-2">Aktif</span>' : '<span class="badge bg-secondary text-white fw-semibold fs-2">Nonaktif</span>';
             }
           },
           { data: 'status', name: 'status', orderable: false, searchable: false },
           { data: 'created_at', name: 'created_at' },
         ],
         order: [[7, 'desc']],
-        language: {
-          url: "https://cdn.datatables.net/plug-ins/1.13.4/i18n/id.json"
+        dom: "<'d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3'f<'.dt-filters'>>rt<'d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3'<'d-flex align-items-center gap-2'l><'d-flex align-items-center gap-2'i><'d-flex align-items-center gap-2'p>>",
+        initComplete: function () {
+          var $slot = $('#stores-table_wrapper').find('.dt-filters');
+          $('#stores-table-toolbar').children().appendTo($slot);
+          $('#stores-table-toolbar').remove();
+          $slot.filter(':empty').remove();
         },
         drawCallback: function(settings) {
           $('#table-actions').addClass('d-none');
@@ -171,10 +150,9 @@
           selectedRow = rowData;
           
           var baseUrl = "{{ url('admin/stores') }}";
-          $('#action-show').attr('href', baseUrl + '/' + selectedRow.id);
           @can('manage-stores')
+          $('#action-show').attr('href', baseUrl + '/' + selectedRow.id);
           $('#action-edit').attr('href', baseUrl + '/' + selectedRow.id + '/edit');
-          $('#action-block').attr('href', baseUrl + '/' + selectedRow.id + '/block');
           @endcan
           
           $('#table-actions').removeClass('d-none');

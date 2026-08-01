@@ -60,7 +60,7 @@
                     
                     <div class="mb-3">
                       <label for="position" class="form-label">Posisi Penempatan</label>
-                      <select class="form-select @error('position') is-invalid @enderror" id="position" name="position" required>
+                      <select class="form-select js-select2 @error('position') is-invalid @enderror" id="position" name="position" required>
                         <option value="feed" {{ old('position') == 'feed' ? 'selected' : '' }}>Feed Utama</option>
                         <option value="sidebar" {{ old('position') == 'sidebar' ? 'selected' : '' }}>Sidebar</option>
                         <option value="search" {{ old('position') == 'search' ? 'selected' : '' }}>Halaman Pencarian</option>
@@ -81,7 +81,7 @@
                     
                     <div class="mb-3">
                       <label for="status" class="form-label">Status Awal</label>
-                      <select class="form-select @error('status') is-invalid @enderror" id="status" name="status" required>
+                      <select class="form-select js-select2 @error('status') is-invalid @enderror" id="status" name="status" required>
                         <option value="available" {{ old('status') == 'available' ? 'selected' : '' }}>Tersedia (Available)</option>
                         <option value="active" {{ old('status') == 'active' ? 'selected' : '' }}>Langsung Aktif (Active)</option>
                         <option value="inactive" {{ old('status') == 'inactive' ? 'selected' : '' }}>Nonaktif (Inactive)</option>

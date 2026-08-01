@@ -87,7 +87,7 @@ class UserController extends Controller
     {
         return view('admin.users.show', [
             // withCoordinates(): latitude/longitude dibaca dari kolom POINT
-            // lewat ST_Latitude/ST_Longitude — properti biasa isinya WKB
+            // lewat ST_Latitude/ST_Longitude �?" properti biasa isinya WKB
             // biner, dan strict mode melempar error bila kolomnya tak dipilih.
             'user' => User::query()
                 ->withCoordinates()
@@ -96,8 +96,23 @@ class UserController extends Controller
                     'rejectedBy:id,name',
                     'blockedBy:id,name',
                     'stores:id,user_id,name,photo,status,is_active,rating_avg,total_reviews,created_at',
+                    'devices:id,user_id,device_id,fcm_token,platform,last_used_at,created_at',
+                    // 5 riwayat terbaru saja: halaman detail tidak boleh
+                    // men-dump seluruh tabel saat hanya gambaran dibutuhkan.
+                    'customerRequests' => fn ($q) => $q
+                        ->with('category:id,name')
+                        ->latest()
+                        ->limit(5),
+                    'orders' => fn ($q) => $q
+                        ->with('store:id,name,photo,status')
+                        ->latest()
+                        ->limit(5),
+                    'reviewsReceived' => fn ($q) => $q
+                        ->with(['reviewer:id,name', 'store:id,name'])
+                        ->latest()
+                        ->limit(5),
                 ])
-                ->withCount(['stores', 'customerRequests', 'orders'])
+                ->withCount(['stores', 'customerRequests', 'orders', 'reviewsReceived'])
                 ->findOrFail($user->getKey()),
         ]);
     }

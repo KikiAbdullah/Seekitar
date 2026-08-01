@@ -14,7 +14,7 @@
             </div>
             <div>
               <a href="{{ route('admin.stores.show', $store) }}" class="btn btn-outline-secondary">
-                <i class="ti ti-arrow-left"></i> Kembali ke Detail
+                <i class="ti ti-arrow-left" aria-hidden="true"></i> Kembali ke Detail
               </a>
             </div>
           </div>
@@ -56,7 +56,7 @@
 
                 <div class="mb-3">
                   <label for="category_ids" class="form-label">Kategori Toko (Maksimal 10 Kategori)</label>
-                  <select name="category_ids[]" id="category_ids" class="form-select @error('category_ids') is-invalid @enderror" multiple style="height: 150px;" required>
+                  <select name="category_ids[]" id="category_ids" class="form-select js-select2 @error('category_ids') is-invalid @enderror" multiple style="height: 150px;" required>
                     @foreach ($kategori as $kat)
                       <option value="{{ $kat->id }}" {{ in_array($kat->id, old('category_ids', $store->category_ids ?? [])) ? 'selected' : '' }}>
                         {{ $kat->name }}
@@ -97,7 +97,7 @@
                     @enderror
                   </div>
                   <div class="col-12">
-                    <div class="form-text text-danger fs-2"><i class="ti ti-info-circle"></i> Koordinat lokasi pin GPS wajib dipasang untuk operasional hyperlocal.</div>
+                    <div class="form-text text-danger fs-2"><i class="ti ti-info-circle" aria-hidden="true"></i> Koordinat lokasi pin GPS wajib dipasang untuk operasional hyperlocal.</div>
                   </div>
                 </div>
 

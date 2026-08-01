@@ -33,7 +33,7 @@
           @if (empty($antrian))
             <div class="d-flex align-items-center justify-content-center py-4">
               <div class="text-center">
-                <i class="ti ti-circle-check text-success fs-9 mb-2"></i>
+                <i class="ti ti-circle-check text-success fs-9 mb-2" aria-hidden="true"></i>
                 <p class="mb-0 fs-3">Semua tugas selesai!</p>
               </div>
             </div>
@@ -43,7 +43,7 @@
                 <div class="d-flex align-items-center justify-content-between border-bottom pb-2">
                   <div class="d-flex align-items-center gap-3">
                     <span class="rounded bg-{{ $item['tone'] }}-subtle text-{{ $item['tone'] }} p-2">
-                      <i class="{{ $item['icon'] }} fs-5"></i>
+                      <i class="{{ $item['icon'] }} fs-5" aria-hidden="true"></i>
                     </span>
                     <div>
                       <h6 class="mb-0 fw-semibold fs-3">{{ $item['label'] }}</h6>
@@ -72,16 +72,16 @@
             <div class="d-flex align-items-center justify-content-between mb-4">
               <div>
                 <h6 class="card-title mb-1 fs-3 text-muted">{{ $card['label'] }}</h6>
-                <h3 class="fw-bold mb-0">{{ number_format($card['value']) }}</h3>
+                <h3 class="fw-bold mb-0">{{ \App\Support\Angka::bulat($card['value']) }}</h3>
               </div>
-              <span class="rounded-circle bg-{{ $card['tone'] }}-subtle text-{{ $card['tone'] }} p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-                <i class="{{ $card['icon'] }} fs-5"></i>
+              <span class="rounded-circle bg-{{ $card['tone'] }}-subtle text-{{ $card['tone'] }} p-3 d-flex align-items-center justify-content-center">
+                <i class="{{ $card['icon'] }} fs-5" aria-hidden="true"></i>
               </span>
             </div>
             <div class="d-flex align-items-center justify-content-between fs-3">
               <span class="text-muted">{{ $card['hint'] }}</span>
               @if ($card['url'])
-                <a href="{{ $card['url'] }}" class="text-primary text-decoration-none fw-semibold">Lihat Detail <i class="ti ti-arrow-right"></i></a>
+                <a href="{{ $card['url'] }}" class="text-primary text-decoration-none fw-semibold">Lihat Detail <i class="ti ti-arrow-right" aria-hidden="true"></i></a>
               @endif
             </div>
           </div>
@@ -102,7 +102,7 @@
                 <p class="card-subtitle">Grafik permintaan baru dan pesanan baru ({{ $chartHari }} hari terakhir)</p>
               </div>
             </div>
-            <div id="market-activity-chart"></div>
+            <div id="market-activity-chart" class="admin-grafik"></div>
           </div>
         </div>
       </div>
@@ -113,7 +113,7 @@
   <div class="row">
     <!-- Recent Requests -->
     @if (Gate::allows('manage-requests') && isset($ringkas['requests']) && $ringkas['requests']->isNotEmpty())
-      <div class="col-lg-6 d-flex align-items-stretch">
+      <div class="col-xl-6 d-flex align-items-stretch">
         <div class="card w-100">
           <div class="card-body p-4">
             <div class="d-flex align-items-center justify-content-between mb-4">
@@ -121,7 +121,7 @@
               <a href="{{ route('admin.requests.index') }}" class="btn btn-sm btn-light text-primary fw-semibold">Lihat Semua</a>
             </div>
             <div class="table-responsive">
-              <table class="table align-middle text-nowrap mb-0">
+              <table class="table align-middle text-nowrap mb-0 admin-ringkas">
                 <thead>
                   <tr class="text-muted fw-semibold">
                     <th scope="col">Judul</th>
@@ -131,24 +131,24 @@
                   </tr>
                 </thead>
                 <tbody>
-                  @foreach ($ringkas['requests'] as $req)
+                  @foreach ($ringkas['requests'] as $item)
                     <tr>
                       <td>
                         <div class="d-flex align-items-center">
-                          <div>
-                            <h6 class="fw-semibold mb-1 fs-3">{{ Str::limit($req->title, 30) }}</h6>
-                            <span class="fs-2 text-muted">Dibuat {{ $req->created_at->diffForHumans() }}</span>
+                          <div class="min-w-0">
+                            <h6 class="fw-semibold mb-1 fs-3 text-truncate">{{ $item['title'] }}</h6>
+                            <span class="fs-2 text-muted">{{ $item['dibuat'] }}</span>
                           </div>
                         </div>
                       </td>
                       <td>
-                        <p class="mb-0 fs-3">{{ $req->user?->name ?: 'Pengguna' }}</p>
+                        <p class="mb-0 fs-3">{{ $item['pembeli'] }}</p>
                       </td>
                       <td>
-                        <span class="badge bg-light-primary text-primary fw-semibold fs-2">{{ $req->category?->name ?: 'Umum' }}</span>
+                        <span class="badge bg-light-primary text-primary fw-semibold fs-2">{{ $item['kategori'] }}</span>
                       </td>
                       <td class="text-end">
-                        <span class="badge bg-light-secondary text-secondary fw-bold">{{ $req->offers_count }}</span>
+                        <span class="badge bg-light-secondary text-secondary fw-bold">{{ $item['penawaran'] }}</span>
                       </td>
                     </tr>
                   @endforeach
@@ -162,7 +162,7 @@
 
     <!-- Recent Offers -->
     @if (Gate::allows('manage-offers') && isset($ringkas['offers']) && $ringkas['offers']->isNotEmpty())
-      <div class="col-lg-6 d-flex align-items-stretch">
+      <div class="col-xl-6 d-flex align-items-stretch">
         <div class="card w-100">
           <div class="card-body p-4">
             <div class="d-flex align-items-center justify-content-between mb-4">
@@ -170,7 +170,7 @@
               <a href="{{ route('admin.offers.index') }}" class="btn btn-sm btn-light text-primary fw-semibold">Lihat Semua</a>
             </div>
             <div class="table-responsive">
-              <table class="table align-middle text-nowrap mb-0">
+              <table class="table align-middle text-nowrap mb-0 admin-ringkas">
                 <thead>
                   <tr class="text-muted fw-semibold">
                     <th scope="col">Toko Penawar</th>
@@ -180,27 +180,21 @@
                   </tr>
                 </thead>
                 <tbody>
-                  @foreach ($ringkas['offers'] as $off)
+                  @foreach ($ringkas['offers'] as $item)
                     <tr>
                       <td>
                         <div class="d-flex align-items-center">
-                          <div>
-                            <h6 class="fw-semibold mb-0 fs-3">{{ $off->store?->name ?: 'Toko' }}</h6>
-                          </div>
+                          <h6 class="fw-semibold mb-0 fs-3 text-truncate">{{ $item['toko'] }}</h6>
                         </div>
                       </td>
                       <td>
-                        <span class="fs-3 text-muted">{{ Str::limit($off->request?->title ?: 'Permintaan', 25) }}</span>
+                        <span class="fs-3 text-muted">{{ $item['request'] }}</span>
                       </td>
                       <td>
-                        <h6 class="fw-semibold mb-0 fs-3">Rp {{ number_format($off->price + $off->additional_cost) }}</h6>
+                        <h6 class="fw-semibold mb-0 fs-3 text-nowrap">{{ $item['nilai'] }}</h6>
                       </td>
                       <td class="text-end">
-                        @php
-                          $status_class = $off->status->value === 'accepted' ? 'success' : ($off->status->value === 'rejected' ? 'danger' : 'warning');
-                          $status_label = $off->status->value === 'accepted' ? 'Diterima' : ($off->status->value === 'rejected' ? 'Ditolak' : 'Menunggu');
-                        @endphp
-                        <span class="badge bg-light-{{ $status_class }} text-{{ $status_class }} fw-semibold fs-2">{{ $status_label }}</span>
+                        <span class="badge bg-light-{{ $item['status_class'] }} text-{{ $item['status_class'] }} fw-semibold fs-2">{{ $item['status_label'] }}</span>
                       </td>
                     </tr>
                   @endforeach
@@ -227,7 +221,6 @@
           success: function (res) {
             var options = {
               chart: {
-                height: 350,
                 type: 'area',
                 fontFamily: "Plus Jakarta Sans', sans-serif",
                 foreColor: '#adb5bd',

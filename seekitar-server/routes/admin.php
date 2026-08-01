@@ -87,6 +87,10 @@ Route::middleware(['auth', 'role:admin|super-admin'])->group(function (): void {
         ->middleware('permission:manage-users')->name('users.data');
     Route::get('stores/data',   [StoreController::class, 'data'])
         ->middleware('permission:manage-stores')->name('stores.data');
+    Route::get('verifications/users/data', [VerificationController::class, 'userData'])
+        ->middleware('permission:verify-users')->name('verifications.users.data');
+    Route::get('verifications/stores/data', [VerificationController::class, 'storesData'])
+        ->middleware('permission:verify-stores')->name('verifications.stores.data');
     Route::get('disputes/data', [DisputeController::class, 'data'])
         ->middleware('permission:manage-disputes')->name('disputes.data');
     Route::get('listings/data', [ListingController::class, 'data'])
@@ -239,6 +243,7 @@ Route::middleware(['auth', 'role:admin|super-admin'])->group(function (): void {
     Route::middleware('permission:manage-disputes')->group(function (): void {
         Route::get('disputes', [DisputeController::class, 'index'])->name('disputes.index');
         Route::get('disputes/{dispute}', [DisputeController::class, 'show'])->name('disputes.show');
+        Route::get('disputes/{dispute}/info', [DisputeController::class, 'info'])->name('disputes.info');
         Route::post('disputes/{dispute}/resolve', [DisputeController::class, 'resolve'])->name('disputes.resolve');
     });
 

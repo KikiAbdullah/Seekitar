@@ -63,7 +63,7 @@
           <!-- Accepted Offer Prominently -->
           @if ($request->acceptedOffer)
             <div class="alert alert-success border-0 shadow-sm p-4 mb-4" role="alert">
-              <h5 class="alert-heading fw-bold mb-3"><i class="ti ti-circle-check"></i> Penawaran Diterima Pembeli</h5>
+              <h5 class="alert-heading fw-bold mb-3"><i class="ti ti-circle-check" aria-hidden="true"></i> Penawaran Diterima Pembeli</h5>
               <div class="d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center gap-3">
                   <img src="{{ $request->acceptedOffer->store->photo ? asset('storage/' . $request->acceptedOffer->store->photo) : 'https://placehold.co/100x100?text=Toko' }}" class="rounded-circle border" width="48" height="48" style="object-fit: cover;">
@@ -109,7 +109,7 @@
                           <img src="{{ $off->store->photo ? asset('storage/' . $off->store->photo) : 'https://placehold.co/100x100?text=Toko' }}" class="rounded-circle border" width="40" height="40" style="object-fit: cover;">
                           <div>
                             <h6 class="fw-semibold mb-0 fs-3">{{ $off->store->name }}</h6>
-                            <span class="fs-2 text-muted">Rating: {{ $off->store->total_reviews > 0 ? '★ ' . number_format($off->store->rating_avg, 1) : 'baru' }}</span>
+                            <span class="fs-2 text-muted">Rating: {{ $off->store->total_reviews > 0 ? '★ ' . \App\Support\Angka::desimal($off->store->rating_avg, 1) : 'baru' }}</span>
                           </div>
                         </div>
                       </td>
@@ -130,7 +130,7 @@
                         <span class="badge bg-light-{{ $o_class }} text-{{ $o_class }} fw-semibold fs-2">{{ $o_label }}</span>
                       </td>
                       <td class="text-end">
-                        <a href="{{ route('admin.offers.show', $off->id) }}" class="btn btn-xs btn-light-info text-info"><i class="ti ti-eye"></i> Detail</a>
+                        <a href="{{ route('admin.offers.show', $off->id) }}" class="btn btn-xs btn-light-info text-info"><i class="ti ti-search" aria-hidden="true"></i> Detail</a>
                       </td>
                     </tr>
                   @endforeach
@@ -157,14 +157,14 @@
                 <h6 class="fw-bold mb-0 text-dark">{{ $request->user?->name }}</h6>
                 @if ($request->user?->verified_at)
                   <span class="text-success" title="KTP Terverifikasi">
-                    <i class="fa-solid fa-circle-check fs-4"></i>
+                    <i class="ti ti-circle-check fs-4" role="img" aria-label="Terverifikasi"></i>
                   </span>
                 @endif
               </div>
               <span class="fs-2 text-muted">{{ $request->user?->phone }}</span>
             </div>
           </div>
-          <a href="{{ route('admin.users.show', $request->user_id) }}" class="btn btn-sm btn-outline-primary w-100"><i class="ti ti-user me-1"></i> Detail Akun Pembeli</a>
+          <a href="{{ route('admin.users.show', $request->user_id) }}" class="btn btn-sm btn-outline-primary w-100"><i class="ti ti-user me-1" aria-hidden="true"></i> Detail Akun Pembeli</a>
         </div>
       </div>
 
@@ -176,7 +176,7 @@
             <p class="fs-3 text-muted mb-3">Lokasi domisili pembeli saat menyiarkan permintaan ini.</p>
             <code>{{ $request->latitude }}, {{ $request->longitude }}</code>
             <a href="https://www.google.com/maps/search/?api=1&query={{ $request->latitude }},{{ $request->longitude }}" target="_blank" class="btn btn-sm btn-light-primary text-primary w-100 mt-3">
-              <i class="ti ti-map-pin"></i> Buka di Google Maps
+              <i class="ti ti-map-pin" aria-hidden="true"></i> Buka di Google Maps
             </a>
           </div>
         </div>
@@ -205,7 +205,7 @@
               <form action="{{ route('admin.requests.extend', $request) }}" method="POST">
                 @csrf
                 <button type="submit" class="btn btn-warning w-100 btn-hover-shadow py-2 fw-semibold" onclick="return confirm('Apakah Anda yakin ingin memperpanjang masa aktif permintaan ini selama 24 jam?');">
-                  <i class="ti ti-clock me-1"></i> Perpanjang 24 Jam (SLA)
+                  <i class="ti ti-clock me-1" aria-hidden="true"></i> Perpanjang 24 Jam (SLA)
                 </button>
               </form>
             @else

@@ -15,7 +15,7 @@
             <div>
               @can('manage-categories')
                 <a href="{{ route('admin.categories.create') }}" class="btn btn-primary d-flex align-items-center gap-2">
-                  <i class="ti ti-plus fs-4"></i> Tambah Kategori
+                  <i class="ti ti-plus fs-4" aria-hidden="true"></i> Tambah Kategori
                 </a>
               @endcan
             </div>
@@ -43,13 +43,13 @@
                   </div>
                   <div class="d-flex align-items-center gap-2">
                     <a href="{{ route('admin.categories.edit', $parent) }}" class="btn btn-sm btn-light-primary text-primary" title="Edit">
-                      <i class="ti ti-edit fs-4"></i> Edit
+                      <i class="ti ti-edit fs-4" aria-hidden="true"></i> Edit
                     </a>
                     <form action="{{ route('admin.categories.destroy', $parent) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus kategori ini?');" style="display:inline-block;">
                       @csrf
                       @method('DELETE')
                       <button type="submit" class="btn btn-sm btn-light-danger text-danger" title="Hapus">
-                        <i class="ti ti-trash fs-4"></i> Hapus
+                        <i class="ti ti-trash fs-4" aria-hidden="true"></i> Hapus
                       </button>
                     </form>
                   </div>
@@ -63,7 +63,7 @@
                         <div class="list-group-item p-3 d-flex align-items-center justify-content-between">
                           <div class="d-flex align-items-center gap-3">
                             <span class="rounded bg-secondary-subtle text-secondary p-1 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                              <i class="ti ti-tag fs-4"></i>
+                              <i class="ti ti-tag fs-4" aria-hidden="true"></i>
                             </span>
                             <div>
                               <h6 class="mb-0 fw-semibold fs-3">{{ $child->name }}</h6>
@@ -72,13 +72,13 @@
                           </div>
                           <div class="d-flex align-items-center gap-2">
                             <a href="{{ route('admin.categories.edit', $child) }}" class="btn btn-sm btn-light-primary text-primary" title="Edit">
-                              <i class="ti ti-edit fs-3"></i> Edit
+                              <i class="ti ti-edit fs-3" aria-hidden="true"></i> Edit
                             </a>
                             <form action="{{ route('admin.categories.destroy', $child) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus subkategori ini?');" style="display:inline-block;">
                               @csrf
                               @method('DELETE')
                               <button type="submit" class="btn btn-sm btn-light-danger text-danger" title="Hapus">
-                                <i class="ti ti-trash fs-3"></i> Hapus
+                                <i class="ti ti-trash fs-3" aria-hidden="true"></i> Hapus
                               </button>
                             </form>
                           </div>
@@ -90,7 +90,7 @@
               </div>
             @empty
               <div class="p-5 text-center">
-                <i class="ti ti-tag text-muted fs-9 mb-3 d-block"></i>
+                <i class="ti ti-tag text-muted fs-9 mb-3 d-block" aria-hidden="true"></i>
                 <p class="mb-0 text-muted fs-4">Belum ada kategori yang dibuat.</p>
               </div>
             @endforelse

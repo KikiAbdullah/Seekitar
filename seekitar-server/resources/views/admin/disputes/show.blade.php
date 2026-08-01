@@ -11,15 +11,7 @@
           <div class="d-md-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
             <div>
               <span class="badge bg-light-danger text-danger fw-semibold fs-2 text-capitalize mb-2">
-                @php
-                  $reasons = [
-                    'item_not_received' => 'Barang Tidak Diterima',
-                    'item_damaged' => 'Barang Rusak/Cacat',
-                    'item_not_matching' => 'Barang Tidak Sesuai Deskripsi',
-                    'others' => 'Lainnya'
-                  ];
-                  echo $reasons[$dispute->reason->value ?? $dispute->reason] ?? $dispute->reason;
-                @endphp
+                {{ $dispute->reason?->label() ?? $dispute->reason }}
               </span>
               <h3 class="fw-bold mb-0 text-dark">Laporan Sengketa Pesanan #{{ $dispute->order?->order_number }}</h3>
               <p class="text-muted mb-0 fs-3">Dilaporkan pada {{ $dispute->created_at?->format('d M Y H:i') }}</p>
@@ -48,7 +40,7 @@
           <!-- Order Info -->
           @if ($dispute->order)
             <h5 class="fw-bold mb-3 text-dark">Pesanan Terkait</h5>
-            <div class="table-responsive border rounded p-3 bg-white mb-4">
+            <div class="table-responsive p-3 bg-white mb-4">
               <table class="table table-borderless align-middle mb-0 fs-3">
                 <tbody>
                   <tr>
@@ -73,7 +65,7 @@
                   </tr>
                 </tbody>
               </table>
-              <a href="{{ route('admin.orders.show', $dispute->order_id) }}" class="btn btn-sm btn-outline-primary mt-3"><i class="ti ti-credit-card me-1"></i> Detail Pesanan Lengkap</a>
+              <a href="{{ route('admin.orders.show', $dispute->order_id) }}" class="btn btn-sm btn-outline-primary mt-3"><i class="ti ti-credit-card me-1" aria-hidden="true"></i> Detail Pesanan Lengkap</a>
             </div>
           @endif
         </div>
@@ -83,8 +75,8 @@
       @if ($dispute->status->value === 'resolved')
         <div class="card shadow-sm mt-4">
           <div class="card-body p-4">
-            <h5 class="fw-bold mb-3 text-success"><i class="ti ti-circle-check"></i> Hasil Keputusan Mediasi</h5>
-            <div class="table-responsive border rounded p-3 bg-light mb-0 fs-3">
+            <h5 class="fw-bold mb-3 text-success"><i class="ti ti-circle-check" aria-hidden="true"></i> Hasil Keputusan Mediasi</h5>
+            <div class="table-responsive p-3 bg-light mb-0 fs-3">
               <table class="table table-borderless align-middle mb-0">
                 <tbody>
                   <tr>
@@ -98,7 +90,7 @@
                   <tr>
                     <td class="text-muted ps-0">Keputusan Akhir</td>
                     <td class="fw-bold text-dark text-capitalize">
-                      {{ $dispute->order->status->value === 'completed' ? 'Dana Diteruskan ke Penjual (Selesai)' : 'Dana Dikembalikan ke Pembeli (Dibatalkan)' }}
+                      {{ $dispute->order->status->value === 'selesai' ? 'Dana Diteruskan ke Penjual (Selesai)' : 'Dana Dikembalikan ke Pembeli (Dibatalkan)' }}
                     </td>
                   </tr>
                   <tr>
@@ -119,15 +111,25 @@
       <div class="card shadow-sm mb-4">
         <div class="card-body p-4">
           <h5 class="fw-bold mb-3 text-dark">Pelapor Masalah</h5>
-          <div class="d-flex align-items-center gap-3">
+          <div class="d-flex align-items-center gap-3 mb-3">
             <span class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold" style="width: 48px; height: 48px;">
               {{ $dispute->reporter?->initials }}
             </span>
             <div>
-              <h6 class="fw-bold mb-0 text-dark">{{ $dispute->reporter?->name }}</h6>
+              <div class="d-flex align-items-center gap-2">
+                <h6 class="fw-bold mb-0 text-dark">{{ $dispute->reporter?->name }}</h6>
+                @if ($dispute->reporter?->verified_at)
+                  <span class="text-success" title="KTP Terverifikasi">
+                    <i class="ti ti-circle-check fs-4" role="img" aria-label="Terverifikasi"></i>
+                  </span>
+                @endif
+              </div>
               <span class="fs-2 text-muted">{{ $dispute->reporter?->phone }}</span>
             </div>
           </div>
+          @if ($dispute->reported_by)
+            <a href="{{ route('admin.users.show', $dispute->reported_by) }}" class="btn btn-sm btn-outline-primary w-100"><i class="ti ti-user me-1" aria-hidden="true"></i> Detail Akun Pelapor</a>
+          @endif
         </div>
       </div>
 
@@ -135,7 +137,7 @@
       @if ($dispute->status->value === 'open')
         <div class="card bg-light-warning shadow-sm mb-4">
           <div class="card-body p-4">
-            <h5 class="fw-bold text-warning mb-2"><i class="ti ti-clock"></i> Tenggat Tanggapan (SLA)</h5>
+            <h5 class="fw-bold text-warning mb-2"><i class="ti ti-clock" aria-hidden="true"></i> Tenggat Tanggapan (SLA)</h5>
             <p class="fs-3 text-dark mb-0"><strong>Batas SLA:</strong> {{ $dispute->response_deadline?->format('d M Y H:i') }}</p>
             @if ($dispute->response_deadline?->isPast())
               <span class="badge bg-danger text-white fw-bold mt-2">SLA TERLAMPAUI (Overdue)</span>
@@ -147,7 +149,7 @@
 
         <!-- Resolve Form -->
         @can('manage-disputes')
-          <div class="card border">
+          <div class="card border" id="mediasi">
             <div class="card-body p-4">
               <h5 class="fw-bold text-dark mb-3">Mediasi & Keputusan Admin</h5>
               <p class="text-muted fs-2">Admin berhak mengambil keputusan mediasi untuk melepaskan dana ke penjual atau mengembalikannya ke pembeli.</p>
@@ -157,7 +159,7 @@
                 
                 <div class="mb-3">
                   <label for="resolution" class="form-label fw-semibold text-dark fs-3">Keputusan Akhir</label>
-                  <select class="form-select @error('resolution') is-invalid @enderror" id="resolution" name="resolution" required>
+                  <select class="form-select js-select2 @error('resolution') is-invalid @enderror" id="resolution" name="resolution" required>
                     <option value="">Pilih Keputusan</option>
                     <option value="selesai" {{ old('resolution') === 'selesai' ? 'selected' : '' }}>Selesaikan (Teruskan Dana ke Penjual)</option>
                     <option value="dibatalkan" {{ old('resolution') === 'dibatalkan' ? 'selected' : '' }}>Batalkan (Kembalikan Dana ke Pembeli)</option>
@@ -176,7 +178,7 @@
                 </div>
                 
                 <button type="submit" class="btn btn-primary w-100 btn-hover-shadow py-2 fw-semibold" onclick="return confirm('Apakah Anda yakin ingin memproses keputusan mediasi ini? Tindakan ini bersifat permanen dan tidak dapat diubah.');">
-                  <i class="ti ti-circle-check fs-5 me-1"></i> Kirim Keputusan
+                  <i class="ti ti-circle-check fs-5 me-1" aria-hidden="true"></i> Kirim Keputusan
                 </button>
               </form>
             </div>

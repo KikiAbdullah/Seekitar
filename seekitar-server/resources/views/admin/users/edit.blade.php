@@ -14,7 +14,7 @@
             </div>
             <div>
               <a href="{{ route('admin.users.show', $user) }}" class="btn btn-outline-secondary">
-                <i class="ti ti-arrow-left"></i> Kembali ke Detail
+                <i class="ti ti-arrow-left" aria-hidden="true"></i> Kembali ke Detail
               </a>
             </div>
           </div>

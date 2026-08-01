@@ -262,6 +262,12 @@
     font-size: 16px;
 }
 
+/* Cadangan untuk submenu yang memakai ikon Tabler (.ti) — sama 16px. */
+.sidebar-nav ul .sidebar-item .first-level .sidebar-link .ti {
+    flex-shrink: 0;
+    font-size: 16px;
+}
+
 /*
  * Submenu aktif harus bisa dikenali tanpa mengandalkan warna saja.
  *
@@ -382,8 +388,13 @@
 
 /* Penanda baris terpilih TIDAK mengandalkan warna latar saja: perbedaan
    warna gagal untuk pengguna buta warna (WCAG 1.4.1). Karena itu ditambah
-   garis di tepi kiri. */
-.admin-selectable tbody tr.table-active {
+   garis di tepi kiri. Warna latar dipasang di sel (bukan <tr>) dan penanda
+   kiri juga di sel pertama, sebab box-shadow tidak dirender pada <tr>. */
+.admin-selectable tbody tr.table-active > td {
+    background-color: var(--bs-primary-bg-subtle) !important;
+    box-shadow: none;
+}
+.admin-selectable tbody tr.table-active > td:first-child {
     box-shadow: inset 3px 0 0 var(--seekitar-green);
 }
 
@@ -684,6 +695,36 @@ div.dt-container .dt-length select { width: auto; display: inline-block; }
  */
 div.dt-container .dt-layout-table {
     overflow-x: auto;
+}
+
+/*
+ * Baris cari DataTables (dom '<"dt-toolbar">f...'): kotak pencarian tetap
+ * di kiri meski CSS bawaan integrasi menyetel text-align:right.
+ */
+div.dt-toolbar .dataTables_filter { text-align: left; }
+div.dt-toolbar .dataTables_filter input { min-width: 220px; }
+
+/*
+ * Paginasi tanpa border kotak-kotak bawaan Bootstrap — tombol angka jadi
+ * keping bulat yang tenang, aktif hijau, nonaktif redup.
+ */
+div.dataTables_wrapper div.dataTables_paginate ul.pagination { margin: 0; gap: .15rem; }
+div.dataTables_wrapper div.dataTables_paginate .page-link {
+    border: none;
+    border-radius: .375rem !important;
+    box-shadow: none;
+    color: #64748b;
+}
+div.dataTables_wrapper div.dataTables_paginate .page-link:hover {
+    background-color: var(--bs-primary-bg-subtle);
+    color: var(--bs-primary);
+}
+div.dataTables_wrapper div.dataTables_paginate .page-item.active .page-link {
+    background-color: var(--bs-primary);
+    color: #fff;
+}
+div.dataTables_wrapper div.dataTables_paginate .page-item.disabled .page-link {
+    color: #cbd5e1;
 }
 
 /* ------------------------------------------------------- Halaman detail */

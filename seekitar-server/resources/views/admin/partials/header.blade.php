@@ -3,7 +3,7 @@
     <ul class="navbar-nav">
       <li class="nav-item">
         <a class="nav-link sidebartoggler nav-icon-hover ms-n3" id="headerCollapse" href="javascript:void(0)">
-          <i class="ti ti-menu-2"></i>
+          <i class="ti ti-menu-2" aria-hidden="true"></i>
         </a>
       </li>
     </ul>
@@ -14,15 +14,12 @@
     
     <button class="navbar-toggler p-0 border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
       <span class="p-2">
-        <i class="ti ti-dots fs-7"></i>
+        <i class="ti ti-dots fs-7" aria-hidden="true"></i>
       </span>
     </button>
     
     <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
       <div class="d-flex align-items-center justify-content-between">
-        <a href="javascript:void(0)" class="nav-link d-flex d-lg-none align-items-center justify-content-center" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobilenavbar" aria-controls="offcanvasWithBothOptions">
-          <i class="ti ti-align-justified fs-7"></i>
-        </a>
         <ul class="navbar-nav flex-row ms-auto align-items-center justify-content-end">
           <li class="nav-item dropdown">
             <a class="nav-link nav-icon-hover" href="javascript:void(0)" id="drop2" data-bs-toggle="dropdown" aria-expanded="false">
@@ -33,11 +30,11 @@
             <div class="dropdown-menu dropdown-menu-end dropdown-menu-animate-up" aria-labelledby="drop2">
               <div class="message-body">
                 <a href="{{ route('admin.profile.edit') }}" class="d-flex align-items-center gap-2 dropdown-item">
-                  <i class="ti ti-user fs-6"></i>
+                  <i class="ti ti-user fs-6" aria-hidden="true"></i>
                   <p class="mb-0 fs-3">Profil Saya</p>
                 </a>
                 <a href="{{ route('admin.password.edit') }}" class="d-flex align-items-center gap-2 dropdown-item">
-                  <i class="ti ti-key fs-6"></i>
+                  <i class="ti ti-key fs-6" aria-hidden="true"></i>
                   <p class="mb-0 fs-3">Ubah Kata Sandi</p>
                 </a>
                 <form action="{{ route('admin.logout') }}" method="POST" class="px-4 mt-3 d-block">

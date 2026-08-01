@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 /**
  * Penjaga PANEL ADMIN: menu, izin, dan halaman.
  *
@@ -26,21 +26,21 @@ const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
 const exists = f => fs.existsSync(path.join(ROOT, f));
 
 let problems = 0;
-const fail = m => { console.log(`  ❌ ${m}`); problems++; };
-const ok = m => console.log(`  ✅ ${m}`);
+const fail = m => { console.log(`  âŒ ${m}`); problems++; };
+const ok = m => console.log(`  âœ… ${m}`);
 
 const SIDEBAR = 'seekitar-server/resources/views/admin/partials/sidebar.blade.php';
 
-// 12 permission dari Server_Implementation_Guide.md §6.2 — sumber kebenarannya
+// 12 permission dari Server_Implementation_Guide.md Â§6.2 â€” sumber kebenarannya
 // adalah seeder, bukan daftar yang ditulis ulang di sini.
 const PERMISSIONS = [...read('seekitar-server/database/seeders/RolesAndPermissionsSeeder.php')
   .matchAll(/^\s*'(manage-[a-z]+|verify-[a-z]+)',$/gm)].map(m => m[1]);
 
-// ─────────────────────────────────── 1. Sidebar ada & memakai @can
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ 1. Sidebar ada & memakai @can
 console.log('Sidebar admin');
 
 if (!exists(SIDEBAR)) {
-  fail(`${SIDEBAR} tidak ada — menu tidak bisa disaring per izin`);
+  fail(`${SIDEBAR} tidak ada â€” menu tidak bisa disaring per izin`);
 } else {
   const sidebar = read(SIDEBAR);
 
@@ -54,7 +54,7 @@ if (!exists(SIDEBAR)) {
   ]);
 
   if (canDipakai.size === 0) {
-    fail('sidebar tidak memakai @can sama sekali — semua menu tampil ke semua admin');
+    fail('sidebar tidak memakai @can sama sekali â€” semua menu tampil ke semua admin');
   } else {
     ok(`sidebar memakai ${canDipakai.size} permission berbeda di @can/@canany`);
   }
@@ -63,7 +63,7 @@ if (!exists(SIDEBAR)) {
   // izinnya diberikan tapi tidak membuka apa pun.
   const tanpaMenu = PERMISSIONS.filter(p => !canDipakai.has(p));
   if (tanpaMenu.length) {
-    fail(`permission tanpa butir menu: ${tanpaMenu.join(', ')} — izin diberikan tapi tidak membuka apa pun`);
+    fail(`permission tanpa butir menu: ${tanpaMenu.join(', ')} â€” izin diberikan tapi tidak membuka apa pun`);
   } else {
     ok(`${PERMISSIONS.length} permission semuanya punya butir menu`);
   }
@@ -76,7 +76,7 @@ if (!exists(SIDEBAR)) {
     ok('semua tautan memakai route()');
   }
 
-  // Induk dropdown harus @canany — dengan @can, menu "Verifikasi" hilang bagi
+  // Induk dropdown harus @canany â€” dengan @can, menu "Verifikasi" hilang bagi
   // admin yang hanya punya salah satu dari dua izinnya.
   if (!/@canany\(\['verify-users', 'verify-stores'\]\)/.test(bersih)) {
     fail("induk menu Verifikasi tidak memakai @canany(['verify-users', 'verify-stores'])");
@@ -87,15 +87,15 @@ if (!exists(SIDEBAR)) {
   /*
    * Ukuran huruf terkecil di sidebar: fs-1 = .625rem = 10px.
    *
-   * Ini di bawah batas 11px (BRANDING-GUIDELINE §4; usulan 8–10px pernah ditolak), tetapi
+   * Ini di bawah batas 11px (BRANDING-GUIDELINE Â§4; usulan 8â€“10px pernah ditolak), tetapi
    * pemeriksaan font yang sudah ada TIDAK menangkapnya: ia mencari deklarasi
    * `font-size:Npx`, sedangkan di sini ukurannya datang dari KELAS utilitas.
-   * Terbukti lewat getComputedStyle di Chromium — tiga elemen sidebar
+   * Terbukti lewat getComputedStyle di Chromium â€” tiga elemen sidebar
    * (dua lencana + kode BPS) merender 10px dan lolos semua checker.
    */
   const fs1 = [...bersih.matchAll(/class="[^"]*\bfs-1\b[^"]*"/g)].map(m => m[0].slice(0, 60));
   if (fs1.length) {
-    fail(`sidebar memakai .fs-1 (= 10px, di bawah batas 11px BRANDING §4): ${fs1.join(', ')}`);
+    fail(`sidebar memakai .fs-1 (= 10px, di bawah batas 11px BRANDING Â§4): ${fs1.join(', ')}`);
   } else {
     ok('sidebar tidak memakai .fs-1 (10px)');
   }
@@ -108,7 +108,7 @@ if (!exists(SIDEBAR)) {
    * 87px dan teksnya terpotong.
    */
   if (!/class="[^"]*\bsidebar-ad\b/.test(bersih)) {
-    fail('kartu kaki sidebar tidak memakai .sidebar-ad — tidak akan tersembunyi saat mini-sidebar');
+    fail('kartu kaki sidebar tidak memakai .sidebar-ad â€” tidak akan tersembunyi saat mini-sidebar');
   } else {
     ok('kartu kaki sidebar memakai pola .sidebar-ad template');
   }
@@ -120,16 +120,16 @@ if (!exists(SIDEBAR)) {
  * Template menyediakan `<div class="dark-transparent sidebartoggler">` di luar
  * .page-wrapper, dan app.min.js memasang penutup pada SETIAP .sidebartoggler.
  * Tanpa elemen ini, di ponsel sidebar menutupi konten tanpa peredupan dan
- * satu-satunya cara menutupnya adalah menemukan tombol X — mengetuk di luar
+ * satu-satunya cara menutupnya adalah menemukan tombol X â€” mengetuk di luar
  * tidak melakukan apa pun. Diverifikasi di Chromium 390px: sebelum perbaikan
  * `.dark-transparent` tidak ada sama sekali.
  */
 {
-  const layout = read('seekitar-server/resources/views/admin/layout.blade.php');
+  const layout = read('seekitar-server/resources/views/admin/layouts/admin.blade.php');
   const adaBackdrop = /class="dark-transparent[^"]*sidebartoggler/.test(layout);
 
   if (!adaBackdrop) {
-    fail('layout tanpa <div class="dark-transparent sidebartoggler"> — sidebar ponsel tanpa peredupan & tidak bisa ditutup dari luar');
+    fail('layout tanpa <div class="dark-transparent sidebartoggler"> â€” sidebar ponsel tanpa peredupan & tidak bisa ditutup dari luar');
   } else {
     ok('backdrop sidebar ponsel ada & terhubung ke sidebartoggler');
   }
@@ -140,11 +140,11 @@ if (!exists(SIDEBAR)) {
  *
  * 1. Lencana menabrak panah .has-arrow. Panah digambar ::after yang
  *    diposisikan absolut, jadi tidak menempati ruang layout dan lencana di
- *    ujung baris menimpanya. Terukur: panah x 213–220, lencana 208,6–235.
+ *    ujung baris menimpanya. Terukur: panah x 213â€“220, lencana 208,6â€“235.
  *
  * 2. Kartu kaki sidebar jatuh di bawah lipatan. Template memberi
  *    .scroll-sidebar tinggi calc(100vh - 80px) sementara .brand-logo sudah
- *    memakai 70px — hanya 10px tersisa untuk kartu setinggi 83px.
+ *    memakai 70px â€” hanya 10px tersisa untuk kartu setinggi 83px.
  *    Perbaikannya flex, bukan angka calc() baru yang akan salah lagi.
  */
 {
@@ -152,7 +152,7 @@ if (!exists(SIDEBAR)) {
     .replace(/\/\*[\s\S]*?\*\//g, '');
 
   if (!/\.sidebar-link\.has-arrow\s*>\s*\.hide-menu:last-child\s*\{[^}]*margin-right/.test(adminCss)) {
-    fail('lencana pada menu bersubmenu tidak diberi ruang — akan menabrak panah .has-arrow');
+    fail('lencana pada menu bersubmenu tidak diberi ruang â€” akan menabrak panah .has-arrow');
   } else {
     ok('lencana sidebar tidak menabrak panah submenu');
   }
@@ -161,9 +161,9 @@ if (!exists(SIDEBAR)) {
   const gulirFleks = /\.left-sidebar\s+\.scroll-sidebar\s*\{[^}]*min-height:\s*0/.test(adminCss);
 
   if (!flexKolom || !gulirFleks) {
-    fail('kaki sidebar tidak memakai tata letak flex — kartu wilayah jatuh di bawah lipatan (template menyisakan 10px untuk kartu 83px)');
+    fail('kaki sidebar tidak memakai tata letak flex â€” kartu wilayah jatuh di bawah lipatan (template menyisakan 10px untuk kartu 83px)');
   } else {
-    ok('kaki sidebar memakai flex — kartu wilayah selalu terlihat');
+    ok('kaki sidebar memakai flex â€” kartu wilayah selalu terlihat');
   }
 
   /*
@@ -172,14 +172,14 @@ if (!exists(SIDEBAR)) {
    * Template mengunci `.first-level .sidebar-link .ti` ke font-size 7px, dan
    * itu wajar di sana: SEMUA 98 ikon submenu template adalah `ti-circle`,
    * sekadar titik penanda daftar. Seekitar memakai ikon bermakna, yang pada
-   * 7px menyusut jadi bintik tak terbedakan. Diukur di Chromium: 7×7 px
-   * berbanding 21×21 px milik menu induk.
+   * 7px menyusut jadi bintik tak terbedakan. Diukur di Chromium: 7Ã—7 px
+   * berbanding 21Ã—21 px milik menu induk.
    */
   const ikonSub = adminCss.match(/\.first-level\s+\.sidebar-link\s+\.ti\s*\{[^}]*\}/s)?.[0] ?? '';
   const ukuran = parseFloat(ikonSub.match(/font-size:\s*(\d+(?:\.\d+)?)px/)?.[1] ?? '0');
 
   if (ukuran < 12) {
-    fail('ikon submenu tidak diperbesar dari 7px bawaan template — ikon bermakna menyusut jadi bintik');
+    fail('ikon submenu tidak diperbesar dari 7px bawaan template â€” ikon bermakna menyusut jadi bintik');
   } else {
     ok(`ikon submenu terbaca (${ukuran}px, bukan 7px bawaan template)`);
   }
@@ -188,7 +188,7 @@ if (!exists(SIDEBAR)) {
    * Submenu aktif tidak boleh dibedakan HANYA lewat warna.
    *
    * Template menandainya dengan mengubah teks jadi hijau saja, latar dipaksa
-   * transparan. Terukur: hijau #168A4A di atas putih = 4,40:1 — di bawah
+   * transparan. Terukur: hijau #168A4A di atas putih = 4,40:1 â€” di bawah
    * ambang WCAG AA 4.5:1; dan bedanya dengan butir non-aktif hanya 2,81:1
    * pada bobot huruf yang sama, sehingga tidak terlihat oleh pengguna buta
    * warna merah-hijau (WCAG 1.4.1).
@@ -198,13 +198,13 @@ if (!exists(SIDEBAR)) {
   const adaBobot = /font-weight:\s*[6-9]\d\d/.test(aktifSub);
 
   if (!adaLatar || !adaBobot) {
-    fail('submenu aktif hanya dibedakan warna — butuh latar + bobot huruf (WCAG 1.4.1, kontras template 4,40:1 < 4.5:1)');
+    fail('submenu aktif hanya dibedakan warna â€” butuh latar + bobot huruf (WCAG 1.4.1, kontras template 4,40:1 < 4.5:1)');
   } else {
     ok('submenu aktif punya penanda non-warna (latar + bobot)');
   }
 }
 
-// ─────────────────────────────────── 5d. Dasbor
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ 5d. Dasbor
 console.log('\nDasbor (pola index2 template)');
 
 {
@@ -212,21 +212,21 @@ console.log('\nDasbor (pola index2 template)');
   const dash = read(DASH);
 
   /*
-   * `align-items-strech` — ejaan yang salah, kurang huruf t.
+   * `align-items-strech` â€” ejaan yang salah, kurang huruf t.
    *
    * JUJUR SOAL DAMPAKNYA: ini BUKAN bug visual. Diuji langsung di Chromium
-   * dengan dua kolom flex berdampingan — `align-items:normal` menghasilkan
+   * dengan dua kolom flex berdampingan â€” `align-items:normal` menghasilkan
    * tinggi yang IDENTIK dengan `align-items:stretch` (200px vs 200px), karena
    * `normal` memang berperilaku sebagai `stretch` pada flex container. Kelas
    * yang salah eja itu sekadar tidak ada di CSS, jadi tidak berefek apa pun.
    *
    * Tetap ditolak karena menyesatkan: pembaca berikutnya mengira tinggi kartu
-   * disamakan oleh kelas itu, lalu menghapusnya saat merapikan — dan baru
+   * disamakan oleh kelas itu, lalu menghapusnya saat merapikan â€” dan baru
    * saat itu tata letaknya benar-benar berubah.
    */
   const salahEja = (dash.match(/align-items-strech/g) || []).length;
   if (salahEja) {
-    fail(`${salahEja} kemunculan "align-items-strech" (salah eja, kelasnya tidak ada di CSS) — tulis align-items-stretch`);
+    fail(`${salahEja} kemunculan "align-items-strech" (salah eja, kelasnya tidak ada di CSS) â€” tulis align-items-stretch`);
   } else {
     ok('tidak ada kelas Bootstrap yang salah eja');
   }
@@ -234,20 +234,20 @@ console.log('\nDasbor (pola index2 template)');
   /*
    * Tabel ringkas dasbor punya 4 kolom dan sel yang panjang (judul permintaan,
    * nama toko, rupiah). Pada col-lg-6 = 489px, kolom terakhir "Status"
-   * terpotong di 1440px, 1280px, dan 992px sekaligus — terukur meluber sampai
+   * terpotong di 1440px, 1280px, dan 992px sekaligus â€” terukur meluber sampai
    * 262px. Template menaruh tabel selebar ini di kolom lebar (col-lg-8),
    * bukan dua tabel bersebelahan.
    */
   const tabelSempit = [...dash.matchAll(/<div class="col-lg-6 d-flex[^"]*">\s*<div class="card w-100">[\s\S]{0,900}?<table/g)].length;
   if (tabelSempit) {
-    fail(`${tabelSempit} tabel ringkas di kolom col-lg-6 — kolom terakhir terpotong (terukur meluber s.d. 262px di 992px)`);
+    fail(`${tabelSempit} tabel ringkas di kolom col-lg-6 â€” kolom terakhir terpotong (terukur meluber s.d. 262px di 992px)`);
   } else {
     ok('tabel ringkas dasbor tidak dijepit di kolom setengah lebar');
   }
 
   /*
    * Setiap variabel yang dipakai dasbor harus benar-benar dikirim controller.
-   * `$sorotan` sempat dipakai di Blade sebelum controllernya menyediakan —
+   * `$sorotan` sempat dipakai di Blade sebelum controllernya menyediakan â€”
    * render harness menangkapnya, tetapi hanya karena fixture-nya diperbarui.
    * Pemeriksaan ini membandingkan langsung ke sumbernya.
    */
@@ -277,8 +277,8 @@ console.log('\nDasbor (pola index2 template)');
    *
    * Diukur di Chromium pada 1440x900: versi sebelum pemadatan butuh 2818px
    * (3,13 layar penuh) untuk isi yang sama. Penyebab terbesarnya blok yang
-   * mengulang informasi tempat lain — kartu "Peran & Wilayah" mengulang peran
-   * dari dropdown header DAN wilayah dari kaki sidebar — plus dua tabel yang
+   * mengulang informasi tempat lain â€” kartu "Peran & Wilayah" mengulang peran
+   * dari dropdown header DAN wilayah dari kaki sidebar â€” plus dua tabel yang
    * ditumpuk ke bawah, bukan berdampingan.
    *
    * Pemeriksaan ini tidak bisa mengukur piksel tanpa peramban, jadi yang
@@ -287,13 +287,13 @@ console.log('\nDasbor (pola index2 template)');
    */
   const tabelBerdampingan = (dash.match(/col-xl-6 d-flex align-items-stretch/g) || []).length;
   if (tabelBerdampingan < 2) {
-    fail('tabel ringkas tidak berdampingan (col-xl-6) — dasbor memanjang tanpa perlu');
+    fail('tabel ringkas tidak berdampingan (col-xl-6) â€” dasbor memanjang tanpa perlu');
   } else {
     ok('dua tabel ringkas berdampingan di layar lebar');
   }
 
   if (/Peran\s*&amp;\s*Wilayah|Hak akses akun Anda/.test(dash)) {
-    fail('kartu "Peran & Wilayah" mengulang isi dropdown header + kaki sidebar — hapus, bukan tampilkan tiga kali');
+    fail('kartu "Peran & Wilayah" mengulang isi dropdown header + kaki sidebar â€” hapus, bukan tampilkan tiga kali');
   } else {
     ok('dasbor tidak mengulang peran/wilayah yang sudah ada di header & sidebar');
   }
@@ -306,7 +306,7 @@ console.log('\nDasbor (pola index2 template)');
    * yang memakai clamp() terhadap tinggi viewport.
    */
   if (/style="[^"]*height:\s*\d+px/.test(dash)) {
-    fail('tinggi grafik dipatok piksel lewat atribut style — pakai .admin-grafik (clamp terhadap viewport)');
+    fail('tinggi grafik dipatok piksel lewat atribut style â€” pakai .admin-grafik (clamp terhadap viewport)');
   } else {
     ok('tinggi grafik responsif terhadap tinggi layar');
   }
@@ -315,7 +315,7 @@ console.log('\nDasbor (pola index2 template)');
    * Sel judul tabel ringkas WAJIB punya patokan lebar.
    *
    * `text-truncate` di dalam <td> tidak cukup: sel tabel melebar mengikuti isi
-   * terpanjang sehingga text-overflow tidak pernah aktif. Terukur — sel
+   * terpanjang sehingga text-overflow tidak pernah aktif. Terukur â€” sel
    * pertama tabel penawaran menolak menyusut di bawah 265px dan membuat tabel
    * meluber 13px di 1366px serta 175px di ponsel.
    */
@@ -325,14 +325,14 @@ console.log('\nDasbor (pola index2 template)');
   const punyaAturan = /\.admin-ringkas\s+td:first-child[^{]*\{[^}]*max-width:\s*0/s.test(adminCssDash);
 
   if (!punyaKelas || !punyaAturan) {
-    fail('tabel ringkas tanpa .admin-ringkas + max-width:0 pada sel pertama — kolom terakhir meluber (terukur 175px di 390px)');
+    fail('tabel ringkas tanpa .admin-ringkas + max-width:0 pada sel pertama â€” kolom terakhir meluber (terukur 175px di 390px)');
   } else {
-    ok('sel judul tabel ringkas bisa menyusut — tidak ada kolom yang meluber');
+    ok('sel judul tabel ringkas bisa menyusut â€” tidak ada kolom yang meluber');
   }
 }
 
-// ─────────────────────────────────── 2. @can sidebar ⇄ middleware route
-console.log('\nIzin menu ⇄ izin route');
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ 2. @can sidebar â‡„ middleware route
+console.log('\nIzin menu â‡„ izin route');
 
 let routes = null;
 try {
@@ -340,19 +340,19 @@ try {
     encoding: 'utf8', maxBuffer: 32 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'],
   }));
 } catch {
-  console.log('  ⚠️  route:list gagal (jalankan ./tools/dev/setup). Bagian ini dilewati.');
+  console.log('  âš ï¸  route:list gagal (jalankan ./tools/dev/setup). Bagian ini dilewati.');
 }
 
 if (routes && exists(SIDEBAR)) {
   const sidebar = read(SIDEBAR).replace(/\{\{--[\s\S]*?--\}\}/g, '');
 
   /*
-   * Pasangan (nama route yang ditaut menu) → (permission pembungkus @can-nya).
+   * Pasangan (nama route yang ditaut menu) â†’ (permission pembungkus @can-nya).
    *
    * Diambil dengan memindai berkas berurutan: setiap @can/@canany membuka
    * konteks, dan route() yang muncul sesudahnya berada di dalamnya sampai
    * @endcan/@endcanany. Pendekatan ini cukup karena sidebar hanya bersarang
-   * satu tingkat — dan kalau suatu saat lebih dalam, pemeriksaan di bawah
+   * satu tingkat â€” dan kalau suatu saat lebih dalam, pemeriksaan di bawah
    * akan melaporkan ketidakcocokan alih-alih lolos diam-diam.
    */
   const tautan = [];
@@ -378,7 +378,7 @@ if (routes && exists(SIDEBAR)) {
     const r = byName.get(nama);
 
     if (!r) {
-      fail(`menu menunjuk route '${nama}' yang tidak terdaftar — tautan mati / 500 saat render`);
+      fail(`menu menunjuk route '${nama}' yang tidak terdaftar â€” tautan mati / 500 saat render`);
       continue;
     }
 
@@ -400,7 +400,7 @@ if (routes && exists(SIDEBAR)) {
     // yang membuka menu harus benar-benar diterima route.
     const terlaluLonggar = izin.filter(p => !dituntut.includes(p));
     if (izin.length === 0) {
-      fail(`'${nama}' butuh ${dituntut.join('|')} tetapi menunya tidak dibungkus @can — akan tampil lalu ditolak 403`);
+      fail(`'${nama}' butuh ${dituntut.join('|')} tetapi menunya tidak dibungkus @can â€” akan tampil lalu ditolak 403`);
     } else if (terlaluLonggar.length) {
       fail(`'${nama}': menu memakai ${terlaluLonggar.join(', ')} tetapi route menuntut ${dituntut.join('|')}`);
     } else {
@@ -410,7 +410,7 @@ if (routes && exists(SIDEBAR)) {
 
   if (cocok) ok(`${cocok} tautan menu cocok dengan permission route-nya`);
 
-  // ── Endpoint data Datatables harus dijaga izin yang sama dengan halamannya.
+  // â”€â”€ Endpoint data Datatables harus dijaga izin yang sama dengan halamannya.
   // Tanpa itu, admin tanpa izin tetap bisa memanggil JSON-nya langsung dan
   // menarik seluruh tabel meski menunya tersembunyi.
   const bocor = routes
@@ -418,12 +418,12 @@ if (routes && exists(SIDEBAR)) {
     .filter(r => !r.middleware.some(m => /PermissionMiddleware/.test(m)));
 
   if (bocor.length) {
-    fail(`endpoint data tanpa permission: ${bocor.map(r => r.uri).join(', ')} — bisa ditarik langsung`);
+    fail(`endpoint data tanpa permission: ${bocor.map(r => r.uri).join(', ')} â€” bisa ditarik langsung`);
   } else {
     ok('semua endpoint data Datatables dijaga permission');
   }
 
-  // ── Seluruh route admin (selain login/logout) wajib di balik auth + role.
+  // â”€â”€ Seluruh route admin (selain login/logout) wajib di balik auth + role.
   const tanpaAuth = routes
     .filter(r => r.uri.startsWith('admin'))
     .filter(r => !['admin/login', 'admin/logout'].includes(r.uri))
@@ -446,23 +446,23 @@ if (routes && exists(SIDEBAR)) {
     ok('semua route admin menuntut peran admin/super-admin');
   }
 
-  // ── Halaman akun sendiri TIDAK boleh menuntut permission: admin tanpa
+  // â”€â”€ Halaman akun sendiri TIDAK boleh menuntut permission: admin tanpa
   // `manage-users` pun harus bisa mengganti kata sandinya sendiri.
   for (const nama of ['admin.profile.edit', 'admin.password.edit']) {
     const r = byName.get(nama);
-    if (!r) { fail(`route '${nama}' tidak ada — admin tidak bisa mengelola akunnya sendiri`); continue; }
+    if (!r) { fail(`route '${nama}' tidak ada â€” admin tidak bisa mengelola akunnya sendiri`); continue; }
     if (r.middleware.some(m => /PermissionMiddleware/.test(m))) {
-      fail(`'${nama}' menuntut permission — admin tanpa izin data tidak bisa mengurus akunnya sendiri`);
+      fail(`'${nama}' menuntut permission â€” admin tanpa izin data tidak bisa mengurus akunnya sendiri`);
     }
   }
   ok('halaman profil & kata sandi bebas dari permission');
 }
 
-// ─────────────────────────────────── 3. Setiap halaman menu punya view
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ 3. Setiap halaman menu punya view
 console.log('\nView halaman admin');
 
 const VIEW_WAJIB = [
-  'dashboard', 'layout', 'partials/sidebar',
+  'dashboard', 'layouts/admin', 'partials/sidebar',
   'auth/login', 'profile/edit', 'profile/password',
   'users/index', 'users/edit', 'categories/index', 'categories/form',
   'stores/index', 'listings/index', 'listings/show',
@@ -476,7 +476,7 @@ const hilang = VIEW_WAJIB.filter(v => !exists(`seekitar-server/resources/views/a
 if (hilang.length) fail(`view admin hilang: ${hilang.join(', ')}`);
 else ok(`${VIEW_WAJIB.length} view admin lengkap`);
 
-// ─────────────────────────────────── 4. Render nyata per peran
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ 4. Render nyata per peran
 console.log('\nRender halaman sebagai admin & super-admin');
 
 // Kode keluar TIDAK bisa dipakai: pembungkus php-wasm selalu mengembalikan 0
@@ -494,13 +494,13 @@ const gagalRender = Number(out.match(/(\d+) gagal\b/)?.[1] ?? -1);
 const masalahMenu = Number(out.match(/(\d+) masalah/)?.[1] ?? -1);
 
 if (gagalRender === 0 && masalahMenu === 0) {
-  ok(out.trim().split('\n').filter(Boolean).slice(-2).join(' · '));
+  ok(out.trim().split('\n').filter(Boolean).slice(-2).join(' Â· '));
 } else {
   const rincian = out.split('\n').filter(l => /^(GAGAL RENDER|MENU (HILANG|BOCOR))/.test(l));
   fail('render admin bermasalah:\n     ' + (rincian.join('\n     ') || out.trim() || 'tidak ada keluaran'));
 }
 
-// ─────────────────────────────────── 5. Aturan Blade panel admin
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ 5. Aturan Blade panel admin
 console.log('\nKebersihan Blade admin');
 
 const viewDir = path.join(ROOT, 'seekitar-server/resources/views/admin');
@@ -514,7 +514,7 @@ const blades = [];
 
 // Direktif Blade DI DALAM komentar JavaScript tetap dikompilasi. `// @js(...)`
 // yang ditulis sebagai penjelasan membuat Blade memanggil Js::from() tanpa
-// argumen dan halaman mati saat render — jebakan yang sama dengan @php di
+// argumen dan halaman mati saat render â€” jebakan yang sama dengan @php di
 // dalam komentar {{-- --}}, dan sudah pernah terjadi di dashboard.blade.php.
 const jsKomentar = [];
 for (const p of blades) {
@@ -525,8 +525,8 @@ for (const p of blades) {
      *
      * Diverifikasi langsung lewat Blade::compileString(): isi blok @php
      * diteruskan apa adanya sebagai PHP, sehingga `// lihat @json()` di
-     * dalamnya tetap sekadar komentar. Di luar blok itu — misalnya dalam
-     * <script> — direktif yang sama benar-benar dikompilasi dan menghasilkan
+     * dalamnya tetap sekadar komentar. Di luar blok itu â€” misalnya dalam
+     * <script> â€” direktif yang sama benar-benar dikompilasi dan menghasilkan
      * `json_encode(, 15, 512)` yang tidak bisa di-parse.
      *
      * Tanpa pengecualian ini, checker melaporkan komentar penjelas di
@@ -538,7 +538,7 @@ for (const p of blades) {
     // Hanya baris di dalam komentar JavaScript (// atau * pada blok /* */).
     if (!/^\s*(\/\/|\*)\s/.test(baris)) continue;
 
-    // (a) direktif @js/@json/@can/… dengan satu-at (bukan @@).
+    // (a) direktif @js/@json/@can/â€¦ dengan satu-at (bukan @@).
     if (/[^@]@(js|json|can|php|include)\b/.test(baris)) {
       jsKomentar.push(`${path.basename(p)}: ${baris.trim().slice(0, 70)}`);
       continue;
@@ -564,7 +564,7 @@ if (jsKomentar.length) {
 }
 
 // Ukuran huruf di bawah 11px ditolak: target pengguna 40+ yang umumnya sudah
-// presbiopia (BRANDING-GUIDELINE.md §4; usulan 8–10px pernah ditolak).
+// presbiopia (BRANDING-GUIDELINE.md Â§4; usulan 8â€“10px pernah ditolak).
 const sumberGaya = [...blades, path.join(ROOT, 'seekitar-server/public/css/admin.css')];
 const fontKecil = [];
 for (const p of sumberGaya) {
@@ -572,8 +572,8 @@ for (const p of sumberGaya) {
 
   /*
    * Komentar dibuang dulu. Catatan yang MENJELASKAN kenapa sebuah ukuran
-   * ditolak sering menyebut angkanya — misalnya "template mengunci ikon ke
-   * font-size: 7px" — dan tanpa pembuangan ini checker melaporkan
+   * ditolak sering menyebut angkanya â€” misalnya "template mengunci ikon ke
+   * font-size: 7px" â€” dan tanpa pembuangan ini checker melaporkan
    * penjelasannya sendiri sebagai pelanggaran. Persis jebakan yang sama
    * dengan prosa di komentar CSS pada pemeriksaan fokus isian.
    */
@@ -586,7 +586,7 @@ for (const p of sumberGaya) {
   }
 }
 if (fontKecil.length) {
-  fail(`font di bawah batas 11px (BRANDING §4): ${fontKecil.join(', ')}`);
+  fail(`font di bawah batas 11px (BRANDING Â§4): ${fontKecil.join(', ')}`);
 } else {
   ok('tidak ada font di bawah 11px');
 }
@@ -594,7 +594,7 @@ if (fontKecil.length) {
 /*
  * number_format() tanpa argumen pemisah memakai format Inggris: 4812 menjadi
  * "4,812", yang dibaca orang Indonesia sebagai bilangan desimal. Kesalahan ini
- * tidak menimbulkan error dan lolos semua pemeriksaan sintaks — ia hanya salah
+ * tidak menimbulkan error dan lolos semua pemeriksaan sintaks â€” ia hanya salah
  * dibaca. Sudah pernah terjadi di dashboard.blade.php.
  */
 const angkaInggris = [];
@@ -620,7 +620,7 @@ for (const p of [...blades, ...fs.readdirSync(path.join(ROOT, 'seekitar-server/a
     }
     const argumen = src.slice(i + 'number_format('.length, j);
 
-    // Wajib menyebut pemisah Indonesia secara eksplisit: (…, 0, ',', '.').
+    // Wajib menyebut pemisah Indonesia secara eksplisit: (â€¦, 0, ',', '.').
     if (!/',\s*'\.'/.test(argumen)) {
       angkaInggris.push(`${path.basename(p)}: number_format(${argumen.replace(/\s+/g, ' ').slice(0, 45)})`);
     }
@@ -639,7 +639,7 @@ if (angkaInggris.length) {
  * `cdn.datatables.net/plug-ins/2.1.8/i18n/id.json` dan selalu gagal dengan
  * "i18n file loading error". Sebabnya 2.1.8 adalah versi CORE Datatables,
  * sedangkan repo Plugins punya penomoran sendiri dan tidak pernah punya tag
- * itu — URL-nya 404.
+ * itu â€” URL-nya 404.
  *
  * Menaikkan nomor versinya bukan perbaikan: nomor itu akan basi lagi pada
  * rilis berikutnya. Karena itu yang ditegakkan di sini adalah TIDAK ADA
@@ -648,13 +648,13 @@ if (angkaInggris.length) {
 const I18N_LOKAL = 'seekitar-server/public/vendor/datatables/id.json';
 
 if (!exists(I18N_LOKAL)) {
-  fail(`${I18N_LOKAL} tidak ada — tabel admin akan memakai bahasa Inggris atau gagal memuat i18n`);
+  fail(`${I18N_LOKAL} tidak ada â€” tabel admin akan memakai bahasa Inggris atau gagal memuat i18n`);
 } else {
   let bahasa = null;
   try {
     bahasa = JSON.parse(read(I18N_LOKAL));
   } catch (e) {
-    fail(`${I18N_LOKAL} bukan JSON yang sah: ${e.message} — Datatables akan melaporkan i18n error`);
+    fail(`${I18N_LOKAL} bukan JSON yang sah: ${e.message} â€” Datatables akan melaporkan i18n error`);
   }
 
   if (bahasa) {
@@ -677,27 +677,27 @@ for (const p of blades) {
   }
 }
 if (i18nCdn.length) {
-  fail(`i18n Datatables masih dari CDN di: ${i18nCdn.join(', ')} — jalur plug-ins memakai penomoran berbeda dan mudah 404`);
+  fail(`i18n Datatables masih dari CDN di: ${i18nCdn.join(', ')} â€” jalur plug-ins memakai penomoran berbeda dan mudah 404`);
 } else {
   ok('i18n Datatables di-host sendiri, bukan dari CDN');
 }
 
 // Konfigurasi bahasa disetel SEKALI di layout; lima tabel yang masing-masing
 // menulis ulang URL-nya adalah lima tempat yang bisa menyimpang.
-const layoutSrc = read('seekitar-server/resources/views/admin/layout.blade.php');
+const layoutSrc = read('seekitar-server/resources/views/admin/layouts/admin.blade.php');
 if (!/dataTable\.defaults[\s\S]{0,200}vendor\/datatables\/id\.json/.test(layoutSrc)) {
-  fail('layout admin tidak menyetel $.fn.dataTable.defaults.language — tiap tabel harus mengulangnya sendiri');
+  fail('layout admin tidak menyetel $.fn.dataTable.defaults.language â€” tiap tabel harus mengulangnya sendiri');
 } else {
   ok('bahasa Datatables disetel sekali di layout');
 }
 
 // Ikon Tabler harus Netral ATAU Bermakna bagi pembaca layar:
-//   - dekoratif ⇒ aria-hidden="true" supaya glyph-nya tidak dibacakan acak;
-//   - bermakna  ⇒ role="img" + aria-label (mis. centang "KTP terverifikasi"
-//     di _cek_terverifikasi — menyembunyikannya justru menghilangkan arti).
+//   - dekoratif â‡’ aria-hidden="true" supaya glyph-nya tidak dibacakan acak;
+//   - bermakna  â‡’ role="img" + aria-label (mis. centang "KTP terverifikasi"
+//     di _cek_terverifikasi â€” menyembunyikannya justru menghilangkan arti).
 // Tag tanpa keduanya tidak punya perlakuan aksesibilitas sama sekali.
 //
-// Panel memakai Tabler (`ti ti-*`) sejak beralih ke template Modernize —
+// Panel memakai Tabler (`ti ti-*`) sejak beralih ke template Modernize â€”
 // FontAwesome tidak lagi dimuat sama sekali, jadi kelas `fa-*` yang tersisa
 // akan tampil sebagai kotak kosong.
 const ikonTanpaAria = [];
@@ -719,7 +719,7 @@ if (ikonTanpaAria.length) {
  * Tidak boleh ada sisa FontAwesome.
  *
  * Template Modernize memakai Tabler, dan FontAwesome sudah TIDAK dimuat sama
- * sekali. Kelas `fa-*` yang tertinggal tidak memunculkan error apa pun — ia
+ * sekali. Kelas `fa-*` yang tertinggal tidak memunculkan error apa pun â€” ia
  * hanya tampil sebagai ruang kosong, dan itu baru terlihat oleh mata manusia.
  */
 const sisaFa = [];
@@ -732,7 +732,7 @@ for (const p of blades) {
 if (sisaFa.length) {
   fail(`kelas FontAwesome tersisa (ikon akan kosong): ${sisaFa.join(', ')}`);
 } else {
-  ok('tidak ada sisa FontAwesome — semua ikon Tabler');
+  ok('tidak ada sisa FontAwesome â€” semua ikon Tabler');
 }
 
 // Template Modernize sudah memuat Bootstrap 5.3.3 di styles.min.css.
@@ -751,7 +751,7 @@ if (bootstrapGanda.length) {
 }
 
 // Aset template harus benar-benar ada di repositori.
-const V = 'seekitar-server/public/vendor/modernize';
+const V = 'seekitar-server/public/vendor/mordenize';
 let asetHilang = 0;
 for (const aset of [
   `${V}/css/style.min.css`,
@@ -770,7 +770,7 @@ if (!asetHilang) ok('aset template Modernize lengkap');
 /*
  * Warna template WAJIB sudah hijau.
  *
- * Biru bawaan #5D87FF ditulis langsung di 117 tempat di dalam style.min.css —
+ * Biru bawaan #5D87FF ditulis langsung di 117 tempat di dalam style.min.css â€”
  * variabel CSS tidak menjangkaunya. Kalau berkas vendor diperbarui tanpa
  * menjalankan ulang tools/dev/recolor-modernize.mjs, panel diam-diam kembali
  * biru di ratusan komponen.
@@ -781,9 +781,9 @@ if (fs.existsSync(vendorCss)) {
   const biru = (isi.match(/#5[dD]87[fF][fF]/g) || []).length;
 
   if (biru > 0) {
-    fail(`style.min.css masih memuat ${biru} biru #5D87FF — jalankan: node tools/dev/recolor-modernize.mjs`);
+    fail(`style.min.css masih memuat ${biru} biru #5D87FF â€” jalankan: node tools/dev/recolor-modernize.mjs`);
   } else if (!isi.includes('#168A4A') && !isi.includes('#168a4a')) {
-    fail('style.min.css tidak memuat hijau Seekitar #168A4A — pewarnaan belum dijalankan');
+    fail('style.min.css tidak memuat hijau Seekitar #168A4A â€” pewarnaan belum dijalankan');
   } else {
     ok('CSS template sudah diwarnai hijau Seekitar');
   }
@@ -791,7 +791,7 @@ if (fs.existsSync(vendorCss)) {
 
 /*
  * Font Tabler: hanya woff2 yang disalin, jadi CSS-nya tidak boleh lagi
- * meminta eot/ttf/woff — tiga permintaan 404 di setiap halaman.
+ * meminta eot/ttf/woff â€” tiga permintaan 404 di setiap halaman.
  */
 const tiCss = path.join(ROOT, `${V}/css/icons/tabler-icons/tabler-icons.min.css`);
 if (fs.existsSync(tiCss)) {
@@ -802,18 +802,18 @@ if (fs.existsSync(tiCss)) {
   if (mati.length) {
     fail(`tabler-icons.min.css masih merujuk font yang tidak disalin (404): ${mati.join(', ')}`);
   } else {
-    ok('font Tabler hanya woff2 — tidak ada rujukan 404');
+    ok('font Tabler hanya woff2 â€” tidak ada rujukan 404');
   }
 }
 
-// ─────────────────────────────────── 5b. Pola tabel: pilih baris, bukan kolom aksi
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ 5b. Pola tabel: pilih baris, bukan kolom aksi
 console.log('\nPola tabel: baris terpilih, bukan kolom aksi');
 
 /*
  * Tombol aksi TIDAK boleh kembali menjadi kolom tabel.
  *
  * HTML-nya tetap dikirim server di field `action` (dan tetap dipakai), tetapi
- * `action` tidak boleh muncul di daftar `columns` view mana pun — kalau
+ * `action` tidak boleh muncul di daftar `columns` view mana pun â€” kalau
  * muncul, kolom tombol kembali dan pola pilih-baris jadi setengah jadi.
  */
 const kolomAksi = [];
@@ -824,7 +824,7 @@ for (const p of blades) {
   }
 }
 if (kolomAksi.length) {
-  fail(`'action' masih didaftarkan sebagai kolom di: ${kolomAksi.join(', ')} — aksi seharusnya muncul di bilah sebelah judul`);
+  fail(`'action' masih didaftarkan sebagai kolom di: ${kolomAksi.join(', ')} â€” aksi seharusnya muncul di bilah sebelah judul`);
 } else {
   ok("'action' tidak lagi menjadi kolom tabel");
 }
@@ -839,7 +839,7 @@ for (const p of blades.filter(x => path.basename(x) === '_actions.blade.php')) {
   }
 }
 if (aksiTanpaCan.length) {
-  fail(`partial aksi tanpa @can: ${aksiTanpaCan.join(', ')} — tombol tampil ke admin yang tidak berhak`);
+  fail(`partial aksi tanpa @can: ${aksiTanpaCan.join(', ')} â€” tombol tampil ke admin yang tidak berhak`);
 } else {
   ok('semua partial aksi dibungkus @can');
 }
@@ -849,8 +849,8 @@ if (aksiTanpaCan.length) {
  *
  * `@include(..., ['filter' => view('x')])` lalu menampilkannya dengan
  * `{{ $filter }}` membuat SELURUH filter tampil sebagai teks mentah
- * (`&lt;select&gt;…`). Penyebabnya: @include me-render sub-view menjadi
- * string lebih dulu, dan string biasa memang di-escape `{{ }}` — objek View
+ * (`&lt;select&gt;â€¦`). Penyebabnya: @include me-render sub-view menjadi
+ * string lebih dulu, dan string biasa memang di-escape `{{ }}` â€” objek View
  * yang Htmlable tidak pernah sampai ke sana.
  *
  * Halaman tetap "berhasil dirender", jadi render harness pun tidak
@@ -867,12 +867,12 @@ for (const p of blades) {
   }
 }
 if (viewSebagaiVariabel.length) {
-  fail(`objek view dioper sebagai variabel — akan tampil sebagai teks ter-escape:\n     ${viewSebagaiVariabel.join('\n     ')}\n     Pakai nama view + @includeIf.`);
+  fail(`objek view dioper sebagai variabel â€” akan tampil sebagai teks ter-escape:\n     ${viewSebagaiVariabel.join('\n     ')}\n     Pakai nama view + @includeIf.`);
 } else {
   ok('tidak ada objek view yang dioper sebagai variabel');
 }
 
-// Bilah aksi harus kosong sebelum ada baris dipilih — tanpa teks petunjuk.
+// Bilah aksi harus kosong sebelum ada baris dipilih â€” tanpa teks petunjuk.
 const petunjukTersisa = blades.filter(p =>
   /Pilih satu baris|admin-rowactions-hint/.test(
     fs.readFileSync(p, 'utf8').replace(/\{\{--[\s\S]*?--\}\}/g, '')));
@@ -892,10 +892,10 @@ if (namaDiAksi.length) {
   ok('bilah aksi hanya berisi tombol');
 }
 
-// ── Select2 ────────────────────────────────────────────────────────────
+// â”€â”€ Select2 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /*
  * Setiap <select> panel wajib memakai Select2 agar bisa dicari, dan
- * pemasangannya harus lewat kelas `.js-select2` — bukan selektor `select`
+ * pemasangannya harus lewat kelas `.js-select2` â€” bukan selektor `select`
  * global, yang akan ikut membungkus pemilih "Tampilkan N entri" milik
  * Datatables dan membuatnya hilang setiap tabel digambar ulang.
  */
@@ -935,15 +935,17 @@ if (selectTanpaKelas.length) {
  * addEventListener terpanggil 0 kali, jQuery .on 1 kali. Memakai yang salah
  * membuat SELURUH filter berhenti bekerja tanpa satu pun pesan error.
  */
-const partialSrc = fs.existsSync(path.join(viewDir, 'partials/table-page.blade.php'))
-  ? fs.readFileSync(path.join(viewDir, 'partials/table-page.blade.php'), 'utf8')
-  : '';
-if (/addEventListener\('change'/.test(partialSrc.replace(/\{\{--[\s\S]*?--\}\}/g, ''))) {
-  fail("filter memakai addEventListener('change') — Select2 memicu event jQuery, filter akan mati diam-diam");
-} else if (!/\$\('\[data-dt-filter/.test(partialSrc)) {
-  fail('filter tabel tidak terpasang listener change apa pun');
+const dtBlades = blades.filter(p =>
+  !p.includes(`${path.sep}partials${path.sep}`) && fs.readFileSync(p, 'utf8').includes('.DataTable(')
+);
+const pakaiNative = dtBlades.filter(p => {
+  const src = fs.readFileSync(p, 'utf8').replace(/\{\{--[\s\S]*?--\}\}/g, '');
+  return /addEventListener\('change'/.test(src);
+});
+if (pakaiNative.length) {
+  fail(`filter memakai addEventListener('change') â€” Select2 memicu event jQuery, filter akan mati diam-diam: ${pakaiNative.join(', ')}`);
 } else {
-  ok("filter memakai jQuery .on('change') — kompatibel dengan Select2");
+  ok("filter memakai jQuery .on('change') â€” kompatibel dengan Select2");
 }
 
 // Berkas Select2 & temanya harus dimuat layout.
@@ -956,34 +958,20 @@ for (const [aset, label] of [
 }
 ok('aset Select2 lengkap di layout');
 
-// Tabel yang memakai partial table-page tidak boleh lagi merakit DataTable
-// sendiri — dua implementasi berarti perilaku pemilihan bisa menyimpang.
-const daftarTabel = [
-  'users/index', 'stores/index', 'listings/index', 'orders/index',
-  'requests/index', 'offers/index', 'reviews/index', 'disputes/index',
-];
-const tidakPakaiPartial = daftarTabel.filter(v => {
-  const f = path.join(viewDir, `${v}.blade.php`);
-  return !fs.existsSync(f) || !fs.readFileSync(f, 'utf8').includes('admin.partials.table-page');
-});
-if (tidakPakaiPartial.length) {
-  fail(`tidak memakai partial table-page: ${tidakPakaiPartial.join(', ')}`);
+// Semua halaman tabel admin dirakit inline (bukan partial table-page) dan
+// pemilihan baris dijaga TUNGGAL: sebelum menandai baris baru, implementasi
+// wajib membersihkan baris terpilih sebelumnya.
+const masihPartial = dtBlades.filter(p => fs.readFileSync(p, 'utf8').includes('admin.partials.table-page'));
+const tanpaGuard = dtBlades.filter(p => !/removeClass\('row-selected'\)/.test(fs.readFileSync(p, 'utf8')));
+if (masihPartial.length) {
+  fail(`masih memakai partial table-page: ${masihPartial.map(p => path.relative(viewDir, p)).join(', ')}`);
 } else {
-  ok(`${daftarTabel.length} halaman tabel memakai partial bersama`);
+  ok('semua halaman tabel memakai DataTable inline');
 }
-
-// Pemilihan harus TUNGGAL: partial wajib membersihkan pilihan lama sebelum
-// menandai yang baru.
-const partialTabel = path.join(viewDir, 'partials/table-page.blade.php');
-if (!fs.existsSync(partialTabel)) {
-  fail('partial table-page tidak ada');
+if (tanpaGuard.length) {
+  fail(`pemilihan baris tidak membersihkan pilihan lama: ${tanpaGuard.map(p => path.relative(viewDir, p)).join(', ')}`);
 } else {
-  const src = fs.readFileSync(partialTabel, 'utf8');
-  if (!/removeClass\('table-active'\)/.test(src)) {
-    fail('partial table-page tidak pernah membersihkan baris terpilih — pemilihan bisa jadi ganda');
-  } else {
-    ok('pemilihan baris dijaga tetap tunggal');
-  }
+  ok('pemilihan baris dijaga tetap tunggal');
 }
 
 
@@ -996,14 +984,14 @@ if (!fs.existsSync(partialTabel)) {
  * Server_Implementation_Guide.md.
  *
  * DUA pengecualian:
- *   1. Dokumentasi PARAMETER di kepala partial — itu kontrak bagi
+ *   1. Dokumentasi PARAMETER di kepala partial â€” itu kontrak bagi
  *      pemanggilnya (id/nama kontainer turunan, variabel wajib, dsb.).
  *   2. Catatan di KEPALA berkas (sebelum cuplikan HTML pertama) yang
- *      menjelaskan kenapa berkasnya dirakit dengan cara tertentu — dipindah
+ *      menjelaskan kenapa berkasnya dirakit dengan cara tertentu â€” dipindah
  *      ke controller berarti memisahkannya dari markup yang justru ia
  *      jelaskan; editor berkas inilah pembacanya, setiap kali berkas dibuka.
  *
- * Komentar singkat menjelang baris yang rumit dibiarkan, selama pendek —
+ * Komentar singkat menjelang baris yang rumit dibiarkan, selama pendek â€”
  * yang dilarang tetap riwayat/penjelasan berlarut-larut.
  */
 const PARTIAL_KEPALA_BERDOKUMEN = /^\{\{--[\s\S]*?\$[a-zA-Z]/;
@@ -1014,10 +1002,10 @@ for (const p of blades) {
   for (const m of src.matchAll(/\{\{--([\s\S]*?)--\}\}/g)) {
     const isi = m[1].trim();
     const baris = isi.split('\n').length;
-    const penanda = /KENAPA|Kenapa|Sebabnya|Diverifikasi|Versi sebelumnya|⚠️|TODO_BUG|jebakan|Akibatnya/.test(isi);
+    const penanda = /KENAPA|Kenapa|Sebabnya|Diverifikasi|Versi sebelumnya|âš ï¸|TODO_BUG|jebakan|Akibatnya/.test(isi);
 
     // Kepala berkas yang mendokumentasikan parameter = kontrak pemanggil;
-    // sebutan variabel ($index, $user, …) adalah ciri khasnya.
+    // sebutan variabel ($index, $user, â€¦) adalah ciri khasnya.
     const diKepala = src.slice(0, m.index).trim() === '';
     if (diKepala && PARTIAL_KEPALA_BERDOKUMEN.test(m[0])) continue;
 
@@ -1059,7 +1047,7 @@ if (tanpaHeader.length) {
 /*
  * Setiap partial yang MEMAKAI variabel lencana harus terdaftar di
  * View::composer. Kalau tidak, variabelnya tidak pernah terisi dan seluruh
- * lencana hilang tanpa error — `$x ?? 0` membuatnya gagal secara diam-diam.
+ * lencana hilang tanpa error â€” `$x ?? 0` membuatnya gagal secara diam-diam.
  */
 const composerSrc = read('seekitar-server/app/Providers/AppServiceProvider.php');
 const butuhComposer = [];
@@ -1079,7 +1067,7 @@ if (butuhComposer.length) {
   ok('semua view berlencana terdaftar di View::composer');
 }
 
-// ─────────────────────────────────── 5c. Halaman masuk
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ 5c. Halaman masuk
 console.log('\nHalaman masuk (pola authentication-login template)');
 
 const LOGIN = 'seekitar-server/resources/views/admin/auth/login.blade.php';
@@ -1095,7 +1083,7 @@ if (!exists(LOGIN)) {
    * Kelasnya BUKAN hiasan: `.radial-gradient` dan `.z-index-5` didefinisikan
    * di style.min.css, dan `col-xl-7` + `col-xl-5` yang berpasangan itulah yang
    * membuat ilustrasi dan formulir berdampingan. Mengganti salah satunya
-   * membuat halaman kembali menjadi kartu tengah — tanpa error apa pun.
+   * membuat halaman kembali menjadi kartu tengah â€” tanpa error apa pun.
    */
   const WAJIB = [
     ['radial-gradient', 'latar gradasi'],
@@ -1123,7 +1111,7 @@ if (!exists(LOGIN)) {
    * recolor-modernize.mjs, ilustrasinya kembali ungu di samping formulir hijau
    * dan tidak ada satu pun pemeriksaan lain yang mengeluh.
    */
-  const ART = 'seekitar-server/public/vendor/modernize/images/backgrounds/login-security.svg';
+  const ART = 'seekitar-server/public/vendor/mordenize/images/backgrounds/login-security.svg';
   if (!login.includes('login-security.svg')) {
     fail('halaman masuk tidak menampilkan ilustrasi login-security.svg');
   } else if (!exists(ART)) {
@@ -1133,9 +1121,9 @@ if (!exists(LOGIN)) {
     const ungu = ['#8d95ff', '#757bff', '#ccd2ff', '#e1e5ff'].filter(w => svg.includes(w));
 
     if (ungu.length) {
-      fail(`ilustrasi masuk masih ungu bawaan template (${ungu.join(', ')}) — jalankan: node tools/dev/recolor-modernize.mjs`);
+      fail(`ilustrasi masuk masih ungu bawaan template (${ungu.join(', ')}) â€” jalankan: node tools/dev/recolor-modernize.mjs`);
     } else if (!svg.includes('#3FA46E')) {
-      fail('ilustrasi masuk tidak memuat hijau Seekitar — pewarnaan belum dijalankan');
+      fail('ilustrasi masuk tidak memuat hijau Seekitar â€” pewarnaan belum dijalankan');
     } else {
       ok('ilustrasi masuk sudah diwarnai hijau');
     }
@@ -1143,7 +1131,7 @@ if (!exists(LOGIN)) {
 
   /*
    * `@keyframes gradient` TIDAK ADA di style.min.css maupun di berkas tema
-   * mana pun di repositori template — sudah diperiksa langsung di style.css
+   * mana pun di repositori template â€” sudah diperiksa langsung di style.css
    * yang belum diminifikasi. Animasi yang menunjuk nama tak dikenal diabaikan
    * browser diam-diam, jadi gradasinya membeku di satu warna. Definisinya ada
    * di admin.css; kalau hilang, latarnya diam lagi tanpa peringatan apa pun.
@@ -1152,7 +1140,7 @@ if (!exists(LOGIN)) {
   const vendorPunyaKeyframe = read(`${V}/css/style.min.css`).includes('@keyframes gradient');
 
   if (!vendorPunyaKeyframe && !/@keyframes\s+gradient\b/.test(adminCss)) {
-    fail('.radial-gradient memanggil animasi "gradient" yang tidak didefinisikan di mana pun — latar akan diam');
+    fail('.radial-gradient memanggil animasi "gradient" yang tidak didefinisikan di mana pun â€” latar akan diam');
   } else {
     ok('animasi gradasi latar terdefinisi');
   }
@@ -1181,14 +1169,14 @@ if (!exists(LOGIN)) {
   /*
    * "Lupa Kata Sandi" hanya boleh tampil kalau route-nya benar-benar ada.
    * Template menyediakan tautannya; menyalinnya tanpa route membuat Blade
-   * melempar RouteNotFoundException dan halaman masuk mati total — panel
+   * melempar RouteNotFoundException dan halaman masuk mati total â€” panel
    * tidak bisa diakses sama sekali.
    */
   const adaRouteLupa = /name\('password\.request'\)|name\('password\.email'\)/.test(read('seekitar-server/routes/admin.php'));
   const adaTautanLupa = /Lupa [Kk]ata [Ss]andi|Forgot Password/.test(login);
 
   if (adaTautanLupa && !adaRouteLupa) {
-    fail('tautan "Lupa Kata Sandi" ada tetapi route password.request belum dibuat — halaman masuk akan melempar RouteNotFoundException');
+    fail('tautan "Lupa Kata Sandi" ada tetapi route password.request belum dibuat â€” halaman masuk akan melempar RouteNotFoundException');
   } else {
     ok(adaTautanLupa
       ? 'tautan lupa kata sandi punya route'
@@ -1208,7 +1196,7 @@ if (!exists(LOGIN)) {
 /*
  * Fokus isian form: hijau, dan benar-benar terlihat.
  *
- * Dua cacat template yang HANYA muncul saat halaman dirender sungguhan —
+ * Dua cacat template yang HANYA muncul saat halaman dirender sungguhan â€”
  * keduanya ditemukan lewat getComputedStyle di Chromium, bukan dengan membaca
  * berkas:
  *
@@ -1216,7 +1204,7 @@ if (!exists(LOGIN)) {
  *     ada di peta recolor-modernize.mjs, jadi ia selamat dari pewarnaan dan
  *     membuat setiap kotak isian berkedip biru di panel hijau.
  *   - `:focus{outline:0;box-shadow:none!important}` yang berlaku global
- *     membunuh cincin fokus milik template sendiri — pengguna keyboard
+ *     membunuh cincin fokus milik template sendiri â€” pengguna keyboard
  *     kehilangan satu-satunya penanda posisi (WCAG 2.4.7).
  *
  * Perbaikannya di admin.css. Kalau berkas itu ditata ulang dan aturannya
@@ -1228,7 +1216,7 @@ if (!exists(LOGIN)) {
    *
    * Versi pertama pemeriksaan ini mencocokkan pola langsung ke berkas mentah
    * dan lulus karena mengenai PROSA di dalam komentar yang menjelaskan aturan
-   * — bukan aturannya. Terbukti saat regresi "hapus !important" disuntikkan:
+   * â€” bukan aturannya. Terbukti saat regresi "hapus !important" disuntikkan:
    * checker tetap hijau. Jebakan yang sama pernah terjadi di
    * check-datatables.php, waktu kata "withCount" di komentar terbaca sebagai
    * kode.
@@ -1241,9 +1229,9 @@ if (!exists(LOGIN)) {
   const adaBorderHijau = /border-color:\s*var\(--seekitar-green\)/.test(aturanFokus);
 
   if (!adaBorderHijau) {
-    fail('.form-control:focus tidak dipaksa hijau — template memakai border biru #aec3ff yang lolos pewarnaan');
+    fail('.form-control:focus tidak dipaksa hijau â€” template memakai border biru #aec3ff yang lolos pewarnaan');
   } else if (!adaFokusHijau) {
-    fail('cincin fokus tanpa !important — aturan global :focus{box-shadow:none!important} template akan menang dan fokus jadi tak terlihat (WCAG 2.4.7)');
+    fail('cincin fokus tanpa !important â€” aturan global :focus{box-shadow:none!important} template akan menang dan fokus jadi tak terlihat (WCAG 2.4.7)');
   } else {
     ok('fokus isian hijau & terlihat (mengalahkan :focus{box-shadow:none!important} template)');
   }
@@ -1251,13 +1239,13 @@ if (!exists(LOGIN)) {
   // Isian bermasalah harus TETAP merah saat difokus; kalau ikut hijau, penanda
   // galatnya hilang justru pada saat pengguna sedang membetulkannya.
   if (!/\.form-control\.is-invalid:focus/.test(adminCss)) {
-    fail('.form-control.is-invalid:focus tidak diatur — isian bermasalah berubah hijau saat difokus');
+    fail('.form-control.is-invalid:focus tidak diatur â€” isian bermasalah berubah hijau saat difokus');
   } else {
     ok('isian bermasalah tetap merah saat difokus');
   }
 }
 
-// ─────────────────────────────────── 6. Query DataTables
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ 6. Query DataTables
 console.log('\nQuery & relasi DataTables');
 
 /*
@@ -1265,9 +1253,9 @@ console.log('\nQuery & relasi DataTables');
  * browser, keduanya pernah terjadi:
  *
  *   - with('user') pada model yang relasinya owner()
- *       → "Call to undefined relationship [user] on model [Store]"
+ *       â†’ "Call to undefined relationship [user] on model [Store]"
  *   - withCount() ditimpa select()
- *       → "Requested unknown parameter 'offers_count'"
+ *       â†’ "Requested unknown parameter 'offers_count'"
  *
  * Keduanya butuh memuat Laravel sungguhan, jadi dijalankan lewat skrip PHP.
  * Kode keluar diabaikan: pembungkus php-wasm selalu mengembalikan 0.
@@ -1295,6 +1283,8 @@ for (const [skrip, judul] of [
 }
 
 console.log(problems === 0
-  ? '\n✅ Panel admin konsisten: menu, izin, route, render, dan query.'
-  : `\n❌ ${problems} masalah ditemukan.`);
+  ? '\nâœ… Panel admin konsisten: menu, izin, route, render, dan query.'
+  : `\nâŒ ${problems} masalah ditemukan.`);
 if (problems) process.exitCode = 1;
+
+

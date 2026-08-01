@@ -7,24 +7,17 @@
   <style>
     .table-action-btn {
       display: inline-flex;
-      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      text-align: center;
-      width: 80px;
-      height: 70px;
-      border-radius: 0.25rem;
-      font-size: 0.75rem;
-      padding: 0.5rem 0.25rem;
+      gap: 0.5rem;
     }
     .table-action-btn .ti {
-      font-size: 1.5rem;
-      margin-bottom: 0.25rem;
+      font-size: 1.125rem;
     }
     #subscriptions-table tbody tr {
       cursor: pointer;
     }
-    .row-selected {
+    .row-selected,
+    .row-selected td {
       background-color: #fcefe2 !important;
       font-weight: 600;
     }
@@ -34,35 +27,6 @@
 @section('content')
   <div class="row">
     <div class="col-12">
-      <!-- Filter Card -->
-      <div class="card mb-4 shadow-sm">
-        <div class="card-body p-4">
-          <h4 class="card-title">Filter Langganan</h4>
-          <p class="card-subtitle mb-3">Saring data langganan berdasarkan paket atau status keaktifan billing.</p>
-          
-          <div class="row g-3">
-            <div class="col-md-3">
-              <label for="filter-plan" class="form-label">Paket Langganan</label>
-              <select class="form-select" id="filter-plan">
-                <option value="">Semua Paket</option>
-                <option value="pro">Toko PRO (pro)</option>
-                <option value="boost">Boost Listing (boost)</option>
-              </select>
-            </div>
-            <div class="col-md-3">
-              <label for="filter-status" class="form-label">Status</label>
-              <select class="form-select" id="filter-status">
-                <option value="">Semua Status</option>
-                <option value="active">Aktif</option>
-                <option value="cancelled">Dibatalkan</option>
-                <option value="expired">Kedaluwarsa</option>
-                <option value="pending">Menunggu</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Table Card -->
       <div class="card w-100 shadow-sm">
         <div class="card-body border-bottom">
@@ -71,20 +35,45 @@
             <!-- Contextual Actions -->
             <div id="table-actions" class="d-none">
               @can('manage-subscriptions')
+              <a id="action-show" href="#" class="btn btn-outline-info table-action-btn" title="Lihat Detail">
+                <i class="ti ti-search" aria-hidden="true"></i>
+                <span>Detail</span>
+              </a>
               <a id="action-edit" href="#" class="btn btn-outline-warning table-action-btn" title="Edit Langganan">
-                <i class="ti ti-pencil"></i>
+                <i class="ti ti-pencil" aria-hidden="true"></i>
                 <span>Edit</span>
               </a>
               <a id="action-delete" href="#" class="btn btn-outline-danger table-action-btn" title="Batalkan Langganan">
-                <i class="ti ti-x"></i>
+                <i class="ti ti-x" aria-hidden="true"></i>
                 <span>Batalkan</span>
               </a>
               @endcan
             </div>
           </div>
         </div>
-        <div class="table-responsive">
-          <table class="table table-sm table-bordered align-middle text-nowrap" id="subscriptions-table" style="width: 100%;">
+        <div class="card-body">
+          <div id="subscriptions-toolbar" class="d-none">
+            <div class="d-flex flex-wrap align-items-center gap-3">
+              <div>
+                <select class="form-select js-select2" id="filter-plan">
+                  <option value="">Semua Paket</option>
+                  <option value="pro">Toko PRO (pro)</option>
+                  <option value="boost">Boost Listing (boost)</option>
+                </select>
+              </div>
+              <div>
+                <select class="form-select js-select2" id="filter-status">
+                  <option value="">Semua Status</option>
+                  <option value="active">Aktif</option>
+                  <option value="cancelled">Dibatalkan</option>
+                  <option value="expired">Kedaluwarsa</option>
+                  <option value="pending">Menunggu</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table align-middle text-nowrap search-table" id="subscriptions-table" style="width: 100%;">
             <thead>
               <tr>
                 <th>ID</th>
@@ -98,7 +87,8 @@
                 <th>Tanggal Transaksi</th>
               </tr>
             </thead>
-          </table>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -131,8 +121,12 @@
           { data: 'created_at', name: 'created_at' },
         ],
         order: [[8, 'desc']],
-        language: {
-          url: "https://cdn.datatables.net/plug-ins/1.13.4/i18n/id.json"
+        dom: "<'d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3'f<'.dt-filters'>>rt<'d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3'<'d-flex align-items-center gap-2'l><'d-flex align-items-center gap-2'i><'d-flex align-items-center gap-2'p>>",
+        initComplete: function () {
+          var $slot = $('#subscriptions-table_wrapper').find('.dt-filters');
+          $('#subscriptions-toolbar').children().appendTo($slot);
+          $('#subscriptions-toolbar').remove();
+          $slot.filter(':empty').remove();
         },
         drawCallback: function(settings) {
           $('#table-actions').addClass('d-none');
@@ -160,6 +154,7 @@
           
           @can('manage-subscriptions')
           var baseUrl = "{{ url('admin/subscriptions') }}";
+          $('#action-show').attr('href', baseUrl + '/' + selectedRow.id);
           $('#action-edit').attr('href', baseUrl + '/' + selectedRow.id + '/edit');
           $('#action-delete').attr('href', baseUrl + '/' + selectedRow.id);
           @endcan

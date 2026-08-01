@@ -186,6 +186,18 @@ class User extends Authenticatable
         return $this->hasMany(UserDevice::class);
     }
 
+    /** Ulasan yang diterima pengguna (sebagai reviewee). */
+    public function reviewsReceived(): HasMany
+    {
+        return $this->hasMany(Review::class, 'reviewee_id');
+    }
+
+    /** Ulasan yang diberikan pengguna (sebagai reviewer). */
+    public function reviewsGiven(): HasMany
+    {
+        return $this->hasMany(Review::class, 'reviewer_id');
+    }
+
     /*
      * Level verifikasi sebagai TURUNAN MURNI untuk kontrak API (kolomnya
      * tidak ada di database — ia dihitung):

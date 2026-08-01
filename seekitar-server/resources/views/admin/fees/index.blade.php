@@ -6,6 +6,16 @@
 
 @push('styles')
   <link rel="stylesheet" href="{{ asset('vendor/mordenize/libs/datatables.net-bs5/css/dataTables.bootstrap5.min.css') }}">
+  <style>
+    #fees-table tbody tr {
+      cursor: pointer;
+    }
+    .row-selected,
+    .row-selected td {
+      background-color: #fcefe2 !important;
+      font-weight: 600;
+    }
+  </style>
 @endpush
 
 @section('content')
@@ -20,7 +30,7 @@
               <h3 class="fw-bold mb-0">Rp {{ number_format($total, 0, ',', '.') }}</h3>
             </div>
             <span class="rounded bg-primary-subtle text-primary p-3">
-              <i class="fa-solid fa-sack-dollar fs-5"></i>
+              <i class="ti ti-coins fs-5" aria-hidden="true"></i>
             </span>
           </div>
           <span class="fs-2 text-muted">Seluruh transaksi sukses</span>
@@ -36,7 +46,7 @@
               <h3 class="fw-bold mb-0">Rp {{ number_format($bulan, 0, ',', '.') }}</h3>
             </div>
             <span class="rounded bg-info-subtle text-info p-3">
-              <i class="fa-solid fa-calendar-days fs-5"></i>
+              <i class="ti ti-calendar fs-5" aria-hidden="true"></i>
             </span>
           </div>
           <span class="fs-2 text-muted">Bulan berjalan</span>
@@ -49,10 +59,10 @@
           <div class="d-flex align-items-center justify-content-between mb-3">
             <div>
               <h6 class="text-muted mb-1 fs-3">Transaksi Berbayar</h6>
-              <h3 class="fw-bold mb-0">{{ number_format($count) }}</h3>
+              <h3 class="fw-bold mb-0">{{ \App\Support\Angka::bulat($count) }}</h3>
             </div>
             <span class="rounded bg-success-subtle text-success p-3">
-              <i class="fa-solid fa-handshake fs-5"></i>
+              <i class="ti ti-arrows-exchange fs-5" aria-hidden="true"></i>
             </span>
           </div>
           <span class="fs-2 text-muted">Transaksi berbiaya layanan</span>
@@ -74,7 +84,7 @@
             
             <div class="mb-3">
               <label for="service_fee_enabled" class="form-label">Status Biaya Layanan Transaksi</label>
-              <select class="form-select @error('service_fee_enabled') is-invalid @enderror" id="service_fee_enabled" name="service_fee_enabled" required>
+              <select class="form-select js-select2 @error('service_fee_enabled') is-invalid @enderror" id="service_fee_enabled" name="service_fee_enabled" required>
                 <option value="1" {{ old('service_fee_enabled', $settings->get('service_fee_enabled')) == '1' ? 'selected' : '' }}>Aktif</option>
                 <option value="0" {{ old('service_fee_enabled', $settings->get('service_fee_enabled')) == '0' ? 'selected' : '' }}>Nonaktif</option>
               </select>
@@ -130,7 +140,7 @@
           <p class="card-subtitle mb-4">Daftar transaksi yang menghasilkan biaya layanan bagi platform Seekitar.</p>
           
           <div class="table-responsive">
-            <table class="table table-striped table-sm table-bordered align-middle text-nowrap" id="fees-table" style="width: 100%;">
+            <table class="table align-middle text-nowrap search-table" id="fees-table" style="width: 100%;">
               <thead>
                 <tr>
                   <th>No Pesanan</th>
@@ -153,7 +163,7 @@
   <script src="{{ asset('vendor/mordenize/libs/datatables.net/js/jquery.dataTables.min.js') }}"></script>
   <script>
     $(function () {
-      $('#fees-table').DataTable({
+      var table = $('#fees-table').DataTable({
         processing: true,
         serverSide: true,
         ajax: "{{ route('admin.fees.data') }}",
@@ -171,8 +181,35 @@
           { data: 'service_fee', name: 'service_fee' },
           { data: 'created_at', name: 'created_at' }
         ],
-        language: {
-          url: "https://cdn.datatables.net/plug-ins/1.13.4/i18n/id.json"
+        dom: "<'d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3'f<'.dt-filters'>>rt<'d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3'<'d-flex align-items-center gap-2'l><'d-flex align-items-center gap-2'i><'d-flex align-items-center gap-2'p>>",
+        initComplete: function () {
+          var $slot = $('#fees-table_wrapper').find('.dt-filters');
+          $('#fees-toolbar').children().appendTo($slot);
+          $('#fees-toolbar').remove();
+          $slot.filter(':empty').remove();
+        },
+        drawCallback: function(settings) {
+          $('#fees-table tbody tr').removeClass('row-selected');
+          selectedRow = null;
+        }
+      });
+
+      var selectedRow = null;
+
+      // Riwayat bersifat baca-saja: klik menandai baris, klik baris yang sama
+      // lagi mengosongkannya.
+      $('#fees-table tbody').on('click', 'tr', function () {
+        var rowData = table.row(this).data();
+
+        if (selectedRow && selectedRow.id === rowData.id) {
+          $(this).removeClass('row-selected');
+          selectedRow = null;
+        } else {
+          if (selectedRow) {
+            $('#fees-table tbody tr').removeClass('row-selected');
+          }
+          $(this).addClass('row-selected');
+          selectedRow = rowData;
         }
       });
     });

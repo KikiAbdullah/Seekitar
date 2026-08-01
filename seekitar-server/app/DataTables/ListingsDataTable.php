@@ -54,8 +54,9 @@ class ListingsDataTable
             ->editColumn('favorites_count', fn (Listing $l) => '<span class="d-inline-flex align-items-center text-nowrap">'
                 .'<i class="fa-regular fa-heart text-danger me-1" aria-hidden="true"></i>'
                 .number_format((int) $l->favorites_count, 0, ',', '.').'</span>')
+            ->addColumn('action', fn (Listing $l) => view('admin.listings._actions', ['listing' => $l])->render())
             ->editColumn('created_at', fn (Listing $l) => $l->created_at?->format('d M Y'))
-            ->rawColumns(['title', 'store_name', 'listing_type', 'status', 'favorites_count'])
+            ->rawColumns(['title', 'store_name', 'listing_type', 'status', 'favorites_count', 'action'])
             ->toJson();
     }
 }

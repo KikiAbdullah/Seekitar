@@ -9,11 +9,13 @@ use App\Models\Store;
 use App\Models\User;
 use App\Services\VerifikasiTokoService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Yajra\DataTables\Facades\DataTables;
 
 /**
  * Antrian verifikasi — pengguna (SATU verifikasi) & pengajuan toko.
@@ -46,18 +48,34 @@ class VerificationController extends Controller
     public function users(): View
     {
         return view('admin.verifications.users', [
-            // Koordinat pemohon ikut dibaca: modal memeriksa titik domisili
-            // terhadap alamatnya — kolom POINT mentah adalah WKB biner.
-            // rejectedBy ikut dimuat: tabel & modal menampilkan konteks
-            // "pengajuan ulang" tanpa N+1 di tiap baris.
+            // Seluruh antrian dibaca di sini (TANPA paginasi) untuk merender
+            // modal tinjauan per baris — DataTables server-side menangani
+            // paginasi tabelnya sendiri, tetapi tombol "Tinjau Data" membuka
+            // modal yang harus ada di halaman untuk baris mana pun.
             'pending' => User::query()
                 ->withCoordinates()
                 ->with(['rejectedBy:id,name'])
                 ->pendingVerification()
                 ->orderBy('ktp_submitted_at')
-                ->paginate(20)
-                ->withQueryString(),
+                ->get(),
         ]);
+    }
+
+    public function userData(): JsonResponse
+    {
+        $pending = User::query()
+            ->withCoordinates()
+            ->with(['rejectedBy:id,name'])
+            ->pendingVerification()
+            ->orderBy('ktp_submitted_at');
+
+        return DataTables::of($pending)
+            ->addColumn('user_info', fn (User $user) => view('admin.verifications._user_info', compact('user'))->render())
+            ->addColumn('submitted_at', fn (User $user) => view('admin.verifications._user_submitted', compact('user'))->render())
+            ->addColumn('context', fn (User $user) => view('admin.verifications._user_context', compact('user'))->render())
+            ->editColumn('phone', fn (User $user) => '<span class="fw-semibold text-dark">' . e($user->phone) . '</span>')
+            ->rawColumns(['user_info', 'phone', 'submitted_at', 'context'])
+            ->make(true);
     }
 
     /** Antrian pengajuan toko. */
@@ -65,19 +83,28 @@ class VerificationController extends Controller
     {
         return view('admin.verifications.stores', [
             'pending' => Store::query()
-                // Antrian HANYA berisi toko yang pemiliknya SUDAH
-                // terverifikasi identitas — definisi bersamanya hidup di
-                // Store::scopePendingVerification (lencana sidebar memakai
-                // definisi yang sama; dua sumber akan membuat angkanya
-                // tidak cocok).
                 // verified_at pemilik ikut dipilih: badge "pemilik layak"
                 // di modal dibaca dari stempel itu.
                 ->with(['owner:id,name,phone,verified_at,address'])
                 ->pendingVerification()
                 ->orderBy('created_at')
-                ->paginate(20)
-                ->withQueryString(),
+                ->get(),
         ]);
+    }
+
+    public function storesData(): JsonResponse
+    {
+        $pending = Store::query()
+            ->with(['owner:id,name,phone,verified_at,address'])
+            ->pendingVerification()
+            ->orderBy('created_at');
+
+        return DataTables::of($pending)
+            ->addColumn('store_info', fn (Store $store) => view('admin.verifications._store_info', compact('store'))->render())
+            ->addColumn('owner_info', fn (Store $store) => view('admin.verifications._store_owner', compact('store'))->render())
+            ->editColumn('created_at', fn (Store $store) => '<span class="fw-semibold text-dark">' . ($store->created_at?->format('d M Y, H:i') ?? '—') . '</span>')
+            ->rawColumns(['store_info', 'owner_info', 'created_at'])
+            ->make(true);
     }
 
     /**

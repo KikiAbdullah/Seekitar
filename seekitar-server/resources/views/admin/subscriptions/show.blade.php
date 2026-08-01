@@ -48,6 +48,10 @@
                   <td class="fw-bold text-dark fs-4">Rp {{ number_format($subscription->amount, 0, ',', '.') }}</td>
                 </tr>
                 <tr>
+                  <td class="text-muted ps-0">Referensi Pembayaran</td>
+                  <td class="text-dark"><code>{{ $subscription->payment_ref ?? '—' }}</code></td>
+                </tr>
+                <tr>
                   <td class="text-muted ps-0">Tanggal Mulai Masa Aktif</td>
                   <td class="text-dark">{{ $subscription->starts_at?->format('d F Y') }}</td>
                 </tr>
@@ -55,9 +59,29 @@
                   <td class="text-muted ps-0">Tanggal Selesai Masa Aktif</td>
                   <td class="text-dark">{{ $subscription->ends_at?->format('d F Y') }}</td>
                 </tr>
+                @if ($subscription->status === 'active' && $subscription->ends_at)
+                  <tr>
+                    <td class="text-muted ps-0">Sisa Masa Aktif</td>
+                    <td class="text-dark">
+                      @if ($subscription->ends_at->isPast())
+                        <span class="badge bg-danger text-white fw-bold fs-2">Sudah Berakhir</span>
+                      @else
+                        <span class="badge bg-success text-white fw-bold fs-2">{{ $subscription->ends_at->diffForHumans() }} lagi</span>
+                      @endif
+                    </td>
+                  </tr>
+                @endif
               </tbody>
             </table>
           </div>
+
+          @if ($subscription->notes)
+            <hr class="my-4 text-muted opacity-25">
+            <h6 class="fw-bold text-dark mb-2">Catatan Langganan</h6>
+            <div class="border rounded p-3 bg-light">
+              <p class="mb-0 text-dark fs-3" style="white-space: pre-wrap; line-height: 1.6;">{{ $subscription->notes }}</p>
+            </div>
+          @endif
         </div>
       </div>
       
@@ -76,7 +100,7 @@
                     <span class="fs-2 text-muted">ID: {{ $subscription->store->id }}</span>
                   </div>
                 </div>
-                <a href="{{ route('admin.stores.show', $subscription->store_id) }}" class="btn btn-sm btn-outline-primary w-100"><i class="ti ti-store me-1"></i> Detail Toko</a>
+                <a href="{{ route('admin.stores.show', $subscription->store_id) }}" class="btn btn-sm btn-outline-primary w-100"><i class="ti ti-building-store me-1" aria-hidden="true"></i> Detail Toko</a>
               </div>
             </div>
           </div>
@@ -93,11 +117,18 @@
                     {{ $subscription->user->initials }}
                   </span>
                   <div>
-                    <h6 class="fw-bold mb-0 text-dark">{{ $subscription->user->name }}</h6>
+                    <div class="d-flex align-items-center gap-2">
+                      <h6 class="fw-bold mb-0 text-dark">{{ $subscription->user->name }}</h6>
+                      @if ($subscription->user->verified_at)
+                        <span class="text-success" title="KTP Terverifikasi">
+                          <i class="ti ti-circle-check fs-4" role="img" aria-label="Terverifikasi"></i>
+                        </span>
+                      @endif
+                    </div>
                     <span class="fs-2 text-muted">{{ $subscription->user->phone }}</span>
                   </div>
                 </div>
-                <a href="{{ route('admin.users.show', $subscription->user_id) }}" class="btn btn-sm btn-outline-primary w-100"><i class="ti ti-user me-1"></i> Detail Pengguna</a>
+                <a href="{{ route('admin.users.show', $subscription->user_id) }}" class="btn btn-sm btn-outline-primary w-100"><i class="ti ti-user me-1" aria-hidden="true"></i> Detail Pengguna</a>
               </div>
             </div>
           </div>
@@ -117,7 +148,7 @@
               <form action="{{ route('admin.subscriptions.cancel', $subscription) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin membatalkan langganan toko ini?');">
                 @csrf
                 <button type="submit" class="btn btn-danger w-100 btn-hover-shadow py-2 fw-semibold">
-                  <i class="ti ti-circle-x fs-5 me-1"></i> Batalkan Langganan
+                  <i class="ti ti-circle-x fs-5 me-1" aria-hidden="true"></i> Batalkan Langganan
                 </button>
               </form>
             </div>
@@ -126,7 +157,7 @@
       @else
         <div class="card bg-light shadow-sm">
           <div class="card-body p-4 text-center">
-            <i class="ti ti-info-circle text-muted fs-8 mb-2"></i>
+            <i class="ti ti-info-circle text-muted fs-8 mb-2" aria-hidden="true"></i>
             <p class="mb-0 fs-3 text-muted">Langganan ini sudah tidak aktif dan tidak dapat dibatalkan kembali.</p>
           </div>
         </div>

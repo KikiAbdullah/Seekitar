@@ -19,7 +19,7 @@
                 <div class="accordion-item mb-3 border rounded-3 overflow-hidden">
                   <h2 class="accordion-header" id="heading-{{ $groupName }}">
                     <button class="accordion-button fs-4 fw-semibold text-capitalize" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ $groupName }}" aria-expanded="true" aria-controls="collapse-{{ $groupName }}">
-                      <i class="fa-solid fa-sliders me-2"></i> Grup: {{ $groupName }}
+                      <i class="ti ti-adjustments-horizontal me-2" aria-hidden="true"></i> Grup: {{ $groupName }}
                     </button>
                   </h2>
                   <div id="collapse-{{ $groupName }}" class="accordion-collapse collapse show" aria-labelledby="heading-{{ $groupName }}" data-bs-parent="#settingsAccordion">
@@ -34,7 +34,7 @@
                           @if ($setting->type === 'integer')
                             <input type="number" class="form-control" id="setting-{{ $setting->key }}" name="settings[{{ $setting->key }}]" value="{{ old('settings.' . $setting->key, $setting->value) }}" required>
                           @elseif ($setting->type === 'boolean')
-                            <select class="form-select" id="setting-{{ $setting->key }}" name="settings[{{ $setting->key }}]" required>
+                            <select class="form-select js-select2" id="setting-{{ $setting->key }}" name="settings[{{ $setting->key }}]" required>
                               <option value="1" {{ old('settings.' . $setting->key, $setting->value) == '1' ? 'selected' : '' }}>Aktif (True)</option>
                               <option value="0" {{ old('settings.' . $setting->key, $setting->value) == '0' ? 'selected' : '' }}>Nonaktif (False)</option>
                             </select>

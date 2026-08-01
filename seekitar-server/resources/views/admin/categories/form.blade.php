@@ -38,7 +38,7 @@
                 
                 <div class="mb-3">
                   <label for="parent_id" class="form-label">Kategori Induk (Parent Category)</label>
-                  <select class="form-select @error('parent_id') is-invalid @enderror" id="parent_id" name="parent_id">
+                  <select class="form-select js-select2 @error('parent_id') is-invalid @enderror" id="parent_id" name="parent_id">
                     <option value="">Tidak ada (Jadikan Kategori Utama)</option>
                     @foreach ($parents as $parent)
                       <option value="{{ $parent->id }}" {{ old('parent_id', $category->parent_id) == $parent->id ? 'selected' : '' }}>

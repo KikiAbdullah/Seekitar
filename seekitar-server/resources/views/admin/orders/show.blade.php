@@ -50,14 +50,14 @@
         @if ($order->payment_proof_url)
           <div class="border rounded p-3 bg-light d-flex align-items-center justify-content-between mb-0">
             <div class="d-flex align-items-center gap-2">
-              <i class="fa-regular fa-file-image text-primary fs-5"></i>
+              <i class="ti ti-photo text-primary fs-5" aria-hidden="true"></i>
               <div>
                 <span class="fw-semibold text-dark fs-3 d-block">Bukti Pembayaran Tersedia</span>
                 <span class="fs-2 text-muted">Dokumen privat — diakses lewat route aman</span>
               </div>
             </div>
             <a href="{{ route('admin.orders.payment-proof', $order) }}" target="_blank" class="btn btn-sm btn-primary">
-              <i class="ti ti-download me-1"></i> Lihat Bukti Bayar
+              <i class="ti ti-download me-1" aria-hidden="true"></i> Lihat Bukti Bayar
             </a>
           </div>
         @else
@@ -84,7 +84,7 @@
             </div>
             <div class="text-end">
               <span class="fw-bold text-primary fs-4">Rp {{ number_format($order->listing->price ?? 0, 0, ',', '.') }}</span>
-              <a href="{{ route('admin.listings.show', $order->listing_id) }}" class="d-block btn btn-xs btn-light-info text-info mt-1"><i class="ti ti-eye"></i> Detail Listing</a>
+              <a href="{{ route('admin.listings.show', $order->listing_id) }}" class="d-block btn btn-xs btn-light-info text-info mt-1"><i class="ti ti-search" aria-hidden="true"></i> Detail Listing</a>
             </div>
           </div>
         </div>
@@ -118,7 +118,7 @@
               </tbody>
             </table>
           </div>
-          <a href="{{ route('admin.offers.show', $order->offer_id) }}" class="btn btn-sm btn-outline-primary mt-3"><i class="ti ti-eye me-1"></i> Detail Penawaran</a>
+          <a href="{{ route('admin.offers.show', $order->offer_id) }}" class="btn btn-sm btn-outline-primary mt-3"><i class="ti ti-search me-1" aria-hidden="true"></i> Detail Penawaran</a>
         </div>
       </div>
     @endif
@@ -127,7 +127,7 @@
     @if ($order->disputes->isNotEmpty())
       <div class="card shadow-sm mb-4">
         <div class="card-body p-4">
-          <h5 class="fw-bold mb-3 text-danger"><i class="ti ti-alert-triangle me-1"></i> Laporan Masalah (Dispute)</h5>
+          <h5 class="fw-bold mb-3 text-danger"><i class="ti ti-alert-triangle me-1" aria-hidden="true"></i> Laporan Masalah (Dispute)</h5>
           @foreach ($order->disputes as $d)
             <div class="border rounded p-3 mb-3 {{ $d->status->value === 'open' ? 'border-danger' : 'border-secondary' }}">
               <div class="d-flex align-items-center justify-content-between mb-2">
@@ -150,7 +150,7 @@
               @if ($d->resolution_note)
                 <div class="bg-light rounded p-2 fs-3 text-muted">Keputusan: {{ $d->resolution_note }}</div>
               @endif
-              <a href="{{ route('admin.disputes.show', $d->id) }}" class="btn btn-xs btn-light-info text-info mt-2"><i class="ti ti-eye me-1"></i> Detail Laporan</a>
+              <a href="{{ route('admin.disputes.show', $d->id) }}" class="btn btn-xs btn-light-info text-info mt-2"><i class="ti ti-search me-1" aria-hidden="true"></i> Detail Laporan</a>
             </div>
           @endforeach
         </div>
@@ -168,7 +168,7 @@
                 <span class="fw-semibold text-dark fs-3">{{ $rev->reviewer?->name }}</span>
                 <div class="text-warning ms-1">
                   @for ($i = 1; $i <= 5; $i++)
-                    <i class="fa-{{ $i <= $rev->rating ? 'solid' : 'regular' }} fa-star"></i>
+                    <i class="ti ti-star {{ $i <= $rev->rating ? '' : 'text-muted' }}" aria-hidden="true"></i>
                   @endfor
                   <span class="fs-2 text-muted ms-1">({{ $rev->rating }})</span>
                 </div>
@@ -197,13 +197,13 @@
             <div class="d-flex align-items-center gap-2">
               <h6 class="fw-bold mb-0 text-dark">{{ $order->buyer?->name }}</h6>
               @if ($order->buyer?->verified_at)
-                <span class="text-success" title="KTP Terverifikasi"><i class="fa-solid fa-circle-check fs-4"></i></span>
+                <span class="text-success" title="KTP Terverifikasi"><i class="ti ti-circle-check fs-4" role="img" aria-label="Terverifikasi"></i></span>
               @endif
             </div>
             <span class="fs-2 text-muted">{{ $order->buyer?->phone }}</span>
           </div>
         </div>
-        <a href="{{ route('admin.users.show', $order->buyer_id) }}" class="btn btn-sm btn-outline-primary w-100"><i class="ti ti-user me-1"></i> Detail Akun</a>
+        <a href="{{ route('admin.users.show', $order->buyer_id) }}" class="btn btn-sm btn-outline-primary w-100"><i class="ti ti-user me-1" aria-hidden="true"></i> Detail Akun</a>
       </div>
     </div>
 
@@ -217,13 +217,13 @@
             <div class="d-flex align-items-center gap-2">
               <h6 class="fw-bold mb-0 text-dark">{{ $order->store?->name }}</h6>
               @if ($order->store?->status->value === 'verified')
-                <span class="text-success" title="Toko Terverifikasi"><i class="fa-solid fa-circle-check fs-4"></i></span>
+                <span class="text-success" title="Toko Terverifikasi"><i class="ti ti-circle-check fs-4" role="img" aria-label="Terverifikasi"></i></span>
               @endif
             </div>
             <span class="fs-2 text-muted">{{ $order->store?->regency }}</span>
           </div>
         </div>
-        <a href="{{ route('admin.stores.show', $order->store_id) }}" class="btn btn-sm btn-outline-primary w-100"><i class="ti ti-store me-1"></i> Detail Toko</a>
+        <a href="{{ route('admin.stores.show', $order->store_id) }}" class="btn btn-sm btn-outline-primary w-100"><i class="ti ti-building-store me-1" aria-hidden="true"></i> Detail Toko</a>
       </div>
     </div>
 
@@ -236,7 +236,7 @@
           @if ($order->latitude && $order->longitude)
             <code class="fs-2 d-block mb-3">{{ $order->latitude }}, {{ $order->longitude }}</code>
             <a href="https://www.google.com/maps/search/?api=1&query={{ $order->latitude }},{{ $order->longitude }}" target="_blank" class="btn btn-sm btn-light-primary text-primary w-100">
-              <i class="ti ti-map-pin me-1"></i> Buka di Google Maps
+              <i class="ti ti-map-pin me-1" aria-hidden="true"></i> Buka di Google Maps
             </a>
           @endif
         </div>
@@ -247,7 +247,7 @@
     @if ($order->status->value === 'dibatalkan' && $order->cancellation_reason)
       <div class="card bg-light-danger shadow-sm mb-4">
         <div class="card-body p-4">
-          <h5 class="fw-bold text-danger mb-2"><i class="ti ti-ban me-1"></i> Dibatalkan</h5>
+          <h5 class="fw-bold text-danger mb-2"><i class="ti ti-ban me-1" aria-hidden="true"></i> Dibatalkan</h5>
           @if ($order->cancelledBy)
             <p class="fs-3 text-dark mb-1">Oleh: <strong>{{ $order->cancelledBy->name }}</strong></p>
             <p class="fs-3 text-dark mb-2">Pada: {{ $order->cancelled_at?->format('d M Y H:i') }}</p>
