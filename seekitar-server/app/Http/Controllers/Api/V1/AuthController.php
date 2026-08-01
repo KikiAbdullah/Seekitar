@@ -17,19 +17,26 @@ use App\Exceptions\OtpDeliveryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Tymon\JWTAuth\Facades\JWTAuth;
+use Tymon\JWTAuth\Exceptions\JWTException;
 
 /**
- * Autentikasi berbasis OTP WhatsApp (API §2).
+ * Autentikasi berbasis OTP WhatsApp + JWT (API §2).
  *
  * Seekitar tidak memakai kata sandi sama sekali — OTP adalah satu-satunya
- * faktor, sehingga penanganannya di sini bersifat kritis.
+ * faktor. Setelah OTP cocok, JWT diterbitkan sebagai bearer token untuk
+ * seluruh request API selanjutnya.
+ *
+ * Token JWT tidak disimpan di database (stateless): verifikasi dilakukan
+ * semata-mata dari signature + expiry payload. Refresh mencabut token lama
+ * lewat blacklist dan menerbitkan yang baru.
  */
 class AuthController extends Controller
 {
     use ApiResponse;
 
-    /** Umur token: 30 hari, dalam detik (API §2.2). */
-    private const TOKEN_TTL_SECONDS = 2592000;
+    /** Umur token JWT: 30 hari, dalam menit (config/jwt.php). */
+    private const TOKEN_TTL_MINUTES = 43200;
 
     public function __construct(
         private readonly OtpService $otp,
@@ -46,10 +53,7 @@ class AuthController extends Controller
         try {
             $this->whatsapp->sendOtp($phone, $code);
         } catch (OtpDeliveryException $e) {
-            // Kode dibuang supaya pengguna bisa meminta ulang tanpa menunggu
-            // TTL habis — kegagalan ini bukan salah pengguna.
             $this->otp->forget($phone);
-
             report($e);
 
             return $this->fail('Gagal mengirim OTP. Coba lagi sesaat lagi.', 503);
@@ -63,6 +67,9 @@ class AuthController extends Controller
      *
      * Akun dibuat otomatis pada verifikasi pertama: tidak ada layar
      * "daftar" terpisah di Seekitar (PRD §5.3.1).
+     *
+     * Setelah OTP cocok, JWT diterbitkan lewat `auth('api')->login()` —
+     * token tidak disimpan di DB, signature-nya diverifikasi tiap request.
      */
     public function verifyOtp(VerifyOtpRequest $request): JsonResponse
     {
@@ -76,18 +83,9 @@ class AuthController extends Controller
 
         /** @var array{0: User, 1: bool} $result */
         $result = DB::transaction(function () use ($phone): array {
-            /*
-             * withTrashed() WAJIB di sini: kolom phone unik di basis data,
-             * dan akun yang di-soft-delete tetap memegang nomornya. Tanpa
-             * ini, User::create() untuk nomor tersebut meledak dengan
-             * IntegrityConstraintViolation (HTTP 500) — padahal jawaban
-             * yang benar adalah memulihkan akunnya.
-             */
             $user = User::withTrashed()->where('phone', $phone)->first();
 
             if ($user) {
-                // Akun yang kembali lewat OTP dipulihkan; kalau ia memang
-                // diblokir, gerbang kedudukan di bawah tetap menahannya.
                 if ($user->trashed()) {
                     $user->restore();
                 }
@@ -100,32 +98,23 @@ class AuthController extends Controller
 
         [$user, $isNew] = $result;
 
-        /*
-         * OTP yang cocok ADALAH bukti kepemilikan nomor — tanpa kolom apa
-         * pun untuk ditulis: kode OTP hanya dikirim ke nomornya sendiri,
-         * jadi keberadaan akun di tabel users sudah merupakan jejaknya.
-         * Verifikasi oleh manusia tinggal SATU hal: admin meninjau wajah,
-         * KTP, alamat, dan koordinat (kolom verified_*), bukan nomornya.
-         * Akun baru berstatus 'menunggu' secara default — tidak ada yang
-         * perlu diubah di sini.
-         */
-
         if ($user->isBlocked()) {
             return $this->fail('Akun Anda diblokir. Hubungi dukungan Seekitar.', 423);
         }
 
-        $token = $user->createToken('mobile', ['*'], now()->addSeconds(self::TOKEN_TTL_SECONDS));
+        // JWT stateless — tidak ada baris di personal_access_tokens.
+        $token = auth('api')->login($user);
 
         return $this->ok([
-            'token'       => $token->plainTextToken,
+            'token'       => $token,
             'token_type'  => 'Bearer',
-            'expires_in'  => self::TOKEN_TTL_SECONDS,
+            'expires_in'  => self::TOKEN_TTL_MINUTES * 60,
             'is_new_user' => $isNew,
             'user'        => new UserResource($user),
         ]);
     }
 
-    /** GET /auth/me */
+    /** GET /auth/me — user dari JWT payload (tanpa query DB ulang). */
     public function me(Request $request): JsonResponse
     {
         return $this->ok(['user' => new UserResource($request->user())]);
@@ -133,19 +122,11 @@ class AuthController extends Controller
 
     /**
      * POST /auth/phone/request-otp — kirim OTP ke NOMOR BARU (ganti HP).
-     *
-     * Nomor adalah kredensial masuk satu-satunya, jadi pergantian TIDAK
-     * boleh berjalan hanya karena sesi kebetulan aktif: pemilik baru harus
-     * membuktikan memegang nomor tujuan lewat OTP (aturan 5 — perubahan
-     * dari sisi pengguna wajib verifikasi ulang).
      */
     public function requestPhoneChangeOtp(RequestOtpRequest $request): JsonResponse
     {
         $phone = $request->phone();
 
-        // Termasuk akun ter-soft-delete: kolom phone unik tanpa memandang
-        // deleted_at — memeriksa yang hidup saja menyiapkan 500 saat
-        // pergantian benar-benar disimpan.
         if (User::withTrashed()->where('phone', $phone)->exists()) {
             return $this->fail('Nomor ini sudah dipakai akun lain.', 422, [
                 'phone' => ['Nomor ini sudah dipakai akun lain.'],
@@ -168,12 +149,6 @@ class AuthController extends Controller
 
     /**
      * POST /auth/phone/verify-otp — nomor DIGANTI hanya setelah OTP-nya cocok.
-     *
-     * Yang ditulis HANYA kolom phone-nya: OTP yang baru saja cocok sudah
-     * merupakan bukti pemilikan nomor terkini — tidak ada stempel nomor
-     * terpisah untuk diperbarui. Kedudukan akun (terverifikasi/menunggu/
-     * ditolak) sengaja TIDAK gugur karena nomor ganti: yang diverifikasi
-     * admin adalah berkas identitasnya, bukan nomor teleponnya.
      */
     public function verifyPhoneChangeOtp(VerifyOtpRequest $request): JsonResponse
     {
@@ -191,17 +166,11 @@ class AuthController extends Controller
             ->exists();
 
         if (! $tersedia) {
-            // Lompat validasi: nomornya didaftarkan akun lain DI SELA
-            // menunggu OTP — OTP yang cocok tidak boleh merampas nomor orang.
             return $this->fail('Nomor ini baru saja dipakai akun lain.', 422);
         }
 
         $user = $request->user();
         $user->phone = $phone;
-        // Tidak ada stempel nomor untuk diperbarui: OTP yang baru saja cocok
-        // SUDAH merupakan bukti pemilikan nomor terkini, dan kedudukan akun
-        // (terverifikasi/ditolak/menunggu) tidak gugur karena nomor ganti —
-        // yang diverifikasi admin adalah BERKAS identitasnya, bukan nomornya.
         $user->save();
 
         return $this->ok(
@@ -223,7 +192,6 @@ class AuthController extends Controller
         $user->fill($request->safe()->only(['name', 'address']));
 
         if ($request->hasFile('avatar')) {
-            // Avatar bersifat publik; KTP tidak (lihat uploadKtp).
             $user->avatar_url = $request->file('avatar')->store('avatars', 'public');
         }
 
@@ -239,17 +207,52 @@ class AuthController extends Controller
         return $this->ok(['user' => new UserResource($user->fresh())]);
     }
 
-    /** POST /auth/logout — mencabut token yang sedang dipakai saja. */
+    /**
+     * POST /auth/logout — blacklist token JWT yang sedang dipakai.
+     *
+     * Berbeda dari Sanctum (hapus baris DB): JWT tidak punya tabel token,
+     * jadi logout dilakukan dengan mem-blacklist token saat ini. Token
+     * yang di-blacklist tidak bisa dipakai lagi meski belum expired.
+     */
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()?->delete();
+        try {
+            auth('api')->logout();
 
-        return $this->ok(null, 'Berhasil keluar.');
+            return $this->ok(null, 'Berhasil keluar.');
+        } catch (JWTException $e) {
+            // Token sudah expired atau invalid — logout tetap sukses.
+            return $this->ok(null, 'Berhasil keluar.');
+        }
+    }
+
+    /**
+     * POST /auth/refresh — perpanjang token JWT tanpa login ulang.
+     *
+     * Token lama di-blacklist, token baru diterbitkan. Hanya bisa dipakai
+     * saat token saat ini masih valid (guard JWT memeriksa signature +
+     * expiry + blacklist).
+     *
+     * Refresh window: 2 minggu sejak token pertama diterbitkan
+     * (config/jwt.php refresh_ttl). Setelah itu wajib login ulang.
+     */
+    public function refresh(Request $request): JsonResponse
+    {
+        try {
+            $newToken = auth('api')->refresh();
+
+            return $this->ok([
+                'token'      => $newToken,
+                'token_type' => 'Bearer',
+                'expires_in' => self::TOKEN_TTL_MINUTES * 60,
+            ]);
+        } catch (JWTException $e) {
+            return $this->fail('Token tidak dapat diperpanjang. Silakan login ulang.', 401);
+        }
     }
 
     /**
      * GET /auth/export-data — portabilitas data (UU PDP pasal 8).
-     * Mengembalikan data pribadi pengguna dalam format JSON untuk diunduh.
      */
     public function exportData(Request $request): JsonResponse
     {
@@ -268,15 +271,19 @@ class AuthController extends Controller
 
     /**
      * DELETE /auth/account — hak dilupakan (right to erasure).
-     * Anonimisasi semua data pribadi pengguna dan mencabut semua token.
-     * Akun tetap ada di database untuk kepentingan audit tetapi tidak bisa
-     * diidentifikasi kembali.
      */
     public function requestDeletion(Request $request): JsonResponse
     {
         $user = $request->user();
 
         $this->privacy->anonymizeUser($user);
+
+        // Blacklist token setelah anonimisasi — akun sudah tidak bisa dipakai.
+        try {
+            auth('api')->logout();
+        } catch (JWTException) {
+            // Tidak masalah jika token sudah invalid.
+        }
 
         return $this->ok(null, 'Akun Anda telah dianonimkan sesuai permintaan.');
     }
