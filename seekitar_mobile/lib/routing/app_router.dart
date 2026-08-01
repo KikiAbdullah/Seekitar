@@ -14,6 +14,8 @@ import '../screens/request_detail_screen.dart';
 import '../screens/notifications_screen.dart';
 import '../screens/favorites_screen.dart';
 import '../screens/legal_screen.dart';
+import '../screens/status_screen.dart';
+import '../screens/pricing_screen.dart';
 import '../screens/wallet_screen.dart';
 import '../screens/address_screen.dart';
 import '../screens/conversations_screen.dart';
@@ -68,6 +70,8 @@ final appRouter = GoRouter(
     GoRoute(path: '/settings', builder: (_, __) => const FullSettingsScreen()),
     GoRoute(path: '/about', builder: (_, __) => const AboutScreen()),
     GoRoute(path: '/help-legal', builder: (_, __) => const HelpLegalScreen()),
+    GoRoute(path: '/status', builder: (_, __) => const StatusScreen()),
+    GoRoute(path: '/pricing', builder: (_, __) => const PricingScreen()),
   ],
 );
 
