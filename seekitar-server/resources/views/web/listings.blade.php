@@ -205,7 +205,7 @@
                 <p class="mb-2 fs-3 text-muted d-flex align-items-center gap-1">
                   <i class="ti ti-building-store"></i>
                   {{ $listing->store?->name }}
-                  @if ($listing->store?->is_verified)
+                  @if ($listing->store?->verified_at)
                     <span class="store-badge-verified ms-1">
                       <i class="ti ti-shield-check-filled"></i>
                     </span>
