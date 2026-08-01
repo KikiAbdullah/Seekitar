@@ -40,7 +40,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override Widget build(BuildContext ctx) {
     final u = ctx.watch<AppState>().user; final t = Theme.of(ctx);
     return Scaffold(
-      appBar: AppBar(title: const Text('Profil'), actions: [IconButton(icon: const Icon(Icons.settings_outlined, size: 22), onPressed: () => ctx.push('/notif-prefs'))]),
+      appBar: AppBar(title: const Text('Profil'), actions: [IconButton(icon: const Icon(Icons.settings_outlined, size: 22), onPressed: () => ctx.push('/settings'))]),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         Card(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
