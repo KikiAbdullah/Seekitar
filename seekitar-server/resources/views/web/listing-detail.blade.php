@@ -164,19 +164,20 @@
             </div>
           </div>
 
-          {{-- CTA utama --}}
+          {{-- CTA utama — Download App --}}
           <div class="d-grid gap-2 mb-5">
             <div class="app-cta-card p-4">
               <div class="position-relative z-1">
                 <h5 class="text-white fw-bold mb-2">
-                  <i class="ti ti-brand-android me-2"></i>Transaksi di Aplikasi
+                  <i class="ti ti-brand-google-play me-2"></i>Pakai Aplikasi untuk Transaksi
                 </h5>
                 <p class="mb-3 text-white opacity-90 fs-4">
-                  Untuk membeli atau menghubungi penjual, gunakan aplikasi Seekitar di ponselmu.
-                  Semua transaksi aman dan tercatat.
+                  Website ini hanya untuk melihat katalog. Untuk membeli, chat penjual,
+                  atau melacak pesanan, unduh aplikasi Seekitar dari Google Play.
                 </p>
-                <a href="{{ route('web.help') }}#cara-daftar" class="btn btn-light px-4 fw-semibold">
-                  <i class="ti ti-download me-1"></i> Cara Unduh & Daftar
+                <a href="{{ config('seekitar.play_store_url') }}" target="_blank" rel="noopener"
+                  class="btn btn-light px-4 fw-semibold d-inline-flex align-items-center gap-2">
+                  <i class="ti ti-brand-google-play fs-5"></i> Download di Google Play
                 </a>
               </div>
             </div>
@@ -312,7 +313,10 @@
               <div class="alert alert-success d-flex align-items-start gap-2 mb-0 mt-3 fs-3">
                 <i class="ti ti-info-circle mt-1 flex-shrink-0"></i>
                 <div>
-                  Untuk bertransaksi dengan toko ini, gunakan <strong>aplikasi Seekitar</strong> di ponselmu.
+                  Transaksi hanya bisa dilakukan lewat <strong>aplikasi Seekitar</strong> di ponsel.
+                  <a href="{{ config('seekitar.play_store_url') }}" target="_blank" rel="noopener" class="text-success fw-semibold d-inline-flex align-items-center gap-1 mt-1">
+                    <i class="ti ti-brand-google-play"></i> Download di Google Play
+                  </a>
                 </div>
               </div>
             </div>
@@ -365,8 +369,9 @@
                 Gratis, tanpa komisi.
               </p>
               <div class="d-sm-flex justify-content-center gap-3">
-                <a href="{{ route('web.help') }}#cara-daftar" class="btn btn-light px-4 fw-semibold">
-                  <i class="ti ti-download me-1"></i> Cara Unduh Aplikasi
+                <a href="{{ config('seekitar.play_store_url') }}" target="_blank" rel="noopener"
+                  class="btn btn-light px-4 fw-semibold d-inline-flex align-items-center gap-2">
+                  <i class="ti ti-brand-google-play fs-5"></i> Download di Google Play
                 </a>
                 <a href="{{ route('web.listings') }}" class="btn btn-outline-light px-4">
                   Jelajahi Listing Lain

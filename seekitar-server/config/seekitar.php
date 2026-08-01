@@ -96,6 +96,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Link Download Aplikasi
+    |--------------------------------------------------------------------------
+    |
+    | Tautan unduhan aplikasi mobile — dipakai di section CTA di halaman
+    | publik. Saat app belum terbit, isi dengan placeholder `#`; setelah
+    | rilis, ganti dengan URL Google Play Store yang sebenarnya.
+    |
+    */
+
+    'play_store_url' => env('SEEKITAR_PLAY_STORE_URL', '#'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Monetisasi & Harga
     |--------------------------------------------------------------------------
     |

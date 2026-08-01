@@ -516,6 +516,70 @@
     </div>
   </section>
 
+  {{-- ============================ DOWNLOAD APP ============================ --}}
+  <section class="py-8 py-lg-11">
+    <div class="container">
+      <div class="row align-items-center g-5">
+        <div class="col-lg-6" data-aos="fade-up" data-aos-duration="1000">
+          <span class="eyebrow">Aplikasi Mobile</span>
+          <h2 class="fs-8 fw-bolder mt-3 mb-3">Unduh Seekitar di ponselmu</h2>
+          <p class="fs-5 text-muted mb-4">
+            Semua fitur — cari barang, pasang listing, terima notifikasi kebutuhan,
+            chat penjual, lacak pesanan — ada di aplikasi mobile. Website ini hanya
+            untuk melihat katalog.
+          </p>
+          <ul class="list-unstyled d-grid gap-2 mb-5">
+            <li class="check-item">
+              <i class="ti ti-circle-check"></i>
+              <span class="text-dark"><strong>Notifikasi real-time</strong> — tahu saat ada pesanan atau penawaran baru.</span>
+            </li>
+            <li class="check-item">
+              <i class="ti ti-circle-check"></i>
+              <span class="text-dark"><strong>Chat langsung</strong> — komunikasi dengan pembeli/penjual dalam satu aplikasi.</span>
+            </li>
+            <li class="check-item">
+              <i class="ti ti-circle-check"></i>
+              <span class="text-dark"><strong>Verifikasi & buka toko</strong> — unggah KTP dan swafoto langsung dari HP.</span>
+            </li>
+            <li class="check-item">
+              <i class="ti ti-circle-check"></i>
+              <span class="text-dark"><strong>Lacak pesanan</strong> — semua status pesanan dalam genggaman.</span>
+            </li>
+          </ul>
+          <a href="{{ config('seekitar.play_store_url') }}" target="_blank" rel="noopener"
+            class="btn btn-primary btn-lg px-5 btn-hover-shadow d-inline-flex align-items-center gap-2">
+            <i class="ti ti-brand-google-play fs-5"></i> Download di Google Play
+          </a>
+        </div>
+        <div class="col-lg-6 text-center" data-aos="fade-up" data-aos-delay="200" data-aos-duration="1000">
+          <div style="background: linear-gradient(145deg, var(--bs-primary-bg-subtle), #e8f5ee); border-radius: 2rem; padding: 2rem;">
+            <div style="max-width: 260px; margin: 0 auto; background: #1a1a2e; border-radius: 1.5rem; padding: 1.25rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,.25);">
+              <div style="background: var(--bs-primary); border-radius: 1rem; padding: 1.5rem 1rem; margin-bottom: 1rem; text-align: center;">
+                <i class="ti ti-building-store" style="font-size: 2.5rem; color: #fff;"></i>
+                <div style="color: #fff; font-weight: 800; font-size: 1.1rem; margin-top: .5rem;">Seekitar</div>
+                <div style="color: rgba(255,255,255,.7); font-size: .7rem;">Pasar Lokal</div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: .5rem;">
+                <div style="background: rgba(255,255,255,.1); border-radius: .6rem; padding: .6rem; text-align: center; color: #fff; font-size: .65rem;">
+                  <i class="ti ti-search d-block mb-1" style="font-size: 1rem;"></i> Cari
+                </div>
+                <div style="background: rgba(255,255,255,.1); border-radius: .6rem; padding: .6rem; text-align: center; color: #fff; font-size: .65rem;">
+                  <i class="ti ti-clipboard d-block mb-1" style="font-size: 1rem;"></i> Pasang
+                </div>
+                <div style="background: rgba(255,255,255,.1); border-radius: .6rem; padding: .6rem; text-align: center; color: #fff; font-size: .65rem;">
+                  <i class="ti ti-message-dots d-block mb-1" style="font-size: 1rem;"></i> Chat
+                </div>
+                <div style="background: rgba(255,255,255,.1); border-radius: .6rem; padding: .6rem; text-align: center; color: #fff; font-size: .65rem;">
+                  <i class="ti ti-bell d-block mb-1" style="font-size: 1rem;"></i> Notif
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   {{-- ============================ CTA ============================ --}}
   <section class="pb-8 pb-lg-11">
     <div class="container">

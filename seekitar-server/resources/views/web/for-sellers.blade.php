@@ -212,6 +212,69 @@
     </div>
   </section>
 
+  {{-- ============================ DOWNLOAD APP ============================ --}}
+  <section class="pb-8 pb-lg-11">
+    <div class="container">
+      <div class="row align-items-center g-5">
+        <div class="col-lg-6" data-aos="fade-up" data-aos-duration="900">
+          <span class="eyebrow">Mulai dari Ponselmu</span>
+          <h2 class="fs-8 fw-bolder mt-3 mb-3">Download Seekitar dari Google Play</h2>
+          <p class="fs-5 text-muted mb-4">
+            Buka toko, pasang listing, terima notifikasi kebutuhan, dan chat pembeli —
+            semuanya lewat aplikasi. Website ini hanya untuk melihat katalog.
+          </p>
+          <ul class="list-unstyled d-grid gap-2 mb-4">
+            <li class="check-item">
+              <i class="ti ti-circle-check"></i>
+              <span class="text-dark"><strong>Daftar dengan nomor WA</strong> — tanpa ribet, langsung masuk.</span>
+            </li>
+            <li class="check-item">
+              <i class="ti ti-circle-check"></i>
+              <span class="text-dark"><strong>Verifikasi KTP lewat HP</strong> — foto dan unggah langsung dari ponsel.</span>
+            </li>
+            <li class="check-item">
+              <i class="ti ti-circle-check"></i>
+              <span class="text-dark"><strong>Notifikasi pesanan baru</strong> — tahu setiap kali ada pembeli.</span>
+            </li>
+            <li class="check-item">
+              <i class="ti ti-circle-check"></i>
+              <span class="text-dark"><strong>Kelola toko kapan saja</strong> — tambah listing, atur stok, balas chat.</span>
+            </li>
+          </ul>
+          <a href="{{ config('seekitar.play_store_url') }}" target="_blank" rel="noopener"
+            class="btn btn-primary btn-lg px-5 btn-hover-shadow d-inline-flex align-items-center gap-2">
+            <i class="ti ti-brand-google-play fs-5"></i> Download di Google Play
+          </a>
+        </div>
+        <div class="col-lg-6 text-center" data-aos="fade-up" data-aos-delay="200" data-aos-duration="900">
+          <div style="background: linear-gradient(145deg, var(--bs-primary-bg-subtle), #e8f5ee); border-radius: 2rem; padding: 2rem;">
+            <div style="max-width: 260px; margin: 0 auto; background: #1a1a2e; border-radius: 1.5rem; padding: 1.25rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,.25);">
+              <div style="background: var(--bs-primary); border-radius: 1rem; padding: 1.5rem 1rem; margin-bottom: 1rem; text-align: center;">
+                <i class="ti ti-building-store" style="font-size: 2.5rem; color: #fff;"></i>
+                <div style="color: #fff; font-weight: 800; font-size: 1.1rem; margin-top: .5rem;">Seekitar</div>
+                <div style="color: rgba(255,255,255,.7); font-size: .7rem;">Pasar Lokal</div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: .5rem;">
+                <div style="background: rgba(255,255,255,.1); border-radius: .6rem; padding: .6rem; text-align: center; color: #fff; font-size: .65rem;">
+                  <i class="ti ti-id d-block mb-1" style="font-size: 1rem;"></i> Verifikasi
+                </div>
+                <div style="background: rgba(255,255,255,.1); border-radius: .6rem; padding: .6rem; text-align: center; color: #fff; font-size: .65rem;">
+                  <i class="ti ti-clipboard d-block mb-1" style="font-size: 1rem;"></i> Listing
+                </div>
+                <div style="background: rgba(255,255,255,.1); border-radius: .6rem; padding: .6rem; text-align: center; color: #fff; font-size: .65rem;">
+                  <i class="ti ti-message-dots d-block mb-1" style="font-size: 1rem;"></i> Chat
+                </div>
+                <div style="background: rgba(255,255,255,.1); border-radius: .6rem; padding: .6rem; text-align: center; color: #fff; font-size: .65rem;">
+                  <i class="ti ti-chart-bar d-block mb-1" style="font-size: 1rem;"></i> Statistik
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   {{-- ============================ CTA ============================ --}}
   <section class="pb-8 pb-lg-11">
     <div class="container">
@@ -225,8 +288,10 @@
                 Gratis, tanpa komitmen, tanpa komisi.
               </p>
               <div class="d-sm-flex align-items-center justify-content-center gap-3">
-                <a href="{{ route('web.help') }}#cara-daftar"
-                  class="btn btn-primary px-5 d-block mb-3 mb-sm-0 btn-hover-shadow">Cara Daftar</a>
+                <a href="{{ config('seekitar.play_store_url') }}" target="_blank" rel="noopener"
+                  class="btn btn-primary px-5 d-block mb-3 mb-sm-0 btn-hover-shadow d-inline-flex align-items-center justify-content-center gap-2">
+                  <i class="ti ti-brand-google-play fs-5"></i> Download di Google Play
+                </a>
                 <a href="{{ route('web.pricing') }}"
                   class="btn btn-outline-secondary px-5 d-block">Lihat Detail Biaya</a>
               </div>
