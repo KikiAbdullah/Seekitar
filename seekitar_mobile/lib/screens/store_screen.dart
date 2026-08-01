@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/store.dart';
 import '../models/dashboard.dart';
@@ -68,15 +69,24 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     final d = _dash;
     final t = Theme.of(ctx);
     final name = _store?.name ?? 'Toko';
+    final sid = _store?.id ?? widget.storeId;
     return Scaffold(
       appBar: AppBar(title: Text(name)),
+      floatingActionButton: _store != null ? FloatingActionButton.extended(
+        onPressed: () => ctx.push('/create-listing', extra: _store).then((_) => _load()),
+        icon: const Icon(Icons.add), label: const Text('Pasang Listing'),
+        backgroundColor: t.colorScheme.primary,
+      ) : null,
       body: ListView(padding: const EdgeInsets.all(16), children: [
         Card(child: Padding(padding: const EdgeInsets.all(16), child: Row(children: [
           CircleAvatar(radius: 30, backgroundColor: Colors.green.shade50, child: Text(name.substring(0, 2).toUpperCase(), style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.bold))),
           const SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), if (_store?.isVerified == true) const Icon(Icons.verified, size: 18, color: Colors.green)]),
-            Text('⭐ ${d?.avgRating.toStringAsFixed(1) ?? "0"} · ${d?.totalReviews ?? 0} ulasan', style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+            GestureDetector(
+              onTap: () => ctx.push('/store/$sid/reviews', extra: name),
+              child: Text('⭐ ${d?.avgRating.toStringAsFixed(1) ?? "0"} · ${d?.totalReviews ?? 0} ulasan  ›', style: TextStyle(fontSize: 13, color: t.colorScheme.primary)),
+            ),
           ])),
         ]))),
         if (d != null) ...[
@@ -85,6 +95,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
           const SizedBox(height: 10),
           Row(children: [_stat('Omzet', 'Rp ${d.totalRevenue.toStringAsFixed(0)}', Icons.attach_money, t), _stat('Bln Ini', '${d.ordersThisMonth} psn', Icons.trending_up, t)]),
         ],
+        const SizedBox(height: 80),
       ]),
     );
   }

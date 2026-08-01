@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import '../models/notification.dart';
 import '../services/api_compat.dart';
 
