@@ -1,19 +1,19 @@
 @extends('web.layout')
 
 @section('title', 'Untuk Penjual & Penyedia Jasa — Seekitar')
-@section('meta_description', 'Buka toko online gratis di Seekitar. Jangkau pelanggan terdekat tanpa biaya langganan.')
+@section('meta_description', 'Buka toko online gratis di Seekitar. Jangkau pelanggan terdekat tanpa biaya langganan, tanpa komisi.')
 
 @section('content')
 
   @include('web.partials._hero', [
-    'kicker'   => 'Gratis · Tanpa komisi',
+    'kicker'   => 'Gratis · Tanpa Komisi',
     'judul'    => 'Buka toko, jangkau tetangga',
-    'subjudul' => 'Daftarkan usaha dan dapatkan pelanggan baru dari warga sekitar ' . config('seekitar.regency') . ' — gratis, tanpa potongan apa pun.',
-    'gambar'   => asset('img/web/penyedia.webp'),
+    'subjudul' => 'Daftarkan usahamu dan dapatkan pelanggan baru dari warga sekitar ' . config('seekitar.regency') . ' — gratis, tanpa potongan apa pun.',
+    'gambar'   => asset('img/web/penyedia-baru.jpg'),
     'gambarAlt' => 'Ilustrasi penjual dan penyedia jasa di pasar lokal Seekitar',
   ])
 
-  {{-- ============================ ANGKA ============================ --}}
+  {{-- ============================ STATISTIK ============================ --}}
   <section class="pb-8 pb-lg-11">
     <div class="container">
       <div class="row g-4 justify-content-center" data-aos="fade-up" data-aos-duration="900">
@@ -65,18 +65,17 @@
       </div>
       <div class="row g-4">
         @foreach ([
-          ['ti ti-wallet', 'Gratis Selamanya', 'Tidak ada biaya pendaftaran, biaya langganan, atau komisi. Pembayaran langsung antara kamu dan pembeli — tanpa potongan apa pun.'],
-          ['ti ti-map', 'Pelanggan Terdekat', 'Tokomu tampil ke warga yang benar-benar di sekitar — dalam radius yang kamu tentukan sendiri. Tidak ada persaingan dengan toko dari kota lain.'],
-          ['ti ti-shield-check', 'Verifikasi Terpercaya', 'Badge terverifikasi meningkatkan kepercayaan pembeli. Admin meninjau identitasmu, jadi pembeli tahu kamu nyata.'],
-          ['ti ti-bell', 'Siaran Kebutuhan', 'Kami kirimkan pemberitahuan saat warga mencari barang/jasa yang kamu tawarkan. Kamu tidak perlu menunggu pembeli datang.'],
-          ['ti ti-message-dots', 'Transaksi Terpantau', 'Riwayat pesanan, rating, dan ulasan tercatat rapi. Bila ada masalah, admin siap menengahi.'],
-          ['ti ti-star', 'Rating & Reputasi', 'Semakin baik pelayananmu, semakin tinggi ratingmu — dan semakin sering tokumu muncul di pencarian.'],
-          ['ti ti-gem', 'Fitur Premium (Opsional)', 'Boost listing agar tokumu tampil di atas, atau langganan Pro untuk prioritas siaran. Fitur berbagai — pakai yang gratis saja juga bisa.'],
-        ] as [$ikon, $judul, $isi])
+          ['ti ti-wallet', 'Gratis Selamanya', 'Tidak ada biaya pendaftaran, biaya langganan, atau komisi transaksi. Pembayaran langsung dari pembeli ke kamu — tanpa potongan.', 'bg-primary-subtle text-primary'],
+          ['ti ti-map', 'Pelanggan Terdekat', 'Tokomu tampil ke warga yang benar-benar di sekitar — dalam radius yang kamu tentukan sendiri. Tidak bersaing dengan toko dari kota lain.', 'bg-success-subtle text-success'],
+          ['ti ti-shield-check', 'Verifikasi Terpercaya', 'Badge terverifikasi meningkatkan kepercayaan pembeli. Admin meninjau identitasmu sehingga pembeli tahu kamu nyata.', 'bg-info-subtle text-info'],
+          ['ti ti-bell', 'Siaran Kebutuhan', 'Dapatkan pemberitahuan saat warga mencari barang atau jasa yang kamu tawarkan. Kamu bisa langsung mengirim penawaran.', 'bg-warning-subtle text-warning'],
+          ['ti ti-message-dots', 'Transaksi Terpantau', 'Riwayat pesanan, rating, dan ulasan tercatat rapi. Bila ada kendala, admin siap menengahi.', 'bg-danger-subtle text-danger'],
+          ['ti ti-star', 'Rating & Reputasi', 'Semakin baik pelayananmu, semakin tinggi ratingmu — dan semakin sering tokomu muncul di hasil pencarian.', 'bg-primary-subtle text-primary'],
+        ] as [$ikon, $judul, $isi, $warna])
           <div class="col-sm-6 col-lg-4" data-aos="fade-up" data-aos-delay="100" data-aos-duration="900">
             <div class="card card-lift border-0 shadow-sm h-100">
               <div class="card-body p-4">
-                <span class="feature-icon bg-primary-subtle text-primary mb-4 d-flex">
+                <span class="feature-icon {{ $warna }} mb-4 d-flex">
                   <i class="d-block {{ $ikon }}"></i>
                 </span>
                 <h5 class="fs-5 fw-semibold mb-2">{{ $judul }}</h5>
@@ -90,7 +89,7 @@
   </section>
 
   {{-- ============================ CARA KERJA ============================ --}}
-  <section class="bg-light py-8 py-lg-11" id="cara-kerja">
+  <section class="py-8 py-lg-11" id="cara-kerja">
     <div class="container">
       <div class="row justify-content-center mb-6 mb-lg-9">
         <div class="col-lg-7 text-center" data-aos="fade-up" data-aos-duration="900">
@@ -101,23 +100,74 @@
       <div class="row g-4 align-items-stretch">
         @foreach ([
           ['ti ti-download', 'Unduh & Daftar', 'Unduh aplikasi Seekitar, daftar dengan nomor WhatsApp — hanya perlu 1 menit.'],
-          ['ti ti-id', 'Verifikasi Identitas', 'Unggah foto KTP dan swafoto. Admin tinjau maksimal 1×24 jam.'],
-          ['ti ti-building-store', 'Atur Toko', 'Pasang foto toko, tentukan radius layanan, dan atur jam buka.'],
-          ['ti ti-clipboard', 'Listing Barang', 'Upload barang atau jasa yang ingin kamu jual atau sewakan. Selesai!'],
+          ['ti ti-id', 'Verifikasi Identitas', 'Unggah foto KTP dan swafoto. Admin meninjau maksimal 1×24 jam.'],
+          ['ti ti-building-store', 'Atur Toko', 'Pasang foto toko, tentukan radius layanan, dan atur jam buka operasional.'],
+          ['ti ti-clipboard', 'Pasang Listing', 'Upload barang atau jasa yang ingin kamu jual atau sewakan. Selesai!'],
         ] as [$ikon, $judul, $isi])
           <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="100" data-aos-duration="900">
             <div class="card card-lift border-0 shadow-sm h-100">
               <div class="card-body p-4 d-flex flex-column align-items-center text-center">
-                <span class="icon-soft mb-4" style="width: 60px; height: 60px; font-size: 1.5rem;">
-                  <i class="{{ $ikon }}"></i>
-                </span>
-                <div class="fs-3 text-muted fw-bold mb-1">Langkah {{ $loop->iteration }}</div>
+                <div class="position-relative mb-4">
+                  <span class="icon-soft d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; font-size: 1.5rem;">
+                    <i class="{{ $ikon }}"></i>
+                  </span>
+                  <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary" style="font-size: .7rem;">
+                    {{ $loop->iteration }}
+                  </span>
+                </div>
                 <h5 class="fs-5 fw-semibold mb-2">{{ $judul }}</h5>
                 <p class="mb-0 text-muted fs-4">{{ $isi }}</p>
               </div>
             </div>
           </div>
         @endforeach
+      </div>
+    </div>
+  </section>
+
+  {{-- ============================ APA YANG BISA KAMU JUAL ============================ --}}
+  <section class="py-8 py-lg-11">
+    <div class="container">
+      <div class="row justify-content-center mb-6 mb-lg-9">
+        <div class="col-lg-7 text-center" data-aos="fade-up" data-aos-duration="900">
+          <span class="eyebrow">Apa yang bisa kamu tawarkan</span>
+          <h2 class="fs-9 fw-bolder mt-3 mb-0">Tiga jenis listing, satu toko</h2>
+        </div>
+      </div>
+      <div class="row g-4">
+        <div class="col-md-4" data-aos="fade-up" data-aos-delay="100" data-aos-duration="900">
+          <div class="card card-lift border-0 shadow-sm h-100 text-center">
+            <div class="card-body p-4 p-lg-5">
+              <span class="icon-soft d-inline-flex align-items-center justify-content-center mb-4" style="width: 72px; height: 72px; font-size: 2rem;">
+                <i class="ti ti-shopping-bag"></i>
+              </span>
+              <h5 class="fs-5 fw-semibold mb-2">Barang</h5>
+              <p class="mb-0 text-muted fs-4">Jual kebutuhan harian, peralatan rumah tangga, elektronik, fashion, hingga barang bekas layak pakai.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4" data-aos="fade-up" data-aos-delay="200" data-aos-duration="900">
+          <div class="card card-lift border-0 shadow-sm h-100 text-center">
+            <div class="card-body p-4 p-lg-5">
+              <span class="icon-soft d-inline-flex align-items-center justify-content-center mb-4" style="width: 72px; height: 72px; font-size: 2rem;">
+                <i class="ti ti-tool"></i>
+              </span>
+              <h5 class="fs-5 fw-semibold mb-2">Jasa</h5>
+              <p class="mb-0 text-muted fs-4">Tawarkan keahlianmu: servis AC, perbaikan rumah, kebersihan, les privat, fotografi, dan banyak lagi.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4" data-aos="fade-up" data-aos-delay="300" data-aos-duration="900">
+          <div class="card card-lift border-0 shadow-sm h-100 text-center">
+            <div class="card-body p-4 p-lg-5">
+              <span class="icon-soft d-inline-flex align-items-center justify-content-center mb-4" style="width: 72px; height: 72px; font-size: 2rem;">
+                <i class="ti ti-calendar-month"></i>
+              </span>
+              <h5 class="fs-5 fw-semibold mb-2">Sewa</h5>
+              <p class="mb-0 text-muted fs-4">Sewakan tenda, kursi, sound system, perlengkapan acara, kendaraan, dan aset lainnya.</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -148,6 +198,11 @@
                     <div class="fs-3 text-muted">{{ $lokasi }}</div>
                   </div>
                 </div>
+                <div class="mb-3">
+                  @for ($i = 0; $i < 5; $i++)
+                    <i class="ti ti-star-filled text-warning fs-4"></i>
+                  @endfor
+                </div>
                 <p class="mb-0 text-muted fs-4 fst-italic">"{{ $kata }}"</p>
               </div>
             </div>
@@ -157,23 +212,61 @@
     </div>
   </section>
 
-  {{-- ================================ CTA ================================ --}}
+  {{-- ============================ DOWNLOAD APP ============================ --}}
   <section class="pb-8 pb-lg-11">
     <div class="container">
-      <div class="row justify-content-center">
-        <div class="col-lg-8">
-          <div class="card c2a-box border-0 shadow-sm" data-aos="fade-up" data-aos-duration="900">
-            <div class="card-body text-center p-4 p-lg-8 py-8">
-              <h3 class="fs-7 fw-semibold">Siap mulai?</h3>
-              <p class="mb-8 text-muted">
-                Bergabung dengan penjual lain di {{ config('seekitar.regency') }}.
-                Gratis, tanpa komitmen.
-              </p>
-              <div class="d-sm-flex align-items-center justify-content-center gap-3 mb-4">
-                <a href="{{ route('web.help') }}"
-                  class="btn btn-primary px-5 d-block mb-3 mb-sm-0 btn-hover-shadow">Buka Toko Gratis</a>
-                <a href="{{ route('web.pricing') }}"
-                  class="btn btn-outline-secondary px-5 d-block">Lihat Detail Biaya</a>
+      <div class="row align-items-center g-5">
+        <div class="col-lg-6" data-aos="fade-up" data-aos-duration="900">
+          <span class="eyebrow">Mulai dari Ponselmu</span>
+          <h2 class="fs-8 fw-bolder mt-3 mb-3">Download Seekitar dari Google Play</h2>
+          <p class="fs-5 text-muted mb-4">
+            Buka toko, pasang listing, terima notifikasi kebutuhan, dan chat pembeli —
+            semuanya lewat aplikasi. Website ini hanya untuk melihat katalog.
+          </p>
+          <ul class="list-unstyled d-grid gap-2 mb-4">
+            <li class="check-item">
+              <i class="ti ti-circle-check"></i>
+              <span class="text-dark"><strong>Daftar dengan nomor WA</strong> — tanpa ribet, langsung masuk.</span>
+            </li>
+            <li class="check-item">
+              <i class="ti ti-circle-check"></i>
+              <span class="text-dark"><strong>Verifikasi KTP lewat HP</strong> — foto dan unggah langsung dari ponsel.</span>
+            </li>
+            <li class="check-item">
+              <i class="ti ti-circle-check"></i>
+              <span class="text-dark"><strong>Notifikasi pesanan baru</strong> — tahu setiap kali ada pembeli.</span>
+            </li>
+            <li class="check-item">
+              <i class="ti ti-circle-check"></i>
+              <span class="text-dark"><strong>Kelola toko kapan saja</strong> — tambah listing, atur stok, balas chat.</span>
+            </li>
+          </ul>
+          <a href="{{ config('seekitar.play_store_url') }}" target="_blank" rel="noopener"
+            class="btn btn-primary btn-lg px-5 btn-hover-shadow d-inline-flex align-items-center gap-2">
+            <i class="ti ti-brand-google-play fs-5"></i> Download di Google Play
+          </a>
+        </div>
+        <div class="col-lg-6 text-center" data-aos="fade-up" data-aos-delay="200" data-aos-duration="900">
+          <div style="background: linear-gradient(145deg, var(--bs-primary-bg-subtle), #e8f5ee); border-radius: 2rem; padding: 2rem;">
+            <div style="max-width: 260px; margin: 0 auto; background: #1a1a2e; border-radius: 1.5rem; padding: 1.25rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,.25);">
+              <div style="background: var(--bs-primary); border-radius: 1rem; padding: 1.5rem 1rem; margin-bottom: 1rem; text-align: center;">
+                <i class="ti ti-building-store" style="font-size: 2.5rem; color: #fff;"></i>
+                <div style="color: #fff; font-weight: 800; font-size: 1.1rem; margin-top: .5rem;">Seekitar</div>
+                <div style="color: rgba(255,255,255,.7); font-size: .7rem;">Pasar Lokal</div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: .5rem;">
+                <div style="background: rgba(255,255,255,.1); border-radius: .6rem; padding: .6rem; text-align: center; color: #fff; font-size: .65rem;">
+                  <i class="ti ti-id d-block mb-1" style="font-size: 1rem;"></i> Verifikasi
+                </div>
+                <div style="background: rgba(255,255,255,.1); border-radius: .6rem; padding: .6rem; text-align: center; color: #fff; font-size: .65rem;">
+                  <i class="ti ti-clipboard d-block mb-1" style="font-size: 1rem;"></i> Listing
+                </div>
+                <div style="background: rgba(255,255,255,.1); border-radius: .6rem; padding: .6rem; text-align: center; color: #fff; font-size: .65rem;">
+                  <i class="ti ti-message-dots d-block mb-1" style="font-size: 1rem;"></i> Chat
+                </div>
+                <div style="background: rgba(255,255,255,.1); border-radius: .6rem; padding: .6rem; text-align: center; color: #fff; font-size: .65rem;">
+                  <i class="ti ti-chart-bar d-block mb-1" style="font-size: 1rem;"></i> Statistik
+                </div>
               </div>
             </div>
           </div>

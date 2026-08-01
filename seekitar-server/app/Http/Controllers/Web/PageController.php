@@ -167,6 +167,60 @@ class PageController extends Controller
     }
 
     /**
+     * Halaman detail satu listing (SEO + preview sebelum transaksi di app).
+     *
+     * Halaman ini TIDAK menggantikan transaksi di aplikasi — ia hanya
+     * menampilkan informasi selengkap mungkin agar pengunjung web (dan
+     * mesin pencari) bisa melihat detail barang/jasa sebelum memutuskan
+     * mengunduh aplikasi. Tombol transaksi mengarah ke app.
+     */
+    public function show(Listing $listing): View
+    {
+        // Hanya listing AKTIF dari toko AKTIF & TERVERIFIKASI yang boleh
+        // tampil — konsisten dengan aturan tayang di katalog & aplikasi.
+        abort_if(
+            $listing->status !== ListingStatus::Active
+            || !$listing->store
+            || !$listing->store->is_active
+            || $listing->store->status !== StoreStatus::Verified,
+            404,
+        );
+
+        $listing->load('store');
+
+        // Listing lain dari toko yang sama (max 6) — berguna untuk cross-sell.
+        $lainnya = Listing::query()
+            ->where('store_id', $listing->store_id)
+            ->where('id', '!=', $listing->id)
+            ->where('status', ListingStatus::Active->value)
+            ->latest()
+            ->limit(6)
+            ->get();
+
+        // Statistik toko: jumlah listing & rating rata-rata.
+        $statToko = [
+            'listing' => Listing::query()
+                ->where('store_id', $listing->store_id)
+                ->where('status', ListingStatus::Active->value)
+                ->count(),
+            'rating'  => Review::query()
+                ->where('store_id', $listing->store_id)
+                ->where('direction', ReviewDirection::BuyerToStore)
+                ->avg('rating') ?: 0,
+            'ulasan'  => Review::query()
+                ->where('store_id', $listing->store_id)
+                ->where('direction', ReviewDirection::BuyerToStore)
+                ->count(),
+        ];
+
+        return view('web.listing-detail', [
+            'listing'  => $listing,
+            'lainnya'  => $lainnya,
+            'statToko' => $statToko,
+        ]);
+    }
+
+    /**
      * Kebijakan Privasi.
      *
      * WAJIB ADA, bukan pelengkap: Permendag PPMSE mensyaratkan informasi

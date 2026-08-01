@@ -18,8 +18,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
-class User extends Authenticatable
+class User extends Authenticatable implements JWTSubject
 {
     use HasApiTokens, HasFactory, HasLocation, HasRoles, HasUuids, SerializesDatesAsUtc, SoftDeletes;
 
@@ -296,6 +297,38 @@ class User extends Authenticatable
     public function isProfileComplete(): bool
     {
         return filled($this->name) && $this->location !== null;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | JWT — tymon/jwt-auth
+    |--------------------------------------------------------------------------
+    |
+    | JWTSubject mewajibkan dua method: identifier unik subjek yang disimpan
+    | di claim `sub` token, dan array klaim kustom tambahan. Seekitar
+    | memakai UUID sebagai kunci utama, jadi getJWTIdentifier() mengembalikan
+    | string (bukan integer seperti contoh bawaan package).
+    */
+
+    /** {@inheritdoc} */
+    public function getJWTIdentifier(): string
+    {
+        return (string) $this->getKey();
+    }
+
+    /**
+     * {@inheritdoc}
+     *
+     * Klaim kustom disimpan di payload JWT agar bisa dibaca tanpa query
+     * database pada setiap request (misal middleware EnsureProfileComplete
+     * tinggal membaca `prv` claim alih-alih join ulang).
+     */
+    public function getJWTCustomClaims(): array
+    {
+        return [
+            'phone' => $this->phone,
+            'name'  => $this->name,
+        ];
     }
 
     /**

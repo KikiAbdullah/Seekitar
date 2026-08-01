@@ -9,6 +9,8 @@
     'kicker'   => 'Legal · Cookie',
     'judul'    => 'Kebijakan Cookie',
     'subjudul' => 'Transparansi penggunaan cookie dan teknologi sejenis di situs Seekitar.',
+    'gambar'   => asset('img/web/legal-baru.jpg'),
+    'gambarAlt' => 'Ilustrasi kebijakan cookie Seekitar',
   ])
 
   <section class="py-8 py-lg-11">

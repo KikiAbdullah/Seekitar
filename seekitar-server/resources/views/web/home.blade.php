@@ -9,6 +9,11 @@
       height: 68px;
       border-radius: 50%;
     }
+    .icon-circle-lg {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+    }
 
     /* ============ CARA KERJA ============ */
     .step-num {
@@ -70,6 +75,25 @@
     .side-card:hover .side-thumb img {
       transform: scale(1.05);
     }
+
+    /* ============ COUNTER STATS ============ */
+    .stat-card {
+      border-left: 4px solid var(--bs-primary);
+      transition: all .3s ease;
+    }
+    .stat-card:hover {
+      border-left-color: var(--bs-primary);
+      background: var(--bs-primary-bg-subtle);
+    }
+
+    /* ============ FITUR DENGAN WARNA BERBEDA ============ */
+    .feature-card-accent {
+      border-top: 3px solid transparent;
+      transition: border-color .3s ease;
+    }
+    .feature-card-accent:hover {
+      border-top-color: var(--bs-primary);
+    }
   </style>
 @endpush
 
@@ -78,8 +102,8 @@
   <script src="{{ asset('vendor/mordenize-lp/libs/owl.carousel/dist/owl.carousel.min.js') }}"></script>
 @endpush
 
-@section('title', 'Seekitar — Pasar Lokal Satu Kabupaten')
-@section('meta_description', 'Beli dan jual barang atau jasa di sekitar Anda. Gratis, tanpa komisi, hanya di ' . config('seekitar.regency') . '.')
+@section('title', 'Seekitar — Pasar Lokal ' . config('seekitar.regency'))
+@section('meta_description', 'Beli dan jual barang, jasa, serta sewa di sekitar Anda. Gratis, tanpa komisi, hanya di ' . config('seekitar.regency') . '.')
 
 @section('content')
 
@@ -106,7 +130,7 @@
               <span class="icon-soft"><i class="ti ti-wallet"></i></span>
               <div>
                 <div class="fw-bold fs-5 lh-sm">Gratis</div>
-                <div class="fs-2 text-muted">tanpa biaya</div>
+                <div class="fs-2 text-muted">tanpa biaya apa pun</div>
               </div>
             </div>
             <div class="d-flex align-items-center gap-2">
@@ -116,11 +140,18 @@
                 <div class="fs-2 text-muted">fokus satu kabupaten</div>
               </div>
             </div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="icon-soft"><i class="ti ti-shield-check"></i></span>
+              <div>
+                <div class="fw-bold fs-5 lh-sm">Terpercaya</div>
+                <div class="fs-2 text-muted">toko terverifikasi</div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="col-lg-6" data-aos="fade-left" data-aos-duration="1000" data-aos-delay="150">
           <div class="hero-figure ms-lg-4">
-            <img src="{{ asset('img/web/hero.webp') }}" class="hero-img" alt="Pasar lokal Seekitar di sekitar Anda" fetchpriority="high" decoding="async">
+            <img src="{{ asset('img/web/hero-baru.jpg') }}" class="hero-img" alt="Pasar lokal Seekitar di sekitar Anda" fetchpriority="high" decoding="async">
             <div class="hero-badge badge-top">
               <span class="badge-icon bg-primary-subtle text-primary"><i class="ti ti-shield-check"></i></span>
               <div>
@@ -141,12 +172,12 @@
     </div>
   </section>
 
-  {{-- ============================ PITA KEPERCAYAAN ============================ --}}
-  <section class="pb-8 pb-lg-11" id="produksi">
+  {{-- ============================ STATISTIK UTAMA ============================ --}}
+  <section class="pb-8 pb-lg-11" id="statistik">
     <div class="container">
       <div class="row g-4 justify-content-center" data-aos="fade-up" data-aos-duration="1000">
-        <div class="col-sm-6 col-lg-4">
-          <div class="card card-lift border-0 shadow-sm h-100">
+        <div class="col-sm-6 col-lg-3">
+          <div class="card stat-card border-0 shadow-sm h-100">
             <div class="card-body d-flex align-items-center gap-3 p-4">
               <span class="icon-soft"><i class="ti ti-building-store"></i></span>
               <div>
@@ -156,8 +187,8 @@
             </div>
           </div>
         </div>
-        <div class="col-sm-6 col-lg-4">
-          <div class="card card-lift border-0 shadow-sm h-100">
+        <div class="col-sm-6 col-lg-3">
+          <div class="card stat-card border-0 shadow-sm h-100">
             <div class="card-body d-flex align-items-center gap-3 p-4">
               <span class="icon-soft"><i class="ti ti-shopping-bag"></i></span>
               <div>
@@ -167,8 +198,19 @@
             </div>
           </div>
         </div>
-        <div class="col-sm-6 col-lg-4">
-          <div class="card card-lift border-0 shadow-sm h-100">
+        <div class="col-sm-6 col-lg-3">
+          <div class="card stat-card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3 p-4">
+              <span class="icon-soft"><i class="ti ti-category"></i></span>
+              <div>
+                <div class="stat-num">{{ $categories->count() }}</div>
+                <div class="text-muted">kategori utama</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="card stat-card border-0 shadow-sm h-100">
             <div class="card-body d-flex align-items-center gap-3 p-4">
               <span class="icon-soft"><i class="ti ti-map-pin"></i></span>
               <div>
@@ -188,21 +230,22 @@
       <div class="row justify-content-center mb-6 mb-lg-9">
         <div class="col-lg-7 text-center" data-aos="fade-up" data-aos-duration="1000">
           <span class="eyebrow">Apa yang bisa kamu temukan</span>
-          <h2 class="fs-9 fw-bolder mt-3 mb-0">Satu pasar untuk barang, jasa, dan sewa</h2>
+          <h2 class="fs-9 fw-bolder mt-3 mb-2">Satu pasar untuk semua kebutuhan</h2>
+          <p class="fs-5 text-muted mb-0">Barang, jasa, dan sewa — semuanya dari warga sekitar.</p>
         </div>
       </div>
       <div class="row g-4">
         <div class="col-md-4" data-aos="fade-up" data-aos-delay="100" data-aos-duration="1000">
           <div class="card service-card card-lift border-0 shadow-sm h-100 overflow-hidden position-relative">
             <div class="service-thumb position-relative">
-              <img src="{{ asset('img/web/layanan-barang.webp') }}" alt="Jual beli barang" loading="lazy">
+              <img src="{{ asset('img/web/layanan-barang-baru.jpg') }}" alt="Jual beli barang" loading="lazy">
               <span class="service-icon position-absolute"><i class="ti ti-shopping-bag"></i></span>
             </div>
             <div class="card-body p-4">
               <h5 class="fs-5 fw-semibold mb-2">Barang</h5>
-              <p class="mb-3 text-muted fs-4">Jual beli kebutuhan harian, peralatan, hingga barang bekas yang masih layak pakai.</p>
+              <p class="mb-3 text-muted fs-4">Kebutuhan harian, peralatan rumah, elektronik, fashion, hingga barang bekas yang masih layak pakai.</p>
               <a href="{{ route('web.listings', ['type' => 'product']) }}" class="stretched-link fw-semibold text-primary text-decoration-none">
-                Jelajahi <i class="ti ti-arrow-right"></i>
+                Jelajahi Barang <i class="ti ti-arrow-right"></i>
               </a>
             </div>
           </div>
@@ -210,14 +253,14 @@
         <div class="col-md-4" data-aos="fade-up" data-aos-delay="250" data-aos-duration="1000">
           <div class="card service-card card-lift border-0 shadow-sm h-100 overflow-hidden position-relative">
             <div class="service-thumb position-relative">
-              <img src="{{ asset('img/web/layanan-jasa.webp') }}" alt="Jasa rumah dan bengkel" loading="lazy">
+              <img src="{{ asset('img/web/layanan-jasa-baru.jpg') }}" alt="Jasa rumah dan bengkel" loading="lazy">
               <span class="service-icon position-absolute"><i class="ti ti-tool"></i></span>
             </div>
             <div class="card-body p-4">
               <h5 class="fs-5 fw-semibold mb-2">Jasa</h5>
-              <p class="mb-3 text-muted fs-4">Temukan tukang, jasa kebersihan, servis elektronik, dan bengkel di sekitar rumahmu.</p>
+              <p class="mb-3 text-muted fs-4">Tukang bangunan, servis AC, kebersihan, bengkel motor, les privat, fotografer, dan banyak lagi.</p>
               <a href="{{ route('web.listings', ['type' => 'service']) }}" class="stretched-link fw-semibold text-primary text-decoration-none">
-                Jelajahi <i class="ti ti-arrow-right"></i>
+                Jelajahi Jasa <i class="ti ti-arrow-right"></i>
               </a>
             </div>
           </div>
@@ -225,14 +268,14 @@
         <div class="col-md-4" data-aos="fade-up" data-aos-delay="400" data-aos-duration="1000">
           <div class="card service-card card-lift border-0 shadow-sm h-100 overflow-hidden position-relative">
             <div class="service-thumb position-relative">
-              <img src="{{ asset('img/web/layanan-sewa.webp') }}" alt="Sewa tenda dan peralatan" loading="lazy">
+              <img src="{{ asset('img/web/layanan-sewa-baru.jpg') }}" alt="Sewa tenda dan peralatan" loading="lazy">
               <span class="service-icon position-absolute"><i class="ti ti-calendar-month"></i></span>
             </div>
             <div class="card-body p-4">
               <h5 class="fs-5 fw-semibold mb-2">Sewa</h5>
-              <p class="mb-3 text-muted fs-4">Sewa tenda, kursi, sound system, dan perlengkapan acara dari penyedia terdekat.</p>
+              <p class="mb-3 text-muted fs-4">Tenda hajatan, kursi, sound system, kendaraan, dan perlengkapan acara dari penyedia terdekat.</p>
               <a href="{{ route('web.listings', ['type' => 'rental']) }}" class="stretched-link fw-semibold text-primary text-decoration-none">
-                Jelajahi <i class="ti ti-arrow-right"></i>
+                Jelajahi Sewa <i class="ti ti-arrow-right"></i>
               </a>
             </div>
           </div>
@@ -242,14 +285,14 @@
   </section>
 
   {{-- ============================ KATEGORI ============================ --}}
-  <section class="bg-light py-8 py-lg-11" id="kategori">
+  <section class="py-8 py-lg-11" id="kategori">
     <div class="container">
       <div class="row justify-content-center mb-6 mb-lg-9">
         <div class="col-lg-8 col-xxl-6 text-center" data-aos="fade-up" data-aos-duration="1000">
           <span class="eyebrow">Jelajahi berdasarkan kategori</span>
           <h2 class="fs-9 fw-bolder mt-3 mb-2">Semua kebutuhan ada kategorinya</h2>
           <p class="fs-5 text-muted mb-0">
-            {{ $categories->count() }} kategori utama, {{ $categories->sum('children_count') }} subkategori siap kamu jelajahi.
+            {{ $categories->count() }} kategori utama dengan {{ $categories->sum('children_count') }} subkategori siap kamu jelajahi.
           </p>
         </div>
       </div>
@@ -272,7 +315,14 @@
           </div>
         @empty
           <div class="col-12 text-center">
-            <p class="mb-0 text-muted">Kategori akan segera hadir.</p>
+            <div class="card border-0 shadow-sm">
+              <div class="card-body p-5">
+                <span class="icon-soft d-inline-flex align-items-center justify-content-center mb-3">
+                  <i class="ti ti-category"></i>
+                </span>
+                <p class="mb-0 text-muted">Kategori sedang disiapkan. Kembali lagi nanti!</p>
+              </div>
+            </div>
           </div>
         @endforelse
       </div>
@@ -290,9 +340,9 @@
       </div>
       <div class="row g-4 align-items-stretch">
         @foreach ([
-          ['Buka toko gratis', 'Daftar dengan nomor HP, lengkapi profil toko, dan serahkan dokumen untuk verifikasi identitas.'],
-          ['Pasang listing', 'Unggah barang, jasa, atau sewa dengan foto dan harga. Atur radius jangkauan pelayananmu sendiri.'],
-          ['Transaksi & rating', 'Terima pesanan dari warga terdekat, selesaikan transaksi langsung, dan bangun reputasi dari rating.'],
+          ['Buka toko gratis', 'Daftar dengan nomor HP, lengkapi profil toko, dan serahkan dokumen untuk verifikasi identitas. Admin meninjau maksimal 1×24 jam.'],
+          ['Pasang listing', 'Unggah barang, jasa, atau sewa dengan foto dan harga. Tentukan sendiri radius jangkauan pelayananmu.'],
+          ['Transaksi & rating', 'Terima pesanan dari warga terdekat, selesaikan transaksi langsung, dan bangun reputasi dari rating pembeli.'],
         ] as [$judul, $isi])
           <div class="col-md-4" data-aos="fade-up" data-aos-delay="100" data-aos-duration="1000">
             <div class="card card-lift border-0 shadow-sm h-100">
@@ -321,47 +371,55 @@
         <div class="col-lg-6" data-aos="fade-up" data-aos-delay="100" data-aos-duration="1000">
           <div class="card side-card card-lift border-0 shadow-sm h-100 overflow-hidden">
             <div class="side-thumb">
-              <img src="{{ asset('img/web/pencari.webp') }}" alt="Untuk pembeli dan pencari kebutuhan" loading="lazy">
+              <img src="{{ asset('img/web/pencari-baru.jpg') }}" alt="Untuk pembeli dan pencari kebutuhan" loading="lazy">
             </div>
             <div class="card-body p-4 p-lg-5">
               <h4 class="fs-6 fw-bold mb-3">Untuk Pembeli</h4>
               <ul class="list-unstyled mb-4 d-grid gap-2">
                 <li class="check-item">
                   <i class="ti ti-circle-check"></i>
-                  <span class="text-dark">Cari barang, jasa, dan sewa dari toko terverifikasi.</span>
+                  <span class="text-dark">Cari barang, jasa, dan sewa dari toko terverifikasi di sekitarmu.</span>
                 </li>
                 <li class="check-item">
                   <i class="ti ti-circle-check"></i>
-                  <span class="text-dark">Bandingkan penjual terdekat tanpa keluar rumah.</span>
+                  <span class="text-dark">Bandingkan harga dan penjual terdekat tanpa perlu keluar rumah.</span>
                 </li>
                 <li class="check-item">
                   <i class="ti ti-circle-check"></i>
-                  <span class="text-dark">Transaksi langsung, riwayat dan rating tercatat rapi.</span>
+                  <span class="text-dark">Umumkan kebutuhan dan terima penawaran dari penyedia terdekat.</span>
+                </li>
+                <li class="check-item">
+                  <i class="ti ti-circle-check"></i>
+                  <span class="text-dark">Bayar langsung ke penjual — tunai atau transfer, tanpa biaya tambahan.</span>
                 </li>
               </ul>
-              <a href="{{ route('web.help') }}" class="btn btn-outline-primary px-4">Pelajari Cara Pakai</a>
+              <a href="{{ route('web.listings') }}" class="btn btn-outline-primary px-4">Jelajahi Pasar</a>
             </div>
           </div>
         </div>
         <div class="col-lg-6" data-aos="fade-up" data-aos-delay="250" data-aos-duration="1000">
           <div class="card side-card card-lift border-0 shadow-sm h-100 overflow-hidden">
             <div class="side-thumb">
-              <img src="{{ asset('img/web/penyedia.webp') }}" alt="Untuk penjual dan penyedia jasa" loading="lazy">
+              <img src="{{ asset('img/web/penyedia-baru.jpg') }}" alt="Untuk penjual dan penyedia jasa" loading="lazy">
             </div>
             <div class="card-body p-4 p-lg-5">
               <h4 class="fs-6 fw-bold mb-3">Untuk Penjual</h4>
               <ul class="list-unstyled mb-4 d-grid gap-2">
                 <li class="check-item">
                   <i class="ti ti-circle-check"></i>
-                  <span class="text-dark">Buka toko gratis, tanpa komisi dan tanpa langganan.</span>
+                  <span class="text-dark">Buka toko gratis selamanya — tanpa komisi dan tanpa biaya langganan.</span>
                 </li>
                 <li class="check-item">
                   <i class="ti ti-circle-check"></i>
-                  <span class="text-dark">Dapat pemberitahuan saat warga butuh produkmu.</span>
+                  <span class="text-dark">Dapat notifikasi saat warga sekitar mencari produk atau jasamu.</span>
                 </li>
                 <li class="check-item">
                   <i class="ti ti-circle-check"></i>
-                  <span class="text-dark">Badge verifikasi membangun kepercayaan pembeli.</span>
+                  <span class="text-dark">Badge verifikasi membangun kepercayaan pembeli terhadap tokomu.</span>
+                </li>
+                <li class="check-item">
+                  <i class="ti ti-circle-check"></i>
+                  <span class="text-dark">Pembayaran diterima 100% — tidak ada potongan dari Seekitar.</span>
                 </li>
               </ul>
               <a href="{{ route('web.for-sellers') }}" class="btn btn-primary px-4 btn-hover-shadow">Buka Toko Gratis</a>
@@ -372,8 +430,8 @@
     </div>
   </section>
 
-  {{-- ============================ FITUR ============================ --}}
-  <section class="bg-light py-8 py-lg-11" id="fitur">
+  {{-- ============================ FITUR UNGGULAN ============================ --}}
+  <section class="py-8 py-lg-11" id="fitur">
     <div class="container">
       <div class="row justify-content-center mb-6 mb-lg-9">
         <div class="col-lg-6 text-center" data-aos="fade-up" data-aos-duration="1000">
@@ -383,17 +441,17 @@
       </div>
       <div class="row g-4">
         @foreach ([
-          ['ti ti-wallet', 'Gratis Selamanya', 'Tidak ada biaya pendaftaran, langganan, atau komisi. Pembayaran langsung antara kamu dan pembeli.'],
-          ['ti ti-map', 'Pelanggan Terdekat', 'Tokomu tampil ke warga yang benar-benar di sekitar — dalam radius yang kamu tentukan sendiri.'],
-          ['ti ti-shield-check', 'Verifikasi Terpercaya', 'Badge terverifikasi meningkatkan kepercayaan pembeli. Admin meninjau identitasmu.'],
-          ['ti ti-bell', 'Siaran Kebutuhan', 'Kami kirim pemberitahuan saat warga mencari barang atau jasa yang kamu tawarkan.'],
-          ['ti ti-message-dots', 'Transaksi Terpantau', 'Riwayat pesanan, rating, dan ulasan tercatat rapi. Bila ada masalah, admin siap menengahi.'],
-          ['ti ti-star', 'Rating & Reputasi', 'Semakin baik pelayananmu, semakin tinggi ratingmu — dan semakin sering tokomu muncul di pencarian.'],
-        ] as [$ikon, $judul, $isi])
+          ['ti ti-wallet', 'Gratis Selamanya', 'Tidak ada biaya pendaftaran, langganan, atau komisi. Pembayaran langsung antara kamu dan penjual — tanpa potongan.', 'bg-primary-subtle text-primary'],
+          ['ti ti-map', 'Pelanggan Terdekat', 'Tokomu tampil ke warga yang benar-benar di sekitar — dalam radius yang kamu tentukan sendiri.', 'bg-success-subtle text-success'],
+          ['ti ti-shield-check', 'Verifikasi Terpercaya', 'Badge terverifikasi meningkatkan kepercayaan pembeli. Admin meninjau identitas setiap penjual.', 'bg-info-subtle text-info'],
+          ['ti ti-bell', 'Notifikasi Kebutuhan', 'Dapatkan pemberitahuan saat warga mencari barang atau jasa yang kamu tawarkan.', 'bg-warning-subtle text-warning'],
+          ['ti ti-message-dots', 'Transaksi Terpantau', 'Riwayat pesanan, rating, dan ulasan tercatat rapi. Admin siap menengahi bila ada masalah.', 'bg-danger-subtle text-danger'],
+          ['ti ti-star', 'Rating & Reputasi', 'Semakin baik pelayananmu, semakin tinggi ratingmu — dan semakin sering tokomu muncul di pencarian.', 'bg-primary-subtle text-primary'],
+        ] as [$ikon, $judul, $isi, $warna])
           <div class="col-sm-6 col-lg-4" data-aos="fade-up" data-aos-delay="100" data-aos-duration="1000">
-            <div class="card feature-card card-lift border-0 shadow-sm h-100">
+            <div class="card feature-card-accent card-lift border-0 shadow-sm h-100">
               <div class="card-body p-4">
-                <span class="feature-icon bg-primary-subtle text-primary mb-4 d-flex">
+                <span class="feature-icon {{ $warna }} mb-4 d-flex">
                   <i class="d-block {{ $ikon }}"></i>
                 </span>
                 <h5 class="fs-5 fw-semibold mb-2">{{ $judul }}</h5>
@@ -407,7 +465,7 @@
   </section>
 
   {{-- ============================ TESTIMONI ============================ --}}
-  <section class="review-section py-8 py-lg-11" id="testimoni">
+  <section class="py-8 py-lg-11" id="testimoni">
     <div class="container">
       <div class="row justify-content-center mb-6 mb-lg-9">
         <div class="col-lg-8 text-center" data-aos="fade-up" data-aos-duration="1000">
@@ -434,8 +492,7 @@
                       <ul class="list-unstyled d-flex align-items-center justify-content-end gap-1 mb-0">
                         @for ($i = 0; $i < 5; $i++)
                           <li @if ($i >= $t['rating']) style="opacity: .25;" @endif>
-                            <img src="{{ asset('vendor/mordenize-lp/images/svgs/icon-star.svg') }}" alt=""
-                              class="img-fluid">
+                            <i class="ti ti-star-filled text-warning"></i>
                           </li>
                         @endfor
                       </ul>
@@ -459,6 +516,70 @@
     </div>
   </section>
 
+  {{-- ============================ DOWNLOAD APP ============================ --}}
+  <section class="py-8 py-lg-11">
+    <div class="container">
+      <div class="row align-items-center g-5">
+        <div class="col-lg-6" data-aos="fade-up" data-aos-duration="1000">
+          <span class="eyebrow">Aplikasi Mobile</span>
+          <h2 class="fs-8 fw-bolder mt-3 mb-3">Unduh Seekitar di ponselmu</h2>
+          <p class="fs-5 text-muted mb-4">
+            Semua fitur — cari barang, pasang listing, terima notifikasi kebutuhan,
+            chat penjual, lacak pesanan — ada di aplikasi mobile. Website ini hanya
+            untuk melihat katalog.
+          </p>
+          <ul class="list-unstyled d-grid gap-2 mb-5">
+            <li class="check-item">
+              <i class="ti ti-circle-check"></i>
+              <span class="text-dark"><strong>Notifikasi real-time</strong> — tahu saat ada pesanan atau penawaran baru.</span>
+            </li>
+            <li class="check-item">
+              <i class="ti ti-circle-check"></i>
+              <span class="text-dark"><strong>Chat langsung</strong> — komunikasi dengan pembeli/penjual dalam satu aplikasi.</span>
+            </li>
+            <li class="check-item">
+              <i class="ti ti-circle-check"></i>
+              <span class="text-dark"><strong>Verifikasi & buka toko</strong> — unggah KTP dan swafoto langsung dari HP.</span>
+            </li>
+            <li class="check-item">
+              <i class="ti ti-circle-check"></i>
+              <span class="text-dark"><strong>Lacak pesanan</strong> — semua status pesanan dalam genggaman.</span>
+            </li>
+          </ul>
+          <a href="{{ config('seekitar.play_store_url') }}" target="_blank" rel="noopener"
+            class="btn btn-primary btn-lg px-5 btn-hover-shadow d-inline-flex align-items-center gap-2">
+            <i class="ti ti-brand-google-play fs-5"></i> Download di Google Play
+          </a>
+        </div>
+        <div class="col-lg-6 text-center" data-aos="fade-up" data-aos-delay="200" data-aos-duration="1000">
+          <div style="background: linear-gradient(145deg, var(--bs-primary-bg-subtle), #e8f5ee); border-radius: 2rem; padding: 2rem;">
+            <div style="max-width: 260px; margin: 0 auto; background: #1a1a2e; border-radius: 1.5rem; padding: 1.25rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,.25);">
+              <div style="background: var(--bs-primary); border-radius: 1rem; padding: 1.5rem 1rem; margin-bottom: 1rem; text-align: center;">
+                <i class="ti ti-building-store" style="font-size: 2.5rem; color: #fff;"></i>
+                <div style="color: #fff; font-weight: 800; font-size: 1.1rem; margin-top: .5rem;">Seekitar</div>
+                <div style="color: rgba(255,255,255,.7); font-size: .7rem;">Pasar Lokal</div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: .5rem;">
+                <div style="background: rgba(255,255,255,.1); border-radius: .6rem; padding: .6rem; text-align: center; color: #fff; font-size: .65rem;">
+                  <i class="ti ti-search d-block mb-1" style="font-size: 1rem;"></i> Cari
+                </div>
+                <div style="background: rgba(255,255,255,.1); border-radius: .6rem; padding: .6rem; text-align: center; color: #fff; font-size: .65rem;">
+                  <i class="ti ti-clipboard d-block mb-1" style="font-size: 1rem;"></i> Pasang
+                </div>
+                <div style="background: rgba(255,255,255,.1); border-radius: .6rem; padding: .6rem; text-align: center; color: #fff; font-size: .65rem;">
+                  <i class="ti ti-message-dots d-block mb-1" style="font-size: 1rem;"></i> Chat
+                </div>
+                <div style="background: rgba(255,255,255,.1); border-radius: .6rem; padding: .6rem; text-align: center; color: #fff; font-size: .65rem;">
+                  <i class="ti ti-bell d-block mb-1" style="font-size: 1rem;"></i> Notif
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   {{-- ============================ CTA ============================ --}}
   <section class="pb-8 pb-lg-11">
     <div class="container">
@@ -468,12 +589,12 @@
             <div class="card-body text-center p-4 p-lg-8 py-8">
               <h3 class="fs-7 fw-semibold">Siap mulai?</h3>
               <p class="mb-8 text-muted">
-                Bergabung dengan penjual lain di {{ config('seekitar.regency') }}. Gratis, tanpa komitmen.
+                Bergabung dengan {{ number_format($statistik['toko']) }} penjual lain di {{ config('seekitar.regency') }}. Gratis, tanpa komitmen.
               </p>
               <div class="d-sm-flex align-items-center justify-content-center gap-3 mb-4">
                 <a href="{{ route('web.for-sellers') }}"
-                  class="btn btn-primary px-5 d-block mb-3 mb-sm-0 btn-hover-shadow" type="button">Buka Toko Gratis</a>
-                <a href="{{ route('web.pricing') }}" class="btn btn-outline-secondary px-5 d-block" type="button">Lihat Detail Biaya</a>
+                  class="btn btn-primary px-5 d-block mb-3 mb-sm-0 btn-hover-shadow">Buka Toko Gratis</a>
+                <a href="{{ route('web.pricing') }}" class="btn btn-outline-secondary px-5 d-block">Lihat Detail Biaya</a>
               </div>
             </div>
           </div>
