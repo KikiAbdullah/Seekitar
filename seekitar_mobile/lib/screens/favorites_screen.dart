@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../models/listing.dart';
 import '../services/api_compat.dart';
-import 'listing_detail_screen.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -23,17 +23,15 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   @override Widget build(BuildContext ctx) => Scaffold(
     appBar: AppBar(title: const Text('Wishlist')),
-    body: _loading ? const Center(child: CircularProgressIndicator()) : _items.isEmpty ? const Center(child: Text('Belum ada favorit')) : ListView.builder(itemCount: _items.length, itemBuilder: (_, i) {
+    body: _loading ? const Center(child: CircularProgressIndicator()) : _items.isEmpty ? const Center(child: Text('Belum ada favorit')) : RefreshIndicator(onRefresh: _load, child: ListView.builder(itemCount: _items.length, itemBuilder: (_, i) {
       final l = _items[i];
-      return Card(
-        child: ListTile(
-          leading: l.images.isNotEmpty ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(l.images.first, width: 56, height: 56, fit: BoxFit.cover, errorBuilder: (_,__,___) => Icon(Icons.image, color: Colors.green.shade300))) : Icon(Icons.image, color: Colors.green.shade300),
-          title: Text(l.title, maxLines: 1),
-          subtitle: Text(l.priceDisplay),
-          trailing: IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: () async { await _api.unfavoriteListing(l.id); _load(); }),
-          onTap: () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => ListingDetailScreen(listing: l))),
-        ),
-      );
-    }),
+      return Card(child: ListTile(
+        leading: l.images.isNotEmpty ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(l.images.first, width: 56, height: 56, fit: BoxFit.cover, errorBuilder: (_,__,___) => Icon(Icons.image, color: Colors.green.shade300))) : Icon(Icons.image, color: Colors.green.shade300),
+        title: Text(l.title, maxLines: 1),
+        subtitle: Text(l.priceDisplay),
+        trailing: IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: () async { await _api.unfavoriteListing(l.id); _load(); }),
+        onTap: () => ctx.push('/listing/${l.id}', extra: l),
+      ));
+    })),
   );
 }

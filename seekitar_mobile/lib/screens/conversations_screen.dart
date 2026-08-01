@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../models/conversation.dart';
 import '../services/api_compat.dart';
 
@@ -46,7 +47,6 @@ class _ChatScreenState extends State<ChatScreen> {
   final _msgCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
   List<ChatMessage> _msgs = [];
-  String? _myId;
 
   @override void initState() { super.initState(); _load(); }
 

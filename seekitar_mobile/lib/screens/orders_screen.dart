@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import '../core/constants.dart';
 import '../models/order.dart';
@@ -22,14 +23,12 @@ class _OrdersScreenState extends State<OrdersScreen> with SingleTickerProviderSt
 
   @override Widget build(BuildContext ctx) => Scaffold(
     appBar: AppBar(title: const Text('Pesanan'), bottom: TabBar(controller: _tab, tabs: const [Tab(text: 'Pembelian'), Tab(text: 'Penjualan')])),
-    body: _loading ? const Center(child: CircularProgressIndicator()) : TabBarView(controller: _tab, children: [
-      _list(_b, false), _list(_s, true),
-    ]),
+    body: _loading ? const Center(child: CircularProgressIndicator()) : TabBarView(controller: _tab, children: [_list(_b, false), _list(_s, true)]),
   );
 
   Widget _list(List<Order> orders, bool seller) => orders.isEmpty ? const Center(child: Text('Belum ada pesanan', style: TextStyle(color: Colors.grey))) : RefreshIndicator(onRefresh: _load, child: ListView.builder(itemCount: orders.length, itemBuilder: (_, i) {
     final o = orders[i];
-    return Card(margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5), child: InkWell(borderRadius: BorderRadius.circular(24), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OrdDetail(order: o))).then((_) => _load()), child: Padding(padding: const EdgeInsets.all(14), child: Row(children: [
+    return Card(margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5), child: InkWell(borderRadius: BorderRadius.circular(24), onTap: () => ctx.push('/order-detail', extra: o).then((_) => _load()), child: Padding(padding: const EdgeInsets.all(14), child: Row(children: [
       ClipRRect(borderRadius: BorderRadius.circular(14), child: (o.listingImages?.isNotEmpty == true) ? Image.network(o.listingImages!.first, width: 60, height: 60, fit: BoxFit.cover) : Container(width: 60, height: 60, color: Colors.green.shade50, child: const Icon(Icons.receipt, color: Colors.green))),
       const SizedBox(width: 14),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

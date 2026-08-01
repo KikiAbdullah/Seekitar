@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../models/notification.dart';
 import '../services/api_compat.dart';
 
@@ -20,8 +21,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     catch (_) { if (mounted) setState(() => _loading = false); }
   }
 
+  Future<void> _markAll() async { await _api.markAllRead(); _load(); }
+
   @override Widget build(BuildContext ctx) => Scaffold(
-    appBar: AppBar(title: const Text('Notifikasi'), actions: [TextButton(onPressed: () { _api.markAllRead(); _load(); }, child: const Text('Baca Semua'))]),
+    appBar: AppBar(title: const Text('Notifikasi'), actions: [TextButton(onPressed: _markAll, child: const Text('Baca Semua'))]),
     body: _loading ? const Center(child: CircularProgressIndicator()) : _items.isEmpty ? const Center(child: Text('Tidak ada notifikasi')) : RefreshIndicator(onRefresh: _load, child: ListView.builder(itemCount: _items.length, itemBuilder: (_, i) {
       final n = _items[i];
       return ListTile(
@@ -29,7 +32,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         title: Text(n.title, style: TextStyle(fontWeight: n.isRead ? FontWeight.normal : FontWeight.bold, fontSize: 14)),
         subtitle: Text(n.body, maxLines: 2, style: const TextStyle(fontSize: 13)),
         trailing: n.isRead ? null : Container(width: 10, height: 10, decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle)),
-        onTap: () { _api.markRead(n.id); setState(() => n.isRead == true ? null : _items[i] = AppNotification(id: n.id, type: n.type, title: n.title, body: n.body, isRead: true, createdAt: n.createdAt)); },
+        onTap: () async { await _api.markRead(n.id); _load(); },
       );
     })),
   );

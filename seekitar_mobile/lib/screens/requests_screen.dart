@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/customer_request.dart';
 import '../services/api_compat.dart';
-import 'request_detail_screen.dart';
 
 class RequestsScreen extends StatefulWidget {
   const RequestsScreen({super.key});
@@ -27,23 +27,21 @@ class _RequestsScreenState extends State<RequestsScreen> with SingleTickerProvid
     } catch (_) { setState(() => _loading = false); }
   }
 
-  @override Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Kebutuhan Sekitar'), bottom: TabBar(controller: _tabCtrl, tabs: const [Tab(text: 'Terdekat'), Tab(text: 'Saya')])),
-      body: _loading ? const Center(child: CircularProgressIndicator()) : TabBarView(controller: _tabCtrl, children: [
-        RefreshIndicator(onRefresh: _load, child: _nearby.isEmpty ? const Center(child: Text('Belum ada permintaan')) : ListView.builder(itemCount: _nearby.length, itemBuilder: (_, i) => _card(_nearby[i]))),
-        RefreshIndicator(onRefresh: _load, child: _mine.isEmpty ? const Center(child: Text('Belum ada permintaan')) : ListView.builder(itemCount: _mine.length, itemBuilder: (_, i) => _card(_mine[i]))),
-      ]),
-      floatingActionButton: FloatingActionButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateRequestScreen())).then((_) => _load()), child: const Icon(Icons.add)),
-    );
-  }
+  @override Widget build(BuildContext ctx) => Scaffold(
+    appBar: AppBar(title: const Text('Kebutuhan Sekitar'), bottom: TabBar(controller: _tabCtrl, tabs: const [Tab(text: 'Terdekat'), Tab(text: 'Saya')])),
+    body: _loading ? const Center(child: CircularProgressIndicator()) : TabBarView(controller: _tabCtrl, children: [
+      RefreshIndicator(onRefresh: _load, child: _nearby.isEmpty ? const Center(child: Text('Belum ada permintaan')) : ListView.builder(itemCount: _nearby.length, itemBuilder: (_, i) => _card(_nearby[i]))),
+      RefreshIndicator(onRefresh: _load, child: _mine.isEmpty ? const Center(child: Text('Belum ada permintaan')) : ListView.builder(itemCount: _mine.length, itemBuilder: (_, i) => _card(_mine[i]))),
+    ]),
+    floatingActionButton: FloatingActionButton(onPressed: () => ctx.push('/create-request').then((_) => _load()), child: const Icon(Icons.add)),
+  );
 
   Widget _card(CustomerRequest r) => Card(child: ListTile(
     leading: CircleAvatar(backgroundColor: Colors.orange.shade50, child: Text(r.userInitials ?? '?', style: TextStyle(color: Colors.orange.shade700, fontWeight: FontWeight.w600))),
     title: Text(r.title, maxLines: 1),
     subtitle: Text(r.timeLeft, style: TextStyle(color: r.isExpired ? Colors.red : Colors.green.shade700, fontSize: 12)),
     trailing: Chip(label: Text('${r.offersCount} tawaran', style: const TextStyle(fontSize: 11))),
-    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RequestDetailScreen(request: r))).then((_) => _load()),
+    onTap: () => ctx.push('/request/${r.id}', extra: r),
   ));
 }
 
@@ -67,7 +65,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
     setState(() => _loading = false);
   }
 
-  @override Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Pasang Kebutuhan')), body: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
+  @override Widget build(BuildContext ctx) => Scaffold(appBar: AppBar(title: const Text('Pasang Kebutuhan')), body: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
     TextField(controller: _titleCtrl, decoration: const InputDecoration(labelText: 'Judul Kebutuhan', hintText: 'Cth: Cari tukang cat dinding')),
     const SizedBox(height: 16),
     TextField(controller: _descCtrl, maxLines: 4, decoration: const InputDecoration(labelText: 'Deskripsi', hintText: 'Jelaskan detail kebutuhanmu...')),

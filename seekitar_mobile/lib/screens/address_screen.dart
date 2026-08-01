@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/address.dart';
 import '../services/api_compat.dart';
@@ -34,9 +35,8 @@ class _AddressScreenState extends State<AddressScreen> {
     ));
     if (ok == true) {
       try {
-        Position pos;
-        try { pos = await Geolocator.getCurrentPosition(); }
-        catch (_) { pos = const Position(latitude: -7.5, longitude: 112.0, timestamp: null, accuracy: 0, altitude: 0, altitudeAccuracy: 0, heading: 0, headingAccuracy: 0, speed: 0, speedAccuracy: 0); }
+        Position pos = const Position(latitude: -7.5, longitude: 112.0, timestamp: null, accuracy: 0, altitude: 0, altitudeAccuracy: 0, heading: 0, headingAccuracy: 0, speed: 0, speedAccuracy: 0);
+        try { pos = await Geolocator.getCurrentPosition(); } catch (_) {}
         await _api.createAddress({'label': labelCtrl.text, 'address': addrCtrl.text, 'latitude': pos.latitude, 'longitude': pos.longitude});
         _load();
       } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e'))); }
