@@ -13,27 +13,61 @@ class CreateStoreScreen extends StatefulWidget {
 class _CreateStoreScreenState extends State<CreateStoreScreen> {
   final _api = ApiProvider();
   final _nameCtrl = TextEditingController(), _addrCtrl = TextEditingController();
+  List<String> _types = ['goods'];
   bool _loading = false;
 
   Future<void> _submit() async {
-    if (_nameCtrl.text.isEmpty) return;
+    if (_nameCtrl.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Nama toko wajib diisi')));
+      return;
+    }
     setState(() => _loading = true);
     try {
       final pos = await Geolocator.getCurrentPosition();
-      await _api.createStore({'name': _nameCtrl.text, 'address': _addrCtrl.text, 'latitude': pos.latitude, 'longitude': pos.longitude, 'service_radius_km': 10, 'accepts_cod': true});
-      if (mounted) Navigator.pop(context);
-    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()))); }
-    setState(() => _loading = false);
+      await _api.createStore({
+        'name': _nameCtrl.text,
+        'address': _addrCtrl.text,
+        'latitude': pos.latitude,
+        'longitude': pos.longitude,
+        'store_type': _types,
+        'category_ids': [1],
+        'service_radius_km': 10,
+        'accepts_cod': true,
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Toko berhasil dibuka! Verifikasi admin 1x24 jam.')));
+        Navigator.pop(context, true);
+      }
+    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')))); }
+    if (mounted) setState(() => _loading = false);
   }
+
+  void _toggleType(String t) => setState(() { if (_types.contains(t) && _types.length > 1) _types.remove(t); else if (!_types.contains(t)) _types.add(t); });
 
   @override Widget build(BuildContext ctx) => Scaffold(
     appBar: AppBar(title: const Text('Buka Toko')),
-    body: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
+    body: SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       TextField(controller: _nameCtrl, decoration: const InputDecoration(labelText: 'Nama Toko')),
       const SizedBox(height: 16),
       TextField(controller: _addrCtrl, maxLines: 3, decoration: const InputDecoration(labelText: 'Alamat Toko')),
       const SizedBox(height: 24),
-      SizedBox(width: double.infinity, child: ElevatedButton(onPressed: _loading ? null : _submit, child: Text(_loading ? 'Membuka...' : 'Buka Toko'))),
+      const Text('Jenis Usaha', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+      const SizedBox(height: 10),
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final t in [['goods', 'Barang'], ['services', 'Jasa'], ['rental', 'Sewa']])
+          FilterChip(
+            selected: _types.contains(t[0]),
+            label: Text(t[1]),
+            onSelected: (_) => _toggleType(t[0]),
+            selectedColor: Theme.of(ctx).colorScheme.primary.withOpacity(0.15),
+            checkmarkColor: Theme.of(ctx).colorScheme.primary,
+          ),
+      ]),
+      const SizedBox(height: 32),
+      SizedBox(height: 56, child: ElevatedButton(
+        onPressed: _loading ? null : _submit,
+        child: _loading ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white)) : const Text('Buka Toko', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+      )),
     ])),
   );
   @override void dispose() { _nameCtrl.dispose(); _addrCtrl.dispose(); super.dispose(); }

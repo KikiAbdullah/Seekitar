@@ -3,7 +3,6 @@ import 'package:dio/dio.dart';
 import '../core/constants.dart';
 import 'dio_client.dart';
 
-/// Single entry point untuk SEMUA API call — thin wrapper di atas DioClient.
 class ApiClient {
   final DioClient _client = DioClient();
   Dio get _dio => _client.dio;
@@ -39,6 +38,13 @@ class ApiClient {
     return Map<String,dynamic>.from(res.data as Map);
   }
 
+  Future<Map<String,dynamic>> uploadMultiple(String path, List<MapEntry<String, File>> files, {Map<String,String>? fields}) async {
+    final fd = <String,dynamic>{for (final f in files) f.key: await MultipartFile.fromFile(f.value.path)};
+    if (fields != null) fd.addAll(fields);
+    final res = await _dio.post(path, data: FormData.fromMap(fd));
+    return Map<String,dynamic>.from(res.data as Map);
+  }
+
   // ─── Auth ──────────────────────────────────────────
   Future<Map<String,dynamic>> requestOtp(String phone) => _post('/auth/request-otp', data: {'phone': phone});
   Future<Map<String,dynamic>> verifyOtp(String phone, String otp) => _post('/auth/verify-otp', data: {'phone': phone, 'otp': otp});
@@ -46,6 +52,8 @@ class ApiClient {
   Future<Map<String,dynamic>> refreshToken() => _post('/auth/refresh');
   Future<void> logout() => _post('/auth/logout');
   Future<Map<String,dynamic>> updateProfile(Map<String,dynamic> body) => _patch('/auth/profile', data: body);
+  Future<void> requestPhoneChangeOtp(String phone) => _post('/auth/phone/request-otp', data: {'phone': phone});
+  Future<Map<String,dynamic>> verifyPhoneChangeOtp(String phone, String otp) => _post('/auth/phone/verify-otp', data: {'phone': phone, 'otp': otp});
 
   // ─── Categories & Config ──────────────────────────
   Future<List<dynamic>> categories() => _get('/categories', parser: (d) => d['data'] as List);
@@ -56,6 +64,9 @@ class ApiClient {
 
   // ─── Search ────────────────────────────────────────
   Future<List<dynamic>> searchSuggestions(String q, {String? type}) => _get('/search/suggestions', query: {'q': q, if (type != null) 'type': type}, parser: (d) => d['data'] as List);
+
+  // ─── Uploads ───────────────────────────────────────
+  Future<Map<String,dynamic>> uploadImage(File file, {String purpose = 'listing'}) => upload('/uploads/images', file: file, fields: {'purpose': purpose});
 
   // ─── Listings ──────────────────────────────────────
   Future<Map<String,dynamic>> listings({required double lat, required double lng, double? radius, int? category, String? type, String? keyword, String sort = 'nearest', int page = 1}) {
@@ -101,6 +112,7 @@ class ApiClient {
 
   // ─── Conversations ─────────────────────────────────
   Future<Map<String,dynamic>> conversations() => _get('/conversations');
+  Future<Map<String,dynamic>> conversationDetail(String id) => _get('/conversations/$id');
   Future<Map<String,dynamic>> createConversation(Map<String,dynamic> body) => _post('/conversations', data: body);
   Future<Map<String,dynamic>> messages(String convId, {int page = 1}) => _get('/conversations/$convId/messages', query: {'page': page.toString()});
   Future<Map<String,dynamic>> sendMessage(String convId, String message) => _post('/conversations/$convId/messages', data: {'message': message});
@@ -125,21 +137,26 @@ class ApiClient {
   Future<Map<String,dynamic>> createOrder(Map<String,dynamic> body) => _post('/orders', data: body);
   Future<Map<String,dynamic>> orderDetail(String id) => _get('/orders/$id');
   Future<Map<String,dynamic>> updateOrderStatus(String id, Map<String,dynamic> body) => _patch('/orders/$id/status', data: body);
-  Future<void> uploadPaymentProof(String id, File file) => upload('/orders/$id/payment-proof', file: file, field: 'proof');
+  Future<Map<String,dynamic>> uploadPaymentProof(String id, File file) => upload('/orders/$id/payment-proof', file: file, field: 'proof');
   Future<Map<String,dynamic>> submitReview(String id, Map<String,dynamic> body) => _post('/orders/$id/review', data: body);
-  Future<void> disputeOrder(String id, Map<String,dynamic> body) => _post('/orders/$id/disputes', data: body);
+  Future<Map<String,dynamic>> disputeOrder(String id, Map<String,dynamic> body) => _post('/orders/$id/disputes', data: body);
 
   // ─── Wallet ────────────────────────────────────────
   Future<Map<String,dynamic>> wallet() => _get('/wallet');
   Future<Map<String,dynamic>> walletTxs() => _get('/wallet/transactions');
   Future<Map<String,dynamic>> topup(double amount) => _post('/wallet/topup', data: {'amount': amount});
+  Future<Map<String,dynamic>> withdraw(Map<String,dynamic> body) => _post('/wallet/withdraw', data: body);
 
   // ─── Addresses ─────────────────────────────────────
   Future<dynamic> addresses() => _get('/addresses');
   Future<Map<String,dynamic>> createAddress(Map<String,dynamic> body) => _post('/addresses', data: body);
   Future<Map<String,dynamic>> updateAddress(String id, Map<String,dynamic> body) => _patch('/addresses/$id', data: body);
   Future<void> deleteAddress(String id) => _delete('/addresses/$id');
-  Future<void> setDefaultAddress(String id) => _patch('/addresses/$id/default');
+  Future<Map<String,dynamic>> setDefaultAddress(String id) => _patch('/addresses/$id/default');
+
+  // ─── Coupons ───────────────────────────────────────
+  Future<Map<String,dynamic>> validateCoupon(String code, double orderTotal) => _post('/coupons/validate', data: {'code': code, 'order_total': orderTotal});
+  Future<Map<String,dynamic>> applyCoupon(String code, String orderId) => _post('/coupons/apply', data: {'code': code, 'order_id': orderId});
 
   // ─── Block ─────────────────────────────────────────
   Future<dynamic> blockedUsers() => _get('/users/blocked');
@@ -150,11 +167,14 @@ class ApiClient {
   Future<void> report(Map<String,dynamic> body) => _post('/reports', data: body);
 
   // ─── Verification ──────────────────────────────────
-  Future<Map<String,dynamic>> uploadKtp(File ktp, File selfie, {String? nik}) => upload('/auth/verification/ktp', file: ktp, field: 'ktp_image');
+  Future<Map<String,dynamic>> uploadKtp(File ktpImage, File selfieImage, {String? nik}) => uploadMultiple('/auth/verification/ktp', [
+    MapEntry('ktp_image', ktpImage),
+    MapEntry('selfie_image', selfieImage),
+  ], fields: {if (nik != null) 'nik': nik});
 
   // ─── FCM / Device ──────────────────────────────────
   Future<void> registerFcmToken(String token, String deviceId) => _post('/auth/fcm-token', data: {'fcm_token': token, 'device_id': deviceId, 'platform': 'android'});
-  Future<void> removeFcmToken(String deviceId) => _delete('/auth/fcm-token?device_id=$deviceId');
+  Future<void> removeFcmToken(String deviceId) => _delete('/auth/fcm-token', query: {'device_id': deviceId});
 
   // ─── Privacy (UU PDP) ──────────────────────────────
   Future<Map<String,dynamic>> exportData() => _get('/auth/export-data');

@@ -34,10 +34,11 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   }
 
   Future<void> _submit() async {
-    if (_title.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Judul wajib diisi')));
-      return;
-    }
+    if (_title.text.isEmpty) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Judul wajib diisi'))); return; }
+    if (_images.isEmpty) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Minimal 1 foto'))); return; }
+    if (_price.text.isEmpty && _type != 'service') { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Harga wajib diisi untuk barang/sewa'))); return; }
+    if (_type != 'service' && (_stock == null || _stock!.isEmpty)) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Stok wajib diisi'))); return; }
+    if (_type == 'service' && (_slot == null || _slot!.isEmpty)) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Slot wajib diisi untuk jasa'))); return; }
     setState(() => _loading = true);
     try {
       final uploaded = <String>[];
@@ -50,20 +51,19 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         }
         setState(() => _uploading = false);
       }
-      await _api.createListing({
+      final body = <String, dynamic>{
         'title': _title.text,
         'description': _desc.text,
         'listing_type': _type,
-        'price': _price.text.isNotEmpty ? double.parse(_price.text) : null,
         'store_id': widget.store.id,
         'images': uploaded,
-        if (_stock != null && _stock!.isNotEmpty) 'stock_qty': int.parse(_stock!),
-        if (_slot != null && _slot!.isNotEmpty) 'slot': int.parse(_slot!),
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing berhasil dipasang!')));
-        Navigator.pop(context, true);
-      }
+      };
+      if (_price.text.isNotEmpty) body['price'] = double.parse(_price.text);
+      if (_type != 'service') body['stock_qty'] = int.parse(_stock!);
+      if (_type == 'service') body['slot'] = int.parse(_slot!);
+
+      await _api.createListing(body);
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing berhasil dipasang!'))); Navigator.pop(context, true); }
     } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e'))); }
     if (mounted) setState(() { _loading = false; _uploading = false; });
   }

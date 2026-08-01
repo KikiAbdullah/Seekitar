@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import '../services/api_compat.dart';
 import '../models/wallet.dart';
 
@@ -38,6 +37,35 @@ class _WalletScreenState extends State<WalletScreen> {
     }
   }
 
+  Future<void> _withdraw() async {
+    final amountCtrl = TextEditingController();
+    final bankCtrl = TextEditingController();
+    final accCtrl = TextEditingController();
+    final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      title: const Text('Tarik Saldo'),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(controller: amountCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Jumlah (Rp)', hintText: '50000')),
+        const SizedBox(height: 12),
+        TextField(controller: bankCtrl, decoration: const InputDecoration(labelText: 'Nama Bank', hintText: 'BCA / BRI / Mandiri')),
+        const SizedBox(height: 12),
+        TextField(controller: accCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Nomor Rekening')),
+      ]),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')), ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Tarik'))],
+    ));
+    if (ok == true && amountCtrl.text.isNotEmpty) {
+      try {
+        await _api.withdraw({
+          'amount': double.parse(amountCtrl.text),
+          'bank_name': bankCtrl.text,
+          'bank_account': accCtrl.text,
+        });
+        _load();
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Penarikan diajukan. Diproses 1x24 jam.')));
+      } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e'))); }
+    }
+  }
+
   @override Widget build(BuildContext ctx) {
     final t = Theme.of(ctx);
     return Scaffold(
@@ -50,7 +78,11 @@ class _WalletScreenState extends State<WalletScreen> {
             const SizedBox(height: 8),
             Text(_wallet?.balanceDisplay ?? 'Rp 0', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: t.colorScheme.primary)),
             const SizedBox(height: 20),
-            SizedBox(width: double.infinity, child: ElevatedButton.icon(onPressed: _topup, icon: const Icon(Icons.add_circle_outline, size: 20), label: const Text('Top Up'))),
+            Row(children: [
+              Expanded(child: ElevatedButton.icon(onPressed: _topup, icon: const Icon(Icons.add_circle_outline, size: 20), label: const Text('Top Up'))),
+              const SizedBox(width: 12),
+              Expanded(child: OutlinedButton.icon(onPressed: _withdraw, icon: const Icon(Icons.credit_card, size: 20), label: const Text('Tarik'))),
+            ]),
           ]))),
           const SizedBox(height: 16),
           Text('Riwayat Transaksi', style: t.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),

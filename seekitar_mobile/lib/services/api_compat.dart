@@ -188,7 +188,7 @@ class ApiProvider {
   Future<void> unblockUser(String id) => _api.unblockUser(id);
 
   // ─── Upload ───
-  Future<Map<String,dynamic>> uploadImage(File file, {String purpose = 'listing'}) => _api.upload('/uploads/images', file, fields: {'purpose': purpose});
+  Future<Map<String,dynamic>> uploadImage(File file, {String purpose = 'listing'}) => _api.uploadImage(file, purpose: purpose);
 
   // ─── Reports ───
   Future<void> report(String targetType, String targetId, String reason, {String? description}) => _api.report({'target_type': targetType, 'target_id': targetId, 'reason': reason, if (description != null) 'description': description});
@@ -196,4 +196,7 @@ class ApiProvider {
   // ─── Privacy ───
   Future<Map<String,dynamic>> exportData() => _api.exportData();
   Future<void> deleteAccount() => _api.deleteAccount();
+
+  // ─── Wallet Extras ───
+  Future<Map<String,dynamic>> withdraw(Map<String,dynamic> body) => _api.withdraw(body);
 }
