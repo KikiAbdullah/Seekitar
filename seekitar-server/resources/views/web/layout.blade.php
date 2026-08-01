@@ -88,20 +88,25 @@
       @yield('content')
     </div>
 
+    {{-- ============================ FOOTER ============================ --}}
     <footer class="footer-part pt-8 pb-5 bg-light">
       <div class="container">
         <div class="row g-5">
           <div class="col-lg-4">
             <div class="text-center text-lg-start">
               <a href="{{ route('web.home') }}">
-              <img src="{{ asset('img/brand/logo-mark.png') }}" alt="Seekitar"
-                class="img-fluid pb-3" width="48" height="48">
+                <img src="{{ asset('img/brand/logo-mark.png') }}" alt="Seekitar"
+                  class="img-fluid pb-3" width="48" height="48">
               </a>
-              <p class="mb-1 text-dark">
-                {{ config('seekitar.company.name') }} — pasar lokal
-                {{ config('seekitar.regency') }}.
+              <p class="mb-1 text-dark fw-semibold">
+                {{ config('seekitar.company.name') }}
               </p>
-              <p class="mb-0 text-muted fs-3">{{ config('seekitar.company.address') }}</p>
+              <p class="mb-2 text-muted fs-3">
+                Pasar lokal {{ config('seekitar.regency') }} — beli dan jual di sekitar Anda.
+              </p>
+              <p class="mb-0 text-muted fs-3">
+                <i class="ti ti-map-pin me-1"></i> {{ config('seekitar.company.address') }}
+              </p>
             </div>
           </div>
           <div class="col-6 col-lg-2">
@@ -117,18 +122,20 @@
             <h6 class="fw-bold mb-3">Bisnis</h6>
             <ul class="list-unstyled d-grid gap-2 mb-0 fs-3">
               <li><a class="text-muted text-hover-primary text-decoration-none" href="{{ route('web.for-sellers') }}">Untuk Penjual</a></li>
-              <li><a class="text-muted text-hover-primary text-decoration-none" href="{{ route('web.pricing') }}">Biaya &amp; Harga</a></li>
+              <li><a class="text-muted text-hover-primary text-decoration-none" href="{{ route('web.pricing') }}">Biaya & Harga</a></li>
               <li><a class="text-muted text-hover-primary text-decoration-none" href="{{ route('web.verification') }}">Kebijakan Verifikasi</a></li>
               <li><a class="text-muted text-hover-primary text-decoration-none" href="{{ route('web.security') }}">Pusat Keamanan</a></li>
+              <li><a class="text-muted text-hover-primary text-decoration-none" href="{{ route('web.guidelines') }}">Pedoman Komunitas</a></li>
             </ul>
           </div>
           <div class="col-lg-3">
-            <h6 class="fw-bold mb-3">Hukum &amp; Bantuan</h6>
+            <h6 class="fw-bold mb-3">Hukum & Bantuan</h6>
             <ul class="list-unstyled d-grid gap-2 mb-0 fs-3">
               <li><a class="text-muted text-hover-primary text-decoration-none" href="{{ route('web.help') }}">Pusat Bantuan</a></li>
-              <li><a class="text-muted text-hover-primary text-decoration-none" href="{{ route('web.contact') }}">Kontak &amp; Pengaduan</a></li>
+              <li><a class="text-muted text-hover-primary text-decoration-none" href="{{ route('web.contact') }}">Kontak & Pengaduan</a></li>
+              <li><a class="text-muted text-hover-primary text-decoration-none" href="{{ route('web.refund') }}">Pengembalian & Sengketa</a></li>
               <li><a class="text-muted text-hover-primary text-decoration-none" href="{{ route('web.privacy') }}">Kebijakan Privasi</a></li>
-              <li><a class="text-muted text-hover-primary text-decoration-none" href="{{ route('web.terms') }}">Syarat &amp; Ketentuan</a></li>
+              <li><a class="text-muted text-hover-primary text-decoration-none" href="{{ route('web.terms') }}">Syarat & Ketentuan</a></li>
               <li><a class="text-muted text-hover-primary text-decoration-none" href="{{ route('web.cookie') }}">Kebijakan Cookie</a></li>
             </ul>
           </div>
@@ -137,7 +144,7 @@
           <div class="row align-items-center justify-content-between g-3">
             <div class="col-md-7">
               <p class="mb-0 text-muted fs-3">
-                © {{ date('Y') }} {{ config('seekitar.company.name') }}. Semua hak dilindungi.
+                &copy; {{ date('Y') }} {{ config('seekitar.company.name') }}. Semua hak dilindungi.
                 @if (config('seekitar.pse.registration_number'))
                   Terdaftar sebagai PSE di Kominfo — {{ config('seekitar.pse.registration_number') }}.
                 @endif
@@ -159,7 +166,7 @@
                 </li>
                 <li>
                   <a class="icon-soft" style="width: 38px; height: 38px;" href="{{ route('web.contact') }}"
-                    aria-label="Kontak &amp; Pengaduan" title="Kontak &amp; Pengaduan">
+                    aria-label="Kontak & Pengaduan" title="Kontak & Pengaduan">
                     <i class="ti ti-headset"></i>
                   </a>
                 </li>
@@ -170,6 +177,7 @@
       </div>
     </footer>
 
+    {{-- ============================ OFFCANVAS MOBILE ============================ --}}
     <div class="offcanvas offcanvas-start modernize-lp-offcanvas" tabindex="-1" id="offcanvasNavbar"
       aria-labelledby="offcanvasNavbarLabel">
       <div class="offcanvas-header p-4">
@@ -180,31 +188,31 @@
         <ul class="navbar-nav justify-content-end flex-grow-1">
           <li class="nav-item mt-3">
             <a class="nav-link fs-3 text-dark {{ request()->routeIs('web.home') ? 'active' : '' }}"
-              href="{{ route('web.home') }}">Beranda</a>
+              href="{{ route('web.home') }}"><i class="ti ti-home me-2"></i> Beranda</a>
           </li>
           <li class="nav-item mt-3">
             <a class="nav-link fs-3 text-dark {{ request()->routeIs('web.listings') ? 'active' : '' }}"
-              href="{{ route('web.listings') }}">Cari</a>
+              href="{{ route('web.listings') }}"><i class="ti ti-search me-2"></i> Cari</a>
           </li>
           <li class="nav-item mt-3">
             <a class="nav-link fs-3 text-dark {{ request()->routeIs('web.about') ? 'active' : '' }}"
-              href="{{ route('web.about') }}">Tentang</a>
+              href="{{ route('web.about') }}"><i class="ti ti-info-circle me-2"></i> Tentang</a>
           </li>
           <li class="nav-item mt-3">
             <a class="nav-link fs-3 text-dark {{ request()->routeIs('web.for-sellers') ? 'active' : '' }}"
-              href="{{ route('web.for-sellers') }}">Untuk Penjual</a>
+              href="{{ route('web.for-sellers') }}"><i class="ti ti-building-store me-2"></i> Untuk Penjual</a>
           </li>
           <li class="nav-item mt-3">
             <a class="nav-link fs-3 text-dark {{ request()->routeIs('web.help') ? 'active' : '' }}"
-              href="{{ route('web.help') }}">Bantuan</a>
+              href="{{ route('web.help') }}"><i class="ti ti-help-circle me-2"></i> Bantuan</a>
           </li>
           <li class="nav-item mt-3">
             <a class="nav-link fs-3 text-dark {{ request()->routeIs('web.blog') ? 'active' : '' }}"
-              href="{{ route('web.blog') }}">Blog</a>
+              href="{{ route('web.blog') }}"><i class="ti ti-news me-2"></i> Blog</a>
           </li>
           <li class="nav-item mt-3">
             <a class="nav-link fs-3 text-dark {{ request()->routeIs('web.contact') ? 'active' : '' }}"
-              href="{{ route('web.contact') }}">Kontak</a>
+              href="{{ route('web.contact') }}"><i class="ti ti-headset me-2"></i> Kontak</a>
           </li>
         </ul>
         <form class="d-flex mt-3" role="search">

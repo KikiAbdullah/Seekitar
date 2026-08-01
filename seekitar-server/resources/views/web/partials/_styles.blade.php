@@ -64,17 +64,15 @@
       flex-shrink: 0;
     }
 
-    /* ============ NAVBAR TRANSPARAN DI POSISI PALING ATAS ============
-       Navbar mengambang di atas hero: transparan saat di atas, putih
-       dengan bayangan setelah discroll (kelas .fixed-header dipicu
-       custom.js pada scroll >= 60px). Hero diberi padding-top sendiri
-       agar kontennya tidak tertutup navbar 80px. */
+    /* ============ NAVBAR ============ */
     .header {
       position: fixed;
       background-color: transparent;
+      transition: background-color .25s ease, box-shadow .25s ease;
     }
     .header.fixed-header {
       background-color: #fff;
+      box-shadow: 0 2px 16px rgba(0,0,0,.06);
     }
 
     /* ============ HERO FULL (beranda & katalog) ============ */
@@ -146,8 +144,6 @@
       right: 1rem;
     }
 
-    /* Badge hero tidak boleh keluar bingkai gambar di layar sempit:
-       dari melayang keluar (offset negatif) jadi duduk di dalam gambar. */
     @media (max-width: 767.98px) {
       .hero-badge {
         padding: .6rem .8rem;
@@ -211,6 +207,13 @@
       object-fit: cover;
     }
 
+    /* ============ CTA BOX ============ */
+    .c2a-box {
+      background: linear-gradient(135deg, var(--bs-primary-bg-subtle) 0%, #fff 100%);
+      border-radius: 1.5rem;
+      border: 1px solid rgba(22, 138, 74, .08);
+    }
+
     /* ============ DOKUMEN LEGAL ============ */
     .doc-toc {
       position: sticky;
@@ -226,6 +229,7 @@
       text-decoration: none;
       font-size: .9rem;
       line-height: 1.35;
+      transition: all .2s ease;
     }
     .doc-toc .toc-link:hover {
       background: var(--bs-primary-bg-subtle);
@@ -305,6 +309,47 @@
     }
     .accordion-button:focus {
       box-shadow: none;
+      border-color: transparent;
+    }
+
+    /* ============ SCROLL LINK SMOOTH ============ */
+    html {
+      scroll-behavior: smooth;
+    }
+
+    /* ============ PAGINATION STYLING ============ */
+    .pagination {
+      gap: .25rem;
+    }
+    .pagination .page-link {
+      border-radius: .65rem;
+      border: 0;
+      padding: .5rem .9rem;
+      color: var(--bs-secondary-color);
+      font-weight: 500;
+    }
+    .pagination .page-item.active .page-link {
+      background: var(--bs-primary);
+      color: #fff;
+    }
+    .pagination .page-link:hover {
+      background: var(--bs-primary-bg-subtle);
+      color: var(--bs-primary);
+    }
+
+    /* ============ ANIMASI ============ */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .animate-fade-up {
+      animation: fadeInUp .5s ease forwards;
     }
   </style>
 @endonce
