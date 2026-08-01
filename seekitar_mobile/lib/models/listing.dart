@@ -1,33 +1,35 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
 import '../core/constants.dart';
-part 'listing.freezed.dart';
-part 'listing.g.dart';
 
-@freezed
-class Listing with _$Listing {
-  const factory Listing({
-    required String id,
-    required String title,
-    String? description,
-    @JsonKey(name: 'listing_type') required String listingType,
-    double? price,
-    @JsonKey(name: 'stock_qty') int? stockQty,
-    int? slot,
-    @Default([]) List<String> images,
-    @Default('active') String status,
-    @JsonKey(name: 'store_id') String? storeId,
-    @JsonKey(name: 'store_name') String? storeName,
-    @JsonKey(name: 'store_verified') bool? storeVerified,
-    @JsonKey(name: 'store_district') String? storeDistrict,
-    @JsonKey(name: 'distance_km') double? distanceKm,
-    @JsonKey(name: 'created_at') DateTime? createdAt,
-    @JsonKey(name: 'is_favorited') @Default(false) bool isFavorited,
-  }) = _Listing;
+class Listing {
+  final String id, title;
+  final String? description;
+  final String listingType;
+  final double? price;
+  final int? stockQty, slot;
+  final List<String> images;
+  final String status;
+  final String? storeId, storeName, storeDistrict;
+  final bool? storeVerified;
+  final double? distanceKm;
+  final DateTime? createdAt;
+  final bool isFavorited;
 
-  factory Listing.fromJson(Map<String, dynamic> json) => _$ListingFromJson(json);
-}
+  Listing({required this.id, required this.title, this.description, required this.listingType, this.price, this.stockQty, this.slot, this.images = const [], this.status = 'active', this.storeId, this.storeName, this.storeDistrict, this.storeVerified, this.distanceKm, this.createdAt, this.isFavorited = false});
 
-extension ListingX on Listing {
+  factory Listing.fromJson(Map<String, dynamic> json) => Listing(
+    id: json['id']?.toString() ?? '', title: json['title']?.toString() ?? '',
+    description: json['description']?.toString(), listingType: json['listing_type']?.toString() ?? 'product',
+    price: (json['price'] as num?)?.toDouble(), stockQty: json['stock_qty'] as int?, slot: json['slot'] as int?,
+    images: (json['images'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+    status: json['status']?.toString() ?? 'active',
+    storeId: json['store']?['id']?.toString(), storeName: json['store']?['name']?.toString(),
+    storeDistrict: json['store']?['district']?.toString() ?? json['store']?['regency']?.toString(),
+    storeVerified: json['store']?['verified_at'] != null,
+    distanceKm: (json['distance_km'] as num?)?.toDouble(),
+    createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at'].toString()) : null,
+    isFavorited: json['is_favorited'] ?? false,
+  );
+
   String get priceDisplay => price != null ? AppConstants.formatRupiah(price!) : 'Hubungi Penjual';
   String get typeLabel => AppConstants.typeLabel(listingType);
 }

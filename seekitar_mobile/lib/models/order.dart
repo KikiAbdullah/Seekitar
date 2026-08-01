@@ -1,52 +1,57 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
 import '../core/constants.dart';
-part 'order.freezed.dart';
-part 'order.g.dart';
 
-@freezed
-class Order with _$Order {
-  const factory Order({
-    required String id,
-    @JsonKey(name: 'order_number') String? orderNumber,
-    @JsonKey(name: 'order_type') required String orderType,
-    required String status,
-    @Default(1) int quantity,
-    @JsonKey(name: 'total_amount') required double totalAmount,
-    @JsonKey(name: 'discount_amount') double? discountAmount,
-    @JsonKey(name: 'store_id') String? storeId,
-    @JsonKey(name: 'store_name') String? storeName,
-    @JsonKey(name: 'listing_id') String? listingId,
-    @JsonKey(name: 'listing_title') String? listingTitle,
-    @JsonKey(name: 'listing_images') List<String>? listingImages,
-    @JsonKey(name: 'buyer_name') String? buyerName,
-    @JsonKey(name: 'payment_method') String? paymentMethod,
-    String? notes,
-    @JsonKey(name: 'created_at') DateTime? createdAt,
-    @JsonKey(name: 'completed_at') DateTime? completedAt,
-  }) = _Order;
+class Order {
+  final String id;
+  final String? orderNumber;
+  final String orderType, status;
+  final int quantity;
+  final double totalAmount;
+  final double? discountAmount;
+  final String? storeId, storeName, listingId, listingTitle;
+  final List<String>? listingImages;
+  final String? buyerName, paymentMethod, notes;
+  final DateTime? createdAt, completedAt;
 
-  factory Order.fromJson(Map<String, dynamic> json) => _$OrderFromJson(json);
-}
+  Order({required this.id, this.orderNumber, required this.orderType, required this.status, this.quantity = 1, required this.totalAmount, this.discountAmount, this.storeId, this.storeName, this.listingId, this.listingTitle, this.listingImages, this.buyerName, this.paymentMethod, this.notes, this.createdAt, this.completedAt});
 
-extension OrderX on Order {
+  factory Order.fromJson(Map<String, dynamic> json) => Order(
+    id: json['id']?.toString() ?? '', orderNumber: json['order_number']?.toString(),
+    orderType: json['order_type']?.toString() ?? 'product', status: json['status']?.toString() ?? 'menunggu_konfirmasi',
+    quantity: json['quantity'] ?? 1, totalAmount: (json['total_amount'] as num?)?.toDouble() ?? 0,
+    discountAmount: (json['discount_amount'] as num?)?.toDouble(),
+    storeId: json['store']?['id']?.toString(), storeName: json['store']?['name']?.toString(),
+    listingId: json['listing']?['id']?.toString(), listingTitle: json['listing']?['title']?.toString(),
+    listingImages: (json['listing']?['images'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
+    buyerName: json['buyer']?['name']?.toString(), paymentMethod: json['payment_method']?.toString(),
+    notes: json['notes']?.toString(),
+    createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at'].toString()) : null,
+    completedAt: json['completed_at'] != null ? DateTime.tryParse(json['completed_at'].toString()) : null,
+  );
+
   String get statusLabel => AppConstants.orderStatusLabel(status);
   String get priceDisplay => AppConstants.formatRupiah(totalAmount);
 }
 
-@freezed
-class Offer with _$Offer {
-  const factory Offer({
-    required String id,
-    required double price,
-    @JsonKey(name: 'additional_cost') double? additionalCost,
-    @JsonKey(name: 'estimated_hours') int? estimatedHours,
-    String? notes,
-    required String status,
-    @JsonKey(name: 'expires_at') DateTime? expiresAt,
-    @JsonKey(name: 'store_id') String? storeId,
-    @JsonKey(name: 'store_name') String? storeName,
-    @JsonKey(name: 'store_rating') double? storeRating,
-  }) = _Offer;
+class Offer {
+  final String id;
+  final double price;
+  final double? additionalCost;
+  final int? estimatedHours;
+  final String? notes;
+  final String status;
+  final DateTime? expiresAt;
+  final String? storeId, storeName;
+  final double? storeRating;
 
-  factory Offer.fromJson(Map<String, dynamic> json) => _$OfferFromJson(json);
+  Offer({required this.id, required this.price, this.additionalCost, this.estimatedHours, this.notes, required this.status, this.expiresAt, this.storeId, this.storeName, this.storeRating});
+
+  factory Offer.fromJson(Map<String, dynamic> json) => Offer(
+    id: json['id']?.toString() ?? '', price: (json['price'] as num?)?.toDouble() ?? 0,
+    additionalCost: (json['additional_cost'] as num?)?.toDouble(),
+    estimatedHours: json['estimated_hours'] as int?, notes: json['notes']?.toString(),
+    status: json['status']?.toString() ?? 'pending',
+    expiresAt: json['expires_at'] != null ? DateTime.tryParse(json['expires_at'].toString()) : null,
+    storeId: json['store']?['id']?.toString(), storeName: json['store']?['name']?.toString(),
+    storeRating: (json['store']?['rating_avg'] as num?)?.toDouble(),
+  );
 }

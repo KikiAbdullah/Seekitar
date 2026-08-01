@@ -1,17 +1,15 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
-part 'review.freezed.dart';
-part 'review.g.dart';
+class Review {
+  final String id;
+  final int rating;
+  final String? comment;
+  final String? reviewerName, reviewerInitials;
+  final DateTime createdAt;
+  Review({required this.id, required this.rating, this.comment, this.reviewerName, this.reviewerInitials, required this.createdAt});
 
-@freezed
-class Review with _$Review {
-  const factory Review({
-    required String id,
-    required int rating,
-    String? comment,
-    @JsonKey(name: 'reviewer_name') String? reviewerName,
-    @JsonKey(name: 'reviewer_initials') String? reviewerInitials,
-    @JsonKey(name: 'created_at') required DateTime createdAt,
-  }) = _Review;
-
-  factory Review.fromJson(Map<String, dynamic> json) => _$ReviewFromJson(json);
+  factory Review.fromJson(Map<String, dynamic> json) => Review(
+    id: json['id']?.toString() ?? '', rating: json['rating'] ?? 0,
+    comment: json['comment']?.toString(),
+    reviewerName: json['reviewer']?['name']?.toString(), reviewerInitials: json['reviewer']?['initials']?.toString(),
+    createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
+  );
 }

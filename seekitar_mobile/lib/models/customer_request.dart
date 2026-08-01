@@ -1,30 +1,29 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
-part 'customer_request.freezed.dart';
-part 'customer_request.g.dart';
+class CustomerRequest {
+  final String id, title;
+  final String? description;
+  final int categoryId;
+  final String? categoryName;
+  final String status;
+  final double latitude, longitude;
+  final double radiusKm;
+  final int offersCount;
+  final DateTime? expiresAt, createdAt;
+  final String? userName, userInitials;
 
-@freezed
-class CustomerRequest with _$CustomerRequest {
-  const factory CustomerRequest({
-    required String id,
-    required String title,
-    String? description,
-    @JsonKey(name: 'category_id') required int categoryId,
-    @JsonKey(name: 'category_name') String? categoryName,
-    required String status,
-    required double latitude,
-    required double longitude,
-    @JsonKey(name: 'radius_km') @Default(15) double radiusKm,
-    @JsonKey(name: 'offers_count') @Default(0) int offersCount,
-    @JsonKey(name: 'expires_at') DateTime? expiresAt,
-    @JsonKey(name: 'created_at') DateTime? createdAt,
-    @JsonKey(name: 'user_name') String? userName,
-    @JsonKey(name: 'user_initials') String? userInitials,
-  }) = _CustomerRequest;
+  CustomerRequest({required this.id, required this.title, this.description, required this.categoryId, this.categoryName, required this.status, required this.latitude, required this.longitude, this.radiusKm = 15, this.offersCount = 0, this.expiresAt, this.createdAt, this.userName, this.userInitials});
 
-  factory CustomerRequest.fromJson(Map<String, dynamic> json) => _$CustomerRequestFromJson(json);
-}
+  factory CustomerRequest.fromJson(Map<String, dynamic> json) => CustomerRequest(
+    id: json['id']?.toString() ?? '', title: json['title']?.toString() ?? '',
+    description: json['description']?.toString(), categoryId: json['category_id'] ?? 0,
+    categoryName: json['category']?['name']?.toString(),
+    status: json['status']?.toString() ?? 'open',
+    latitude: (json['latitude'] as num?)?.toDouble() ?? 0, longitude: (json['longitude'] as num?)?.toDouble() ?? 0,
+    radiusKm: (json['radius_km'] as num?)?.toDouble() ?? 15, offersCount: json['offers_count'] ?? 0,
+    expiresAt: json['expires_at'] != null ? DateTime.tryParse(json['expires_at'].toString()) : null,
+    createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at'].toString()) : null,
+    userName: json['user']?['name']?.toString(), userInitials: json['user']?['initials']?.toString(),
+  );
 
-extension CustomerRequestX on CustomerRequest {
   bool get isExpired => expiresAt != null && expiresAt!.isBefore(DateTime.now());
   String get timeLeft {
     if (expiresAt == null) return '';

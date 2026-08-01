@@ -1,22 +1,19 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
-part 'dashboard.freezed.dart';
-part 'dashboard.g.dart';
+class StoreDashboard {
+  final int totalListings, totalOrders, completedOrders, pendingOrders;
+  final double totalRevenue, avgRating;
+  final int totalReviews, ordersThisMonth;
+  final double revenueThisMonth;
+  final bool isVerified, isActive;
 
-@freezed
-class StoreDashboard with _$StoreDashboard {
-  const factory StoreDashboard({
-    @JsonKey(name: 'total_listings') @Default(0) int totalListings,
-    @JsonKey(name: 'total_orders') @Default(0) int totalOrders,
-    @JsonKey(name: 'completed_orders') @Default(0) int completedOrders,
-    @JsonKey(name: 'pending_orders') @Default(0) int pendingOrders,
-    @JsonKey(name: 'total_revenue') @Default(0) double totalRevenue,
-    @JsonKey(name: 'avg_rating') @Default(0) double avgRating,
-    @JsonKey(name: 'total_reviews') @Default(0) int totalReviews,
-    @JsonKey(name: 'orders_this_month') @Default(0) int ordersThisMonth,
-    @JsonKey(name: 'revenue_this_month') @Default(0) double revenueThisMonth,
-    @JsonKey(name: 'is_verified') @Default(false) bool isVerified,
-    @JsonKey(name: 'is_active') @Default(true) bool isActive,
-  }) = _StoreDashboard;
+  StoreDashboard({this.totalListings = 0, this.totalOrders = 0, this.completedOrders = 0, this.pendingOrders = 0, this.totalRevenue = 0, this.avgRating = 0, this.totalReviews = 0, this.ordersThisMonth = 0, this.revenueThisMonth = 0, this.isVerified = false, this.isActive = true});
 
-  factory StoreDashboard.fromJson(Map<String, dynamic> json) => _$StoreDashboardFromJson(json);
+  factory StoreDashboard.fromJson(Map<String, dynamic> json) => StoreDashboard(
+    totalListings: json['total_listings'] ?? 0, totalOrders: json['total_orders'] ?? 0,
+    completedOrders: json['completed_orders'] ?? 0, pendingOrders: json['pending_orders'] ?? 0,
+    totalRevenue: (json['total_revenue'] as num?)?.toDouble() ?? 0,
+    avgRating: (json['avg_rating'] as num?)?.toDouble() ?? 0,
+    totalReviews: json['total_reviews'] ?? 0, ordersThisMonth: json['orders_this_month'] ?? 0,
+    revenueThisMonth: (json['revenue_this_month'] as num?)?.toDouble() ?? 0,
+    isVerified: json['is_verified'] ?? false, isActive: json['is_active'] ?? true,
+  );
 }

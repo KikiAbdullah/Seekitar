@@ -1,33 +1,35 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
-part 'conversation.freezed.dart';
-part 'conversation.g.dart';
+class Conversation {
+  final String id;
+  final String? orderId, lastMessage;
+  final DateTime? lastMessageAt;
+  final String? otherUserName, otherUserAvatar;
+  final bool hasUnread;
 
-@freezed
-class Conversation with _$Conversation {
-  const factory Conversation({
-    required String id,
-    @JsonKey(name: 'order_id') String? orderId,
-    @JsonKey(name: 'last_message') String? lastMessage,
-    @JsonKey(name: 'last_message_at') DateTime? lastMessageAt,
-    @JsonKey(name: 'other_user_name') String? otherUserName,
-    @JsonKey(name: 'other_user_avatar') String? otherUserAvatar,
-    @JsonKey(name: 'has_unread') @Default(false) bool hasUnread,
-  }) = _Conversation;
+  Conversation({required this.id, this.orderId, this.lastMessage, this.lastMessageAt, this.otherUserName, this.otherUserAvatar, this.hasUnread = false});
 
-  factory Conversation.fromJson(Map<String, dynamic> json) => _$ConversationFromJson(json);
+  factory Conversation.fromJson(Map<String, dynamic> json) => Conversation(
+    id: json['id']?.toString() ?? '', orderId: json['order_id']?.toString(),
+    lastMessage: json['last_message']?['message']?.toString(),
+    lastMessageAt: json['last_message']?['created_at'] != null ? DateTime.tryParse(json['last_message']['created_at'].toString()) : null,
+    otherUserName: ((json['participants'] as List?)?.firstWhere((p) => p['user_id'] != null, orElse: () => null) as Map?)?['user']?['name']?.toString(),
+    otherUserAvatar: ((json['participants'] as List?)?.firstWhere((p) => p['user_id'] != null, orElse: () => null) as Map?)?['user']?['avatar_url']?.toString(),
+    hasUnread: json['has_unread'] ?? false,
+  );
 }
 
-@freezed
-class ChatMessage with _$ChatMessage {
-  const factory ChatMessage({
-    required String id,
-    @JsonKey(name: 'sender_id') required String senderId,
-    String? message,
-    @JsonKey(name: 'attachment_url') String? attachmentUrl,
-    @JsonKey(name: 'message_type') @Default('text') String messageType,
-    required DateTime createdAt,
-    @Default(false) bool isMine,
-  }) = _ChatMessage;
+class ChatMessage {
+  final String id, senderId;
+  final String? message, attachmentUrl;
+  final String messageType;
+  final DateTime createdAt;
+  final bool isMine;
 
-  factory ChatMessage.fromJson(Map<String, dynamic> json) => _$ChatMessageFromJson(json);
+  ChatMessage({required this.id, required this.senderId, this.message, this.attachmentUrl, this.messageType = 'text', required this.createdAt, this.isMine = false});
+
+  factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
+    id: json['id']?.toString() ?? '', senderId: json['sender_id']?.toString() ?? '',
+    message: json['message']?.toString(), attachmentUrl: json['attachment_url']?.toString(),
+    messageType: json['message_type']?.toString() ?? 'text',
+    createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
+  );
 }

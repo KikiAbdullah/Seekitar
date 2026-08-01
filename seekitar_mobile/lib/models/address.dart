@@ -1,18 +1,14 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
-part 'address.freezed.dart';
-part 'address.g.dart';
+class UserAddress {
+  final String id, label, address;
+  final String? note;
+  final double latitude, longitude;
+  final bool isDefault;
+  UserAddress({required this.id, required this.label, required this.address, this.note, required this.latitude, required this.longitude, this.isDefault = false});
 
-@freezed
-class UserAddress with _$UserAddress {
-  const factory UserAddress({
-    required String id,
-    required String label,
-    required String address,
-    String? note,
-    required double latitude,
-    required double longitude,
-    @JsonKey(name: 'is_default') @Default(false) bool isDefault,
-  }) = _UserAddress;
-
-  factory UserAddress.fromJson(Map<String, dynamic> json) => _$UserAddressFromJson(json);
+  factory UserAddress.fromJson(Map<String, dynamic> json) => UserAddress(
+    id: json['id']?.toString() ?? '', label: json['label']?.toString() ?? '',
+    address: json['address']?.toString() ?? '', note: json['note']?.toString(),
+    latitude: (json['latitude'] as num?)?.toDouble() ?? 0, longitude: (json['longitude'] as num?)?.toDouble() ?? 0,
+    isDefault: json['is_default'] ?? false,
+  );
 }

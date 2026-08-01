@@ -1,34 +1,29 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
-part 'notification.freezed.dart';
-part 'notification.g.dart';
+class AppNotification {
+  final String id, type, title, body;
+  final String? dataId, dataType;
+  final DateTime? readAt;
+  final DateTime createdAt;
 
-@freezed
-class AppNotification with _$AppNotification {
-  const factory AppNotification({
-    required String id,
-    required String type,
-    required String title,
-    required String body,
-    @JsonKey(name: 'data_id') String? dataId,
-    @JsonKey(name: 'data_type') String? dataType,
-    @JsonKey(name: 'read_at') DateTime? readAt,
-    @JsonKey(name: 'created_at') required DateTime createdAt,
-  }) = _AppNotification;
+  AppNotification({required this.id, required this.type, required this.title, required this.body, this.dataId, this.dataType, this.readAt, required this.createdAt});
 
-  factory AppNotification.fromJson(Map<String, dynamic> json) => _$AppNotificationFromJson(json);
-
-  const AppNotification._();
+  factory AppNotification.fromJson(Map<String, dynamic> json) => AppNotification(
+    id: json['id']?.toString() ?? '', type: json['type']?.toString() ?? '',
+    title: json['title']?.toString() ?? '', body: json['body']?.toString() ?? '',
+    dataId: json['data_id']?.toString(), dataType: json['data_type']?.toString(),
+    readAt: json['read_at'] != null ? DateTime.tryParse(json['read_at'].toString()) : null,
+    createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
+  );
 
   bool get isRead => readAt != null;
 }
 
-@freezed
-class NotificationPreference with _$NotificationPreference {
-  const factory NotificationPreference({
-    required String key,
-    required String label,
-    @Default(true) bool enabled,
-  }) = _NotificationPreference;
+class NotificationPreference {
+  final String key, label;
+  bool enabled;
+  NotificationPreference({required this.key, required this.label, this.enabled = true});
 
-  factory NotificationPreference.fromJson(Map<String, dynamic> json) => _$NotificationPreferenceFromJson(json);
+  factory NotificationPreference.fromJson(Map<String, dynamic> json) => NotificationPreference(
+    key: json['key']?.toString() ?? '', label: json['label']?.toString() ?? '',
+    enabled: json['enabled'] ?? true,
+  );
 }
