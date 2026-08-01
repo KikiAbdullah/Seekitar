@@ -69,9 +69,9 @@
               <thead>
                 <tr>
                   <th style="display:none">ID</th>
-                  <th>Listing</th>
-                  <th>Penawar</th>
-                  <th>Jumlah Tawaran</th>
+                  <th>Permintaan</th>
+                  <th>Toko Penawar</th>
+                  <th>Total Tawaran</th>
                   <th>Status</th>
                   <th>Berakhir</th>
                   <th>Dibuat</th>
@@ -100,13 +100,9 @@
         },
         columns: [
           { data: 'id', name: 'id', visible: false },
-          { data: 'listing', name: 'listing.title' },
-          { data: 'buyer_name', name: 'buyer.name' },
-          { data: 'amount', name: 'amount',
-            render: function(data, type, row) {
-              return '<span class="fw-semibold text-nowrap">Rp ' + data.toLocaleString('id-ID') + '</span>';
-            }
-          },
+          { data: 'request_title', name: 'request.title' },
+          { data: 'store_name', name: 'store.name' },
+          { data: 'total', name: 'total' },
           { data: 'status', name: 'status' },
           { data: 'expires_at', name: 'expires_at' },
           { data: 'created_at', name: 'created_at' },

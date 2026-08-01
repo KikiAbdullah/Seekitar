@@ -40,6 +40,14 @@
                   <i class="ti ti-search" aria-hidden="true"></i>
                   <span>Detail</span>
                 </a>
+                <form id="action-extend" method="POST" action="#" class="d-none d-inline">
+                  @csrf
+                  <button type="submit" class="btn btn-outline-warning table-action-btn" title="Perpanjang 24 Jam"
+                          onclick="return confirm('Perpanjang masa aktif permintaan ini 24 jam?');">
+                    <i class="ti ti-clock" aria-hidden="true"></i>
+                    <span>Perpanjang</span>
+                  </button>
+                </form>
                 @endcan
               </div>
             </div>
@@ -57,6 +65,15 @@
                   @endforeach
                 </select>
               </div>
+              <div>
+                <label for="filter-category" class="visually-hidden">Saring kategori</label>
+                <select class="form-select js-select2" id="filter-category">
+                  <option value="">Semua Kategori</option>
+                  @foreach ($categories as $category)
+                    <option value="{{ $category->id }}">{{ $category->name }}</option>
+                  @endforeach
+                </select>
+              </div>
             </div>
           </div>
           <div class="table-responsive">
@@ -67,10 +84,8 @@
                   <th>Judul Permintaan</th>
                   <th>Peminta</th>
                   <th>Budget</th>
-                  <th>Kategori</th>
-                  <th>Penawaran</th>
                   <th>Status</th>
-                  <th>Dibuat</th>
+                  <th>Berakhir</th>
                 </tr>
               </thead>
             </table>
@@ -92,6 +107,7 @@
           url: "{{ route('admin.requests.data') }}",
           data: function (d) {
             d.status = $('#filter-status').val();
+            d.category_id = $('#filter-category').val();
           }
         },
         columns: [
@@ -99,12 +115,11 @@
           { data: 'title', name: 'title' },
           { data: 'buyer_name', name: 'buyer.name' },
           { data: 'budget', name: 'budget' },
-          { data: 'category_name', name: 'category.name' },
-          { data: 'offers_count', name: 'offers_count', searchable: false },
           { data: 'status', name: 'status' },
-          { data: 'created_at', name: 'created_at' },
+          { data: 'expires_at', name: 'expires_at' },
+          { data: 'status_value', name: 'status', visible: false, searchable: false, sortable: false },
         ],
-        order: [[7, 'desc']],
+        order: [[5, 'desc']],
         dom: "<'d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3'f<'.dt-filters'>>rt<'d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3'<'d-flex align-items-center gap-2'l><'d-flex align-items-center gap-2'i><'d-flex align-items-center gap-2'p>>",
         initComplete: function () {
           var $slot = $('#requests-table_wrapper').find('.dt-filters');
@@ -139,6 +154,13 @@
           var baseUrl = "{{ url('admin/requests') }}";
           @can('manage-requests')
           $('#action-show').attr('href', baseUrl + '/' + selectedRow.id);
+          if (selectedRow.status_value === 'closed') {
+            $('#action-extend').addClass('d-none');
+          } else {
+            $('#action-extend')
+              .removeClass('d-none')
+              .attr('action', baseUrl + '/' + selectedRow.id + '/extend');
+          }
           @endcan
           
           $('#table-actions').removeClass('d-none');
@@ -146,6 +168,9 @@
       });
 
       $('#filter-status').change(function(){
+        table.draw();
+      });
+      $('#filter-category').change(function(){
         table.draw();
       });
     });

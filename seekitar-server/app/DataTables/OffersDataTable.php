@@ -31,10 +31,8 @@ class OffersDataTable
                 (int) $o->price + (int) $o->additional_cost, 0, ',', '.'
             ))
             ->editColumn('status', fn (Offer $o) => $o->status?->label() ?? '—')
-            ->addColumn('action', fn (Offer $o) => view('admin.offers._actions', ['offer' => $o])->render())
             ->editColumn('expires_at', fn (Offer $o) => $o->expires_at?->format('d M Y H:i'))
             ->editColumn('created_at', fn (Offer $o) => $o->created_at?->format('d M Y'))
-            ->rawColumns(['action'])
             ->toJson();
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\DataTables\CustomerRequestsDataTable;
 use App\Enums\RequestStatus;
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\CustomerRequest;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -15,7 +16,9 @@ class CustomerRequestController extends Controller
 {
     public function index(): View
     {
-        return view('admin.requests.index');
+        return view('admin.requests.index', [
+            'categories' => Category::orderBy('name')->get(['id', 'name']),
+        ]);
     }
 
     public function data(Request $request, CustomerRequestsDataTable $table): JsonResponse

@@ -47,15 +47,9 @@ class UsersDataTable
             // Lencana kedudukan dirender Blade supaya warna enum tidak
             // diduplikasi di PHP — satu sumber: UserStatus::color().
             ->editColumn('status', fn (User $u) => view('admin.users._status', ['user' => $u])->render())
-            // Bilah aksi baris terpilih: HTML dikirim server (dengan @can
-            // di partial-nya), bukan dirakit ulang di browser.
-            ->addColumn('action', fn (User $u) => view('admin.users._actions', ['user' => $u])->render())
-
             // Kolom hasil render HTML tidak boleh di-escape ulang; sisanya
             // TETAP di-escape oleh Blade.
-            ->rawColumns(['name', 'status', 'action'])
-            // Kolom aksi tidak mewakili data, jadi mengurutkannya tidak
-            // bermakna dan hanya menghasilkan SQL yang salah.
+            ->rawColumns(['name', 'status'])
             ->toJson();
     }
 }

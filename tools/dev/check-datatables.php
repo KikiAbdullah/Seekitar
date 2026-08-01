@@ -91,12 +91,15 @@ $diharapkan = [
  */
 foreach ($diharapkan as $kelas => &$info) {
     $view = $root.'/resources/views/'.$info['view'];
-    preg_match_all("/'data'\\s*=>\\s*'([a-z0-9_]+)'/", file_get_contents($view), $k);
-    if (! $k[1]) {
+    // Kolom bisa ditulis gaya lama ('data' => 'x') maupun gaya inline
+    // ({ data: 'x' }) — keduanya dipakai di repo.
+    preg_match_all("/'data'\\s*=>\\s*'([a-z0-9_]+)'|\\bdata:\\s*'([a-z0-9_]+)'/", file_get_contents($view), $k);
+    $namaKolom = array_values(array_filter(array_merge($k[1], $k[2]), fn ($v) => $v !== ''));
+    if (! $namaKolom) {
         $gagal(class_basename($kelas).": tidak ada kolom 'data' yang terbaca di {$info['view']}");
         $info['kolom'] = [];
     } else {
-        $info['kolom'] = array_values(array_unique($k[1]));
+        $info['kolom'] = array_values(array_unique($namaKolom));
     }
 }
 unset($info);

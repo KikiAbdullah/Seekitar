@@ -26,10 +26,7 @@ class ReviewsDataTable
             // lain di aplikasi (PRD §5.2.3).
             ->addColumn('reviewer_name', fn (Review $r) => $r->reviewer?->displayName() ?? '—')
             ->editColumn('direction', fn (Review $r) => $r->direction?->value)
-            ->addColumn('action', fn (Review $r) => view('admin.reviews._actions', ['review' => $r])->render())
             ->editColumn('created_at', fn (Review $r) => $r->created_at?->format('d M Y'))
-
-            ->rawColumns(['action'])
             ->toJson();
     }
 }
