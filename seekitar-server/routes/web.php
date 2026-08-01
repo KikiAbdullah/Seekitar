@@ -34,6 +34,7 @@ Route::name('web.')->group(function (): void {
 
     // --- Katalog publik -----------------------------------------------------
     Route::get('/cari', [PageController::class, 'listings'])->name('listings');
+    Route::get('/listing/{listing}', [PageController::class, 'show'])->name('listing.show');
 
     // --- Halaman legal (wajib) -------------------------------------------
     Route::get('/kebijakan-privasi', [PageController::class, 'privacy'])->name('privacy');

@@ -201,7 +201,9 @@
                 </span>
               </div>
               <div class="card-body p-4 d-flex flex-column">
-                <h5 class="fs-5 fw-semibold mb-1">{{ Str::limit($listing->title, 42) }}</h5>
+                <h5 class="fs-5 fw-semibold mb-1">
+                  <a href="{{ route('web.listing.show', $listing) }}" class="text-decoration-none text-reset stretched-link">{{ Str::limit($listing->title, 42) }}</a>
+                </h5>
                 <p class="mb-2 fs-3 text-muted d-flex align-items-center gap-1">
                   <i class="ti ti-building-store"></i>
                   {{ $listing->store?->name }}
