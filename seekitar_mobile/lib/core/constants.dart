@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppConstants {
   static const String appName = 'Seekitar';
-  static const String baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://10.0.2.2:8000/api/v1');
+  static const String baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://192.168.0.101:8000/api/v1');
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 15);
   static const int maxRetries = 2;
@@ -25,8 +25,16 @@ class AppConstants {
     return {'menunggu_konfirmasi': 'Menunggu', 'diproses': 'Diproses', 'dikirim': 'Dikirim', 'selesai': 'Selesai', 'dibatalkan': 'Dibatalkan', 'dispute': 'Sengketa'}[s] ?? s;
   }
 
+  static String paymentMethodLabel(String? s) {
+    return {'cod': 'Bayar di Tempat (COD)', 'transfer': 'Transfer Bank'}[s] ?? 'Tidak ditentukan';
+  }
+
+  static String deliveryMethodLabel(String? s) {
+    return {'pickup': 'Ambil di Tempat', 'delivery': 'Diantar Penjual'}[s] ?? 'Tidak ditentukan';
+  }
+
   static Color orderStatusColor(String s) {
-    return {'menunggu_konfirmasi': Colors.orange, 'diproses': Colors.blue, 'selesai': Colors.green, 'dibatalkan': Colors.red, 'dispute': Colors.red.shade700}[s] ?? Colors.grey;
+    return {'menunggu_konfirmasi': Colors.orange, 'diproses': Colors.blue, 'dikirim': Colors.blue.shade600, 'selesai': Colors.green, 'dibatalkan': Colors.red, 'dispute': Colors.red.shade700}[s] ?? Colors.grey;
   }
 }
 

@@ -17,6 +17,10 @@ class StoreResource extends JsonResource
         return [
             'id'    => $this->id,
             'name'  => $this->name,
+            // Pemilik toko — dipakai pembeli untuk memulai percakapan
+            // (postingan chat butuh participant_id pengguna). Publik seperti
+            // data toko lainnya.
+            'owner_id' => $this->user_id,
             // Foto etalase — publik oleh desain, seperti avatar pengguna.
             'photo' => $this->photo,
 

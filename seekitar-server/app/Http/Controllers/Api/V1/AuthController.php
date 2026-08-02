@@ -59,7 +59,7 @@ class AuthController extends Controller
             return $this->fail('Gagal mengirim OTP. Coba lagi sesaat lagi.', 503);
         }
 
-        return $this->ok(null, 'OTP telah dikirim ke WhatsApp Anda.');
+        return $this->ok($this->debugOtpPayload($code), 'OTP telah dikirim ke WhatsApp Anda.');
     }
 
     /**
@@ -75,7 +75,7 @@ class AuthController extends Controller
     {
         $phone = $request->phone();
 
-        if (! $this->otp->verify($phone, $request->otp())) {
+        if (! $this->otpAccepted($phone, $request->otp())) {
             return $this->fail('Kode OTP salah atau sudah kedaluwarsa.', 422, [
                 'otp' => ['Kode OTP salah atau sudah kedaluwarsa.'],
             ]);
@@ -144,7 +144,7 @@ class AuthController extends Controller
             return $this->fail('Gagal mengirim OTP. Coba lagi sesaat lagi.', 503);
         }
 
-        return $this->ok(null, 'OTP telah dikirim ke nomor baru Anda.');
+        return $this->ok($this->debugOtpPayload($code), 'OTP telah dikirim ke nomor baru Anda.');
     }
 
     /**
@@ -154,7 +154,7 @@ class AuthController extends Controller
     {
         $phone = $request->phone();
 
-        if (! $this->otp->verify($phone, $request->otp())) {
+        if (! $this->otpAccepted($phone, $request->otp())) {
             return $this->fail('Kode OTP salah atau sudah kedaluwarsa.', 422, [
                 'otp' => ['Kode OTP salah atau sudah kedaluwarsa.'],
             ]);
@@ -286,5 +286,34 @@ class AuthController extends Controller
         }
 
         return $this->ok(null, 'Akun Anda telah dianonimkan sesuai permintaan.');
+    }
+
+    private function debugOtpPayload(string $code): ?array
+    {
+        if (app()->isProduction()) {
+            return null;
+        }
+
+        return [
+            'debug_otp' => $code,
+            'otp_delivery' => strtolower((string) env('OTP_DELIVERY', 'log')),
+        ];
+    }
+
+    /**
+     * Verifikasi OTP, dengan pintu darurat development.
+     *
+     * Di luar produksi (dummy mode, tanpa gateway WhatsApp sungguhan) kode
+     * apa pun yang lolos validasi `digits:6` diterima — supaya integrasi
+     * mobile ↔ Laravel bisa diuji end-to-end. Di produksi tetap diverifikasi
+     * ketat terhadap hash yang dikirim gateway.
+     */
+    private function otpAccepted(string $phone, string $code): bool
+    {
+        if ($this->otp->verify($phone, $code)) {
+            return true;
+        }
+
+        return ! app()->isProduction();
     }
 }

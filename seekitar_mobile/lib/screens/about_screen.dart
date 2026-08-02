@@ -83,7 +83,7 @@ class _AboutScreenState extends State<AboutScreen> {
   Widget _row(IconData icon, String label, String value, String link) => Padding(padding: const EdgeInsets.symmetric(vertical: 5), child: Row(children: [
     Icon(icon, size: 18, color: Colors.grey.shade500), const SizedBox(width: 8),
     SizedBox(width: 90, child: Text(label, style: TextStyle(color: Colors.grey.shade500, fontSize: 13))),
-    Expanded(child: GestureDetector(onTap: () => launchUrl(Uri.parse(link)), child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))))));
+    Expanded(child: GestureDetector(onTap: () => launchUrl(Uri.parse(link)), child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))))]));
 
   Widget _value(String title, String desc) => Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
     const Icon(Icons.check_circle, size: 18, color: Color(0xFF168A4A)), const SizedBox(width: 10),

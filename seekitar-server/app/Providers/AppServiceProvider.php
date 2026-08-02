@@ -21,6 +21,7 @@ use App\Services\CacheService;
 use App\Services\Contracts\NotificationSender;
 use App\Services\Contracts\WhatsAppGateway;
 use App\Services\Notifications\LogNotificationSender;
+use App\Services\WhatsApp\EmailOtpGateway;
 use App\Services\WhatsApp\KirimWaGateway;
 use App\Services\WhatsApp\LogWhatsAppGateway;
 use App\View\Composers\SidebarComposer;
@@ -46,7 +47,13 @@ class AppServiceProvider extends ServiceProvider
         // pengembang tidak butuh kredensial provider berbayar hanya untuk
         // bisa masuk (Server_Implementation_Guide.md §15.2).
         $this->app->bind(WhatsAppGateway::class, function () {
+            $delivery = strtolower((string) env('OTP_DELIVERY', 'log'));
+
             if (! $this->app->isProduction()) {
+                if ($delivery === 'email') {
+                    return new EmailOtpGateway();
+                }
+
                 return new LogWhatsAppGateway();
             }
 

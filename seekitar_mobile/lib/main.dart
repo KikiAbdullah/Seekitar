@@ -14,7 +14,7 @@ void main() {
   _setupErrorHandling();
   final app = AppState();
   app.init();
-  try { FcmService().init(); } catch (_) {}
+  FcmService().init().catchError((_) {});
   runApp(SeekitarApp(app: app));
 }
 

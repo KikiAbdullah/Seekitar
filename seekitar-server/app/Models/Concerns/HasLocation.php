@@ -107,12 +107,17 @@ trait HasLocation
      * Koordinat sebagai GeoJSON (API §12.3).
      *
      * GeoJSON selalu [longitude, latitude] — lihat RFC 7946. Nilainya
-     * diambil dari kolom hasil scopeWithCoordinates().
+     * diambil dari kolom hasil scopeWithCoordinates(). Kolom itu virtual
+     * (bukan bagian tabel), jadi `getAttribute()` bisa memicu
+     * MissingAttributeException saat model diambil tanpa scope tersebut —
+     * baca mentah dari $attributes supaya aman dan cukup kembalikan null.
      */
     public function coordinates(): ?array
     {
-        $lat = $this->getAttribute('latitude');
-        $lng = $this->getAttribute('longitude');
+        $attributes = $this->getAttributes();
+
+        $lat = $attributes['latitude'] ?? null;
+        $lng = $attributes['longitude'] ?? null;
 
         if ($lat === null || $lng === null) {
             return null;

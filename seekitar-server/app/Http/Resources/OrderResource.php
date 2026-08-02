@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\PaymentMethod;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -34,8 +35,25 @@ class OrderResource extends JsonResource
             'payment_method'  => $this->payment_method?->value,
             'delivery_method' => $this->delivery_method?->value,
 
+            // Rekening penjual — HANYA untuk pembeli, dan hanya saat metode
+            // bayar transfer. Pembeli butuh nomor ini untuk melakukan
+            // transfer; pembeli COD atau pemilik toko tidak melihatnya.
+            'bank_account' => $this->when(
+                $request->user()?->id === $this->buyer_id
+                    && $this->payment_method === PaymentMethod::Transfer,
+                $this->store?->bank_account,
+            ),
+            'bank_account_name' => $this->when(
+                $request->user()?->id === $this->buyer_id
+                    && $this->payment_method === PaymentMethod::Transfer,
+                $this->store?->bank_account_name,
+            ),
+
             'shipping_address'    => $this->shipping_address,
-            'payment_proof_url'   => $this->payment_proof_url,
+            // Nilai MENTAH, bukan accessor (accessor mengembalikan placeholder
+            // saat kosong). Klien butuh membedakan "belum ada bukti" (null)
+            // dari "sudah diunggah" untuk menampilkan aksi unggah.
+            'payment_proof_url'   => $this->getRawOriginal('payment_proof_url'),
             'payment_confirmed_at' => $this->payment_confirmed_at?->format('Y-m-d\TH:i:s\Z'),
 
             'notes' => $this->notes,

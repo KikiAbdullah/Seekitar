@@ -5,6 +5,8 @@ import '../models/listing.dart';
 import '../models/store.dart';
 import '../models/dashboard.dart';
 import '../services/api_compat.dart';
+import '../providers/app_state.dart';
+import 'package:provider/provider.dart';
 
 class CreateStoreScreen extends StatefulWidget { const CreateStoreScreen({super.key}); @override State<CreateStoreScreen> createState() => _CreateStoreScreenState(); }
 class _CreateStoreScreenState extends State<CreateStoreScreen> {
@@ -37,7 +39,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try { final sid = widget.store?.id ?? widget.storeId; final d = await _api.getStoreDashboard(sid); if (mounted) setState(() { _dash = d; _store = widget.store; _loading = false; }); }
-    catch (_) { if (mounted) setState(() => _loading = false); }
+    catch (_) { if (mounted) setState(() { _store = widget.store; _loading = false; }); }
   }
   Future<void> _deleteListing(Listing l) async {
     final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(title: const Text('Hapus Listing?'), content: Text('Hapus "${l.title}"?'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')), ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('Hapus'))]));
@@ -48,7 +50,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
     final d = _dash; final t = Theme.of(ctx); final name = _store?.name ?? 'Toko'; final sid = _store?.id ?? widget.storeId;
     return Scaffold(
       appBar: AppBar(title: Text(name)),
-      floatingActionButton: _store != null ? FloatingActionButton.extended(onPressed: () => ctx.push('/create-listing', extra: _store).then((_) => _load()), icon: const Icon(Icons.add), label: const Text('Pasang Listing'), backgroundColor: t.colorScheme.primary) : null,
+      floatingActionButton: _store?.ownerId == context.read<AppState>().user?.id && _store != null ? FloatingActionButton.extended(onPressed: () => ctx.push('/create-listing', extra: _store).then((_) => _load()), icon: const Icon(Icons.add), label: const Text('Pasang Listing'), backgroundColor: t.colorScheme.primary) : null,
       body: ListView(padding: const EdgeInsets.all(16), children: [
         Card(child: Padding(padding: const EdgeInsets.all(16), child: Row(children: [
           CircleAvatar(radius: 30, backgroundColor: Colors.green.shade50, child: Text(name.substring(0, 2).toUpperCase(), style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.bold))),

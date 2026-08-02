@@ -22,6 +22,7 @@ import '../screens/wallet_screen.dart';
 import '../screens/address_screen.dart';
 import '../screens/conversations_screen.dart';
 import '../models/conversation.dart';
+import '../models/store.dart';
 import '../models/order.dart';
 import '../screens/blocked_screen.dart';
 import '../screens/notif_prefs_screen.dart';
@@ -31,6 +32,8 @@ import '../screens/reviews_screen.dart';
 import '../screens/coupon_screen.dart';
 import '../screens/settings_full_screen.dart';
 import '../screens/about_screen.dart';
+import '../screens/checkout_screen.dart';
+import '../screens/order_detail_screen.dart';
 
 final _rootKey = GlobalKey<NavigatorState>();
 
@@ -55,7 +58,8 @@ final appRouter = GoRouter(
     GoRoute(path: '/create-listing', builder: (_, s) => CreateListingScreen(store: s.extra as dynamic)),
     GoRoute(path: '/request/:id', builder: (_, s) => RequestDetailScreen(requestId: s.pathParameters['id']!)),
     GoRoute(path: '/create-request', builder: (_, __) => const CreateRequestScreen()),
-    GoRoute(path: '/order-detail', builder: (_, s) => OrdDetail(order: s.extra as Order)),
+    GoRoute(path: '/order-detail/:id', builder: (_, s) => OrderDetailScreen(orderId: s.pathParameters['id']!, order: s.extra as Order?)),
+    GoRoute(path: '/checkout', builder: (_, s) => CheckoutScreen(listing: s.extra as dynamic)),
     GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
     GoRoute(path: '/favorites', builder: (_, __) => const FavoritesScreen()),
     GoRoute(path: '/wallet', builder: (_, __) => const WalletScreen()),
@@ -65,12 +69,13 @@ final appRouter = GoRouter(
     GoRoute(path: '/blocked', builder: (_, __) => const BlockedUsersScreen()),
     GoRoute(path: '/notif-prefs', builder: (_, __) => const NotifPrefsScreen()),
     GoRoute(path: '/create-store', builder: (_, __) => const CreateStoreScreen()),
-    GoRoute(path: '/store/:id/dashboard', builder: (_, s) => StoreDashboardScreen(storeId: s.pathParameters['id']!)),
+    GoRoute(path: '/store/:id/dashboard', builder: (_, s) => StoreDashboardScreen(storeId: s.pathParameters['id']!, store: s.extra as Store?)),
     GoRoute(path: '/store/:id/reviews', builder: (_, s) => StoreReviewsScreen(storeId: s.pathParameters['id']!, storeName: s.extra?.toString() ?? 'Toko')),
     GoRoute(path: '/verification', builder: (_, __) => const VerificationScreen()),
     GoRoute(path: '/coupon', builder: (_, s) { final a = s.extra as Map<String,dynamic>?; return CouponScreen(orderTotal: (a?['total'] as num?)?.toDouble() ?? 0, orderId: a?['orderId']?.toString() ?? ''); }),
     GoRoute(path: '/settings', builder: (_, __) => const FullSettingsScreen()),
     GoRoute(path: '/categories', builder: (_, __) => const CategoryBrowseScreen()),
+    GoRoute(path: '/category-search', builder: (_, s) => SearchScreen(category: int.tryParse(s.uri.queryParameters['id'] ?? ''), label: s.uri.queryParameters['label'] ?? 'Cari', showAppBar: true)),
     GoRoute(path: '/stores-nearby', builder: (_, __) => const StoresNearbyScreen()),
     GoRoute(path: '/about', builder: (_, __) => const AboutScreen()),
     GoRoute(path: '/help-legal', builder: (_, __) => const HelpLegalScreen()),

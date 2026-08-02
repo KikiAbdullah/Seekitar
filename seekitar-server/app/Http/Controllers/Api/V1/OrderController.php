@@ -232,4 +232,26 @@ class OrderController extends Controller
 
         return $this->created(['dispute' => new DisputeResource($dispute)]);
     }
+
+    /**
+     * GET /orders/{order}/payment-proof
+     *
+     * Sajikan bukti bayar dari disk privat (local) ke pembeli/penjual yang
+     * terlibat dalam transaksi. Berkas tidak boleh diakses publik — route
+     * ini adalah satu-satunya jalan untuk melihatnya dari aplikasi.
+     */
+    public function paymentProof(Order $order): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $this->authorize('view', $order);
+
+        $path = $order->getRawOriginal('payment_proof_url');
+
+        abort_if($path === null || ! Storage::disk('local')->exists($path), 404);
+
+        $response = Storage::disk('local')->response($path);
+        $response->headers->set('Content-Type', Storage::disk('local')->mimeType($path));
+        $response->headers->set('Content-Disposition', 'inline');
+
+        return $response;
+    }
 }

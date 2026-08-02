@@ -49,7 +49,7 @@ class ApiProvider {
   // ─── Listings ───
   Future<List<Listing>> getListings({required double lat, required double lng, double? radius, int? category, String? type, String? keyword, String sort = 'nearest', int page = 1}) async {
     final r = await _api.listings(lat: lat, lng: lng, radius: radius, category: category, type: type, keyword: keyword, sort: sort, page: page);
-    return (r['data'] as List?)?.map((l) => Listing.fromJson(l as Map<String,dynamic>)).toList() ?? [];
+    return (r as List?)?.map((l) => Listing.fromJson(l as Map<String,dynamic>)).toList() ?? [];
   }
   Future<Listing> getListing(String id) async { final r = await _api.listingDetail(id); return Listing.fromJson(r['listing'] as Map<String,dynamic>); }
   Future<Listing> createListing(Map<String,dynamic> body) async { final r = await _api.createListing(body); return Listing.fromJson(r['listing'] as Map<String,dynamic>); }
@@ -60,25 +60,25 @@ class ApiProvider {
   // ─── Stores ───
   Future<List<Store>> nearbyStores({required double lat, required double lng, double? radius, String? type}) async {
     final r = await _api.nearbyStores(lat: lat, lng: lng, radius: radius, type: type);
-    return (r['data'] as List?)?.map((s) => Store.fromJson(s as Map<String,dynamic>)).toList() ?? [];
+    return (r as List?)?.map((s) => Store.fromJson(s as Map<String,dynamic>)).toList() ?? [];
   }
   Future<List<Store>> mine() async {
     final r = await _api.mineStores();
-    return (r['data'] as List?)?.map((s) => Store.fromJson(s as Map<String,dynamic>)).toList() ?? [];
+    return (r as List?)?.map((s) => Store.fromJson(s as Map<String,dynamic>)).toList() ?? [];
   }
   Future<Store> getStore(String id) async { final r = await _api.storeDetail(id); return Store.fromJson(r['store'] as Map<String,dynamic>); }
   Future<Store> createStore(Map<String,dynamic> body) async { final r = await _api.createStore(body); return Store.fromJson(r['store'] as Map<String,dynamic>); }
   Future<Store> updateStore(String id, Map<String,dynamic> body) async { final r = await _api.updateStore(id, body); return Store.fromJson(r['store'] as Map<String,dynamic>); }
   Future<List<Review>> getStoreReviews(String id) async {
     final r = await _api.storeReviews(id);
-    return (r['data'] as List?)?.map((rv) => Review.fromJson(rv as Map<String,dynamic>)).toList() ?? [];
+    return (r as List?)?.map((rv) => Review.fromJson(rv as Map<String,dynamic>)).toList() ?? [];
   }
   Future<StoreDashboard> getStoreDashboard(String id) async { final r = await _api.storeDashboard(id); return StoreDashboard.fromJson(r); }
 
   // ─── Favorites ───
   Future<List<Listing>> getFavorites() async {
     final r = await _api.favorites();
-    return (r['data'] as List?)?.map((l) => Listing.fromJson(l as Map<String,dynamic>)).toList() ?? [];
+    return (r as List?)?.map((l) => Listing.fromJson(l as Map<String,dynamic>)).toList() ?? [];
   }
   Future<void> favoriteListing(String id) => _api.addFavorite(id);
   Future<void> unfavoriteListing(String id) => _api.removeFavorite(id);
@@ -86,7 +86,7 @@ class ApiProvider {
   // ─── Notifications ───
   Future<List<AppNotification>> getNotifications({int page = 1}) async {
     final r = await _api.notifications(page: page);
-    return (r['data'] as List?)?.map((n) => AppNotification.fromJson(n as Map<String,dynamic>)).toList() ?? [];
+    return (r as List?)?.map((n) => AppNotification.fromJson(n as Map<String,dynamic>)).toList() ?? [];
   }
   Future<int> unreadCount() async { final r = await _api.unreadCount(); return (r['count'] as num?)?.toInt() ?? 0; }
   Future<void> markRead(String id) => _api.markRead(id);
@@ -100,7 +100,7 @@ class ApiProvider {
   // ─── Conversations ───
   Future<List<Conversation>> getConversations() async {
     final r = await _api.conversations();
-    return (r['data'] as List?)?.map((c) => Conversation.fromJson(c as Map<String,dynamic>)).toList() ?? [];
+    return (r as List?)?.map((c) => Conversation.fromJson(c as Map<String,dynamic>)).toList() ?? [];
   }
   Future<Conversation> createConversation(String participantId, {String? orderId}) async {
     final r = await _api.createConversation({'participant_id': participantId, if (orderId != null) 'order_id': orderId});
@@ -108,7 +108,7 @@ class ApiProvider {
   }
   Future<List<ChatMessage>> getMessages(String convId, {int page = 1}) async {
     final r = await _api.messages(convId, page: page);
-    return (r['data'] as List?)?.map((m) => ChatMessage.fromJson(m as Map<String,dynamic>)).toList() ?? [];
+    return (r as List?)?.map((m) => ChatMessage.fromJson(m as Map<String,dynamic>)).toList() ?? [];
   }
   Future<ChatMessage> sendMessage(String convId, String message) async {
     final r = await _api.sendMessage(convId, message);
@@ -118,11 +118,11 @@ class ApiProvider {
   // ─── Requests ───
   Future<List<CustomerRequest>> getRequests({required double lat, required double lng}) async {
     final r = await _api.requests(lat: lat, lng: lng);
-    return (r['data'] as List?)?.map((x) => CustomerRequest.fromJson(x as Map<String,dynamic>)).toList() ?? [];
+    return (r as List?)?.map((x) => CustomerRequest.fromJson(x as Map<String,dynamic>)).toList() ?? [];
   }
   Future<List<CustomerRequest>> myRequests({String? status}) async {
     final r = await _api.myRequests(status: status);
-    return (r['data'] as List?)?.map((x) => CustomerRequest.fromJson(x as Map<String,dynamic>)).toList() ?? [];
+    return (r as List?)?.map((x) => CustomerRequest.fromJson(x as Map<String,dynamic>)).toList() ?? [];
   }
   Future<CustomerRequest> getRequest(String id) async { final r = await _api.requestDetail(id); return CustomerRequest.fromJson(r['request'] as Map<String,dynamic>); }
   Future<CustomerRequest> createRequest(Map<String,dynamic> body) async { final r = await _api.createRequest(body); return CustomerRequest.fromJson(r['request'] as Map<String,dynamic>); }
@@ -131,7 +131,7 @@ class ApiProvider {
   Future<CustomerRequest> extendRequest(String id) async { final r = await _api.extendRequest(id); return CustomerRequest.fromJson(r['request'] as Map<String,dynamic>); }
   Future<List<Offer>> getRequestOffers(String reqId, {String sort = 'cheapest'}) async {
     final r = await _api.requestOffers(reqId, sort: sort);
-    return (r['data'] as List?)?.map((o) => Offer.fromJson(o as Map<String,dynamic>)).toList() ?? [];
+    return (r as List?)?.map((o) => Offer.fromJson(o as Map<String,dynamic>)).toList() ?? [];
   }
 
   // ─── Offers ───
@@ -145,7 +145,7 @@ class ApiProvider {
   // ─── Orders ───
   Future<List<Order>> getOrders({String role = 'buyer', String? status}) async {
     final r = await _api.orders(role: role, status: status);
-    return (r['data'] as List?)?.map((o) => Order.fromJson(o as Map<String,dynamic>)).toList() ?? [];
+    return (r as List?)?.map((o) => Order.fromJson(o as Map<String,dynamic>)).toList() ?? [];
   }
   Future<Order> createOrder(Map<String,dynamic> body) async { final r = await _api.createOrder(body); return Order.fromJson(r['order'] as Map<String,dynamic>); }
   Future<Order> getOrder(String id) async { final r = await _api.orderDetail(id); return Order.fromJson(r['order'] as Map<String,dynamic>); }
@@ -164,15 +164,14 @@ class ApiProvider {
   Future<Wallet> getWallet() async { final r = await _api.wallet(); return Wallet.fromJson(r['wallet'] as Map<String,dynamic>); }
   Future<List<WalletTransaction>> getWalletTransactions() async {
     final r = await _api.walletTxs();
-    return (r['data'] as List?)?.map((t) => WalletTransaction.fromJson(t as Map<String,dynamic>)).toList() ?? [];
+    return (r as List?)?.map((t) => WalletTransaction.fromJson(t as Map<String,dynamic>)).toList() ?? [];
   }
   Future<WalletTransaction> topup(double amount) async { final r = await _api.topup(amount); return WalletTransaction.fromJson(r['transaction'] as Map<String,dynamic>); }
 
   // ─── Addresses ───
   Future<List<UserAddress>> getAddresses() async {
     final r = await _api.addresses();
-    if (r is List) return r.map((a) => UserAddress.fromJson(a as Map<String,dynamic>)).toList();
-    return (r['data'] as List?)?.map((a) => UserAddress.fromJson(a as Map<String,dynamic>)).toList() ?? [];
+    return (r as List).map((a) => UserAddress.fromJson(a as Map<String,dynamic>)).toList();
   }
   Future<UserAddress> createAddress(Map<String,dynamic> body) async { final r = await _api.createAddress(body); return UserAddress.fromJson(r); }
   Future<UserAddress> updateAddress(String id, Map<String,dynamic> body) async { final r = await _api.updateAddress(id, body); return UserAddress.fromJson(r); }
@@ -182,13 +181,16 @@ class ApiProvider {
   // ─── Block ───
   Future<List<Map<String,dynamic>>> getBlockedUsers() async {
     final r = await _api.blockedUsers();
-    return (r is List ? r : (r['data'] as List?) ?? []).cast<Map<String,dynamic>>();
+    return (r as List?)?.cast<Map<String,dynamic>>() ?? [];
   }
   Future<void> blockUser(String id) => _api.blockUser(id);
   Future<void> unblockUser(String id) => _api.unblockUser(id);
 
   // ─── Upload ───
   Future<Map<String,dynamic>> uploadImage(File file, {String purpose = 'listing'}) => _api.uploadImage(file, purpose: purpose);
+  Future<Map<String,dynamic>> validateCoupon(String code, double orderTotal) => _api.validateCoupon(code, orderTotal);
+  Future<Map<String,dynamic>> applyCoupon(String code, String orderId) => _api.applyCoupon(code, orderId);
+  Future<Map<String,dynamic>> uploadKtp(File ktpImage, File selfieImage, {String? nik}) => _api.uploadKtp(ktpImage, selfieImage, nik: nik);
 
   // ─── Reports ───
   Future<void> report(String targetType, String targetId, String reason, {String? description}) => _api.report({'target_type': targetType, 'target_id': targetId, 'reason': reason, if (description != null) 'description': description});

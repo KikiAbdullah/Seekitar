@@ -191,6 +191,12 @@ return [
             'driver' => 'eloquent',
             'model'  => App\Models\User::class,
         ],
+
+        'jwt' => Tymon\JWTAuth\Providers\JWT\Lcobucci::class,
+
+        'auth' => Tymon\JWTAuth\Providers\Auth\Illuminate::class,
+
+        'storage' => Tymon\JWTAuth\Providers\Storage\Illuminate::class,
     ],
 
 ];

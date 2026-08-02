@@ -44,7 +44,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         Padding(padding: const EdgeInsets.fromLTRB(24, 0, 24, 32), child: SizedBox(width: double.infinity, height: 56, child: ElevatedButton(onPressed: () {
           if (_page < _pages.length - 1) { _pageCtrl.animateToPage(_page + 1, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut); }
           else { _finish(); }
-        }, child: Text(_page < _pages.length - 1 ? 'Lanjut' : 'Mulai', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)))),
+        }, child: Text(_page < _pages.length - 1 ? 'Lanjut' : 'Mulai', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700))))),
       ])),
     );
   }

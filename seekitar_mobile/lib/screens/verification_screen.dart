@@ -40,23 +40,24 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
   @override Widget build(BuildContext ctx) {
     final t = Theme.of(ctx);
+    final body = _status == 'submitted'
+        ? Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(color: t.colorScheme.primary.withOpacity(0.08), borderRadius: BorderRadius.circular(28)),
+            child: Column(children: [
+              const Icon(Icons.check_circle, size: 72, color: Color(0xFF168A4A)),
+              const SizedBox(height: 20),
+              const Text('Berkas Terkirim!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 8),
+              Text('Admin akan meninjau identitasmu dalam 1x24 jam. Kamu akan mendapat notifikasi setelah selesai.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600, height: 1.5)),
+              const SizedBox(height: 24),
+              OutlinedButton(onPressed: () => Navigator.pop(context), child: const Text('Kembali')),
+            ]),
+          )
+        : _buildForm(t);
     return Scaffold(
       appBar: AppBar(title: const Text('Verifikasi Identitas')),
-      body: ListView(padding: const EdgeInsets.all(20), children: [
-        if (_status == 'submitted') ...[
-          Container(padding: const EdgeInsets.all(32), decoration: BoxDecoration(color: t.colorScheme.primary.withOpacity(0.08), borderRadius: BorderRadius.circular(28)), child: Column(children: [
-            const Icon(Icons.check_circle, size: 72, color: Color(0xFF168A4A)),
-            const SizedBox(height: 20),
-            const Text('Berkas Terkirim!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 8),
-            Text('Admin akan meninjau identitasmu dalam 1x24 jam. Kamu akan mendapat notifikasi setelah selesai.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600, height: 1.5)),
-            const SizedBox(height: 24),
-            OutlinedButton(onPressed: () => Navigator.pop(context), child: const Text('Kembali')),
-          ])),
-          return;
-        ],
-        _buildForm(t),
-      ]),
+      body: ListView(padding: const EdgeInsets.all(20), children: [body]),
     );
   }
 

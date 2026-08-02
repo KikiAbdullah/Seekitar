@@ -37,7 +37,7 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> requestOtp(String phone) => _api.requestOtp(phone);
+  Future<Map<String, dynamic>> requestOtp(String phone) => _api.requestOtp(phone);
 
   Future<Map<String, dynamic>> verifyOtp(String phone, String otp) async {
     final res = await _api.verifyOtp(phone, otp);

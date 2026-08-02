@@ -51,7 +51,7 @@ class _CategoryBrowseScreenState extends State<CategoryBrowseScreen> {
         leading: Container(width: 44, height: 44, decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.label, color: Colors.green, size: 22)),
         title: Text(sub.name, style: const TextStyle(fontWeight: FontWeight.w600)),
         trailing: const Icon(Icons.chevron_right, size: 18),
-        onTap: () {}, // Future: filter listings by this subcategory
+        onTap: () => ctx.push('/category-search?id=${sub.id}&label=${Uri.encodeComponent(sub.name)}'),
       )),
     ]);
   }

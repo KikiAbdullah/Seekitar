@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
+import '../models/category.dart';
 import '../models/customer_request.dart';
 import '../services/api_compat.dart';
 
@@ -14,6 +15,7 @@ class _RequestsScreenState extends State<RequestsScreen> with SingleTickerProvid
   late TabController _tabCtrl;
   List<CustomerRequest> _nearby = [], _mine = [];
   bool _loading = true;
+  BuildContext get ctx => context;
 
   @override void initState() { super.initState(); _tabCtrl = TabController(length: 2, vsync: this); _load(); }
 
@@ -21,9 +23,9 @@ class _RequestsScreenState extends State<RequestsScreen> with SingleTickerProvid
     setState(() => _loading = true);
     try {
       final pos = await Geolocator.getCurrentPosition();
-      final results = await Future.wait([_api.getRequests(lat: pos.latitude, lng: pos.longitude), _api.myRequests()]);
+      final results = await Future.wait<Object>([_api.getRequests(lat: pos.latitude, lng: pos.longitude), _api.myRequests()]);
       if (!mounted) return;
-      setState(() { _nearby = results[0]; _mine = results[1]; _loading = false; });
+      setState(() { _nearby = results[0] as List<CustomerRequest>; _mine = results[1] as List<CustomerRequest>; _loading = false; });
     } catch (_) { setState(() => _loading = false); }
   }
 
@@ -54,18 +56,49 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
   final _api = ApiProvider();
   final _titleCtrl = TextEditingController(), _descCtrl = TextEditingController();
   bool _loading = false;
+  List<Category> _cats = [];
+  int? _catId;
+  bool _catsLoading = true;
+
+  @override void initState() { super.initState(); _loadCats(); }
+
+  Future<void> _loadCats() async {
+    try {
+      final cats = await _api.getCategories();
+      if (mounted) setState(() { _cats = cats; _catId = cats.isNotEmpty ? cats.first.id : null; _catsLoading = false; });
+    } catch (_) { if (mounted) setState(() => _catsLoading = false); }
+  }
+
+  List<(int, String)> get _catOptions {
+    final out = <(int, String)>[];
+    for (final c in _cats) {
+      out.add((c.id, c.name));
+      for (final ch in c.children) out.add((ch.id, '  ${ch.name}'));
+    }
+    return out;
+  }
 
   Future<void> _submit() async {
+    if (_catId == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pilih kategori terlebih dahulu'))); return; }
     setState(() => _loading = true);
     try {
       final pos = await Geolocator.getCurrentPosition();
-      await _api.createRequest({'title': _titleCtrl.text, 'description': _descCtrl.text, 'latitude': pos.latitude, 'longitude': pos.longitude, 'radius_km': 15});
+      await _api.createRequest({'title': _titleCtrl.text, 'description': _descCtrl.text, 'category_id': _catId, 'latitude': pos.latitude, 'longitude': pos.longitude, 'radius_km': 15});
       if (mounted) Navigator.pop(context);
     } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()))); }
     setState(() => _loading = false);
   }
 
   @override Widget build(BuildContext ctx) => Scaffold(appBar: AppBar(title: const Text('Pasang Kebutuhan')), body: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
+    _catsLoading
+      ? const LinearProgressIndicator()
+      : DropdownButtonFormField<int>(
+          initialValue: _catId,
+          items: _catOptions.map((o) => DropdownMenuItem<int>(value: o.$1, child: Text(o.$2))).toList(),
+          onChanged: (v) => setState(() => _catId = v),
+          decoration: const InputDecoration(labelText: 'Kategori'),
+        ),
+    const SizedBox(height: 16),
     TextField(controller: _titleCtrl, decoration: const InputDecoration(labelText: 'Judul Kebutuhan', hintText: 'Cth: Cari tukang cat dinding')),
     const SizedBox(height: 16),
     TextField(controller: _descCtrl, maxLines: 4, decoration: const InputDecoration(labelText: 'Deskripsi', hintText: 'Jelaskan detail kebutuhanmu...')),

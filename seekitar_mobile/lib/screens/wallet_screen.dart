@@ -18,8 +18,10 @@ class _WalletScreenState extends State<WalletScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final r = await Future.wait([_api.getWallet(), _api.getWalletTransactions()]);
-      if (mounted) setState(() { _wallet = r[0]; _txs = r[1]; _loading = false; });
+      final results = await Future.wait<Object>([_api.getWallet(), _api.getWalletTransactions()]);
+      final wallet = results[0] as Wallet;
+      final txs = results[1] as List<WalletTransaction>;
+      if (mounted) setState(() { _wallet = wallet; _txs = txs; _loading = false; });
     } catch (_) { if (mounted) setState(() => _loading = false); }
   }
 

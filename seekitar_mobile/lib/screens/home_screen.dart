@@ -32,9 +32,9 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       final lRaw = res['listings'], rRaw = res['requests'];
       setState(() {
-        if (lRaw is Map && lRaw['data'] is List) _listings = (lRaw['data'] as List).map((d) => Listing.fromJson(d as Map<String,dynamic>)).toList();
-        if (rRaw is Map && rRaw['data'] is List) _requests = (rRaw['data'] as List).map((d) => CustomerRequest.fromJson(d as Map<String,dynamic>)).toList();
-        if (lRaw is Map) _listingCount = (lRaw['total'] as num?)?.toInt() ?? _listings.length;
+        if (lRaw is List) _listings = lRaw.map((d) => Listing.fromJson(d as Map<String,dynamic>)).toList();
+        if (rRaw is List) _requests = rRaw.map((d) => CustomerRequest.fromJson(d as Map<String,dynamic>)).toList();
+        if (lRaw is List) _listingCount = _listings.length;
         _loading = false;
       });
       _loadConfig();
@@ -52,7 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (p == LocationPermission.denied) p = await Geolocator.requestPermission();
       if (p == LocationPermission.denied || p == LocationPermission.deniedForever) throw '';
       return await Geolocator.getCurrentPosition();
-    } catch (_) { return const Position(latitude: -7.5, longitude: 112.0, timestamp: null, accuracy: 0, altitude: 0, altitudeAccuracy: 0, heading: 0, headingAccuracy: 0, speed: 0, speedAccuracy: 0); }
+    } catch (_) { return Position(latitude: -7.5, longitude: 112.0, timestamp: DateTime.now(), accuracy: 0, altitude: 0, altitudeAccuracy: 0, heading: 0, headingAccuracy: 0, speed: 0, speedAccuracy: 0); }
   }
 
   BuildContext get ctx => context;
@@ -189,7 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _sideCard(ThemeData t, IconData icon, String title, List<String> items, VoidCallback onTap) => GestureDetector(
     onTap: onTap,
-    child: Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10)])),
+    child: Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10)]),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Container(width: 40, height: 40, decoration: BoxDecoration(color: AppTheme.primarySubtle, borderRadius: BorderRadius.circular(12)), child: Icon(icon, size: 20, color: t.colorScheme.primary)),
       const SizedBox(height: 12),
@@ -202,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
       const SizedBox(height: 8),
       Align(alignment: Alignment.centerRight, child: Text('Lihat ›', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: t.colorScheme.primary))),
     ]),
-  );
+  ));
 
   // ── PLAY STORE CTA ──
   Widget _playStoreCta(ThemeData t) => Padding(

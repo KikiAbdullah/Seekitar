@@ -48,7 +48,9 @@ class DioClient {
           final refreshDio = Dio(BaseOptions(baseUrl: AppConstants.baseUrl));
           refreshDio.options.headers['Authorization'] = 'Bearer $_token';
           final res = await refreshDio.post('/auth/refresh');
-          final newToken = res.data['token'] as String;
+          final data = res.data is Map ? res.data['data'] : null;
+          final newToken = data is Map ? data['token']?.toString() : null;
+          if (newToken == null) throw Exception('Refresh gagal');
           await setToken(newToken);
           error.requestOptions.headers['Authorization'] = 'Bearer $newToken';
           final retry = await _dio.fetch(error.requestOptions);

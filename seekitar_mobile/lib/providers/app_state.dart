@@ -16,7 +16,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> init() => _auth.init();
 
-  Future<void> requestOtp(String phone) => _auth.requestOtp(phone);
+  Future<Map<String, dynamic>> requestOtp(String phone) => _auth.requestOtp(phone);
   Future<Map<String, dynamic>> verifyOtp(String phone, String otp) => _auth.verifyOtp(phone, otp);
   Future<void> logout() => _auth.logout();
   Future<void> updateProfile({String? name, String? address, double? lat, double? lng}) => _auth.updateProfile(name: name, address: address, lat: lat, lng: lng);

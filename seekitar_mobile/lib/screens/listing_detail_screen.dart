@@ -4,6 +4,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import '../core/theme.dart';
 import '../models/listing.dart';
+import '../models/store.dart';
 import '../services/api_compat.dart';
 
 class ListingDetailScreen extends StatefulWidget {
@@ -18,6 +19,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   final _api = ApiProvider();
   Listing? _detail;
   bool _loading = true;
+  bool _isMine = false;
+  bool _chatting = false;
   final _pageCtrl = PageController();
   int _imgIdx = 0;
   bool _reporting = false;
@@ -28,11 +31,42 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   String get _id => _detail?.id ?? widget.listingId;
 
   Future<void> _load() async {
-    if (widget.listing != null) { setState(() { _detail = widget.listing; _loading = false; }); return; }
+    if (widget.listing != null) { setState(() { _detail = widget.listing; _loading = false; }); _checkMine(); return; }
     setState(() => _loading = true);
-    try { final d = await _api.getListing(widget.listingId); setState(() { _detail = d; _loading = false; }); }
+    try { final d = await _api.getListing(widget.listingId); setState(() { _detail = d; _loading = false; }); _checkMine(); }
     catch (_) { setState(() => _loading = false); }
   }
+
+  Future<void> _checkMine() async {
+    try {
+      final stores = await _api.mine();
+      if (mounted) setState(() => _isMine = stores.any((s) => s.id == _detail?.storeId));
+    } catch (_) {}
+  }
+
+  Future<void> _chat() async {
+    final ownerId = _detail?.storeOwnerId;
+    if (ownerId == null || ownerId.isEmpty) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Toko belum dapat dihubungi.')));
+      return;
+    }
+    setState(() => _chatting = true);
+    try {
+      final conv = await _api.createConversation(ownerId);
+      if (mounted) ctx.push('/chat/${conv.id}', extra: conv);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e')));
+    }
+    if (mounted) setState(() => _chatting = false);
+  }
+
+  void _buy() {
+    final l = _detail;
+    if (l == null) return;
+    ctx.push('/checkout', extra: l);
+  }
+
+  BuildContext get ctx => context;
 
   Future<void> _share() async {
     try {
@@ -75,6 +109,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         IconButton(icon: const Icon(Icons.share), onPressed: _share),
         IconButton(icon: Icon(_reporting ? Icons.hourglass_empty : Icons.flag_outlined), onPressed: _reporting ? null : _report),
       ]),
+      bottomNavigationBar: _bottomBar(t),
       body: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         SizedBox(height: 280, child: l.images.isNotEmpty ? Stack(children: [
           PageView.builder(controller: _pageCtrl, onPageChanged: (i) => setState(() => _imgIdx = i), itemCount: l.images.length, itemBuilder: (_, i) => Image.network(l.images[i], width: double.infinity, fit: BoxFit.cover, errorBuilder: (_,__,___) => _galleryFallback())),
@@ -119,4 +154,20 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
 
   Widget _galleryFallback() => Container(height: 280, decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [AppTheme.heroGradientStart, AppTheme.primarySubtle])), child: const Center(child: Icon(Icons.image, size: 64, color: Color(0xFF168A4A))));
   Widget _row(IconData icon, String label, String value) => Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Row(children: [Icon(icon, size: 20, color: Colors.grey.shade500), const SizedBox(width: 10), Text(label, style: TextStyle(color: Colors.grey.shade600)), const Spacer(), Text(value, style: const TextStyle(fontWeight: FontWeight.w600))]));
+
+  Widget _bottomBar(ThemeData t) {
+    if (_isMine) {
+      return SafeArea(child: Padding(padding: const EdgeInsets.all(12), child: Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 14), decoration: BoxDecoration(color: AppTheme.primarySubtle, borderRadius: BorderRadius.circular(16)), child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.store, size: 18, color: Color(0xFF168A4A)), SizedBox(width: 8), Text('Ini listing milikmu', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF168A4A)))]))));
+    }
+    return SafeArea(child: Container(padding: const EdgeInsets.fromLTRB(16, 8, 16, 12), decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12)]), child: Row(children: [
+      OutlinedButton.icon(onPressed: _chatting ? null : _chat, icon: const Icon(Icons.chat_bubble_outline, size: 18), label: const Text('Chat'), style: OutlinedButton.styleFrom(minimumSize: const Size(96, 52))),
+      const SizedBox(width: 12),
+      Expanded(child: ElevatedButton.icon(
+        onPressed: _detail?.price == null ? null : _buy,
+        icon: const Icon(Icons.shopping_cart_outlined, size: 18),
+        label: Text(_detail?.price == null ? 'Hubungi Penjual' : 'Beli Sekarang'),
+        style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+      )),
+    ])));
+  }
 }

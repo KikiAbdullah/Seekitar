@@ -154,6 +154,7 @@ Route::prefix('v1')->group(function (): void {
             Route::get('orders/{order}', [OrderController::class, 'show']);
             Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus']);
             Route::post('orders/{order}/payment-proof', [OrderController::class, 'uploadPaymentProof']);
+            Route::get('orders/{order}/payment-proof', [OrderController::class, 'paymentProof']);
             Route::post('orders/{order}/review', [OrderController::class, 'review']);
             Route::post('orders/{order}/disputes', [OrderController::class, 'dispute']);
 

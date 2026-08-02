@@ -43,6 +43,10 @@ return [
         'token' => env('KIRIMWA_TOKEN'),
     ],
 
+    'otp_mail' => [
+        'to' => env('OTP_EMAIL_TO'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

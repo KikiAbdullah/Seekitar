@@ -12,6 +12,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   final _phoneCtrl = TextEditingController(), _otpCtrl = TextEditingController();
   bool _otpSent = false, _loading = false;
   String? _error;
+  String? _debugOtp;
   int _countdown = 0;
   late final AnimationController _anim;
   late final Animation<double> _slide;
@@ -30,8 +31,21 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   Future<void> _sendOtp() async {
     final p = _phoneCtrl.text.trim();
     if (p.length < 10) { setState(() => _error = 'Masukkan nomor WhatsApp yang valid'); return; }
-    setState(() { _loading = true; _error = null; });
-    try { await context.read<AppState>().requestOtp(p); if (mounted) { setState(() => _otpSent = true); _startCountdown(); } }
+    setState(() { _loading = true; _error = null; _debugOtp = null; });
+    try {
+      final res = await context.read<AppState>().requestOtp(p);
+      if (mounted) {
+        final debugOtp = res['debug_otp']?.toString();
+        setState(() {
+          _otpSent = true;
+          _debugOtp = debugOtp;
+          if (debugOtp != null && debugOtp.isNotEmpty) {
+            _otpCtrl.text = debugOtp;
+          }
+        });
+        _startCountdown();
+      }
+    }
     catch (e) { if (mounted) setState(() => _error = e.toString().replaceAll('Exception: ', '')); }
     if (mounted) setState(() => _loading = false);
   }
@@ -70,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       const SizedBox(height: 28),
                       Text('Selamat datang\ndi Seekitar', textAlign: TextAlign.center, style: t.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900, height: 1.15, letterSpacing: -0.5)),
                       const SizedBox(height: 8),
-                      Text('Masuk dengan nomor WhatsApp.\nTanpa kata sandi.', textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: Colors.grey.shade500, height: 1.4)),
+                      Text('Masuk dengan nomor WhatsApp.\nOTP dikirim dari server Laravel aktif.', textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: Colors.grey.shade500, height: 1.4)),
                       const SizedBox(height: 40),
 
                       // Phone field
@@ -108,6 +122,18 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             ),
                           ),
                         ),
+                        if (_debugOtp != null) ...[
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(color: Colors.amber.shade50, borderRadius: BorderRadius.circular(16)),
+                            child: Row(children: [
+                              Icon(Icons.science_outlined, size: 18, color: Colors.orange.shade700),
+                              const SizedBox(width: 10),
+                              Expanded(child: Text('Mode dummy aktif. OTP development: $_debugOtp', style: TextStyle(color: Colors.orange.shade800, fontSize: 13, fontWeight: FontWeight.w600))),
+                            ]),
+                          ),
+                        ],
                         const SizedBox(height: 8),
                         Align(alignment: Alignment.centerRight, child: TextButton(
                           onPressed: _countdown > 0 ? null : () { setState(() => _otpSent = false); _otpCtrl.clear(); _sendOtp(); },
