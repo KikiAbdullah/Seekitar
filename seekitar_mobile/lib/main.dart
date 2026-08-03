@@ -43,8 +43,7 @@ class SeekitarApp extends StatelessWidget {
           title: AppConstants.appName,
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,
-          darkTheme: AppTheme.dark,
-          themeMode: ThemeMode.system,
+          themeMode: ThemeMode.light,
           routerConfig: appRouter,
           builder: (ctx, child) {
             if (child == null) return const SizedBox.shrink();

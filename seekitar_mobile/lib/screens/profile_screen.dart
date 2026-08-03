@@ -33,7 +33,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       const Text('Edit Profil', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)), const SizedBox(height: 16),
       TextField(controller: nc, decoration: const InputDecoration(labelText: 'Nama')), const SizedBox(height: 12),
       TextField(controller: ac, decoration: const InputDecoration(labelText: 'Alamat')), const SizedBox(height: 24),
-      ElevatedButton(onPressed: () async { Navigator.pop(ctx); try { final p = await Geolocator.getCurrentPosition(); await app.updateProfile(name: nc.text, address: ac.text, lat: p.latitude, lng: p.longitude); } catch (_) {} }, child: const Text('Simpan')),
+      ElevatedButton(onPressed: () async {
+        Navigator.pop(ctx);
+        double? lat, lng;
+        try { final p = await Geolocator.getCurrentPosition(); lat = p.latitude; lng = p.longitude; } catch (_) {}
+        try { await app.updateProfile(name: nc.text, address: ac.text, lat: lat, lng: lng); } catch (_) {}
+      }, child: const Text('Simpan')),
     ]))));
   }
 

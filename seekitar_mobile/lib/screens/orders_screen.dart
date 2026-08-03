@@ -1,8 +1,10 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../core/constants.dart';
 import '../models/order.dart';
 import '../services/api_compat.dart';
+import '../services/dio_client.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -10,24 +12,40 @@ class OrdersScreen extends StatefulWidget {
 }
 class _OrdersScreenState extends State<OrdersScreen> with SingleTickerProviderStateMixin {
   final _api = ApiProvider();
-  late TabController _tab; List<Order> _b = [], _s = []; bool _loading = true; String? _error;
+  late TabController _tab; List<Order> _b = [], _s = []; bool _loading = true; String? _error; bool _profileIncomplete = false;
   BuildContext get ctx => context;
   @override void initState() { super.initState(); _tab = TabController(length: 2, vsync: this); _load(); }
   @override void dispose() { _tab.dispose(); super.dispose(); }
   Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() { _loading = true; _error = null; _profileIncomplete = false; });
     try {
       final results = await Future.wait<Object>([_api.getOrders(role: 'buyer'), _api.getOrders(role: 'seller')]);
       final buyerOrders = results[0] as List<Order>;
       final sellerOrders = results[1] as List<Order>;
       if (mounted) setState(() { _b = buyerOrders; _s = sellerOrders; _loading = false; });
     }
-    catch (e) { if (mounted) setState(() { _error = e.toString(); _loading = false; }); }
+    catch (e) {
+      final isIncomplete = e is DioException && e.response?.statusCode == 403;
+      if (mounted) setState(() {
+        _profileIncomplete = isIncomplete;
+        _error = isIncomplete ? null : (e is DioException ? DioClient().getMessage(e) : e.toString());
+        _loading = false;
+      });
+    }
   }
   @override Widget build(BuildContext ctx) => Scaffold(
     appBar: AppBar(title: const Text('Pesanan'), bottom: TabBar(controller: _tab, tabs: const [Tab(text: 'Pembelian'), Tab(text: 'Penjualan')])),
-    body: _loading ? const Center(child: CircularProgressIndicator()) : _error != null ? _err() : TabBarView(controller: _tab, children: [_list(_b, false), _list(_s, true)]),
+    body: _loading ? const Center(child: CircularProgressIndicator()) : _profileIncomplete ? _profilePrompt() : _error != null ? _err() : TabBarView(controller: _tab, children: [_list(_b, false), _list(_s, true)]),
   );
+  Widget _profilePrompt() => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+    const Icon(Icons.fact_check_outlined, size: 52, color: Color(0xFF168A4A)),
+    const SizedBox(height: 16),
+    const Text('Lengkapi profil kamu dulu', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+    const SizedBox(height: 6),
+    Padding(padding: const EdgeInsets.symmetric(horizontal: 44), child: Text('Isi nama dan aktifkan lokasi untuk melihat pesanan.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600, height: 1.4))),
+    const SizedBox(height: 18),
+    ElevatedButton.icon(onPressed: () async { await ctx.push('/profile'); _load(); }, icon: const Icon(Icons.person_outline), label: const Text('Lengkapi Profil')),
+  ]));
   Widget _err() => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.cloud_off, size: 48, color: Colors.grey), const SizedBox(height: 12), Text(_error!, style: const TextStyle(color: Colors.grey)), const SizedBox(height: 16), ElevatedButton.icon(onPressed: _load, icon: const Icon(Icons.refresh), label: const Text('Coba Lagi'))]));
   Widget _list(List<Order> orders, bool seller) => orders.isEmpty ? const Center(child: Text('Belum ada pesanan', style: TextStyle(color: Colors.grey))) : RefreshIndicator(onRefresh: _load, child: ListView.builder(itemCount: orders.length, itemBuilder: (_, i) {
     final o = orders[i];
