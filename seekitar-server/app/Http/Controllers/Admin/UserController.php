@@ -21,6 +21,20 @@ class UserController extends Controller
 {
     public function __construct(private readonly VerifikasiTokoService $verifikasiToko) {}
 
+    /**
+     * Akun super-admin pemilik tidak boleh dikelola lewat panel web.
+     *
+     * Ia tersembunyi dari daftar, dan halaman langsungnya pun ditolak —
+     * kalau tidak, URL tebakan /admin/users/{id} tetap bisa mengubahnya.
+     * 404 (bukan 403) agar keberadaan akunnya tidak bisa dipindai.
+     */
+    private function ensureNotSuperAdmin(User $user): void
+    {
+        if ($user->hasRole('super-admin')) {
+            abort(404);
+        }
+    }
+
     public function index(): View
     {
         return view('admin.users.index');
@@ -29,6 +43,8 @@ class UserController extends Controller
     public function exportCsv(Request $request): StreamedResponse
     {
         $users = User::query()
+            // Akun super-admin tidak ikut diekspor — konsisten dengan daftar.
+            ->excludingSuperAdmins()
             ->select(['id', 'phone', 'name', 'email', 'address',
                       'rating_avg', 'total_reviews', 'status', 'verified_at', 'created_at'])
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
@@ -60,6 +76,8 @@ class UserController extends Controller
 
     public function edit(User $user): View
     {
+        $this->ensureNotSuperAdmin($user);
+
         return view('admin.users.edit', [
             // withCoordinates(): titik domisilinya mengisi peta pemilih —
             // kolom POINT mentah adalah WKB biner yang tidak berguna di Blade.
@@ -85,6 +103,8 @@ class UserController extends Controller
      */
     public function show(User $user): View
     {
+        $this->ensureNotSuperAdmin($user);
+
         return view('admin.users.show', [
             // withCoordinates(): latitude/longitude dibaca dari kolom POINT
             // lewat ST_Latitude/ST_Longitude �?" properti biasa isinya WKB
@@ -132,6 +152,8 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user): RedirectResponse
     {
+        $this->ensureNotSuperAdmin($user);
+
         // String kosong dari input teks ≠ null — tanpa normalisasi ini,
         // isian yang SENGAJA dikosongkan admin justru gagal di rule
         // email/digits: kolomnya tidak pernah bisa dikosongkan lagi.
@@ -281,6 +303,8 @@ class UserController extends Controller
      */
     public function block(Request $request, User $user): RedirectResponse
     {
+        $this->ensureNotSuperAdmin($user);
+
         $data = $request->validate([
             'reason' => ['required_if:action,block', 'nullable', 'string', 'max:255'],
         ]);

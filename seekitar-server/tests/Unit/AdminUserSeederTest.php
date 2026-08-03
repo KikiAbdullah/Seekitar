@@ -24,8 +24,9 @@ class AdminUserSeederTest extends TestCase
     {
         $roles = array_column(AdminUserSeeder::accounts(), 'role');
 
-        // Ketiga peran yang dibuat RolesAndPermissionsSeeder harus terwakili.
-        $this->assertEqualsCanonicalizing(['super-admin', 'admin', 'user'], $roles);
+        // `super-admin` dibuat RolesAndPermissionsSeeder di semua environment;
+        // seeder ini hanya menyediakan akun contoh peran admin & user.
+        $this->assertEqualsCanonicalizing(['admin', 'user'], $roles);
     }
 
     public function test_peran_yang_dipakai_benar_benar_dibuat_seeder_role(): void

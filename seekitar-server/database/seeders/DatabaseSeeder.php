@@ -20,7 +20,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            RolesAndPermissionsSeeder::class,  // 1. role, permission, super-admin
+            RolesAndPermissionsSeeder::class,  // 1. role, permission, super-admin (Sinta Wijaya)
             CategorySeeder::class,             // 2. 24 kategori (wajib produksi)
             SettingSeeder::class,              // 3. nilai default tabel settings
             BlogPostSeeder::class,             // 4. blog awal yang sudah ditulis

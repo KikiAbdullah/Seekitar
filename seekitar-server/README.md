@@ -28,17 +28,19 @@ php artisan serve
 
 `migrate:fresh --seed` adalah jalan resmi: perubahan skema SELALU dimerge
 ke migrasi dasar (tidak ada migrasi `add_*`), jadi skema lengkap selalu
-terbentuk dari nol. Seed menjalankan, berurutan: role & permission
-satu akun super-admin (dari `config/seekitar.php`), kategori, pengaturan,
-akun contoh per peran (local/testing saja), lalu data dummy.
+terbentuk dari nol. Seed menjalankan, berurutan: role & permission +
+satu akun super-admin pemilik (dari `config/seekitar.php`), kategori,
+pengaturan, akun contoh peran admin & user (local/testing saja), lalu
+data dummy.
 
 ### Kredensial contoh (local/testing)
 
-Dicetak seeder ke console; kata sandi semuanya `password`:
+Akun **super-admin pemilik** (Sinta Wijaya) dibuat di SEMUA environment
+dari `config/seekitar.php` (`superadmin@seekitar.test` / `password`).
+Sisanya dicetak seeder ke console; kata sandi semuanya `password`:
 
 | Peran | Email | Panel |
 | :-- | :-- | :-- |
-| super-admin | `superadmin@seekitar.test` | ya |
 | admin | `admin.staf@seekitar.test` | ya |
 | user | `warga@seekitar.test` | **ditolak** (kontrol uji pembatasan peran) |
 

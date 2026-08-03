@@ -171,7 +171,7 @@ Setiap tabel dilengkapi penjelasan tiap kolom, alasan pemilihan tipe, dan constr
 | `email_verified_at`  | TIMESTAMP NULL       | Bawaan Laravel; belum dipakai alur apa pun.                    |
 | `password`           | VARCHAR(255) NULL    | **Khusus admin.** Hash bcrypt. NULL = akun hanya bisa OTP.     |
 | `phone`              | VARCHAR(15)          | Nomor HP Indonesia (diawali 62), unik. Menghindari duplikasi akun. Keberadaannya di tabel ini SEKALIGUS jejak "nomor dibuktikan OTP" — kode hanya dikirim ke nomornya sendiri. |
-| `name`               | VARCHAR(100)         | Nama asli pengguna, wajib diisi.                                                     |
+| `name`               | VARCHAR(100) NULL   | Nama asli pengguna. NULL saat akun baru dibuat lewat OTP (nomor saja), diisi belakangan lewat profil.           |
 | `avatar_url`         | VARCHAR(500) NULL    | URL foto profil, disimpan di cloud storage. Panjang 500 cukup untuk URL pre‑signed.  |
 | `location`           | POINT SRID 4326 NULL | Lokasi default pengguna (misal rumah). NULL hanya saat onboarding belum selesai.     |
 | `address`            | VARCHAR(255) NULL    | Alamat teks hasil reverse geocoding. Untuk ditampilkan, bukan untuk query.           |

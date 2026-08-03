@@ -31,7 +31,12 @@ return new class extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password')->nullable();
 
-            $table->string('name', 100);
+            /*
+             * NULL-able: akun dibuat seketika saat OTP pertama diverifikasi
+             * (hanya nomor HP), lalu nama diisi belakangan lewat profil
+             * (User::initials() sudah menyiapkan fallback nama kosong).
+             */
+            $table->string('name', 100)->nullable();
             $table->string('avatar_url', 500)->nullable();
             $table->string('address', 255)->nullable();
 

@@ -18,6 +18,9 @@ class UsersDataTable
     public function json(Request $request): JsonResponse
     {
         $query = User::query()
+            // Akun super-admin (pemilik) bukan warga — tersembunyi dari daftar
+            // pengguna panel supaya tidak bisa dikelola lewat UI (User model).
+            ->excludingSuperAdmins()
             ->select([
                 'id', 'phone', 'name', 'email', 'address',
                 'rating_avg', 'total_reviews',

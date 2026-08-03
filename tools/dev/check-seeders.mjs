@@ -161,7 +161,7 @@ if (exists(`${SEEDERS}/AdminUserSeeder.php`)) {
   } else ok('memakai syncRoles (idempoten)');
 
   const roles = [...src.matchAll(/'role'\s*=>\s*'([a-z-]+)'/g)].map(m => m[1]);
-  const expected = ['super-admin', 'admin', 'user'];
+  const expected = ['admin', 'user'];
   const missing = expected.filter(r => !roles.includes(r));
   if (missing.length) fail(`peran tanpa akun contoh: ${missing.join(', ')}`);
   else ok(`${roles.length} akun contoh (${roles.join(', ')})`);

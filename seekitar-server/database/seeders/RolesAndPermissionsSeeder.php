@@ -10,7 +10,7 @@ use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
 /**
- * Role, permission, dan akun super-admin pertama.
+ * Role, permission, dan akun super-admin pemilik.
  *
  * Harus jalan PALING AWAL (lihat `DatabaseSeeder`) karena seeder ini membuat
  * pengguna yang langsung diberi role.
@@ -95,10 +95,13 @@ class RolesAndPermissionsSeeder extends Seeder
     }
 
     /**
-     * Akun super-admin pertama.
+     * Akun super-admin pemilik.
      *
-     * Nomor, email, dan kata sandi diambil dari env agar tiap lingkungan
-     * punya pemilik berbeda — menanamnya di kode berarti kredensial contoh
+     * Dibuat di SEMUA environment (termasuk produksi): ini satu-satunya
+     * akun super-admin, jadi pengguna tidak perlu menyalinnya ke seeder
+     * lain. Identitas default-nya Sinta Wijaya; nomor, email, dan kata
+     * sandi tetap bisa diganti lewat env agar tiap lingkungan punya
+     * kredensial sendiri — menanamnya di kode berarti kredensial contoh
      * yang sama menjadi super-admin di produksi.
      *
      * Email & kata sandi WAJIB ada: panel admin memakai login web, bukan OTP
@@ -114,7 +117,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $user = User::withTrashed()->firstOrCreate(
             ['phone' => $phone],
             [
-                'name'  => 'Super Admin',
+                'name'  => 'Sinta Wijaya',
                 'email' => $email,
                 // Stempel + status == "terverifikasi"; khusus akun staf ini
                 // identitasnya dianggap sudah ditinjau. "Pro" tidak perlu

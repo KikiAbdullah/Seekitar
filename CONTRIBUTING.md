@@ -114,19 +114,19 @@ php artisan migrate --seed
 
 Buka `/admin/login`. Ada dua kelompok akun:
 
-**1. Akun pemilik** — dibuat di semua environment, kredensial dari `.env`:
+**1. Akun super-admin pemilik (Sinta Wijaya)** — dibuat di SEMUA environment,
+kredensial dari `.env`:
 
 | Kunci | Default |
 | :-- | :-- |
-| `SEEKITAR_SUPER_ADMIN_EMAIL` | `admin@seekitar.test` |
+| `SEEKITAR_SUPER_ADMIN_PHONE` | `6280000000001` |
+| `SEEKITAR_SUPER_ADMIN_EMAIL` | `superadmin@seekitar.test` |
 | `SEEKITAR_SUPER_ADMIN_PASSWORD` | `password` |
 
-**2. Akun contoh per peran** — HANYA `local`/`testing`, sandi semuanya
-`password`:
+**2. Akun contoh peran** — HANYA `local`/`testing`, sandi semuanya `password`:
 
 | Peran | Email | Akses panel |
 | :-- | :-- | :-- |
-| `super-admin` | `superadmin@seekitar.test` | ya — 12 permission |
 | `admin` | `admin.staf@seekitar.test` | ya — 10 permission |
 | `user` | `warga@seekitar.test` | **ditolak** (akun kontrol) |
 

@@ -9,8 +9,8 @@ use RuntimeException;
 use Spatie\Permission\PermissionRegistrar;
 
 /**
- * Akun contoh untuk setiap peran — agar panel admin bisa diuji dari
- * sudut pandang tiap tingkat akses.
+ * Akun contoh peran ADMIN & USER — agar panel admin bisa diuji dari sudut
+ * pandang akses yang terbatas (dan dari sudut pandang yang ditolak).
  *
  * ⚠️ HANYA local & testing. Seeder ini membuat akun dengan kata sandi yang
  * tertulis di repositori; menjalankannya di produksi sama dengan membuka
@@ -20,13 +20,16 @@ use Spatie\Permission\PermissionRegistrar;
  * KENAPA TERPISAH DARI RolesAndPermissionsSeeder
  * ----------------------------------------------
  * Seeder itu WAJIB jalan di produksi karena membuat role, permission, dan
- * satu akun pemilik. Kalau akun contoh ikut di dalamnya, tidak ada cara
- * menjalankan yang satu tanpa yang lain.
+ * akun super-admin pemilik (Sinta Wijaya). Akun contoh peran admin & user
+ * tidak boleh ikut ke produksi, jadi ia tidak bisa digabung ke seeder itu.
  */
 class AdminUserSeeder extends Seeder
 {
     /**
      * Akun per peran.
+     *
+     * `super-admin` tidak ada di sini — akun itu dibuat oleh
+     * `RolesAndPermissionsSeeder` di semua environment.
      *
      * `user` sengaja ikut dibuat — bukan untuk masuk panel, melainkan untuk
      * MEMBUKTIKAN bahwa ia ditolak. Tanpa akun kontrol seperti ini, tidak
@@ -35,17 +38,6 @@ class AdminUserSeeder extends Seeder
      * @var list<array{role: string, name: string, phone: string, email: string, ktp: bool, panel: bool}>
      */
     private const ACCOUNTS = [
-        [
-            'role'  => 'super-admin',
-            'name'  => 'Sinta Wijaya',
-            'phone' => '6280000000001',
-            'email' => 'superadmin@seekitar.test',
-            // Staf panel dianggap identitasnya terverifikasi: stempel KTP
-            // diisi supaya halaman pengguna menampilkannya utuh. "Pro"
-            // tidak ditulis manual — turunan dari toko tervalidasi.
-            'ktp'   => true,
-            'panel' => true,
-        ],
         [
             'role'  => 'admin',
             'name'  => 'Andi Prasetyo',

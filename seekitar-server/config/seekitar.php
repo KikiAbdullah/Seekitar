@@ -4,19 +4,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Akun Super Admin Pertama
+    | Akun Super Admin
     |--------------------------------------------------------------------------
     |
-    | Nomor ini dipakai `RolesAndPermissionsSeeder` untuk membuat pemilik
-    | pertama panel admin. Sengaja lewat env, bukan ditanam di kode: kalau
-    | tidak, nomor contoh yang sama akan menjadi super-admin di produksi.
+    | Nomor ini dipakai `RolesAndPermissionsSeeder` untuk membuat satu akun
+    | super-admin di SEMUA environment (termasuk produksi) — pemilik panel
+    | admin bernama Sinta Wijaya. Sengaja lewat env, bukan ditanam di kode:
+    | kalau tidak, kredensialnya tidak bisa diganti per lingkungan.
     |
     | Format wajib E.164 tanpa tanda plus (`62xxxxxxxxxx`), sama dengan
     | kolom `users.phone` (DATABASE.md §4.1).
     |
     */
 
-    'super_admin_phone' => env('SEEKITAR_SUPER_ADMIN_PHONE', '6280000000000'),
+    'super_admin_phone' => env('SEEKITAR_SUPER_ADMIN_PHONE', '6280000000001'),
 
     /*
     | Kredensial login PANEL ADMIN (web).
@@ -27,7 +28,7 @@ return [
     | ⚠️ WAJIB diganti di produksi. Kata sandi default hanya agar lingkungan
     | pengembangan bisa langsung dipakai setelah `db:seed`.
     */
-    'super_admin_email'    => env('SEEKITAR_SUPER_ADMIN_EMAIL', 'admin@seekitar.test'),
+    'super_admin_email'    => env('SEEKITAR_SUPER_ADMIN_EMAIL', 'superadmin@seekitar.test'),
     'super_admin_password' => env('SEEKITAR_SUPER_ADMIN_PASSWORD', 'password'),
 
     /*

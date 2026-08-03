@@ -3721,7 +3721,7 @@ public function run(): void
         $user = User::withTrashed()->firstOrCreate(
             ['phone' => config('seekitar.super_admin_phone')],
             [
-                'name'  => 'Super Admin',
+                'name'  => 'Sinta Wijaya',
                 'email' => config('seekitar.super_admin_email'),
                 // Stempel + status == "terverifikasi"; khusus akun staf ini
                 // identitasnya dianggap sudah ditinjau. "Pro" tidak perlu

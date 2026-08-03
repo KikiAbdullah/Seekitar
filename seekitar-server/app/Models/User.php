@@ -271,6 +271,19 @@ class User extends Authenticatable implements JWTSubject
     }
 
     /**
+     * Sembunyikan akun super-admin dari daftar pengguna panel.
+     *
+     * Akun pemilik (Sinta Wijaya) bukan warga: ia dibuat seeder di semua
+     * environment dan hanya boleh dikelola lewat kode/DB, bukan lewat UI
+     * admin. Tanpa filter ini, daftar /admin/users menampilkan dan membiarkan
+     * detail/editnya diubah lewat halaman web.
+     */
+    public function scopeExcludingSuperAdmins(Builder $query): Builder
+    {
+        return $query->whereDoesntHave('roles', fn (Builder $q) => $q->where('name', 'super-admin'));
+    }
+
+    /**
      * Antrian verifikasi admin — pengajuan identitas yang menunggu tinjauan.
      *
      * status=menunggu SAJA tidak cukup: itu juga kedudukan setiap akun baru
