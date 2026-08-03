@@ -38,7 +38,15 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
   @override void initState() { super.initState(); _load(); }
   Future<void> _load() async {
     setState(() => _loading = true);
-    try { final sid = widget.store?.id ?? widget.storeId; final d = await _api.getStoreDashboard(sid); if (mounted) setState(() { _dash = d; _store = widget.store; _loading = false; }); }
+    try {
+      final sid = widget.store?.id ?? widget.storeId;
+      // Bila hanya storeId yang diteruskan (mis. dari Profil), ambil objek
+      // toko dari API — FAB "Pasang Listing" dan nama toko butuh store != null.
+      var s = widget.store;
+      if (s == null) s = await _api.getStore(sid);
+      final d = await _api.getStoreDashboard(sid);
+      if (mounted) setState(() { _dash = d; _store = s; _loading = false; });
+    }
     catch (_) { if (mounted) setState(() { _store = widget.store; _loading = false; }); }
   }
   Future<void> _deleteListing(Listing l) async {
