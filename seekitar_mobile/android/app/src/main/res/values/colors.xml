@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Warna latar ikon adaptif — hijau brand Seekitar. -->
+    <color name="ic_launcher_background">#168A4A</color>
+</resources>
