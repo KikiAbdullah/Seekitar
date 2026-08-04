@@ -117,6 +117,8 @@ async function startSocket() {
         const jid = sock.user?.id || '';
         state.phone = jid.split(':')[0] || null;
         logger.info({ phone: state.phone }, 'whatsapp connected');
+        // eslint-disable-next-line no-console
+        console.log(`[Seekitar WhatsApp Gateway] ✅ TERSAMBUNG — nomor: ${state.phone || '?'}`);
       }
 
       if (connection === 'close') {
@@ -128,8 +130,12 @@ async function startSocket() {
           state.loggedOut = true;
           state.phone = null;
           logger.warn('logged out — scan QR ulang');
+          // eslint-disable-next-line no-console
+          console.log('[Seekitar WhatsApp Gateway] ⚠️ Sesi di-logout — scan QR ulang.');
         } else {
           logger.warn({ code }, 'connection closed — will reconnect');
+          // eslint-disable-next-line no-console
+          console.log(`[Seekitar WhatsApp Gateway] ⚠️ Koneksi tertutup (${code ?? '?'}) — coba sambung ulang…`);
           scheduleReconnect();
         }
       }
@@ -152,19 +158,24 @@ function scheduleReconnect() {
     startSocket();
   }, RECONNECT_DELAY_MS);
 }
-
 // ───────────────────────── helper kirim ─────────────────────────
 /**
- * Koneksi dianggap hidup hanya bila flag online DAN socket WebSocket-nya
- * benar-benar OPEN. `state.online` saja tidak cukup: koneksi bisa mati
- * diam-diam (network drop tanpa event close) sehingga sendMessage
- * menggantung selamanya.
+ * Koneksi dianggap hidup hanya bila flag online DAN WebSocket benar-benar
+ * OPEN.
+ *
+ * ⚠️ Di Baileys 6.7.x, `socket.ws` adalah instance WebSocketClient yang
+ * TIDAK punya `readyState` — ia punya getter `isOpen` (boolean). Memakai
+ * `ws.readyState === 1` di sini SELALU false (undefined === 1), yang
+ * membuat status di-reset ke offline terus-menerus padahal koneksi nyata
+ * terbuka. Deteksi di bawah menangani keduanya.
  */
 function isSocketOpen() {
-  return state.online
-    && state.socket
-    && state.socket.ws
-    && state.socket.ws.readyState === WS_OPEN;
+  if (!state.online || !state.socket || !state.socket.ws) return false;
+  const ws = state.socket.ws;
+  // Baileys 6.7.x: WebSocketClient.isOpen (boolean getter).
+  if (typeof ws.isOpen === 'boolean') return ws.isOpen;
+  // Bentuk lain / versi lama: WebSocket mentah dengan readyState.
+  return ws.readyState === 1;
 }
 
 function ensureConnected() {
@@ -213,12 +224,25 @@ function requireAuth(req, res, next) {
 app.use('/api', requireAuth);
 
 /**
- * Turunkan state.online bila WebSocket ternyata sudah tidak OPEN — dipanggil
- * sebelum status/QR dilaporkan supaya UI tidak menampilkan "Online" padahal
- * koneksi sudah mati diam-diam.
+ * Turunkan state.online bila WebSocket ternyata sudah TIDAK terbuka —
+ * dipanggil sebelum status/QR dilaporkan supaya UI tidak menampilkan
+ * "Online" padahal koneksi sudah mati diam-diam.
+ *
+ * Konservatif: kalau `ws` tidak bisa diperiksa (undefined / bentuk tak
+ * dikenal), JANGAN menurunkan status — biarkan event connection.update
+ * yang menentukan. (Deteksi agresif di versi sebelumnya memakai
+ * `ws.readyState` yang selalu undefined di Baileys 6.7.x → online di-reset
+ * terus → web selalu offline meski sudah scan.)
  */
+function isWsDefinitelyClosed() {
+  if (!state.online || !state.socket || !state.socket.ws) return false;
+  const ws = state.socket.ws;
+  if (typeof ws.isOpen === 'boolean') return !ws.isOpen;
+  return ws.readyState !== undefined && ws.readyState !== 1 && ws.readyState !== 0;
+}
+
 function syncConnectionState() {
-  if (state.online && state.socket && !(state.socket.ws && state.socket.ws.readyState === WS_OPEN)) {
+  if (isWsDefinitelyClosed()) {
     state.online = false;
     scheduleReconnect();
   }

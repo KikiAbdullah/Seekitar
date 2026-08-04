@@ -114,5 +114,14 @@ scan (selama belum logout).
   selesai. Service kini mendeteksi WebSocket tidak OPEN (status diturunkan ke
   offline) dan membalas `504` dalam `SEND_TIMEOUT_MS`; pastikan koneksi
   internet stabil, atau scan ulang QR.
+- **Web tetap Offline & QR muncul padahal HP sudah "Perangkat Tertaut"**:
+  (1) pastikan hanya **satu** proses gateway yang berjalan — kalau ada dua
+  (mis. `npm start` lama + PM2), yang dipanggil Laravel bisa bukan yang
+  ter-scan. Cek dengan `pm2 status` / tutup terminal `npm start` lain.
+  (2) Versi gateway harus yang terbaru (`git pull` lalu restart): versi lama
+  salah mendeteksi WebSocket (memakai `readyState` yang tidak ada di Baileys
+  6.7.x) sehingga status di-reset ke offline terus. (3) Lihat log gateway —
+  harus ada baris `✅ TERSAMBUNG — nomor: …` saat scan berhasil; kalau tidak
+  ada, sesi belum benar-benar open.
 - **Nomor diblokir**: hentikan pemakaian, hubungi WhatsApp untuk pemulihan —
   ini risiko Baileys (lihat peringatan di atas).

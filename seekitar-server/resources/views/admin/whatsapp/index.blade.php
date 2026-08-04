@@ -206,7 +206,17 @@
           const res = await fetch(statusUrl, { headers: { 'Accept': 'application/json' } });
           const json = await res.json();
           if (json.success) renderStatus(json.data);
-        } catch (_) { /* gateway mati — biarkan state lama */ }
+        } catch (_) {
+          // Gateway tidak terjangkau — tandai supaya tidak tampak "Online".
+          dot.className = 'wa-status-dot offline';
+          statusEl.textContent = 'Tidak terjangkau';
+          phoneEl.textContent = '—';
+          qrPlaceholder('Gateway tidak terjangkau. Pastikan service berjalan.');
+        }
+      }
+
+      function qrPlaceholder(text) {
+        qrBox.innerHTML = '<p class="text-muted fs-3 px-3 text-center mb-0"><i class="ti ti-qrcode fs-1 d-block mb-2 text-muted" aria-hidden="true"></i>' + (text || 'Menunggu QR…') + '</p>';
       }
 
       async function pollQr() {
@@ -224,8 +234,14 @@
           }
           if (data.qr) {
             qrBox.innerHTML = '<img src="' + data.qr + '" alt="QR Code WhatsApp" width="240" height="240">';
+          } else {
+            // QR tidak tersedia (masih connect / sudah kedaluwarsa) — reset
+            // placeholder agar QR LAMA tidak terus tampil.
+            qrPlaceholder('QR belum tersedia — tunggu sebentar…');
           }
-        } catch (_) {}
+        } catch (_) {
+          qrPlaceholder('Gateway tidak terjangkau. Pastikan service berjalan.');
+        }
         finally { qrPolling = false; }
       }
 
@@ -257,7 +273,7 @@
           if (json.success) {
             Swal.fire({ title: 'Sesi dicabut', text: json.message, icon: 'success', timer: 2500, showConfirmButton: false });
             renderStatus({ online: false });
-            qrBox.innerHTML = '<p class="text-muted fs-3 px-3 text-center mb-0">Menunggu QR…</p>';
+            qrPlaceholder();
             setTimeout(pollQr, 1500);
           } else {
             Swal.fire({ title: 'Gagal', text: json.message || 'Terjadi kesalahan.', icon: 'error' });
