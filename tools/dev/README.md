@@ -38,7 +38,7 @@ green, and the app served over HTTP (`/` and `/up` both return 200).
 | `node tools/dev/check-docs.mjs` | Guards UI/UX, queue, testing, notification, geospatial, and doc-version sections. |
 | `node tools/dev/check-schema-drift.mjs` | Compares migrations ⇄ `DATABASE.md` ⇄ Eloquent `$fillable`; catches columns that exist in one layer but not the others. |
 | `node tools/dev/check-mysql.mjs` | Asserts the project stays MySQL-only: no SQLite path, SRID 4326 + `axis-order=long-lat`, spatial indexes on NOT NULL, native ENUM/SET, CHECK constraints, InnoDB. |
-| `node tools/dev/check-seeders.mjs` | Asserts seeders match the docs: 24 categories, 16 permissions (§6.2), 8 settings keys, idempotency, UUID morph key for Spatie. |
+| `node tools/dev/check-seeders.mjs` | Asserts seeders match the docs: 24 categories, 17 permissions (§6.2), 8 settings keys, idempotency, UUID morph key for Spatie. |
 | `node tools/dev/check-services.mjs` | Asserts service-layer guarantees: OTP hashing/TTL/attempt limit, two-way broadcast matching, state-machine finality, phone masking in logs. |
 | `node tools/dev/check-http.mjs` | Asserts every documented endpoint has a route, auth/throttle middleware is applied, resources do not leak private columns, and Blade escaping stays on. |
 | `node tools/dev/check-admin-menu.mjs` | Asserts every `@can` in the admin sidebar matches the `permission:` middleware on the route it links to, that Datatables JSON endpoints are guarded too, that the Datatables i18n file is self-hosted and valid, and renders every admin page as both `admin` and `super-admin`. |

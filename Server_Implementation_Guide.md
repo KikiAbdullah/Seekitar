@@ -1295,7 +1295,7 @@ harus mengenali keduanya. Model `User` perlu tahu guard mana yang dipakai:
 - `admin` (akses panel admin kecuali manajemen admin lain)
 - `user` (default pengguna biasa)
 
-**Permissions (abilities) untuk Admin (16, sesuai `RolesAndPermissionsSeeder::PERMISSIONS`):**
+**Permissions (abilities) untuk Admin (17, sesuai `RolesAndPermissionsSeeder::PERMISSIONS`):**
 
 - `manage-users`
 - `verify-users`
@@ -1313,6 +1313,7 @@ harus mengenali keduanya. Model `User` perlu tahu guard mana yang dipakai:
 - `manage-advertisements`
 - `manage-fees`
 - `manage-blog`
+- `manage-whatsapp`
 
 Semua permission diberikan pada role `super-admin`. Role `admin` bisa diberikan sebagian (misal tidak bisa `manage-users` untuk mencegah hapus sesama admin — `ADMIN_EXCLUDED` di seeder berisi `manage-users`, `manage-settings`, dan `manage-fees`).
 
@@ -3012,7 +3013,22 @@ interface WhatsAppGateway
 | :-- | :-- | :-- |
 | Twilio (`twilio/sdk`) | Produksi lintas negara | Perlu template WhatsApp Business terdaftar |
 | Kirim WA / Wablas | Pasar Indonesia, biaya lebih murah | REST sederhana, cukup `Http::post()` |
+| **Baileys** (`BaileysGateway`) | Gratis, kendali penuh | WhatsApp Web tak-resmi via Node sidecar; QR di-scan dari panel admin. ⚠️ melanggar ToS WhatsApp — pakai nomor gateway khusus |
 | `LogWhatsAppGateway` | Development | OTP ditulis ke `storage/logs` |
+
+**Baileys (gateway WhatsApp Web lokal).** Service Node di
+`seekitar-server/whatsapp-gateway/` (`npm start` → `http://127.0.0.1:3001`)
+mengekspos `GET /api/status`, `GET /api/qr`, `POST /api/logout`, dan
+`POST /api/send`. `BaileysGateway` memanggilnya dari Laravel; panel admin
+memakai endpoint `admin.whatsapp.*` (permission `manage-whatsapp`) untuk
+**scan QR**, menampilkan **status online/offline**, mencabut sesi, dan uji
+kirim. Setup lengkap di `seekitar-server/whatsapp-gateway/README.md`.
+
+```env
+WHATSAPP_DRIVER=baileys
+BAILEYS_URL=http://127.0.0.1:3001
+BAILEYS_TOKEN=<token service>   # wajib di produksi
+```
 
 ```php
 class KirimWaGateway implements WhatsAppGateway
@@ -3728,7 +3744,7 @@ public function run(): void
 
     DB::transaction(function () {
         $permissions = [];
-        foreach (self::PERMISSIONS as $name) {          // 16 permission, §6.2
+        foreach (self::PERMISSIONS as $name) {          // 17 permission, §6.2
             $permissions[$name] = Permission::firstOrCreate(
                 ['name' => $name, 'guard_name' => 'web']
             );
@@ -3780,7 +3796,7 @@ public function run(): void
 >    mengubah sesama admin, halaman pengaturan tetap khusus super-admin
 >    (`API_DOCUMENTATION.md` §10.5), dan biaya layanan hanya diatur pemilik.
 
-> Daftar permission di atas **sudah** memuat 16 permission sesuai §6.2.
+> Daftar permission di atas **sudah** memuat 17 permission sesuai §6.2.
 > Pastikan keduanya tetap sinkron saat menambah permission baru.
 
 **`DatabaseSeeder`** — satu pintu, dan urutannya penting karena

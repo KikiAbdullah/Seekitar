@@ -22,7 +22,7 @@ use Spatie\Permission\PermissionRegistrar;
  */
 class RolesAndPermissionsSeeder extends Seeder
 {
-    /** 16 permission — 12 original + 3 monetisasi + 1 blog. */
+    /** 17 permission — 16 sebelumnya + manage-whatsapp (gateway WhatsApp). */
     public const PERMISSIONS = [
         'manage-users',
         'verify-users',
@@ -40,6 +40,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'manage-advertisements',
         'manage-fees',
         'manage-blog',
+        'manage-whatsapp',
     ];
 
     /**

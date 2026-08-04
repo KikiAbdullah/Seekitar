@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\StoreMapController;
 use App\Http\Controllers\Admin\SubscriptionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VerificationController;
+use App\Http\Controllers\Admin\WhatsAppController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -267,5 +268,14 @@ Route::middleware(['auth', 'role:admin|super-admin'])->group(function (): void {
         Route::get('fees/data', [FeeController::class, 'data'])->name('fees.data');
         Route::get('fees', [FeeController::class, 'index'])->name('fees.index');
         Route::post('fees/update-settings', [FeeController::class, 'updateSettings'])->name('fees.update-settings');
+    });
+
+    // Gateway WhatsApp (Baileys) — scan QR & status koneksi.
+    Route::middleware('permission:manage-whatsapp')->group(function (): void {
+        Route::get('whatsapp', [WhatsAppController::class, 'index'])->name('whatsapp.index');
+        Route::get('whatsapp/status', [WhatsAppController::class, 'status'])->name('whatsapp.status');
+        Route::get('whatsapp/qr', [WhatsAppController::class, 'qr'])->name('whatsapp.qr');
+        Route::post('whatsapp/logout', [WhatsAppController::class, 'logout'])->name('whatsapp.logout');
+        Route::post('whatsapp/send-test', [WhatsAppController::class, 'sendTest'])->name('whatsapp.send-test');
     });
 });

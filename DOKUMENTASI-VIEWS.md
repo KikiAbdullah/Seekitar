@@ -174,6 +174,12 @@ Disusun per folder/per file: judul halaman, isi, kolom tabel, filter, aksi, part
 |------|-----|
 | `stores.blade.php` | **"Peta Toko"** — Leaflet, sebaran semua toko di `config('seekitar.regency')` yang memiliki koordinat. |
 
+### A.21 Gateway WhatsApp (`whatsapp/`)
+
+| File | Isi |
+|------|-----|
+| `index.blade.php` | **"Gateway WhatsApp"** (permission `manage-whatsapp`, driver `baileys`): kartu status (Online/Offline, nomor tersambung, terakhir tersambung) + tombol Muat Ulang & Cabut Sesi (konfirmasi SweetAlert2), kotak QR code untuk scan (auto-poll 3 dtk saat offline), langkah scan, dan form uji kirim pesan. Bila driver bukan `baileys`, menampilkan pesan cara mengaktifkannya. |
+
 ---
 
 ## B. Situs Web (`resources/views/web/`)

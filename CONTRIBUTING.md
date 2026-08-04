@@ -127,7 +127,7 @@ kredensial dari `.env`:
 
 | Peran | Email | Akses panel |
 | :-- | :-- | :-- |
-| `admin` | `admin.staf@seekitar.test` | ya — 13 permission (16 dikurangi `ADMIN_EXCLUDED`) |
+| `admin` | `admin.staf@seekitar.test` | ya — 14 permission (17 dikurangi `ADMIN_EXCLUDED`) |
 | `user` | `warga@seekitar.test` | **ditolak** (akun kontrol) |
 
 Perbedaan `super-admin` dan `admin`: hanya super-admin yang punya

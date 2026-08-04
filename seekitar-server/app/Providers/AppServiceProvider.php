@@ -21,6 +21,7 @@ use App\Services\CacheService;
 use App\Services\Contracts\NotificationSender;
 use App\Services\Contracts\WhatsAppGateway;
 use App\Services\Notifications\LogNotificationSender;
+use App\Services\WhatsApp\BaileysGateway;
 use App\Services\WhatsApp\EmailOtpGateway;
 use App\Services\WhatsApp\KirimWaGateway;
 use App\Services\WhatsApp\LogWhatsAppGateway;
@@ -44,30 +45,30 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Di luar produksi, OTP ditulis ke log alih-alih dikirim — supaya
-        // pengembang tidak butuh kredensial provider berbayar hanya untuk
-        // bisa masuk (Server_Implementation_Guide.md §15.2).
+        // Driver WhatsApp: log (dev), email, kirimwa (provider berbayar),
+        // atau baileys (gateway WhatsApp Web lokal — lihat config/whatsapp.php
+        // dan seekitar-server/whatsapp-gateway/README.md).
         $this->app->bind(WhatsAppGateway::class, function () {
-            $delivery = strtolower((string) env('OTP_DELIVERY', 'log'));
+            $driver = strtolower((string) config('whatsapp.driver', 'log'));
 
-            if (! $this->app->isProduction()) {
-                if ($delivery === 'email') {
-                    return new EmailOtpGateway();
-                }
-
-                return new LogWhatsAppGateway();
+            if ($this->app->isProduction()) {
+                // Gagal cepat: tanpa konfigurasi yang benar, setiap permintaan
+                // OTP akan gagal dan tidak ada yang bisa masuk.
+                return match ($driver) {
+                    'baileys' => $this->requireBaileysConfig(new BaileysGateway()),
+                    'kirimwa' => $this->requireKirimwaConfig(new KirimWaGateway()),
+                    default   => throw new RuntimeException(
+                        "WHATSAPP_DRIVER='{$driver}' tidak valid untuk produksi; pakai 'baileys' atau 'kirimwa'."
+                    ),
+                };
             }
 
-            // Gagal cepat: tanpa kredensial, setiap permintaan OTP akan
-            // menghasilkan 401 dari provider dan tidak ada yang bisa masuk.
-            // Lebih baik ketahuan saat boot daripada saat pengguna login.
-            foreach (['services.kirimwa.url', 'services.kirimwa.token'] as $key) {
-                if (blank(config($key))) {
-                    throw new RuntimeException("Konfigurasi {$key} kosong; OTP produksi tidak bisa dikirim.");
-                }
-            }
-
-            return new KirimWaGateway();
+            return match ($driver) {
+                'baileys' => new BaileysGateway(),
+                'email'   => new EmailOtpGateway(),
+                'kirimwa' => new KirimWaGateway(),
+                default   => new LogWhatsAppGateway(),
+            };
         });
 
         // Pengirim notifikasi. Implementasi FCM sungguhan belum ada — lihat
@@ -278,5 +279,29 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(5)->by('admin-login:'.$request->input('email').'|'.$request->ip()),
             Limit::perMinute(20)->by('admin-login-ip:'.$request->ip()),
         ]);
+    }
+
+    /** Produksi + Baileys: URL & token wajib terisi agar OTP bisa terkirim. */
+    private function requireBaileysConfig(BaileysGateway $gateway): BaileysGateway
+    {
+        foreach (['whatsapp.baileys.url', 'whatsapp.baileys.token'] as $key) {
+            if (blank(config($key))) {
+                throw new RuntimeException("Konfigurasi {$key} kosong; OTP produksi (Baileys) tidak bisa dikirim.");
+            }
+        }
+
+        return $gateway;
+    }
+
+    /** Produksi + Kirim WA: kredensial wajib terisi agar OTP bisa terkirim. */
+    private function requireKirimwaConfig(KirimWaGateway $gateway): KirimWaGateway
+    {
+        foreach (['services.kirimwa.url', 'services.kirimwa.token'] as $key) {
+            if (blank(config($key))) {
+                throw new RuntimeException("Konfigurasi {$key} kosong; OTP produksi tidak bisa dikirim.");
+            }
+        }
+
+        return $gateway;
     }
 }

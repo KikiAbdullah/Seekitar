@@ -1630,6 +1630,23 @@ angka tetap. Mengubahnya berlaku untuk data **baru**; misalnya menurunkan
 
 **Error 422** – Nilai di luar batas aman, mis. `max_search_radius_km > 50`.
 
+### 10.6 Gateway WhatsApp — `permission:manage-whatsapp`
+
+Halaman panel web (bukan API mobile) untuk mengelola gateway WhatsApp
+(Baileys): scan QR, status koneksi, cabut sesi, dan uji kirim. Aktif hanya
+bila `WHATSAPP_DRIVER=baileys`; driver lain menampilkan pesan nonaktif.
+
+| Method | Path | Fungsi |
+| :-- | :-- | :-- |
+| `GET` | `/admin/whatsapp` | Halaman gateway (status + QR) |
+| `GET` | `/admin/whatsapp/status` | JSON `{ online, phone, last_connected_at }` — dipakai polling UI |
+| `GET` | `/admin/whatsapp/qr` | JSON `{ qr: dataURL|null, online }` |
+| `POST` | `/admin/whatsapp/logout` | Cabut sesi → QR baru diminta |
+| `POST` | `/admin/whatsapp/send-test` | `{ phone, text }` — uji kirim pesan |
+
+Semua endpoint ini **panel web** (sesi + CSRF), bukan Bearer token. Service
+Node pendukungnya di `seekitar-server/whatsapp-gateway/`.
+
 ---
 
 ## 11. STATUS KODE & ERROR HANDLING

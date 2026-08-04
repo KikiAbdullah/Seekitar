@@ -177,7 +177,7 @@
         @endcan
         @endcanany
 
-        @canany(['manage-disputes', 'manage-fees', 'manage-settings'])
+        @canany(['manage-disputes', 'manage-fees', 'manage-settings', 'manage-whatsapp'])
         <li class="nav-small-cap">
           <i class="ti ti-dots nav-small-cap-icon fs-4" aria-hidden="true"></i>
           <span class="hide-menu">Sistem & SLA</span>
@@ -209,6 +209,16 @@
               <i class="ti ti-adjustments-horizontal" aria-hidden="true"></i>
             </span>
             <span class="hide-menu">Pengaturan</span>
+          </a>
+        </li>
+        @endcan
+        @can('manage-whatsapp')
+        <li class="sidebar-item">
+          <a class="sidebar-link {{ request()->routeIs('admin.whatsapp.*') ? 'active' : '' }}" href="{{ route('admin.whatsapp.index') }}" aria-expanded="false">
+            <span>
+              <i class="ti ti-brand-whatsapp" aria-hidden="true"></i>
+            </span>
+            <span class="hide-menu">WhatsApp Gateway</span>
           </a>
         </li>
         @endcan
