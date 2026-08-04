@@ -9,6 +9,7 @@ use App\Http\Requests\Api\UpdateProfileRequest;
 use App\Http\Requests\Api\VerifyOtpRequest;
 use App\Http\Resources\UserExportResource;
 use App\Http\Resources\UserResource;
+use App\Jobs\SendOtpJob;
 use App\Models\User;
 use App\Services\Contracts\WhatsAppGateway;
 use App\Services\OtpService;
@@ -50,9 +51,14 @@ class AuthController extends Controller
         $phone = $request->phone();
         $code  = $this->otp->generate($phone);
 
+        // Kirim DI BELAKANG LAYAR lewat queue — respons langsung kembali ke
+        // klien tanpa menunggu WhatsApp (SendOtpJob). Ini membuat login
+        // terasa instan dan tahan banting: kalau gateway bermasalah, job
+        // di-retry & masuk failed_jobs, bukan menggantung request.
         try {
-            $this->whatsapp->sendOtp($phone, $code);
-        } catch (OtpDeliveryException $e) {
+            SendOtpJob::dispatch($phone, $code);
+        } catch (\Throwable $e) {
+            // Antrean gagal (mis. Redis mati) — batalkan OTP & kabari klien.
             $this->otp->forget($phone);
             report($e);
 
@@ -71,7 +77,7 @@ class AuthController extends Controller
             $payload = array_merge($payload, $debug);
         }
 
-        return $this->ok($payload, 'OTP telah dikirim ke WhatsApp Anda.');
+        return $this->ok($payload, 'OTP sedang dikirim ke WhatsApp Anda.');
     }
 
     /**

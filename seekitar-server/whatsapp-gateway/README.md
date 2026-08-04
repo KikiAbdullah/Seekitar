@@ -31,6 +31,38 @@ npm start          # http://127.0.0.1:3001
 | `QR_TTL_MS` | `45000` | Masa berlaku QR yang dikembalikan `/api/qr` |
 | `RECONNECT_DELAY_MS` | `5000` | Jeda coba sambung ulang setelah koneksi putus |
 | `SEND_TIMEOUT_MS` | `8000` | Batas waktu kirim pesan; lewat batas → balas `504` (mencegah request menggantung) |
+| `REDIS_URL` | *(kosong)* | URL Redis untuk **jalur cepat socket** (contoh `redis://127.0.0.1:6379`). Jika diisi, gateway men-subscribe `WA_CHANNEL_SEND` dan kirim pesan tanpa HTTP handshake per pesan |
+| `WA_CHANNEL_SEND` | `seekitar:wa:send` | Channel Redis tempat Laravel mem-publish pesan |
+| `WA_CHANNEL_RESULT` | `seekitar:wa:result` | Channel Redis hasil kirim (`{id, ok, error}`) |
+
+## Menjalankan di background (daemon)
+
+| Platform | Cara |
+| :-- | :-- |
+| **Windows** | `start-background.bat` (memakai PM2; auto-restart & ikut boot) |
+| **Linux** | `seekitar-wa.service` (systemd) — `systemctl enable --now seekitar-wa` |
+| **Semua** | `npm i -g pm2 && pm2 start ecosystem.config.js && pm2 save` |
+
+Isi `BAILEYS_TOKEN` (sama dengan `.env` Laravel) dan `REDIS_URL` pada
+`ecosystem.config.js` / unit systemd / env sebelum start.
+
+## Jalur cepat: Redis pub/sub (socket)
+
+Agar OTP terkirim **sangat cepat** tanpa HTTP handshake per pesan:
+
+1. Gateway: set `REDIS_URL` (mis. `redis://127.0.0.1:6379`) → otomatis
+   subscribe `seekitar:wa:send`.
+2. Laravel: set `BAILEYS_REDIS_URL=redis://127.0.0.1:6379` di `.env` →
+   `BaileysGateway::sendOtp` mem-publish ke channel itu (bukan HTTP).
+3. OTP dikirim via **Laravel Queue** (`SendOtpJob`, antrean `high`) —
+   request `POST /auth/request-otp` langsung membalas; worker yang
+   meneruskan. Jalankan worker:
+   `php artisan queue:work redis --queue=high,default`
+
+> Redis pub/sub adalah fire-and-forget: bila gateway mati saat publish,
+> pesan tidak antre. Untuk keandalan penuh tetap jalankan worker queue
+> (retry) dan pantau `failed_jobs`. Bila butuh garansi kirim, biarkan
+> `BAILEYS_REDIS_URL` kosong (HTTP fallback tetap andal di localhost).
 
 ## Endpoint HTTP
 

@@ -26,6 +26,16 @@ return [
         'token'   => env('BAILEYS_TOKEN', ''),
 
         'timeout' => (int) env('BAILEYS_TIMEOUT', 10),
+
+        // ── Jalur cepat (socket) ────────────────────────────────────────────
+        // Bila diisi, OTP TIDAK lewat HTTP melainkan di-publish ke channel
+        // Redis yang disubscribe gateway Node (koneksi socket persisten —
+        // sangat cepat, tanpa handshake per pesan). Kosongkan untuk memakai
+        // HTTP biasa. Contoh: redis://127.0.0.1:6379
+        'redis_url' => env('BAILEYS_REDIS_URL', ''),
+
+        // Nama channel Redis (harus sama dengan WA_CHANNEL_SEND di gateway).
+        'channel_send' => env('BAILEYS_CHANNEL_SEND', 'seekitar:wa:send'),
     ],
 
 ];

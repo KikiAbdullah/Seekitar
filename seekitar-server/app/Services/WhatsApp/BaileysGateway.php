@@ -95,9 +95,34 @@ class BaileysGateway implements WhatsAppGateway
         return $json;
     }
 
-    /** Kirim OTP — kontrak WhatsAppGateway. */
+    /**
+     * Kirim OTP — kontrak WhatsAppGateway.
+     *
+     * Jalur cepat (SOCKET): bila `whatsapp.baileys.redis_url` diisi, pesan
+     * di-publish ke channel Redis yang disubscribe gateway Node. Redis
+     * pub/sub memakai koneksi socket PERSISTEN — tanpa handshake HTTP per
+     * pesan — sehingga OTP terkirim dalam hitungan milidetik dari worker.
+     * Fire-and-forget: gateway yang membalas lewat channel `result`.
+     *
+     * Fallback: HTTP POST /api/send (handshake per panggilan, lebih lambat
+     * sedikit tapi tetap andal — dipakai bila Redis tidak dikonfigurasi).
+     */
     public function sendOtp(string $phone, string $code): void
     {
+        $redisUrl = (string) config('whatsapp.baileys.redis_url', '');
+
+        if ($redisUrl !== '') {
+            \Illuminate\Support\Facades\Redis::publish(
+                (string) config('whatsapp.baileys.channel_send', 'seekitar:wa:send'),
+                json_encode([
+                    'to'   => $phone,
+                    'text' => $this->message($code),
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            );
+
+            return;
+        }
+
         $this->call('POST', '/api/send', [
             'to'   => $phone,
             'text' => $this->message($code),

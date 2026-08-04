@@ -27,6 +27,7 @@ const path = require('node:path');
 const express = require('express');
 const pino = require('pino');
 const QRCode = require('qrcode');
+const Redis = require('ioredis');
 
 const {
   default: makeWASocket,
@@ -47,6 +48,15 @@ const RECONNECT_DELAY_MS = Number(process.env.RECONNECT_DELAY_MS || 5000);
 // WhatsApp mati diam-diam (state.online belum sempat false) — tanpa ini,
 // request /api/send menggantung sampai timeout di sisi pemanggil.
 const SEND_TIMEOUT_MS = Number(process.env.SEND_TIMEOUT_MS || 8000);
+
+// ── Redis pub/sub (jalur cepat socket) ─────────────────────────────────────
+// Bila REDIS_URL diisi, gateway men-subscribe channel WA_CHANNEL_SEND dan
+// mengirim setiap pesan lewat Baileys; hasilnya di-publish ke
+// WA_CHANNEL_RESULT. Laravel memakai jalur ini (BAILEYS_REDIS_URL) untuk
+// OTP — koneksi socket persisten, tanpa HTTP handshake per pesan.
+const REDIS_URL = process.env.REDIS_URL || '';
+const WA_CHANNEL_SEND = process.env.WA_CHANNEL_SEND || 'seekitar:wa:send';
+const WA_CHANNEL_RESULT = process.env.WA_CHANNEL_RESULT || 'seekitar:wa:result';
 
 const WS_OPEN = 1; // WebSocket.OPEN
 
@@ -291,9 +301,49 @@ app.post('/api/send', async (req, res) => {
 
 app.get('/healthz', (req, res) => res.json({ success: true, data: { online: state.online } }));
 
+// ───────────────────────── Redis subscriber (jalur cepat) ─────────────────────────
+// Laravel (BaileysGateway) mem-publish pesan ke channel ini saat
+// BAILEYS_REDIS_URL diset — socket persisten, tanpa HTTP handshake per pesan.
+function startRedisSubscriber() {
+  if (!REDIS_URL) {
+    logger.info('REDIS_URL kosong — jalur cepat socket nonaktif; pakai HTTP.');
+    return;
+  }
+
+  const sub = new Redis(REDIS_URL, { maxRetriesPerRequest: null });
+
+  sub.on('error', (err) => logger.error({ err }, 'redis subscriber error'));
+  sub.on('connect', () => logger.info('redis subscriber connected'));
+  sub.on('ready', () => {
+    sub.subscribe(WA_CHANNEL_SEND, (err) => {
+      if (err) logger.error({ err }, 'redis subscribe gagal');
+      else logger.info({ channel: WA_CHANNEL_SEND }, 'redis subscribed');
+    });
+  });
+
+  sub.on('message', async (channel, message) => {
+    if (channel !== WA_CHANNEL_SEND) return;
+
+    let payload;
+    try { payload = JSON.parse(message); } catch (_) { return; }
+    const { id = null, to, text } = payload;
+    if (!to || !text) return;
+
+    try {
+      await sendText(to, text);
+      sub.publish(WA_CHANNEL_RESULT, JSON.stringify({ id, ok: true, to }));
+    } catch (err) {
+      sub.publish(WA_CHANNEL_RESULT, JSON.stringify({ id, ok: false, to, error: err.message }));
+    }
+  });
+
+  state.redisSub = sub; // hindari di-GC
+}
+
 app.listen(PORT, HOST, () => {
   logger.info({ port: PORT, host: HOST }, 'seekitar whatsapp gateway listening');
   // eslint-disable-next-line no-console
   console.log(`[Seekitar WhatsApp Gateway] http://${HOST}:${PORT}  (healthz: /healthz)`);
   startSocket();
+  startRedisSubscriber();
 });

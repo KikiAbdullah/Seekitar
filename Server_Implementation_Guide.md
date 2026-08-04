@@ -3024,10 +3024,26 @@ memakai endpoint `admin.whatsapp.*` (permission `manage-whatsapp`) untuk
 **scan QR**, menampilkan **status online/offline**, mencabut sesi, dan uji
 kirim. Setup lengkap di `seekitar-server/whatsapp-gateway/README.md`.
 
+**Kirim OTP berjalan DI BACKGROUND (queue), bukan di dalam request:**
+
+1. `AuthController::requestOtp` hanya `SendOtpJob::dispatch(...)` lalu
+   langsung membalas — login terasa instan, tidak menunggu WhatsApp.
+2. Worker (`php artisan queue:work redis --queue=high,default`) yang
+   meneruskan via `BaileysGateway::sendOtp`; gagal → retry/backoff →
+   `failed_jobs`.
+3. **Jalur cepat socket (opsional):** set `BAILEYS_REDIS_URL` (Laravel)
+   dan `REDIS_URL` (gateway) → `sendOtp` mem-publish ke channel Redis
+   `seekitar:wa:send` yang disubscribe gateway (koneksi socket persisten,
+   tanpa HTTP handshake per pesan). Kosongkan untuk HTTP biasa.
+4. **Daemon background:** gateway dijalankan dengan PM2
+   (`ecosystem.config.js` / `start-background.bat` di Windows) atau systemd
+   (`seekitar-wa.service`) — tidak perlu terminal terbuka.
+
 ```env
 WHATSAPP_DRIVER=baileys
 BAILEYS_URL=http://127.0.0.1:3001
-BAILEYS_TOKEN=<token service>   # wajib di produksi
+BAILEYS_TOKEN=<token service>          # wajib di produksi
+# BAILEYS_REDIS_URL=redis://127.0.0.1:6379   # jalur cepat socket (opsional)
 ```
 
 ```php

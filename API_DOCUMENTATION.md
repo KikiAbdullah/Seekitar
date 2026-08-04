@@ -139,7 +139,9 @@ Jika error:
 POST /auth/request-otp
 ```
 
-**Public** – Mengirim OTP WhatsApp ke nomor telepon.
+**Public** – Mengirim OTP WhatsApp ke nomor telepon. Pengiriman **asinkron**:
+endpoint langsung membalas (antrean `SendOtpJob`), OTP dikirim worker di
+belakang layar — respons bukan jaminan pesan sudah sampai.
 
 **Body:**
 
@@ -157,7 +159,7 @@ POST /auth/request-otp
   "data": {
     "is_registered": false
   },
-  "message": "OTP telah dikirim ke WhatsApp Anda."
+  "message": "OTP sedang dikirim ke WhatsApp Anda."
 }
 ```
 

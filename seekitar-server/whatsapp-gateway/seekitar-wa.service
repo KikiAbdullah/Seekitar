@@ -1,0 +1,32 @@
+# systemd unit — jalankan gateway WhatsApp sebagai daemon background (Linux).
+#
+# Pasang:
+#   sudo cp seekitar-wa.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now seekitar-wa
+#
+# Env diedit di bagian [Service] — token harus sama dengan .env Laravel.
+
+[Unit]
+Description=Seekitar WhatsApp Gateway (Baileys)
+After=network.target redis-server.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/seekitar/seekitar-server/whatsapp-gateway
+ExecStart=/usr/bin/node index.js
+Restart=always
+RestartSec=3
+# ⚠️ Isi token (sama dengan BAILEYS_TOKEN di .env Laravel) & URL Redis
+# untuk jalur cepat socket; kosongkan REDIS_URL untuk HTTP saja.
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=3001
+Environment=BAILEYS_TOKEN=GANTI_DENGAN_TOKEN
+Environment=REDIS_URL=redis://127.0.0.1:6379
+Environment=WA_CHANNEL_SEND=seekitar:wa:send
+Environment=WA_CHANNEL_RESULT=seekitar:wa:result
+Environment=LOG_LEVEL=warn
+
+[Install]
+WantedBy=multi-user.target
