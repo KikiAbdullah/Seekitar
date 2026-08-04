@@ -67,6 +67,22 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     try {
       final res = await context.read<AppState>().requestOtp(p);
       if (mounted) {
+        final registered = res['is_registered'];
+        // Server baru mengirim `is_registered`; kalau null (server lama),
+        // lanjutkan alur lama tanpa pengecekan.
+        if (registered != null) {
+          final isRegistered = registered == true;
+          if (_isRegister && isRegistered) {
+            setState(() { _error = 'Nomor WhatsApp sudah terdaftar. Silakan masuk dengan nomor ini.'; _loading = false; });
+            _showSuggestion('Nomor sudah terdaftar. Masuk dengan nomor ini?', 'Masuk', () => _setMode(false));
+            return;
+          }
+          if (!_isRegister && !isRegistered) {
+            setState(() { _error = 'Nomor WhatsApp belum terdaftar. Daftar dulu untuk membuat akun.'; _loading = false; });
+            _showSuggestion('Nomor belum terdaftar. Buat akun baru?', 'Daftar', () => _setMode(true));
+            return;
+          }
+        }
         final debugOtp = res['debug_otp']?.toString();
         setState(() {
           _otpSent = true;
@@ -81,6 +97,19 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     }
     catch (e) { if (mounted) setState(() => _error = e.toString().replaceAll('Exception: ', '')); }
     if (mounted) setState(() => _loading = false);
+  }
+
+  /// Notifikasi sementara dengan tombol aksi (Masuk/Daftar) — dipakai saat
+  /// nomor tidak cocok dengan mode yang dipilih user.
+  void _showSuggestion(String message, String actionLabel, VoidCallback onAction) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(label: actionLabel, onPressed: onAction),
+      ));
   }
 
   Future<void> _verifyOtp() async {
@@ -125,7 +154,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       const SizedBox(height: 28),
                       Text(_isRegister ? 'Buat akun\nSeekitar' : 'Selamat datang\ndi Seekitar', textAlign: TextAlign.center, style: t.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900, height: 1.15, letterSpacing: -0.5)),
                       const SizedBox(height: 8),
-                      Text(_isRegister ? 'Daftar pakai nomor WhatsApp.\nAkun dibuat otomatis tanpa kata sandi.' : 'Masuk dengan nomor WhatsApp.\nOTP dikirim dari server Laravel aktif.', textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: Colors.grey.shade500, height: 1.4)),
+                      Text(_isRegister ? 'Daftar dengan nomor WhatsApp.\nKode OTP akan dikirim lewat WhatsApp.' : 'Masuk dengan nomor WhatsApp.\nKode OTP akan dikirim lewat WhatsApp.', textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: Colors.grey.shade500, height: 1.4)),
                       const SizedBox(height: 32),
 
                       // Mode: Masuk / Daftar

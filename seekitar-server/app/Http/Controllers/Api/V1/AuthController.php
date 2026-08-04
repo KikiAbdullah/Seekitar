@@ -59,7 +59,19 @@ class AuthController extends Controller
             return $this->fail('Gagal mengirim OTP. Coba lagi sesaat lagi.', 503);
         }
 
-        return $this->ok($this->debugOtpPayload($code), 'OTP telah dikirim ke WhatsApp Anda.');
+        // Info untuk UI: apakah nomor ini sudah punya akun? Dipakai klien
+        // untuk menyarankan "daftar" (nomor baru) atau "masuk" (nomor lama)
+        // SEBELUM user mengetik OTP. OTP tetap dikirim apa pun statusnya —
+        // perilaku akun-otomatis-saat-verifikasi tidak berubah.
+        $registered = User::withTrashed()->where('phone', $phone)->exists();
+
+        $payload = ['is_registered' => $registered];
+        $debug   = $this->debugOtpPayload($code);
+        if ($debug !== null) {
+            $payload = array_merge($payload, $debug);
+        }
+
+        return $this->ok($payload, 'OTP telah dikirim ke WhatsApp Anda.');
     }
 
     /**

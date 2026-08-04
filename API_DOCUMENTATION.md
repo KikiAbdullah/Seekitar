@@ -154,9 +154,16 @@ POST /auth/request-otp
 ```json
 {
   "success": true,
+  "data": {
+    "is_registered": false
+  },
   "message": "OTP telah dikirim ke WhatsApp Anda."
 }
 ```
+
+| Field | Tipe | Keterangan |
+| :-- | :-- | :-- |
+| `is_registered` | boolean | `true` jika nomor sudah punya akun, `false` jika baru. Dipakai klien untuk menyarankan mode **Masuk** (nomor lama) atau **Daftar** (nomor baru) sebelum user mengetik OTP. OTP tetap dikirim apa pun statusnya — akun dibuat otomatis saat verifikasi pertama. |
 
 > Di environment `local`/`testing`, respons menyertakan `debug_otp` (kode
 > dikembalikan langsung, tidak benar-benar dikirim) agar pengembangan tanpa
