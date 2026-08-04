@@ -112,7 +112,6 @@ ditulis manual.
 | WhatsApp             | `url_launcher`                          | ^6.3.0   | Membuka WhatsApp / nomor telepon       |
 | Image Picker         | `image_picker`                          | ^1.1.0   | Ambil foto produk, KTP                 |
 | Kompresi Gambar      | `flutter_image_compress`                | ^2.5.1   | Kompresi sebelum unggah                |
-| File Picker          | `file_picker`                           | ^8.1.0   | Pilih berkas umum                      |
 | Cached Network Image | `cached_network_image`                  | ^3.4.0   | Cache gambar                           |
 | Local Storage        | `shared_preferences`                    | ^2.3.0   | Preferensi ringan                      |
 | Secure Storage       | `flutter_secure_storage`                | ^10.3.1  | Token JWT disimpan aman (`jwt_token`)  |

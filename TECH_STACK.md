@@ -100,7 +100,6 @@ codegen, jadi **tidak ada** `build_runner`/`json_serializable`/`freezed`.
 | `flutter_svg`            | `^2.0.0`     | Aset SVG (logo dsb.)                                        |
 | `image_picker`           | `^1.1.0`     | Pilih foto (KTP, listing)                                   |
 | `flutter_image_compress` | `^2.5.1`     | Kompresi sebelum unggah (built-in Kotlin)                    |
-| `file_picker`            | `^8.1.0`     | Pilih berkas umum                                           |
 | `geolocator`             | `^13.0.0`    | Posisi pengguna                                             |
 | `geocoding`              | `^3.0.0`     | Reverse geocoding alamat                                    |
 | `firebase_core`          | `^3.6.0`     | Firebase                                                    |
