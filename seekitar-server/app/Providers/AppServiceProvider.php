@@ -25,6 +25,7 @@ use App\Services\WhatsApp\EmailOtpGateway;
 use App\Services\WhatsApp\KirimWaGateway;
 use App\Services\WhatsApp\LogWhatsAppGateway;
 use App\View\Composers\SidebarComposer;
+use App\Support\PhoneNumber;
 use Carbon\Carbon;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
@@ -235,13 +236,34 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('api', fn (Request $request) => Limit::perMinute(60)
             ->by($request->user()?->id ?: $request->ip()));
 
+        // OTP dibatasi PER NOMOR (ternormalisasi), bukan per IP: kalau per IP,
+        // satu orang bisa memanen OTP dengan berganti jaringan, dan sebaliknya
+        // pengguna satu WiFi kantor akan saling memblokir. Kunci memakai
+        // PhoneNumber::normalize supaya `0812…` dan `62812…` dihitung sebagai
+        // nomor yang SAMA — throttle berjalan SEBELUM FormRequest menormalkan.
+        //
+        // Di luar produksi batas dilonggarkan supaya pengembangan tidak gampang
+        // kena 429 (mis. tes alur OTP berulang); produksi tetap 3/menit & 10/hari.
+        if (app()->isProduction()) {
+            $otpPerMinute = 3;
+            $otpPerDay    = 10;
+            $verifyPerMinute = 5;
+        } else {
+            $otpPerMinute = 10;
+            $otpPerDay    = 100;
+            $verifyPerMinute = 20;
+        }
+
+        $phone = static fn (Request $request) => PhoneNumber::normalize($request->input('phone'))
+            ?? (string) $request->input('phone');
+
         RateLimiter::for('otp', fn (Request $request) => [
-            Limit::perMinute(3)->by('otp:'.$request->input('phone')),
-            Limit::perDay(10)->by('otp-daily:'.$request->input('phone')),
+            Limit::perMinute($otpPerMinute)->by('otp:'.$phone($request)),
+            Limit::perDay($otpPerDay)->by('otp-daily:'.$phone($request)),
         ]);
 
-        RateLimiter::for('otp-verify', fn (Request $request) => Limit::perMinute(5)
-            ->by('otp-verify:'.$request->input('phone')));
+        RateLimiter::for('otp-verify', fn (Request $request) => Limit::perMinute($verifyPerMinute)
+            ->by('otp-verify:'.$phone($request)));
 
         RateLimiter::for('offers', fn (Request $request) => Limit::perMinute(30)
             ->by('offers:'.$request->user()?->id));

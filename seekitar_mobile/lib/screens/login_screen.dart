@@ -1,7 +1,9 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
+import '../services/dio_client.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -95,7 +97,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         _startCountdown();
       }
     }
-    catch (e) { if (mounted) setState(() => _error = e.toString().replaceAll('Exception: ', '')); }
+    catch (e) { if (mounted) setState(() => _error = _friendlyError(e)); }
     if (mounted) setState(() => _loading = false);
   }
 
@@ -112,6 +114,24 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       ));
   }
 
+  /// Ubah error apa pun jadi pesan ramah. Untuk 429 (rate limit OTP) tampilkan
+  /// hitung mundur dari header `Retry-After`; selain itu ambil `message` dari
+  /// amplop respons server (DioClient.getMessage).
+  String _friendlyError(Object e) {
+    if (e is DioException) {
+      final status = e.response?.statusCode;
+      if (status == 429) {
+        final retry = e.response?.headers.value('retry-after');
+        if (retry != null && int.tryParse(retry) != null) {
+          return 'Terlalu banyak percobaan. Coba lagi dalam $retry detik.';
+        }
+        return 'Terlalu banyak percobaan. Tunggu beberapa saat lalu coba lagi.';
+      }
+      return DioClient().getMessage(e);
+    }
+    return e.toString().replaceAll('Exception: ', '');
+  }
+
   Future<void> _verifyOtp() async {
     final o = _otpCtrl.text.trim();
     if (o.length < 4) { setState(() => _error = 'Masukkan kode OTP'); return; }
@@ -125,7 +145,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       }
       if (mounted) context.go('/home');
     }
-    catch (e) { if (mounted) setState(() => _error = e.toString().replaceAll('Exception: ', '')); }
+    catch (e) { if (mounted) setState(() => _error = _friendlyError(e)); }
     if (mounted) setState(() => _loading = false);
   }
 
