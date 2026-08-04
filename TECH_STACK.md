@@ -89,7 +89,7 @@ codegen, jadi **tidak ada** `build_runner`/`json_serializable`/`freezed`.
 | `go_router`              | `^14.8.0`    | Navigasi deklaratif + `StatefulShellRoute` (5 tab bawah)    |
 | `dio`                    | `^5.7.0`     | HTTP client; interceptor 401 → refresh JWT & retry          |
 | `connectivity_plus`      | `^6.1.0`     | Deteksi offline (banner offline)                            |
-| `flutter_secure_storage` | `^9.2.0`     | Penyimpanan token JWT (`jwt_token`)                         |
+| `flutter_secure_storage` | `^10.3.1`    | Penyimpanan token JWT (`jwt_token`); kompatibel win32 ^6      |
 | `shared_preferences`     | `^2.3.0`     | Preferensi ringan                                           |
 | `path_provider`          | `^2.1.0`     | Direktori berkas                                            |
 | `flutter_screenutil`     | `^5.9.0`     | Skala UI (designSize 390×844)                               |

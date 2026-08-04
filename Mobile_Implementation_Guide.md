@@ -115,7 +115,7 @@ ditulis manual.
 | File Picker          | `file_picker`                           | ^8.1.0   | Pilih berkas umum                      |
 | Cached Network Image | `cached_network_image`                  | ^3.4.0   | Cache gambar                           |
 | Local Storage        | `shared_preferences`                    | ^2.3.0   | Preferensi ringan                      |
-| Secure Storage       | `flutter_secure_storage`                | ^9.2.0   | Token JWT disimpan aman (`jwt_token`)  |
+| Secure Storage       | `flutter_secure_storage`                | ^10.3.1  | Token JWT disimpan aman (`jwt_token`)  |
 | Konektivitas         | `connectivity_plus`                     | ^6.1.0   | Banner offline                         |
 | Path                 | `path_provider`                         | ^2.1.0   | Direktori berkas                       |
 | Skala UI             | `flutter_screenutil`                    | ^5.9.0   | Design size 390×844                    |
