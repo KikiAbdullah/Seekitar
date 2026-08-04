@@ -73,7 +73,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       final res = await _api.shareListing(_id);
       final text = res['whatsapp_text']?.toString() ?? _detail?.title ?? '';
       if (text.isNotEmpty) {
-        await Share.share(text, subject: _detail?.title ?? 'Listing Seekitar');
+        await SharePlus.instance.share(ShareParams(
+          text: text,
+          subject: _detail?.title ?? 'Listing Seekitar',
+        ));
       }
     } catch (_) {}
   }

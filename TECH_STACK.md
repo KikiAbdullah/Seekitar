@@ -99,19 +99,19 @@ codegen, jadi **tidak ada** `build_runner`/`json_serializable`/`freezed`.
 | `smooth_page_indicator`  | `^1.2.0`     | Indikator galeri gambar listing                              |
 | `flutter_svg`            | `^2.0.0`     | Aset SVG (logo dsb.)                                        |
 | `image_picker`           | `^1.1.0`     | Pilih foto (KTP, listing)                                   |
-| `flutter_image_compress` | `^2.4.0`     | Kompresi sebelum unggah                                     |
+| `flutter_image_compress` | `^2.5.1`     | Kompresi sebelum unggah (built-in Kotlin)                    |
 | `file_picker`            | `^8.1.0`     | Pilih berkas umum                                           |
 | `geolocator`             | `^13.0.0`    | Posisi pengguna                                             |
 | `geocoding`              | `^3.0.0`     | Reverse geocoding alamat                                    |
 | `firebase_core`          | `^3.6.0`     | Firebase                                                    |
 | `firebase_messaging`     | `^15.1.0`    | FCM push notification                                       |
 | `flutter_local_notifications` | `^18.0.0` | Notifikasi lokal saat aplikasi di latar depan          |
-| `share_plus`             | `^10.0.0`    | Berbagi tautan listing                                      |
+| `share_plus`             | `^13.3.0`    | Berbagi tautan listing (API SharePlus.instance.share)       |
 | `url_launcher`           | `^6.3.0`     | Buka WhatsApp/nomor telepon                                  |
 | `intl`                   | `^0.19.0`    | Format tanggal/angka                                        |
 | `permission_handler`     | `^11.3.0`    | Izin lokasi/notifikasi                                      |
 | `logger`                 | `^2.5.0`     | Log aplikasi                                                |
-| `package_info_plus`      | `^8.1.0`    | Versi aplikasi (halaman Tentang)                            |
+| `package_info_plus`      | `^10.2.1`    | Versi aplikasi (built-in Kotlin)                            |
 
 ### ⚠️ Klarifikasi: GoRouter ↔ state management tidak saling bergantung
 

@@ -111,7 +111,7 @@ ditulis manual.
 | Notifikasi Lokal     | `flutter_local_notifications`           | ^18.0.0  | Notif saat aplikasi di latar depan     |
 | WhatsApp             | `url_launcher`                          | ^6.3.0   | Membuka WhatsApp / nomor telepon       |
 | Image Picker         | `image_picker`                          | ^1.1.0   | Ambil foto produk, KTP                 |
-| Kompresi Gambar      | `flutter_image_compress`                | ^2.4.0   | Kompresi sebelum unggah                |
+| Kompresi Gambar      | `flutter_image_compress`                | ^2.5.1   | Kompresi sebelum unggah                |
 | File Picker          | `file_picker`                           | ^8.1.0   | Pilih berkas umum                      |
 | Cached Network Image | `cached_network_image`                  | ^3.4.0   | Cache gambar                           |
 | Local Storage        | `shared_preferences`                    | ^2.3.0   | Preferensi ringan                      |
@@ -123,11 +123,11 @@ ditulis manual.
 | Indikator Galeri     | `smooth_page_indicator`                 | ^1.2.0   | Dots galeri gambar listing             |
 | SVG                  | `flutter_svg`                           | ^2.0.0   | Logo & aset vektor                     |
 | Skeleton Loading     | `shimmer`                               | ^3.0.0   | Placeholder saat memuat data           |
-| Berbagi              | `share_plus`                            | ^10.0.0  | Bagikan tautan listing                 |
+| Berbagi              | `share_plus`                            | ^13.3.0  | Bagikan tautan listing (SharePlus.instance.share) |
 | Format               | `intl`                                  | ^0.19.0  | Format tanggal/angka Rupiah            |
 | Izin Platform        | `permission_handler`                    | ^11.3.0  | Izin lokasi, notifikasi                |
 | Log                  | `logger`                                | ^2.5.0   | Log aplikasi                           |
-| Info Paket           | `package_info_plus`                     | ^8.1.0   | Versi aplikasi (halaman Tentang)       |
+| Info Paket           | `package_info_plus`                     | ^10.2.1  | Versi aplikasi (halaman Tentang)       |
 
 **Dev dependencies:** `flutter_test`, `flutter_lints`, `flutter_native_splash`.
 
