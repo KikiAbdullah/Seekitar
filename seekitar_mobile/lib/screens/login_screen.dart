@@ -15,6 +15,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   String? _error;
   String? _debugOtp;
   int _countdown = 0;
+  /// Nomor HP yang SUDAH dinormalisasi (62xxx) — dipakai saat verifikasi OTP
+  /// agar selalu sama dengan nomor yang menerima OTP, meski field diedit.
+  String? _normalizedPhone;
   late final AnimationController _anim;
   late final Animation<double> _slide;
 
@@ -36,14 +39,29 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       _error = null;
       _debugOtp = null;
       _countdown = 0;
+      _normalizedPhone = null;
     });
   }
+
+  /// Normalisasi nomor HP Indonesia ke format E.164 (`62xxx`) — aturannya
+  /// SAMA dengan `App\Support\PhoneNumber` di server. Jadi user bebas
+  /// mengetik `0812…`, `812…`, `62812…`, atau `+62812…`; yang dikirim &
+  /// tersimpan di DB selalu `62812…`.
+  String normalizePhone(String input) {
+    final digits = input.replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) return '';
+    if (digits.startsWith('0')) return '62${digits.substring(1)}';
+    if (digits.startsWith('62')) return digits;
+    return '62$digits';
+  }
+
+  bool _isValidPhone(String phone) => RegExp(r'^62[0-9]{8,13}$').hasMatch(phone);
 
   void _startCountdown() { _countdown = 60; Future.doWhile(() async { await Future.delayed(const Duration(seconds: 1)); if (!mounted) return false; setState(() => _countdown--); return _countdown > 0; }); }
 
   Future<void> _sendOtp() async {
-    final p = _phoneCtrl.text.trim();
-    if (p.length < 10) { setState(() => _error = 'Masukkan nomor WhatsApp yang valid'); return; }
+    final p = normalizePhone(_phoneCtrl.text);
+    if (!_isValidPhone(p)) { setState(() => _error = 'Nomor WhatsApp tidak valid. Contoh: 081234567890'); return; }
     if (_isRegister && _nameCtrl.text.trim().isEmpty) { setState(() => _error = 'Masukkan nama lengkapmu dulu'); return; }
     setState(() { _loading = true; _error = null; _debugOtp = null; });
     try {
@@ -52,6 +70,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         final debugOtp = res['debug_otp']?.toString();
         setState(() {
           _otpSent = true;
+          _normalizedPhone = p;   // kunci verifikasi = nomor yang menerima OTP
           _debugOtp = debugOtp;
           if (debugOtp != null && debugOtp.isNotEmpty) {
             _otpCtrl.text = debugOtp;
@@ -69,7 +88,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     if (o.length < 4) { setState(() => _error = 'Masukkan kode OTP'); return; }
     setState(() { _loading = true; _error = null; });
     try {
-      await context.read<AppState>().verifyOtp(_phoneCtrl.text.trim(), o);
+      // Pakai nomor ternormalisasi yang sama dengan saat OTP dikirim,
+      // bukan membaca ulang field (yang bisa saja sudah diedit user).
+      await context.read<AppState>().verifyOtp(_normalizedPhone ?? normalizePhone(_phoneCtrl.text), o);
       if (_isRegister && _nameCtrl.text.trim().isNotEmpty) {
         await context.read<AppState>().updateProfile(name: _nameCtrl.text.trim());
       }
@@ -138,7 +159,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         const SizedBox(height: 16),
                       ],
 
-                      // Phone field
+                      // Phone field — tanpa prefix "+62" supaya user bebas
+                      // mengetik 0812… (0 di awal). Dinormalisasi ke 628…
+                      // otomatis saat dikirim.
                       Container(
                         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 12)]),
                         child: TextField(
@@ -147,10 +170,12 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, letterSpacing: 0.5),
                           decoration: InputDecoration(
                             labelText: 'Nomor WhatsApp',
-                            hintText: '8123-4567-890',
+                            hintText: '0812-3456-789',
                             hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 18),
-                            prefixIcon: Padding(padding: const EdgeInsets.only(left: 16, right: 8), child: Text('+62', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: t.colorScheme.primary))),
-                            prefixIconConstraints: const BoxConstraints(minWidth: 60),
+                            prefixIcon: const Icon(Icons.phone_outlined, color: Color(0xFF168A4A), size: 22),
+                            prefixIconConstraints: const BoxConstraints(minWidth: 48),
+                            helperText: 'Boleh 0812…, 812…, atau +62812… — otomatis tersimpan 62812…',
+                            helperStyle: TextStyle(color: Colors.grey.shade500, fontSize: 11),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
                           ),
                         ),
