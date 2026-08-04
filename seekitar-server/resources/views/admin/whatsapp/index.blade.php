@@ -93,9 +93,12 @@
                 </tr>
               </tbody>
             </table>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 flex-wrap">
               <button class="btn btn-light d-inline-flex align-items-center gap-1" id="wa-refresh" type="button">
                 <i class="ti ti-refresh" aria-hidden="true"></i> Muat Ulang
+              </button>
+              <button class="btn btn-outline-warning d-inline-flex align-items-center gap-1" id="wa-reset" type="button">
+                <i class="ti ti-refresh-alert" aria-hidden="true"></i> Reset & QR Baru
               </button>
               <button class="btn btn-outline-danger d-inline-flex align-items-center gap-1" id="wa-logout" type="button">
                 <i class="ti ti-plug-connected-x" aria-hidden="true"></i> Cabut Sesi
@@ -164,6 +167,7 @@
       const statusUrl   = @json(route('admin.whatsapp.status'));
       const qrUrl       = @json(route('admin.whatsapp.qr'));
       const logoutUrl   = @json(route('admin.whatsapp.logout'));
+      const resetUrl    = @json(route('admin.whatsapp.reset'));
       const sendUrl     = @json(route('admin.whatsapp.send-test'));
 
       // Token CSRF: dari meta (kini tersedia di layout admin), fallback ke
@@ -235,9 +239,10 @@
           if (data.qr) {
             qrBox.innerHTML = '<img src="' + data.qr + '" alt="QR Code WhatsApp" width="240" height="240">';
           } else {
-            // QR tidak tersedia (masih connect / sudah kedaluwarsa) — reset
-            // placeholder agar QR LAMA tidak terus tampil.
-            qrPlaceholder('QR belum tersedia — tunggu sebentar…');
+            // QR tidak tersedia — tampilkan status sesuai fase koneksi.
+            qrPlaceholder(data.connecting
+              ? 'Menghubungkan ke server WhatsApp…'
+              : 'QR belum tersedia — tunggu sebentar…');
           }
         } catch (_) {
           qrPlaceholder('Gateway tidak terjangkau. Pastikan service berjalan.');
@@ -245,12 +250,12 @@
         finally { qrPolling = false; }
       }
 
-      // Polling: status tiap 5s; QR tiap 3s saat belum online.
-      setInterval(refreshStatus, 5000);
+      // Polling cepat: status tiap 3s; QR tiap 2s saat belum online.
+      setInterval(refreshStatus, 3000);
       setInterval(() => {
         const online = statusEl.textContent === 'Online';
         if (!online) pollQr();
-      }, 3000);
+      }, 2000);
 
       document.getElementById('wa-refresh').addEventListener('click', () => { refreshStatus(); pollQr(); });
 
@@ -275,6 +280,33 @@
             renderStatus({ online: false });
             qrPlaceholder();
             setTimeout(pollQr, 1500);
+          } else {
+            Swal.fire({ title: 'Gagal', text: json.message || 'Terjadi kesalahan.', icon: 'error' });
+          }
+        });
+      });
+
+      document.getElementById('wa-reset').addEventListener('click', () => {
+        Swal.fire({
+          title: 'Reset sesi & minta QR baru?',
+          text: 'Sesi yang tersimpan akan dihapus dan QR baru segera muncul. Dipakai saat QR macet / tidak muncul.',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#f4b63f',
+          confirmButtonText: 'Ya, reset',
+          cancelButtonText: 'Batal',
+        }).then(async (result) => {
+          if (!result.isConfirmed) return;
+          const res = await fetch(resetUrl, {
+            method: 'POST',
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken() },
+          });
+          const json = await res.json();
+          if (json.success) {
+            Swal.fire({ title: 'Sesi di-reset', text: json.message, icon: 'success', timer: 2500, showConfirmButton: false });
+            renderStatus({ online: false });
+            qrPlaceholder('Menghubungkan ke server WhatsApp…');
+            setTimeout(pollQr, 1000);
           } else {
             Swal.fire({ title: 'Gagal', text: json.message || 'Terjadi kesalahan.', icon: 'error' });
           }

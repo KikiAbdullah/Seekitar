@@ -29,8 +29,9 @@ npm start          # http://127.0.0.1:3001
 | `SESSION_DIR` | `./session` | Folder kredensial sesi (di-`gitignore`) |
 | `LOG_LEVEL` | `silent` | `error` / `warn` / `info` / `debug` untuk troubleshooting |
 | `QR_TTL_MS` | `45000` | Masa berlaku QR yang dikembalikan `/api/qr` |
-| `RECONNECT_DELAY_MS` | `5000` | Jeda coba sambung ulang setelah koneksi putus |
+| `RECONNECT_DELAY_MS` | `3000` | Jeda coba sambung ulang setelah koneksi putus |
 | `SEND_TIMEOUT_MS` | `8000` | Batas waktu kirim pesan; lewat batas → balas `504` (mencegah request menggantung) |
+| `AUTO_RESET_AFTER` | `3` | Setelah N kali koneksi putus (tanpa pernah QR/open) dengan sesi tersimpan, folder sesi di-reset otomatis agar QR fresh muncul |
 | `REDIS_URL` | *(kosong)* | URL Redis untuk **jalur cepat socket** (contoh `redis://127.0.0.1:6379`). Jika diisi, gateway men-subscribe `WA_CHANNEL_SEND` dan kirim pesan tanpa HTTP handshake per pesan |
 | `WA_CHANNEL_SEND` | `seekitar:wa:send` | Channel Redis tempat Laravel mem-publish pesan |
 | `WA_CHANNEL_RESULT` | `seekitar:wa:result` | Channel Redis hasil kirim (`{id, ok, error}`) |
@@ -123,5 +124,13 @@ scan (selama belum logout).
   6.7.x) sehingga status di-reset ke offline terus. (3) Lihat log gateway —
   harus ada baris `✅ TERSAMBUNG — nomor: …` saat scan berhasil; kalau tidak
   ada, sesi belum benar-benar open.
+- **QR tidak pernah muncul ("QR belum tersedia" selamanya)**: versi baru
+  memakai versi Baileys dipin (tanpa fetch GitHub) → socket dibuat seketika;
+  sesi korup di-reset otomatis setelah `AUTO_RESET_AFTER`× putus; dan tombol
+  **"Reset & QR Baru"** di panel admin menghapus sesi lalu QR fresh muncul
+  dalam hitungan detik. Bila masih macet, cek log: `🟢 QR BARU tersedia`
+  harus muncul; kalau `⚠️ Koneksi tertutup (kode …)` berulang tanpa QR,
+  berarti jaringan server tidak bisa menjangkau server WhatsApp
+  (`web.whatsapp.com`), atau ada proses gateway lain yang memegang sesi.
 - **Nomor diblokir**: hentikan pemakaian, hubungi WhatsApp untuk pemulihan —
   ini risiko Baileys (lihat peringatan di atas).

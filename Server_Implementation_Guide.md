@@ -3038,6 +3038,10 @@ kirim. Setup lengkap di `seekitar-server/whatsapp-gateway/README.md`.
 4. **Daemon background:** gateway dijalankan dengan PM2
    (`ecosystem.config.js` / `start-background.bat` di Windows) atau systemd
    (`seekitar-wa.service`) — tidak perlu terminal terbuka.
+5. **QR muncul cepat & anti-macet:** versi Baileys dipin (tanpa fetch GitHub),
+   QR di-cache (bukan dibuat per polling), sesi korup di-reset otomatis
+   setelah beberapa kali putus, dan panel admin punya tombol
+   **Reset & QR Baru** (`POST /admin/whatsapp/reset` → hapus sesi → QR fresh).
 
 ```env
 WHATSAPP_DRIVER=baileys

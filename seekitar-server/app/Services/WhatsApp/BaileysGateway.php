@@ -161,6 +161,15 @@ class BaileysGateway implements WhatsAppGateway
         $this->call('POST', '/api/logout');
     }
 
+    /**
+     * Reset sesi total — hapus kredensial & minta QR BARU seketika.
+     * Dipakai dari panel admin saat QR macet / sesi korup.
+     */
+    public function resetSession(): void
+    {
+        $this->call('POST', '/api/reset');
+    }
+
     private function message(string $code): string
     {
         $minutes = (int) (\App\Services\OtpService::TTL_SECONDS / 60);

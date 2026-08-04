@@ -276,6 +276,7 @@ Route::middleware(['auth', 'role:admin|super-admin'])->group(function (): void {
         Route::get('whatsapp/status', [WhatsAppController::class, 'status'])->name('whatsapp.status');
         Route::get('whatsapp/qr', [WhatsAppController::class, 'qr'])->name('whatsapp.qr');
         Route::post('whatsapp/logout', [WhatsAppController::class, 'logout'])->name('whatsapp.logout');
+        Route::post('whatsapp/reset', [WhatsAppController::class, 'reset'])->name('whatsapp.reset');
         Route::post('whatsapp/send-test', [WhatsAppController::class, 'sendTest'])->name('whatsapp.send-test');
     });
 });

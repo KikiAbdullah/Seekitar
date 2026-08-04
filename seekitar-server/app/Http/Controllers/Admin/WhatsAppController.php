@@ -89,6 +89,25 @@ class WhatsAppController extends Controller
         }
     }
 
+    /** POST /admin/whatsapp/reset — hapus sesi & minta QR BARU (atasi QR macet). */
+    public function reset(): JsonResponse
+    {
+        if (! $this->isBaileys()) {
+            return response()->json(['success' => false, 'message' => 'Driver WhatsApp bukan Baileys.']);
+        }
+
+        try {
+            /** @var \App\Services\WhatsApp\BaileysGateway $baileys */
+            $baileys = $this->whatsapp;
+            $baileys->resetSession();
+            Cache::forget('whatsapp.status');
+
+            return response()->json(['success' => true, 'message' => 'Sesi di-reset. QR baru akan segera muncul — scan ulang.']);
+        } catch (OtpDeliveryException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 503);
+        }
+    }
+
     /** POST /admin/whatsapp/send-test — uji kirim pesan. */
     public function sendTest(Request $request): JsonResponse
     {

@@ -1644,6 +1644,7 @@ bila `WHATSAPP_DRIVER=baileys`; driver lain menampilkan pesan nonaktif.
 | `GET` | `/admin/whatsapp/status` | JSON `{ online, phone, last_connected_at }` — dipakai polling UI |
 | `GET` | `/admin/whatsapp/qr` | JSON `{ qr: dataURL|null, online }` |
 | `POST` | `/admin/whatsapp/logout` | Cabut sesi → QR baru diminta |
+| `POST` | `/admin/whatsapp/reset` | Hapus sesi & minta QR BARU (atasi QR macet / sesi korup) |
 | `POST` | `/admin/whatsapp/send-test` | `{ phone, text }` — uji kirim pesan |
 
 Semua endpoint ini **panel web** (sesi + CSRF), bukan Bearer token. Service
