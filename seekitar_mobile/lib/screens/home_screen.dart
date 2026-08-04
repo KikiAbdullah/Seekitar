@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/constants.dart';
 import '../core/theme.dart';
 import '../models/customer_request.dart';
 import '../models/listing.dart';
@@ -27,6 +28,17 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Fallback saat GPS tidak tersedia: pusat Kabupaten Pasuruan.
   static const double _fallbackLat = -7.5;
   static const double _fallbackLng = 112.0;
+
+  /// Akar server (tanpa `/api/v1`) untuk mengambil aset statis publik,
+  /// mis. `http://192.168.201.162:8000`.
+  String get _serverRoot {
+    final base = AppConstants.baseUrl;
+    final idx = base.indexOf('/api/v1');
+    return idx > 0 ? base.substring(0, idx) : base;
+  }
+
+  /// Gambar hero beranda yang disajikan Laravel dari `public/img/web/`.
+  String get _heroUrl => '$_serverRoot/img/web/hero-baru.jpg';
 
   @override void initState() { super.initState(); _load(); }
 
@@ -130,16 +142,34 @@ class _HomeScreenState extends State<HomeScreen> {
   // ── HERO ──
   Widget _hero(ThemeData t) => Padding(
     padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-    child: ClipRRect(borderRadius: BorderRadius.circular(28), child: Container(
+    child: ClipRRect(borderRadius: BorderRadius.circular(28), child: SizedBox(
       height: 200,
-      decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [AppTheme.primary, const Color(0xFF1FA05A), const Color(0xFF34D399)])),
-      child: Stack(children: [
-        Positioned(right: -40, top: -40, child: Container(width: 200, height: 200, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.08)))),
-        Positioned(left: -20, bottom: -60, child: Container(width: 160, height: 160, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.black.withOpacity(0.06)))),
+      child: Stack(fit: StackFit.expand, children: [
+        // Latar: gambar hero dari server (public/img/web/hero-baru.jpg).
+        _networkImage(_heroUrl, fit: BoxFit.cover, ph: _heroFallback(), cacheWidth: 1170),
+        // Overlay agar teks tetap terbaca di atas gambar yang terang.
+        DecoratedBox(decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [
+              Colors.black.withOpacity(0.62),
+              Colors.black.withOpacity(0.30),
+              Colors.transparent,
+            ],
+          ),
+        )),
+        DecoratedBox(decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.transparent, Colors.black.withOpacity(0.25)],
+          ),
+        )),
         Padding(padding: const EdgeInsets.all(24), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-          Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)), child: Text(_regency.isNotEmpty ? 'Pasar Lokal $_regency' : 'Pasar Lokal Satu Kabupaten', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2))),
+          Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: Colors.black.withOpacity(0.35), borderRadius: BorderRadius.circular(20)), child: Text(_regency.isNotEmpty ? 'Pasar Lokal $_regency' : 'Pasar Lokal Satu Kabupaten', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2))),
           const Spacer(),
-          Text('Yang kamu\nbutuhkan, ada\ndi sekitar.', style: TextStyle(fontSize: 26, height: 1.15, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5, shadows: [Shadow(color: Colors.black.withOpacity(0.15), blurRadius: 4)])),
+          Text('Yang kamu\nbutuhkan, ada\ndi sekitar.', style: TextStyle(fontSize: 26, height: 1.15, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5, shadows: [Shadow(color: Colors.black.withOpacity(0.35), blurRadius: 6), Shadow(color: Colors.black.withOpacity(0.2), blurRadius: 2, offset: const Offset(0, 1))])),
           const SizedBox(height: 16),
           Row(children: [_pill('Barang'), const SizedBox(width: 8), _pill('Jasa'), const SizedBox(width: 8), _pill('Sewa')]),
         ])),
@@ -147,7 +177,16 @@ class _HomeScreenState extends State<HomeScreen> {
     )),
   );
 
-  Widget _pill(String label) => Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8), decoration: BoxDecoration(color: Colors.white.withOpacity(0.18), borderRadius: BorderRadius.circular(24)), child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)));
+  /// Fallback hero bila gambar server tidak bisa dimuat (offline/dns) —
+  /// tetap memakai gradien hijau brand + ornamen, bukan area kosong.
+  Widget _heroFallback() => DecoratedBox(decoration: BoxDecoration(
+    gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [AppTheme.primary, const Color(0xFF1FA05A), const Color(0xFF34D399)]),
+  ), child: Stack(children: [
+    Positioned(right: -40, top: -40, child: Container(width: 200, height: 200, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.08)))),
+    Positioned(left: -20, bottom: -60, child: Container(width: 160, height: 160, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.black.withOpacity(0.06)))),
+  ]));
+
+  Widget _pill(String label) => Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8), decoration: BoxDecoration(color: Colors.black.withOpacity(0.35), borderRadius: BorderRadius.circular(24)), child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)));
 
   // ── STATS ROW ──
   Widget _statsRow(ThemeData t) => Padding(
@@ -212,11 +251,13 @@ class _HomeScreenState extends State<HomeScreen> {
   ));
 
   /// Gambar jaringan dengan placeholder saat loading & saat gagal.
-  Widget _networkImage(String url, {double? width, double? height, BoxFit fit = BoxFit.cover, required Widget ph}) {
+  Widget _networkImage(String url, {double? width, double? height, BoxFit fit = BoxFit.cover, required Widget ph, int? cacheWidth}) {
     final img = Image.network(
       url,
       width: width, height: height, fit: fit,
-      cacheWidth: 480, // hemat memori — cukup untuk kartu kecil
+      // Ukuran cache disesuaikan: 480 px cukup untuk kartu kecil, hero
+      // memakai 1170 px (≈ lebar layar 390dp × 3x) agar tetap tajam.
+      cacheWidth: cacheWidth ?? 480,
       loadingBuilder: (_, child, progress) => progress == null ? child : ph,
       errorBuilder: (_, __, ___) => ph,
     );
