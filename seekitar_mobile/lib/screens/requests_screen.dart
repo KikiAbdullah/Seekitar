@@ -39,7 +39,7 @@ class _RequestsScreenState extends State<RequestsScreen> with SingleTickerProvid
   );
 
   Widget _card(CustomerRequest r) => Card(child: ListTile(
-    leading: CircleAvatar(backgroundColor: Colors.orange.shade50, child: Text(r.userInitials ?? '?', style: TextStyle(color: Colors.orange.shade700, fontWeight: FontWeight.w600))),
+    leading: CircleAvatar(backgroundColor: Colors.orange.shade50, child: Text(r.initials, style: TextStyle(color: Colors.orange.shade700, fontWeight: FontWeight.w600))),
     title: Text(r.title, maxLines: 1),
     subtitle: Text(r.timeLeft, style: TextStyle(color: r.isExpired ? Colors.red : Colors.green.shade700, fontSize: 12)),
     trailing: Chip(label: Text('${r.offersCount} tawaran', style: const TextStyle(fontSize: 11))),

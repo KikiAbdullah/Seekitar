@@ -35,7 +35,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
       body: RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.all(16), children: [
         Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(r.title, style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)), const SizedBox(height: 8),
-          Row(children: [CircleAvatar(radius: 16, backgroundColor: Colors.orange.shade50, child: Text(r.userInitials ?? '?', style: TextStyle(fontSize: 12, color: Colors.orange.shade700))), const SizedBox(width: 8), Text(r.userName ?? '', style: const TextStyle(fontWeight: FontWeight.w500))]),
+          Row(children: [CircleAvatar(radius: 16, backgroundColor: Colors.orange.shade50, child: Text(r.initials, style: TextStyle(fontSize: 12, color: Colors.orange.shade700))), const SizedBox(width: 8), Text(r.userName ?? '', style: const TextStyle(fontWeight: FontWeight.w500))]),
           const SizedBox(height: 8),
           Row(children: [Icon(Icons.timer, size: 16, color: r.isExpired ? Colors.red : Colors.green), const SizedBox(width: 4), Text(r.timeLeft, style: TextStyle(color: r.isExpired ? Colors.red : Colors.green, fontWeight: FontWeight.w600))]),
           if (!r.isExpired) ...[const SizedBox(height: 10), OutlinedButton.icon(onPressed: _extend, icon: const Icon(Icons.timelapse, size: 16), label: const Text('Perpanjang 24 Jam'), style: OutlinedButton.styleFrom(foregroundColor: Colors.orange))],
