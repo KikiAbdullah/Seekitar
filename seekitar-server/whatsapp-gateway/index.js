@@ -77,15 +77,23 @@ const logger = pino({ level: LOG_LEVEL });
 
 // ───────────────────────── socket Baileys ─────────────────────────
 async function startSocket() {
-  if (state.connecting) return;
+  if (state.connecting) {
+    // eslint-disable-next-line no-console
+    console.log('[WA] ⏳ startSocket dipanggil saat sudah connecting — dilewati.');
+    return;
+  }
   state.connecting = true;
   state.loggedOut = false;
 
   try {
     fs.mkdirSync(SESSION_DIR, { recursive: true });
 
+    // eslint-disable-next-line no-console
+    console.log(`[WA] 🔌 Memulai sesi Baileys — folder sesi: ${SESSION_DIR}`);
     const { state: authState, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
     const { version } = await fetchLatestBaileysVersion();
+    // eslint-disable-next-line no-console
+    console.log(`[WA] 📡 Versi Baileys terbaru: ${version.join('.')}`);
 
     const sock = makeWASocket({
       version,
@@ -98,15 +106,21 @@ async function startSocket() {
     });
 
     state.socket = sock;
+    // eslint-disable-next-line no-console
+    console.log('[WA] ✅ Socket Baileys dibuat (makeWASocket OK).');
 
     sock.ev.on('creds.update', saveCreds);
 
     sock.ev.on('connection.update', (update) => {
-      const { connection, lastDisconnect, qr } = update;
+      const { connection, lastDisconnect, qr, isNewLogin } = update;
+      // eslint-disable-next-line no-console
+      console.log(`[WA] 📨 event connection.update → connection=${connection} isNewLogin=${!!isNewLogin} qr=${qr ? 'ADA' : 'tidak'}`);
 
       if (qr) {
         state.lastQr = qr;
         state.lastQrAt = Date.now();
+        // eslint-disable-next-line no-console
+        console.log(`[WA] 🟢 QR BARU tersedia (${new Date().toLocaleTimeString()}) — scan dari panel admin.`);
       }
 
       if (connection === 'open') {
@@ -118,7 +132,7 @@ async function startSocket() {
         state.phone = jid.split(':')[0] || null;
         logger.info({ phone: state.phone }, 'whatsapp connected');
         // eslint-disable-next-line no-console
-        console.log(`[Seekitar WhatsApp Gateway] ✅ TERSAMBUNG — nomor: ${state.phone || '?'}`);
+        console.log(`[WA] ✅ TERSAMBUNG — nomor: ${state.phone || '?'} (${new Date().toLocaleTimeString()})`);
       }
 
       if (connection === 'close') {
@@ -131,11 +145,11 @@ async function startSocket() {
           state.phone = null;
           logger.warn('logged out — scan QR ulang');
           // eslint-disable-next-line no-console
-          console.log('[Seekitar WhatsApp Gateway] ⚠️ Sesi di-logout — scan QR ulang.');
+          console.log('[WA] ⚠️ Sesi di-LOGOUT — scan QR ulang.');
         } else {
           logger.warn({ code }, 'connection closed — will reconnect');
           // eslint-disable-next-line no-console
-          console.log(`[Seekitar WhatsApp Gateway] ⚠️ Koneksi tertutup (${code ?? '?'}) — coba sambung ulang…`);
+          console.log(`[WA] ⚠️ Koneksi tertutup (kode ${code ?? '?'}) — coba sambung ulang dalam ${RECONNECT_DELAY_MS / 1000}s…`);
           scheduleReconnect();
         }
       }
@@ -146,6 +160,8 @@ async function startSocket() {
     });
   } catch (err) {
     logger.error({ err }, 'startSocket failed');
+    // eslint-disable-next-line no-console
+    console.error('[WA] ❌ startSocket gagal:', err.message);
     scheduleReconnect();
   } finally {
     state.connecting = false;
@@ -155,6 +171,8 @@ async function startSocket() {
 function scheduleReconnect() {
   if (state.reconnectTimer) clearTimeout(state.reconnectTimer);
   state.reconnectTimer = setTimeout(() => {
+    // eslint-disable-next-line no-console
+    console.log('[WA] 🔄 Mencoba sambung ulang…');
     startSocket();
   }, RECONNECT_DELAY_MS);
 }
@@ -195,6 +213,9 @@ function toJid(phone) {
 async function sendText(phone, text) {
   ensureConnected();
 
+  // eslint-disable-next-line no-console
+  console.log(`[WA] 📤 Kirim pesan → ${phone} (${new Date().toLocaleTimeString()})`);
+
   // Promise.race: kalau sendMessage tidak selesai dalam SEND_TIMEOUT_MS,
   // balas 504 agar pemanggil tidak menunggu sampai timeout-nya sendiri.
   const send = state.socket.sendMessage(toJid(phone), { text });
@@ -207,7 +228,15 @@ async function sendText(phone, text) {
     }, SEND_TIMEOUT_MS);
   });
 
-  await Promise.race([send, timeout]);
+  try {
+    await Promise.race([send, timeout]);
+    // eslint-disable-next-line no-console
+    console.log(`[WA] ✅ Pesan terkirim → ${phone}`);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(`[WA] ❌ Gagal kirim → ${phone}: ${err.message}`);
+    throw err;
+  }
 }
 
 // ───────────────────────── HTTP server ─────────────────────────
@@ -251,6 +280,8 @@ function syncConnectionState() {
 app.get('/api/status', (req, res) => {
   syncConnectionState();
   const qrFresh = state.lastQr && state.lastQrAt && (Date.now() - state.lastQrAt) < QR_TTL_MS;
+  // eslint-disable-next-line no-console
+  console.log(`[WA] 📊 /api/status → online=${state.online} phone=${state.phone || '-'} qr=${qrFresh ? 'ADA' : '-'}`);
   res.json({
     success: true,
     data: {
@@ -286,6 +317,8 @@ app.get('/api/qr', async (req, res) => {
 });
 
 app.post('/api/logout', async (req, res) => {
+  // eslint-disable-next-line no-console
+  console.log(`[WA] 🔌 /api/logout dipanggil (${new Date().toLocaleTimeString()})`);
   try {
     if (state.socket) {
       try { await state.socket.logout(); } catch (_) { /* abaikan */ }
@@ -312,6 +345,8 @@ app.post('/api/logout', async (req, res) => {
 
 app.post('/api/send', async (req, res) => {
   const { to, text } = req.body || {};
+  // eslint-disable-next-line no-console
+  console.log(`[WA] 📥 POST /api/send → ${to || '(kosong)'} (${new Date().toLocaleTimeString()})`);
   if (!to || !text) {
     return res.status(422).json({ success: false, message: 'Parameter `to` dan `text` wajib.' });
   }
@@ -330,23 +365,45 @@ app.get('/healthz', (req, res) => res.json({ success: true, data: { online: stat
 // BAILEYS_REDIS_URL diset — socket persisten, tanpa HTTP handshake per pesan.
 function startRedisSubscriber() {
   if (!REDIS_URL) {
-    logger.info('REDIS_URL kosong — jalur cepat socket nonaktif; pakai HTTP.');
+    // eslint-disable-next-line no-console
+    console.log('[WA] 🟠 REDIS_URL kosong — jalur cepat socket NONAKTIF; pakai HTTP biasa.');
     return;
   }
 
+  // eslint-disable-next-line no-console
+  console.log(`[WA] 🔵 Menghubungkan ke Redis: ${REDIS_URL.replace(/:[^:@/]+@/, ':*****@')}`);
+
   const sub = new Redis(REDIS_URL, { maxRetriesPerRequest: null });
 
-  sub.on('error', (err) => logger.error({ err }, 'redis subscriber error'));
-  sub.on('connect', () => logger.info('redis subscriber connected'));
+  sub.on('error', (err) => {
+    logger.error({ err }, 'redis subscriber error');
+    // eslint-disable-next-line no-console
+    console.error('[WA] ❌ Redis subscriber error:', err.message);
+  });
+  sub.on('connect', () => {
+    logger.info('redis subscriber connected');
+    // eslint-disable-next-line no-console
+    console.log('[WA] 🔵 Redis subscriber CONNECTED.');
+  });
   sub.on('ready', () => {
     sub.subscribe(WA_CHANNEL_SEND, (err) => {
-      if (err) logger.error({ err }, 'redis subscribe gagal');
-      else logger.info({ channel: WA_CHANNEL_SEND }, 'redis subscribed');
+      if (err) {
+        logger.error({ err }, 'redis subscribe gagal');
+        // eslint-disable-next-line no-console
+        console.error(`[WA] ❌ Gagal subscribe ${WA_CHANNEL_SEND}:`, err.message);
+      } else {
+        logger.info({ channel: WA_CHANNEL_SEND }, 'redis subscribed');
+        // eslint-disable-next-line no-console
+        console.log(`[WA] 🔵 Redis SUBSCRIBED ke channel "${WA_CHANNEL_SEND}" — jalur cepat siap.`);
+      }
     });
   });
 
   sub.on('message', async (channel, message) => {
     if (channel !== WA_CHANNEL_SEND) return;
+
+    // eslint-disable-next-line no-console
+    console.log(`[WA] 📨 Pesan dari Redis channel "${channel}" diterima (${new Date().toLocaleTimeString()}).`);
 
     let payload;
     try { payload = JSON.parse(message); } catch (_) { return; }
@@ -356,8 +413,12 @@ function startRedisSubscriber() {
     try {
       await sendText(to, text);
       sub.publish(WA_CHANNEL_RESULT, JSON.stringify({ id, ok: true, to }));
+      // eslint-disable-next-line no-console
+      console.log(`[WA] ✅ Hasil kirim via Redis → ${to} (ok=true).`);
     } catch (err) {
       sub.publish(WA_CHANNEL_RESULT, JSON.stringify({ id, ok: false, to, error: err.message }));
+      // eslint-disable-next-line no-console
+      console.error(`[WA] ❌ Hasil kirim via Redis → ${to} (ok=false): ${err.message}`);
     }
   });
 
@@ -367,7 +428,13 @@ function startRedisSubscriber() {
 app.listen(PORT, HOST, () => {
   logger.info({ port: PORT, host: HOST }, 'seekitar whatsapp gateway listening');
   // eslint-disable-next-line no-console
-  console.log(`[Seekitar WhatsApp Gateway] http://${HOST}:${PORT}  (healthz: /healthz)`);
+  console.log('==========================================================');
+  console.log(`[WA] 🚀 Seekitar WhatsApp Gateway dimulai`);
+  console.log(`[WA] 🌐 HTTP : http://${HOST}:${PORT}   (healthz: /healthz)`);
+  console.log(`[WA] 🔑 Token: ${BAILEYS_TOKEN ? 'TERSET (auth aktif)' : 'KOSONG (tanpa auth — hanya dev!)'}`);
+  console.log(`[WA] 🗂️  Folder sesi: ${SESSION_DIR}`);
+  console.log(`[WA] 📡 Baileys: ${require('@whiskeysockets/baileys/package.json').version}`);
+  console.log('==========================================================');
   startSocket();
   startRedisSubscriber();
 });
