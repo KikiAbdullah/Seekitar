@@ -43,6 +43,12 @@ const LOG_LEVEL = process.env.LOG_LEVEL || 'silent'; // pino: silent|error|warn|
 const BAILEYS_TOKEN = process.env.BAILEYS_TOKEN || '';
 const QR_TTL_MS = Number(process.env.QR_TTL_MS || 45000); // QR Baileys ~20s; beri ruang
 const RECONNECT_DELAY_MS = Number(process.env.RECONNECT_DELAY_MS || 5000);
+// Batas waktu kirim pesan. sendMessage bisa menggantung bila koneksi
+// WhatsApp mati diam-diam (state.online belum sempat false) — tanpa ini,
+// request /api/send menggantung sampai timeout di sisi pemanggil.
+const SEND_TIMEOUT_MS = Number(process.env.SEND_TIMEOUT_MS || 8000);
+
+const WS_OPEN = 1; // WebSocket.OPEN
 
 // ───────────────────────── state sesi ─────────────────────────
 const state = {
@@ -138,8 +144,21 @@ function scheduleReconnect() {
 }
 
 // ───────────────────────── helper kirim ─────────────────────────
+/**
+ * Koneksi dianggap hidup hanya bila flag online DAN socket WebSocket-nya
+ * benar-benar OPEN. `state.online` saja tidak cukup: koneksi bisa mati
+ * diam-diam (network drop tanpa event close) sehingga sendMessage
+ * menggantung selamanya.
+ */
+function isSocketOpen() {
+  return state.online
+    && state.socket
+    && state.socket.ws
+    && state.socket.ws.readyState === WS_OPEN;
+}
+
 function ensureConnected() {
-  if (!state.online || !state.socket) {
+  if (!isSocketOpen()) {
     const err = new Error('WhatsApp belum tersambung. Scan QR di panel admin dulu.');
     err.status = 409;
     throw err;
@@ -154,7 +173,20 @@ function toJid(phone) {
 
 async function sendText(phone, text) {
   ensureConnected();
-  await state.socket.sendMessage(toJid(phone), { text });
+
+  // Promise.race: kalau sendMessage tidak selesai dalam SEND_TIMEOUT_MS,
+  // balas 504 agar pemanggil tidak menunggu sampai timeout-nya sendiri.
+  const send = state.socket.sendMessage(toJid(phone), { text });
+  const timeout = new Promise((_, reject) => {
+    setTimeout(() => {
+      reject(Object.assign(
+        new Error('Waktu kirim habis — koneksi WhatsApp tidak merespons.'),
+        { status: 504 }
+      ));
+    }, SEND_TIMEOUT_MS);
+  });
+
+  await Promise.race([send, timeout]);
 }
 
 // ───────────────────────── HTTP server ─────────────────────────
@@ -170,7 +202,20 @@ function requireAuth(req, res, next) {
 
 app.use('/api', requireAuth);
 
+/**
+ * Turunkan state.online bila WebSocket ternyata sudah tidak OPEN — dipanggil
+ * sebelum status/QR dilaporkan supaya UI tidak menampilkan "Online" padahal
+ * koneksi sudah mati diam-diam.
+ */
+function syncConnectionState() {
+  if (state.online && state.socket && !(state.socket.ws && state.socket.ws.readyState === WS_OPEN)) {
+    state.online = false;
+    scheduleReconnect();
+  }
+}
+
 app.get('/api/status', (req, res) => {
+  syncConnectionState();
   const qrFresh = state.lastQr && state.lastQrAt && (Date.now() - state.lastQrAt) < QR_TTL_MS;
   res.json({
     success: true,
@@ -185,6 +230,7 @@ app.get('/api/status', (req, res) => {
 });
 
 app.get('/api/qr', async (req, res) => {
+  syncConnectionState();
   if (state.online) {
     return res.json({ success: true, data: { qr: null, online: true, message: 'Sudah tersambung.' } });
   }

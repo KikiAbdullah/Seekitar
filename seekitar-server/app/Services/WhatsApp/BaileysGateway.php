@@ -31,6 +31,11 @@ class BaileysGateway implements WhatsAppGateway
     private const RETRY_TIMES = 2;
     private const RETRY_DELAY_MS = 500;
 
+    private function timeout(): int
+    {
+        return (int) config('whatsapp.baileys.timeout', self::TIMEOUT_SECONDS);
+    }
+
     private function baseUrl(): string
     {
         return rtrim((string) config('whatsapp.baileys.url', 'http://127.0.0.1:3001'), '/');
@@ -54,7 +59,7 @@ class BaileysGateway implements WhatsAppGateway
     {
         try {
             $request = Http::withHeaders($this->headers())
-                ->timeout(self::TIMEOUT_SECONDS)
+                ->timeout($this->timeout())
                 ->retry(self::RETRY_TIMES, self::RETRY_DELAY_MS, throw: false);
 
             $response = match (strtoupper($method)) {
@@ -62,6 +67,15 @@ class BaileysGateway implements WhatsAppGateway
                 default  => $request->get($this->baseUrl().$path),
             };
         } catch (ConnectionException $e) {
+            // cURL 28 = timeout. Service Node ada tapi tidak membalas —
+            // biasanya koneksi WhatsApp mati diam-diam / sendMessage menggantung.
+            if (str_contains($e->getMessage(), '28') || str_contains(strtolower($e->getMessage()), 'timed out')) {
+                throw OtpDeliveryException::fromProvider(
+                    'Baileys',
+                    'Gateway WhatsApp tidak merespons (timeout). Pastikan service Node berjalan (npm start) dan koneksi WhatsApp online.'
+                );
+            }
+
             throw OtpDeliveryException::fromProvider('Baileys', $e->getMessage());
         }
 

@@ -30,6 +30,7 @@ npm start          # http://127.0.0.1:3001
 | `LOG_LEVEL` | `silent` | `error` / `warn` / `info` / `debug` untuk troubleshooting |
 | `QR_TTL_MS` | `45000` | Masa berlaku QR yang dikembalikan `/api/qr` |
 | `RECONNECT_DELAY_MS` | `5000` | Jeda coba sambung ulang setelah koneksi putus |
+| `SEND_TIMEOUT_MS` | `8000` | Batas waktu kirim pesan; lewat batas → balas `504` (mencegah request menggantung) |
 
 ## Endpoint HTTP
 
@@ -76,5 +77,10 @@ scan (selama belum logout).
 - **`409 belum tersambung` saat kirim**: scan QR dulu.
 - **Tiba-tiba offline**: cek log; koneksi akan coba disambung otomatis.
   Kalau `logged_out` (nomor di-logout dari perangkat lain), scan ulang.
+- **Kirim menggantung / timeout (cURL 28)**: koneksi WhatsApp mati diam-diam
+  (network drop tanpa event close) sehingga `sendMessage` tidak pernah
+  selesai. Service kini mendeteksi WebSocket tidak OPEN (status diturunkan ke
+  offline) dan membalas `504` dalam `SEND_TIMEOUT_MS`; pastikan koneksi
+  internet stabil, atau scan ulang QR.
 - **Nomor diblokir**: hentikan pemakaian, hubungi WhatsApp untuk pemulihan —
   ini risiko Baileys (lihat peringatan di atas).
