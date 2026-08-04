@@ -10,7 +10,7 @@ REST API untuk aplikasi Flutter (`/api/v1`) + panel admin web (`/admin`).
 | Laravel | 13.x (`laravel/framework ^13.8`) |
 | PHP | 8.3+ |
 | Database | MySQL 8.0.34+ (**wajib** — `POINT SRID 4326`, `SPATIAL INDEX`, `SET`, `CHECK`) |
-| Auth API | Sanctum 4 (token Bearer, masuk via OTP WhatsApp) |
+| Auth API | JWT (tymon/jwt-auth 2, guard `api`) + Sanctum 4 (sesi admin & transisi) |
 | Panel admin | Blade + Bootstrap 5.3 (template Modernize, divendor di `public/vendor/`) + Yajra DataTables 13 + SweetAlert2 (divendor di `public/vendor/sweetalert2/`) |
 | Peran & izin | Spatie Permission 8 |
 | Queue/Cache | Redis 7 |
@@ -26,12 +26,12 @@ php artisan storage:link
 php artisan serve
 ```
 
-`migrate:fresh --seed` adalah jalan resmi: perubahan skema SELALU dimerge
-ke migrasi dasar (tidak ada migrasi `add_*`), jadi skema lengkap selalu
-terbentuk dari nol. Seed menjalankan, berurutan: role & permission +
-satu akun super-admin pemilik (dari `config/seekitar.php`), kategori,
-pengaturan, akun contoh peran admin & user (local/testing saja), lalu
-data dummy.
+`migrate:fresh --seed` adalah jalan resmi: skema lengkap selalu terbentuk
+dari nol (termasuk migrasi `extend_*`/`add_*` untuk kolom yang menyusul).
+Seed menjalankan, berurutan: role & permission + satu akun super-admin
+pemilik (dari `config/seekitar.php`), kategori, pengaturan, blog awal,
+lalu akun contoh peran admin & user serta data dummy (local/testing
+saja).
 
 ### Kredensial contoh (local/testing)
 
@@ -50,9 +50,9 @@ Sisanya dicetak seeder ke console; kata sandi semuanya `password`:
 php artisan test
 ```
 
-14 file test — kontrak seeder/factory/enum/rute/state machine diuji tanpa
-basis data (lihat `tests/Unit`), kontrak skema lewat basis data test
-(`tests/Feature`).
+24 file test (14 `tests/Unit` + 10 `tests/Feature`) — kontrak
+seeder/factory/enum/rute/state machine diuji tanpa basis data, kontrak
+skema lewat basis data test.
 
 ## Peta struktur
 

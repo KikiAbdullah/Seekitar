@@ -68,7 +68,7 @@ Perbaiki penyebabnya — jangan menghapus aturannya.
 | Normalisasi nomor telepon | Tanpa itu, satu nomor bisa membuat beberapa akun meski kolomnya `UNIQUE` |
 | `MBRContains` sebelum `ST_Distance_Sphere` | Tanpa pra-filter, indeks spasial tidak terpakai sama sekali |
 | Validasi tulis | FormRequest untuk alur yang dipakai ulang/kompleks (OTP, profil); validasi kecil sekali-pakai boleh `$request->validate()` di controller — yang penting pesannya berbahasa Indonesia |
-| `ref` pada Riverpod 3 | Subclass `Ref` hasil codegen sudah dihapus |
+| `context.watch`/`context.read` | State management memakai `provider` (ChangeNotifier), bukan Riverpod |
 | `if (!mounted) return;` setelah `await` | Penyebab crash paling umum di Flutter |
 
 ### Commit
@@ -127,12 +127,14 @@ kredensial dari `.env`:
 
 | Peran | Email | Akses panel |
 | :-- | :-- | :-- |
-| `admin` | `admin.staf@seekitar.test` | ya — 10 permission |
+| `admin` | `admin.staf@seekitar.test` | ya — 13 permission (16 dikurangi `ADMIN_EXCLUDED`) |
 | `user` | `warga@seekitar.test` | **ditolak** (akun kontrol) |
 
 Perbedaan `super-admin` dan `admin`: hanya super-admin yang punya
-`manage-users` dan `manage-settings`. Admin biasa tidak bisa mengubah sesama
-admin atau menyentuh pengaturan sistem — menunya pun tidak muncul.
+`manage-users`, `manage-settings`, dan `manage-fees` (daftar
+`ADMIN_EXCLUDED` di `RolesAndPermissionsSeeder`). Admin biasa tidak bisa
+mengubah sesama admin, menyentuh pengaturan sistem, atau mengubah biaya
+layanan — menunya pun tidak muncul.
 
 Akun `warga@seekitar.test` sengaja ada untuk **membuktikan penolakan
 bekerja**: kredensialnya benar, tetapi `canAccessAdminPanel()` menolaknya dan

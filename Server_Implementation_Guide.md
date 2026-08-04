@@ -42,7 +42,7 @@
    - 5.3 Rate Limiter Kustom
    - 5.4 `EnsureProfileComplete`
 6. [Autentikasi & Otorisasi](#6-autentikasi--otorisasi)
-   - 6.1 Sanctum & Token
+   - 6.1 JWT & Token (API)
    - 6.2 Spatie Permission (Roles & Abilities)
    - 6.3 Gates & Policies
 7. [Routing Lengkap](#7-routing-lengkap)
@@ -703,7 +703,9 @@ class User extends Authenticatable {
 }
 ```
 
-**Guard:** kita gunakan `sanctum` (api) dan `web` (admin). Di config/permission.php, pastikan guards mencakup keduanya.
+**Guard:** kita gunakan `api` (JWT untuk mobile), `web` (sesi admin), dan
+`sanctum` (kompatibilitas transisi). Di config/permission.php, pastikan guards
+mencakup ketiganya.
 
 ### 3.3 Bootstrap 5 & Asset
 
@@ -839,7 +841,7 @@ database/
     └── DummyDataSeeder.php            # Data contoh, hanya untuk development
 
 routes/
-├── api.php                            # Endpoint mobile (guard sanctum)
+├── api.php                            # Endpoint mobile (guard api / JWT)
 ├── web.php                            # Web publik SEO
 ├── admin.php                          # Panel admin (guard web + role)
 └── console.php                        # Jadwal scheduler
@@ -950,7 +952,7 @@ Nilai enum **wajib** sama persis dengan ENUM di `DATABASE.md`:
 | `ListingStatus`      | `active`, `sold`, `hidden`                                                   | `listings.status`             |
 | `ListingType`        | `product`, `service`, `rental`                                               | `listings.listing_type`       |
 | `StoreType`          | `goods`, `services`, `rental`                                                | `stores.store_type` (SET)     |
-| `VerificationStatus` | `pending`, `verified`, `rejected`                                            | `stores.verification_status`  |
+| `StoreStatus`        | `pending`, `verified`, `rejected`, `blocked`                                 | `stores.status` (menggantikan `verification_status`) |
 | `PaymentMethod`      | `cod`, `transfer`                                                            | `orders.payment_method`       |
 | `DisputeStatus`      | `open`, `resolved`                                                           | `disputes.status`             |
 | `VerificationLevel`  | `1`, `2`, `3` (int)                                                          | **TURUNAN** — bukan kolom lagi; dihitung `User::verificationLevel` (DATABASE.md §4.1) |
@@ -1136,7 +1138,7 @@ return Application::configure(basePath: dirname(__DIR__))
 | Alias | Dipakai di | Fungsi |
 | :-- | :-- | :-- |
 | `auth` | web admin | Sesi login Laravel |
-| `auth:sanctum` | `/api/*` | Bearer token |
+| `auth:api` | `/api/*` | JWT Bearer token (guard `api`, driver `jwt`) |
 | `role:admin` | web admin | Spatie — batasi ke admin |
 | `permission:manage-users` | per-route admin | Spatie — izin granular |
 | `store.owner` | API penjual | Memastikan pemanggil pemilik toko terkait |
@@ -1205,79 +1207,83 @@ dipasang, pengguna baru terkunci dan tidak akan pernah bisa melengkapi profil.
 
 ## 6. AUTENTIKASI & OTORISASI
 
-### 6.1 Sanctum & Token (API)
+### 6.1 JWT & Token (API)
 
-Seekitar memakai Sanctum dalam **dua mode sekaligus**. Membedakan keduanya itu
-penting, karena salah konfigurasi di sini adalah penyebab paling umum error
-`419 CSRF token mismatch` di aplikasi mobile.
+Autentikasi API mobile memakai **JWT stateless** (`tymon/jwt-auth`), sementara
+panel admin memakai **sesi cookie Laravel**. Dua kanal ini tidak boleh
+tertukar — API mobile tidak pernah mengirim cookie, dan panel admin tidak
+pernah mengirim Bearer token.
 
 | Kanal                     | Mode          | Mekanisme                                  |
 | :------------------------ | :------------ | :------------------------------------------ |
-| **Mobile app** (`/api/*`) | **Stateless** | Bearer personal access token, tanpa cookie  |
-| **Admin panel** (web)     | **Stateful**  | Session cookie Laravel biasa                |
+| **Mobile app** (`/api/*`) | **Stateless** | Bearer JWT (`auth:api`, driver `jwt`), tanpa cookie |
+| **Admin panel** (web)     | **Stateful**  | Session cookie Laravel biasa (guard `web`)  |
 
-**Instalasi:**
+**Alur masuk (OTP → JWT):**
 
-```bash
-composer require laravel/sanctum:^4.0
-php artisan install:api
+```php
+// AuthController::verifyOtp — setelah OTP cocok:
+$token = auth('api')->login($user);   // JWT stateless, TIDAK disimpan di DB
+
+return $this->ok([
+    'token'      => $token,
+    'token_type' => 'Bearer',
+    'expires_in' => self::TOKEN_TTL_MINUTES * 60,   // 30 hari (config/jwt.php ttl)
+    'user'       => new UserResource($user),
+]);
 ```
 
-**Konfigurasi `.env`:**
+**Konfigurasi (`config/jwt.php` & `.env`):**
 
 ```env
-# Domain yang boleh memakai autentikasi berbasis cookie (web admin).
-# Mobile app TIDAK dimasukkan ke sini — ia memakai Bearer token.
-SANCTUM_STATEFUL_DOMAINS=localhost,localhost:8000,127.0.0.1,127.0.0.1:8000,admin.seekitar.id
-
-SESSION_DOMAIN=.seekitar.id
-SESSION_DRIVER=redis
+JWT_SECRET=<hasil php artisan jwt:secret>
+JWT_TTL=43200          # 30 hari — umur token
+JWT_REFRESH_TTL=20160  # 14 hari — jendela refresh sejak token pertama
+JWT_BLACKLIST_ENABLED=true
 ```
 
-> ⚠️ **Jangan** memasukkan `api.seekitar.id` ke `SANCTUM_STATEFUL_DOMAINS`.
-> Jika dimasukkan, Sanctum memperlakukan request mobile sebagai stateful dan
-> mulai menuntut CSRF token, sehingga request dari aplikasi gagal dengan 419.
-
-**Middleware stateful hanya untuk web admin** (`bootstrap/app.php`):
+**Refresh tanpa login ulang** (`POST /auth/refresh`) — token lama di-blacklist,
+token baru diterbitkan; hanya berlaku selama token saat ini masih valid dan
+masih dalam jendela `refresh_ttl`:
 
 ```php
-->withMiddleware(function (Middleware $middleware) {
-    // Hanya grup 'web'/admin yang perlu cookie-based auth.
-    $middleware->statefulApi();
-
-    $middleware->alias([
-        'role'       => \Spatie\Permission\Middleware\RoleMiddleware::class,
-        'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
-    ]);
-})
+$newToken = auth('api')->refresh();
+return $this->ok(['token' => $newToken, 'token_type' => 'Bearer', 'expires_in' => ...]);
 ```
 
-**Membuat token dengan ability terbatas:**
+**Logout** (`POST /auth/logout`) — JWT tidak punya tabel token (berbeda dari
+Sanctum yang menghapus baris DB), jadi logout dilakukan dengan mem-blacklist
+token saat ini:
 
 ```php
-// Batasi cakupan token sesuai peran, jangan beri akses penuh.
-$token = $user->createToken('mobile-app', ['user'])->plainTextToken;
-
-// Untuk pemilik toko:
-$token = $user->createToken('mobile-app', ['user', 'store-owner'])->plainTextToken;
+auth('api')->logout();   // token masuk blacklist sampai kedaluwarsa
 ```
 
-Melindungi route dengan ability:
+**Melindungi route API:**
 
 ```php
-Route::middleware(['auth:sanctum', 'ability:store-owner'])->group(function () {
-    Route::post('/listings', [ListingController::class, 'store']);
+Route::middleware('auth:api')->group(function () {
+    Route::get('/me', [AuthController::class, 'me']);
+    // ...
 });
 ```
+
+**Sanctum masih terpasang untuk dua hal:** (1) autentikasi stateful berbasis
+cookie pada domain `SANCTUM_STATEFUL_DOMAINS` (web admin via
+`$middleware->statefulApi()` — jangan pernah memasukkan `api.seekitar.id` ke
+daftar itu, atau request mobile akan menuntut CSRF dan gagal dengan 419), dan
+(2) kompatibilitas token Sanctum lama yang masih hidup selama masa transisi
+(guard `sanctum` tetap ada di `config/auth.php`).
 
 **Guard untuk Spatie Permission** — karena ada dua kanal, `config/permission.php`
 harus mengenali keduanya. Model `User` perlu tahu guard mana yang dipakai:
 
 ```php
-// config/auth.php — pastikan kedua guard ada
+// config/auth.php — pastikan ketiga guard ada
 'guards' => [
     'web'     => ['driver' => 'session', 'provider' => 'users'],
-    'sanctum' => ['driver' => 'sanctum', 'provider' => 'users'],
+    'api'     => ['driver' => 'jwt',     'provider' => 'users'],
+    'sanctum' => ['driver' => 'sanctum', 'provider' => 'users'],   // transisi
 ],
 ```
 
@@ -1289,7 +1295,7 @@ harus mengenali keduanya. Model `User` perlu tahu guard mana yang dipakai:
 - `admin` (akses panel admin kecuali manajemen admin lain)
 - `user` (default pengguna biasa)
 
-**Permissions (abilities) untuk Admin:**
+**Permissions (abilities) untuk Admin (16, sesuai `RolesAndPermissionsSeeder::PERMISSIONS`):**
 
 - `manage-users`
 - `verify-users`
@@ -1303,8 +1309,12 @@ harus mengenali keduanya. Model `User` perlu tahu guard mana yang dipakai:
 - `manage-disputes`
 - `manage-reviews`
 - `manage-settings`
+- `manage-subscriptions`
+- `manage-advertisements`
+- `manage-fees`
+- `manage-blog`
 
-Semua permission diberikan pada role `super-admin`. Role `admin` bisa diberikan sebagian (misal tidak bisa `manage-users` untuk mencegah hapus sesama admin).
+Semua permission diberikan pada role `super-admin`. Role `admin` bisa diberikan sebagian (misal tidak bisa `manage-users` untuk mencegah hapus sesama admin — `ADMIN_EXCLUDED` di seeder berisi `manage-users`, `manage-settings`, dan `manage-fees`).
 
 **Cara assign (Seeder):** lihat bagian 19.
 
@@ -1312,7 +1322,7 @@ Semua permission diberikan pada role `super-admin`. Role `admin` bisa diberikan 
 
 Spatie menyimpan `guard_name` **di setiap baris** role dan permission. Sebuah
 permission bermilik `guard_name = 'web'` **tidak terlihat** oleh pengguna yang
-diautentikasi lewat guard `sanctum`, meskipun namanya sama persis. Ini penyebab
+diautentikasi lewat guard `api`, meskipun namanya sama persis. Ini penyebab
 `can()` mendadak mengembalikan `false` di API padahal berfungsi di web admin.
 
 Seekitar sengaja memakai pembagian berikut:
@@ -1320,12 +1330,12 @@ Seekitar sengaja memakai pembagian berikut:
 | Kanal | Guard | Otorisasi memakai |
 | :-- | :-- | :-- |
 | Web admin | `web` | **Spatie** role & permission (`role:admin\|super-admin`, lalu `permission:*` granular per route/blok) |
-| API mobile | `sanctum` | Token `['*']` + **Policy** kepemilikan (Store/Offer/Order/dsb.) + middleware `permission:*` untuk endpoint admin API |
+| API mobile | `api` (JWT) | **Policy** kepemilikan (Store/Offer/Order/dsb.) + middleware `permission:*` untuk endpoint admin API |
 
 Artinya seluruh role/permission Spatie cukup dibuat untuk guard `web` saja —
 persis seperti seeder di §19.2. Pengguna biasa di aplikasi mobile tidak
 membutuhkan baris permission sama sekali; haknya ditentukan kepemilikan data
-(lewat Policy) dan ability token.
+(lewat Policy).
 
 ```php
 // config/permission.php
@@ -1338,12 +1348,11 @@ membutuhkan baris permission sama sekali; haknya ditentukan kepemilikan data
 'defaults' => ['guard' => 'web'],
 ```
 
-> Endpoint admin API **memang** memakai `permission:*` di atas token
-> Sanctum — dan itu bekerja karena model `User` tidak mendefinisikan
-> `guard_name`, sehingga Spatie mengecek role/permission guard `web`
-> (default) apa pun kanal autentikasinya. Yang perlu dicegah justru
-> mengganti guard default ke `sanctum`: itu akan mematikan seluruh
-> otorisasi web admin.
+> Endpoint admin API **memang** memakai `permission:*` di atas Bearer JWT —
+> dan itu bekerja karena model `User` tidak mendefinisikan `guard_name`,
+> sehingga Spatie mengecek role/permission guard `web` (default) apa pun
+> kanal autentikasinya. Yang perlu dicegah justru mengganti guard default ke
+> `sanctum` atau `api`: itu akan mematikan seluruh otorisasi web admin.
 
 ### 6.3 Gates & Policies
 
@@ -1500,7 +1509,7 @@ Route::prefix('v1')->group(function () {
     Route::get('categories',      [CategoryController::class, 'index']);
 
     // --- Perlu login ---------------------------------------------------
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware('auth:api')->group(function () {
         Route::post('auth/logout',     [AuthController::class, 'logout']);
         Route::get('auth/me',          [AuthController::class, 'me']);
         Route::patch('auth/profile',   [AuthController::class, 'updateProfile']);
@@ -1862,9 +1871,11 @@ terlanjur ada siklus di data lama.
 
 **Index Verifikasi Toko (`/admin/verifications/stores`):**
 
-- Antrian: toko `verification_status = 'pending'`, terlama dulu; pemilik
-  ikut dimuat (`owner:id,name,phone,verified_at`) — kelayakan pemilik
-  adalah bagian dari penilaian.
+- Antrian: toko `status = 'pending'` (kolom `stores.status` — JSON API
+  tetap menyebutnya `verification_status` untuk klien lama, lihat
+  `StoreResource`), terlama dulu; pemilik ikut dimuat
+  (`owner:id,name,phone,verified_at`) — kelayakan pemilik adalah bagian
+  dari penilaian.
 - Modal SOP 3 langkah (alamat & pemilik → foto etalase ASLI → koordinat di
   peta) + checklist wajib. Foto dibaca dari kolom MENTAH
   (`getRawOriginal('photo')`): aksesor `Store::photo` menjatuhkan nilai
@@ -1933,36 +1944,46 @@ API, kedudukan kembali `menunggu` dan siklusnya dimulai lagi — jejak
 `rejected_*` sengaja dipertahankan sebagai konteks pengajuan ulang,
 baru dibersihkan saat identitasnya akhirnya disetujui.
 
-**Toko — dua syarat diperiksa ulang SERVER di titik persetujuan:**
+**Toko — dua syarat diperiksa ulang SERVER di titik persetujuan.** Logika
+kedudukan toko hidup **sekali** di `App\Services\VerifikasiTokoService`
+(`setujui`/`tolak`), dipakai panel web, aksi cepat di tabel toko, DAN
+endpoint admin API — sebelumnya logika itu disalin tiga kali dan sudah
+pernah menyimpang:
 
 ```php
-$hasil = DB::transaction(function () use ($store, $request): string {
-    $toko = Store::lockForUpdate()->findOrFail($store->id);
+// App\Services\VerifikasiTokoService::setujui
+public function setujui(Store $store, int|string $adminId): string
+{
+    return DB::transaction(function () use ($store, $adminId): string {
+        $toko = Store::lockForUpdate()->findOrFail($store->getKey());
 
-    if ($toko->verification_status !== VerificationStatus::Pending) {
-        return 'bukan-antrian';                    // stempel tulis-sekali
-    }
+        if ($toko->status !== StoreStatus::Pending) {
+            return 'bukan-antrian';                    // stempel tulis-sekali
+        }
 
-    // Syarat (1): pemilik terverifikasi (no HP + KTP). Level bisa turun
-    // selama menunggu antrian, jadi mengecek hanya saat pengajuan tidak cukup.
-    $pemilik = User::lockForUpdate()->find($toko->user_id);
-    if ($pemilik === null || ! $pemilik->canOpenStore()) {
-        return 'pemilik-belum-terverifikasi';
-    }
+        // Syarat (1): pemilik terverifikasi (no HP + KTP). Level bisa turun
+        // selama menunggu antrian, jadi mengecek hanya saat pengajuan tidak cukup.
+        $pemilik = User::lockForUpdate()->find($toko->user_id);
+        if ($pemilik === null || ! $pemilik->canOpenStore()) {
+            return 'pemilik-belum-terverifikasi';
+        }
 
-    // Syarat (2): foto ASLI terunggah — baca kolom mentah, bukan aksesor.
-    if (empty($toko->getRawOriginal('photo'))) {
-        return 'foto-belum-diunggah';
-    }
+        // Syarat (2): foto ASLI terunggah — baca kolom mentah, bukan aksesor.
+        if (empty($toko->getRawOriginal('photo'))) {
+            return 'foto-belum-diunggah';
+        }
 
-    $toko->verification_status = VerificationStatus::Verified;
-    $toko->rejected_reason     = null;
-    $toko->verified_at         = now();
-    $toko->verified_by         = $request->user()->id;
-    $toko->save();
+        $toko->status          = StoreStatus::Verified;
+        $toko->verified_at     = now();
+        $toko->verified_by     = $adminId;
+        $toko->rejected_at     = null;   // jejak penolakan dibersihkan di sini
+        $toko->rejected_by     = null;
+        $toko->rejected_reason = null;
+        $toko->save();
 
-    return 'disetujui';
-});
+        return 'disetujui';
+    });
+}
 ```
 
 **Toko — penolakan juga hanya sah dari antrian** (menolak toko yang sudah
@@ -1970,14 +1991,18 @@ disetujui akan menyisakan stempel `verified_*` pada status `rejected` —
 keadaan kontradiktif tanpa makna alur):
 
 ```php
-$toko->verification_status = VerificationStatus::Rejected;
-$toko->rejected_reason     = $request->reason();   // wajib: min 10, maks 500
+// VerifikasiTokoService::tolak — mengembalikan bool
+$toko->status          = StoreStatus::Rejected;
+$toko->rejected_at     = now();
+$toko->rejected_by     = $adminId;
+$toko->rejected_reason = $reason;      // wajib diisi pemanggil
 $toko->save();
 ```
 
-`reason` wajib diisi saat menolak (`RejectVerificationRequest`:
-`'reason' => 'required|string|min:10|max:500'`) — penolakan tanpa alasan
-membuat pengguna mengajukan ulang berkas yang sama.
+Alasan wajib diisi saat menolak — tanpa itu pengguna mengajukan ulang
+berkas yang sama. Saat pemilik diblokir, `seretBersamaPemilik()` menyeret
+semua tokonya ke `blocked` (dengan jejak `blocked_*`), dan membuka blokir
+mengembalikan kedudukan tiap toko dari jejaknya sendiri.
 
 > ⚠️ **Verifikasi pengguna itu SATU, bukan bertahap.** Desain awal punya
 > tahap 1 ("verifikasi nomor") dan tahap 2 ("verifikasi KTP") — padahal
@@ -2779,7 +2804,7 @@ public function matchingStores(CustomerRequest $request): Collection
 
     return Store::query()
         ->where('is_active', true)
-        ->where('verification_status', VerificationStatus::Verified)
+        ->where('status', StoreStatus::Verified)
         // Toko tidak boleh menawar pada permintaannya sendiri.
         ->where('user_id', '!=', $request->user_id)
         // Kategori toko memuat kategori permintaan (JSON, bukan FK).
@@ -3089,21 +3114,24 @@ trait HasLocation
 }
 ```
 
-Dipakai di `Store` dan `CustomerRequest` (keduanya punya kolom `location`):
+Dipakai di model yang punya kolom `location` POINT: `CustomerRequest`,
+`User`, dan `Order` (`shipping_location`). **`Store` TIDAK memakai trait ini**
+— lokasi toko adalah kolom `latitude`/`longitude` DECIMAL, jadi pencarian
+radius toko memakai `scopeWithinBox` (`whereBetween`) + `Jarak::haversineKm`
+di PHP (lihat `DATABASE.md` §11):
 
 ```php
-class Store extends Model
+class CustomerRequest extends Model
 {
-    use HasLocation, SoftDeletes;
+    use HasLocation, ...;
 }
 
-// Pemakaian di controller:
-$stores = Store::query()
+// Pemakaian di BroadcastService (pencocokan penyedia untuk permintaan):
+$permintaan = CustomerRequest::query()
     ->withDistance($lat, $lng)
     ->nearby($lat, $lng, $radiusKm)
-    ->where('is_active', true)
     ->orderByDistance()
-    ->paginate($perPage);
+    ->get();
 ```
 
 > ⚠️ **Urutan `POINT(longitude latitude)`** — terbalik dari kebiasaan menulis
@@ -3116,25 +3144,26 @@ $stores = Store::query()
 > ⚠️ **Jangan menghapus tahap `MBRContains` dari `scopeNearby()`** dengan alasan
 > "menyederhanakan query". Tanpa tahap itu, indeks spasial tidak terpakai sama
 > sekali dan pencarian melambat sebanding dengan jumlah baris. Verifikasi
-> dengan `EXPLAIN`: kolom `key` harus berisi `stores_location_spatial`.
+> dengan `EXPLAIN`: kolom `key` harus berisi `cr_location_spatial`.
 
 **Memastikan indeks terpakai:**
 
 ```php
 // Jalankan sekali di tinker/test setelah data uji dimuat.
 DB::enableQueryLog();
-Store::nearby(-7.2575, 112.7521, 5)->get();
+CustomerRequest::nearby(-7.2575, 112.7521, 5)->get();
 $sql = DB::getQueryLog()[0]['query'];
 
 dd(DB::select("EXPLAIN $sql", DB::getQueryLog()[0]['bindings']));
-// key => 'stores_location_spatial'  ✅
-// key => null                        ❌ indeks tidak terpakai
+// key => 'cr_location_spatial'  ✅
+// key => null                    ❌ indeks tidak terpakai
 ```
 
-**Menyimpan koordinat** (kolom POINT tidak bisa diisi string biasa):
+**Menyimpan koordinat** (kolom POINT tidak bisa diisi string biasa — semua
+penulisan dipusatkan di `HasLocation::setLocation()`):
 
 ```php
-$store->location = DB::raw("ST_GeomFromText('POINT($lng $lat)', 4326, 'axis-order=long-lat')");
+$permintaan->setLocation($lat, $lng);   // memakai ST_GeomFromText + axis-order
 ```
 
 ### 16.1 Reverse Geocoding (Koordinat → Alamat)
@@ -3699,7 +3728,7 @@ public function run(): void
 
     DB::transaction(function () {
         $permissions = [];
-        foreach (self::PERMISSIONS as $name) {          // 12 permission, §6.2
+        foreach (self::PERMISSIONS as $name) {          // 16 permission, §6.2
             $permissions[$name] = Permission::firstOrCreate(
                 ['name' => $name, 'guard_name' => 'web']
             );
@@ -3746,12 +3775,13 @@ public function run(): void
 > 2. **Oper objek Permission ke `syncPermissions()`, bukan namanya.** Dengan
 >    string, Spatie memanggil `findByName()` yang membaca cache permission, dan
 >    cache itu bisa belum memuat baris yang baru dibuat pada transaksi sama.
-> 3. **`manage-users` dan `manage-settings` ditahan dari role `admin`** —
->    supaya admin biasa tidak bisa mengubah sesama admin, dan halaman
->    pengaturan tetap khusus super-admin (`API_DOCUMENTATION.md` §10.5).
+> 3. **`manage-users`, `manage-settings`, dan `manage-fees` ditahan dari role
+>    `admin`** (`ADMIN_EXCLUDED` di seeder) — supaya admin biasa tidak bisa
+>    mengubah sesama admin, halaman pengaturan tetap khusus super-admin
+>    (`API_DOCUMENTATION.md` §10.5), dan biaya layanan hanya diatur pemilik.
 
-> Daftar permission di atas **sudah** memuat `manage-settings` (12 permission,
-> sesuai §6.2). Pastikan keduanya tetap sinkron saat menambah permission baru.
+> Daftar permission di atas **sudah** memuat 16 permission sesuai §6.2.
+> Pastikan keduanya tetap sinkron saat menambah permission baru.
 
 **`DatabaseSeeder`** — satu pintu, dan urutannya penting karena
 `RolesAndPermissionsSeeder` membuat user super-admin yang butuh role:
@@ -3971,7 +4001,11 @@ CACHE_STORE=redis
 SESSION_DRIVER=redis
 QUEUE_CONNECTION=redis
 
-# --- Sanctum & Session ----------------------------------------------------
+# --- JWT & Sanctum/Session ------------------------------------------------
+JWT_SECRET=                          # php artisan jwt:secret
+JWT_TTL=43200                        # 30 hari
+JWT_REFRESH_TTL=20160                # 14 hari
+JWT_BLACKLIST_ENABLED=true
 SANCTUM_STATEFUL_DOMAINS=admin.seekitar.id
 SESSION_DOMAIN=.seekitar.id
 SESSION_SECURE_COOKIE=true

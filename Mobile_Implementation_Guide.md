@@ -3,14 +3,13 @@
 **Versi:** 2.3 (Production‑Ready)  
 **Tanggal:** 29 Juli 2026  
 **Target:** Flutter 3.44+ (Dart 3.12+) · Android & iOS  
-**Arsitektur:** Clean Architecture + Riverpod · Dependency Injection dengan Riverpod  
-**State Management:** Riverpod 3.x dengan AsyncNotifier  
-**HTTP Client:** Dio 5.x  
-**Database Lokal:** Isar (opsional, untuk cache)  
-**Maps & Geolokasi:** Google Maps Flutter, Geolocator, Geocoding  
-**Push Notification:** Firebase Cloud Messaging (FCM)  
+**Arsitektur:** pragmatis per peran — `screens/`, `services/`, `models/`, `providers/`, `routing/`, `widgets/`  
+**State Management:** provider (`ChangeNotifier` + `ChangeNotifierProvider`)  
+**HTTP Client:** Dio 5.x (interceptor JWT + refresh + retry)  
+**Database Lokal:** tidak ada (tanpa cache lokal; `shared_preferences` untuk preferensi ringan)  
+**Maps & Geolokasi:** Geolocator + Geocoding (tanpa `google_maps_flutter`)  
+**Push Notification:** Firebase Cloud Messaging (FCM) + `flutter_local_notifications`  
 **WhatsApp Redirection:** url_launcher  
-**Analytics:** Firebase Analytics, Firebase Crashlytics  
 **CI/CD:** GitHub Actions (build APK/IPA)
 
 > 📌 Versi lengkap & matriks kompatibilitas paket ada di [`TECH_STACK.md`](TECH_STACK.md) (sumber kebenaran tunggal).
@@ -22,7 +21,7 @@ memengaruhi cara app berperilaku:
 
 | Komponen backend       | Versi         | Relevansi untuk mobile                                                                 |
 | :--------------------- | :------------ | :-------------------------------------------------------------------------------------- |
-| Laravel + Sanctum      | 13 · Sanctum 4 | Sumber REST API; token Bearer disimpan di `flutter_secure_storage`                     |
+| Laravel + JWT          | 13 · JWT (tymon 2) | Sumber REST API; Bearer JWT disimpan di `flutter_secure_storage` (kunci `jwt_token`); refresh via `POST /auth/refresh` |
 | MySQL 8.0.34+ (Spatial) | 8.0.34+       | Pencarian radius toko dihitung di server — app hanya mengirim `lat`, `lng`, `radius`   |
 | **Redis 7**            | 7.x           | Cache & **queue**: broadcast penawaran dan notifikasi FCM diproses asinkron            |
 | Firebase FCM           | —             | Push notification masuk lewat queue Redis, bukan langsung dari request                 |
@@ -39,12 +38,9 @@ polling ringan sebagai pelengkap push.
 1. [Arsitektur & Prinsip](#1-arsitektur--prinsip)
 2. [Library Utama (pub.dev)](#2-library-utama-pubdev)
 3. [Struktur Proyek](#3-struktur-proyek)
-   - 3.1 Tiga Lokasi Widget — Kapan Pakai yang Mana
-   - 3.2 `core/services/` vs `data/repositories/`
-   - 3.3 `core/constants/route_constants.dart`
-4. [State Management & Dependency Injection (Riverpod)](#4-state-management--dependency-injection-riverpod)
-5. [Layer Data: API, Repositories, Models](#5-layer-data-api-repositories-models)
-6. [Layer Domain: UseCases & Entities](#6-layer-domain-usecases--entities)
+4. [State Management & Dependency Injection (provider)](#4-state-management--dependency-injection-provider)
+5. [Layer Data: Dio, API Client, Models](#5-layer-data-dio-api-client-models)
+6. [Layer Layanan & Sesi: Auth Service](#6-layer-layanan--sesi-auth-service)
 7. [Layer Presentation: Halaman & Widget](#7-layer-presentation-halaman--widget)
 8. [Navigasi & Routing (GoRouter)](#8-navigasi--routing-gorouter)
 9. [Autentikasi & OTP Flow](#9-autentikasi--otp-flow)
@@ -70,75 +66,92 @@ polling ringan sebagai pelengkap push.
 
 ## 1. ARSITEKTUR & PRINSIP
 
-Aplikasi Flutter Seekitar mengadopsi **Clean Architecture** dengan 3 lapis:
+Aplikasi Flutter Seekitar memakai struktur **pragmatis per peran** (bukan
+Clean Architecture berlapis — lihat §3), dengan pemisahan yang jelas antara
+tanggung jawab:
 
-- **Data:** API client (Dio), model DTO, repository implementasi.
-- **Domain:** Entitas, usecase, repository interface.
-- **Presentation:** Halaman, widget, state (Riverpod AsyncNotifier).
+- **`screens/`** — halaman (UI), termasuk state lokal halaman (StatefulWidget).
+- **`services/`** — akses ke dunia luar: `DioClient` (HTTP + interceptor JWT),
+  `ApiClient` (metode API), `AuthService` (OTP & sesi), `FcmService` (push).
+- **`models/`** — objek data polos dengan `fromJson` manual (tanpa codegen).
+- **`providers/`** — state global (`AppState extends ChangeNotifier`).
+- **`routing/`** — GoRouter (35 route + `StatefulShellRoute` 5 tab).
+- **`widgets/`** — komponen bersama (banner offline, base screen).
+- **`core/`** — konstanta, tema, logger.
 
 **Prinsip:**
 
-- **Separation of Concerns** – Setiap lapis hanya berkomunikasi melalui interface.
-- **Unidirectional Data Flow** – State mengalir dari provider ke UI, event dari UI ke provider.
-- **Testability** – Domain murni Dart tanpa dependency Flutter.
-- **Reusability** – Widget kecil, composable.
+- **Satu sumber state global** – `AppState` (ChangeNotifier) memegang sesi
+  pengguna & token; layar membaca lewat `context.watch`/`context.read`.
+- **Layar stateless bila mungkin** – Data diambil `ApiClient`, state lokal
+  cukup dengan `setState`; provider global hanya untuk hal yang dipakai
+  lintas layar (sesi, jumlah notifikasi).
+- **Model manual** – `fromJson` ditulis tangan: tanpa `build_runner`, build
+  lebih cepat dan tidak ada berkas `.g.dart` yang bisa basi.
+- **Reusability** – Widget kecil, composable (`widgets/`).
 
 ---
 
 ## 2. LIBRARY UTAMA (pub.dev)
 
-Versi di bawah ini selaras dengan **Flutter 3.44 / Dart 3.12**.
+Daftar di bawah ini adalah isi **`seekitar_mobile/pubspec.yaml`** yang
+sebenarnya — sumber kebenaran. Tidak ada `flutter_riverpod`, `freezed`,
+`json_serializable`, `build_runner`, maupun `google_maps_flutter`; model JSON
+ditulis manual.
 
 | Kategori             | Library                                 | Versi    | Keterangan                             |
 | -------------------- | --------------------------------------- | -------- | -------------------------------------- |
-| State Management     | `flutter_riverpod`                      | ^3.4.0   | Riverpod untuk state, DI, caching      |
-| HTTP Client          | `dio`                                   | ^5.11.0  | REST API calls dengan interceptors     |
-| Routing              | `go_router`                             | ^17.3.0  | Navigasi deklaratif, deep link         |
-| Maps                 | `google_maps_flutter`                   | ^2.18.0  | Menampilkan peta, pin lokasi           |
-| Geolokasi            | `geolocator`                            | ^14.0.0  | Mendapatkan posisi GPS                 |
-| Geocoding            | `geocoding`                             | ^5.0.0   | Reverse geocoding (koordinat → alamat) |
-| Push Notification    | `firebase_messaging`                    | ^16.4.0  | FCM untuk notifikasi                   |
-| Firebase Core        | `firebase_core`                         | ^4.12.0  | Inisialisasi Firebase                  |
-| Deep Link            | `app_links`                             | ^6.0.0   | Menangani universal link               |
-| WhatsApp             | `url_launcher`                          | ^6.3.0   | Membuka WhatsApp                       |
-| Image Picker         | `image_picker`                          | ^1.2.0   | Ambil foto produk, KTP                 |
+| State Management     | `provider`                              | ^6.1.0   | `ChangeNotifier` + `ChangeNotifierProvider` |
+| HTTP Client          | `dio`                                   | ^5.7.0   | REST API calls; interceptor JWT/refresh/retry |
+| Routing              | `go_router`                             | ^14.8.0  | Navigasi deklaratif + `StatefulShellRoute` |
+| Geolokasi            | `geolocator`                            | ^13.0.0  | Mendapatkan posisi GPS                 |
+| Geocoding            | `geocoding`                             | ^3.0.0   | Reverse geocoding (koordinat → alamat) |
+| Push Notification    | `firebase_messaging`                    | ^15.1.0  | FCM untuk notifikasi                   |
+| Firebase Core        | `firebase_core`                         | ^3.6.0   | Inisialisasi Firebase                  |
+| Notifikasi Lokal     | `flutter_local_notifications`           | ^18.0.0  | Notif saat aplikasi di latar depan     |
+| WhatsApp             | `url_launcher`                          | ^6.3.0   | Membuka WhatsApp / nomor telepon       |
+| Image Picker         | `image_picker`                          | ^1.1.0   | Ambil foto produk, KTP                 |
+| Kompresi Gambar      | `flutter_image_compress`                | ^2.4.0   | Kompresi sebelum unggah                |
+| File Picker          | `file_picker`                           | ^8.1.0   | Pilih berkas umum                      |
 | Cached Network Image | `cached_network_image`                  | ^3.4.0   | Cache gambar                           |
-| Local Storage        | `shared_preferences`                    | ^2.5.0   | Token, preferensi                      |
-| Secure Storage       | `flutter_secure_storage`                | ^10.3.0  | Token akses disimpan aman              |
-| JSON Serialization   | `json_annotation` + `json_serializable` | ^4.12.0  | Generate kode model                    |
-| Build Runner         | `build_runner`                          | ^2.4.0   | Menjalankan generator                  |
-| Font                 | `google_fonts`                          | ^8.1.0   | Plus Jakarta Sans (§16)                |
+| Local Storage        | `shared_preferences`                    | ^2.3.0   | Preferensi ringan                      |
+| Secure Storage       | `flutter_secure_storage`                | ^9.2.0   | Token JWT disimpan aman (`jwt_token`)  |
+| Konektivitas         | `connectivity_plus`                     | ^6.1.0   | Banner offline                         |
+| Path                 | `path_provider`                         | ^2.1.0   | Direktori berkas                       |
+| Skala UI             | `flutter_screenutil`                    | ^5.9.0   | Design size 390×844                    |
+| Rating               | `flutter_rating_bar`                    | ^4.0.1   | Tampilan bintang rating                |
+| Indikator Galeri     | `smooth_page_indicator`                 | ^1.2.0   | Dots galeri gambar listing             |
+| SVG                  | `flutter_svg`                           | ^2.0.0   | Logo & aset vektor                     |
 | Skeleton Loading     | `shimmer`                               | ^3.0.0   | Placeholder saat memuat data           |
-| Analytics            | `firebase_analytics`                    | ^12.4.0  | Pelacakan event (§20)                  |
-| Crash Reporting      | `firebase_crashlytics`                  | ^5.2.0   | Laporan galat otomatis                 |
-| l10n                 | `flutter_localizations`                 | SDK      | Multi bahasa (opsional)                |
+| Berbagi              | `share_plus`                            | ^10.0.0  | Bagikan tautan listing                 |
+| Format               | `intl`                                  | ^0.19.0  | Format tanggal/angka Rupiah            |
+| Izin Platform        | `permission_handler`                    | ^11.3.0  | Izin lokasi, notifikasi                |
+| Log                  | `logger`                                | ^2.5.0   | Log aplikasi                           |
+| Info Paket           | `package_info_plus`                     | ^8.1.0   | Versi aplikasi (halaman Tentang)       |
 
-**Dev dependencies:** `flutter_test`, `mocktail`, `riverpod_lint`, `custom_lint`.
+**Dev dependencies:** `flutter_test`, `flutter_lints`, `flutter_native_splash`.
 
-> Konfigurasi environment (dev/staging/prod) memakai `--dart-define`, **bukan**
-> `flutter_dotenv` — lihat §21 untuk alasannya. Tidak ada package tambahan.
+> Konfigurasi environment memakai `--dart-define=API_BASE_URL=...` (dibaca
+> `String.fromEnvironment` di `lib/core/constants.dart`) — tidak ada
+> `flutter_dotenv` dan tidak ada `config/dev.json`.
 
 ### Catatan Kompatibilitas
 
-**GoRouter ↔ Riverpod tidak saling bergantung.** Anggapan bahwa "GoRouter
-membutuhkan Riverpod versi tertentu" itu keliru: `go_router` hanya bergantung
-pada `collection`, `logging`, dan `meta`, dan Riverpod tidak menyebut GoRouter
-sama sekali. Yang benar-benar mengikat keduanya adalah **versi Dart SDK** —
-`go_router` 17 butuh Dart `^3.10`, `flutter_riverpod` 3 butuh Dart `^3.12`.
-Keduanya aman di Dart 3.12.
-
-**Riverpod 3 wajib, bukan opsional.** Riverpod 2.x tidak dites untuk Dart 3.12
-dan sudah tidak dirawat. Konsekuensinya ada breaking change pada pola penulisan
-provider — lihat §4.4.
+**GoRouter ↔ state management tidak saling bergantung.** `go_router` hanya
+bergantung pada `collection`, `logging`, dan `meta` — tidak ada kaitan dengan
+`provider` maupun Riverpod. Keduanya independen; yang mengikat adalah versi
+Dart SDK (proyek ini Dart 3.12+).
 
 **Firebase harus sekeluarga.** `firebase_core` dan `firebase_messaging` dirilis
 berpasangan; menaikkan salah satu saja sering memicu konflik di build Android.
 
-**Dihapus dari daftar:**
+**Sengaja tidak dipakai:**
 
-- `freezed` / `freezed_annotation` — versi stabilnya belum menjangkau Dart 3.12.
-  Untuk sementara pakai `json_serializable` + kelas immutable manual
-  (`final` field + `copyWith`). Tambahkan kembali setelah Freezed 4 stabil.
+- `freezed` / `json_serializable` / `build_runner` — model memakai `fromJson`
+  manual; tanpa codegen, build lebih cepat dan tidak ada berkas `.g.dart`.
+- `google_maps_flutter` — pemilih lokasi cukup dengan koordinat GPS +
+  reverse geocoding; peta interaktif ada di web admin (Leaflet), bukan di
+  aplikasi mobile.
 - `pull_to_refresh_flutter3` — tidak lagi dirawat. Pakai `RefreshIndicator`
   bawaan Flutter yang sudah memadai.
 
@@ -148,460 +161,312 @@ berpasangan; menaikkan salah satu saja sering memicu konflik di build Android.
 
 ```
 lib/
-├── app.dart                    # MaterialApp + GoRouter
-├── main.dart                   # Entry point (initialize)
+├── main.dart                   # Entry point: init AppState + FCM, runApp
 ├── core/
-│   ├── constants/
-│   │   ├── api_constants.dart      # Base URL, endpoints
-│   │   ├── app_colors.dart         # Warna sesuai brand guideline
-│   │   └── route_constants.dart    # Nama & path rute GoRouter (anti hardcode)
-│   ├── enums/                      # Cerminan Enum backend
-│   │   ├── order_status.dart
-│   │   ├── request_status.dart
-│   │   ├── offer_status.dart
-│   │   └── store_type.dart
-│   ├── errors/
-│   │   ├── exceptions.dart
-│   │   └── failure.dart
-│   ├── network/
-│   │   ├── dio_client.dart         # Dio instance + interceptors
-│   │   └── api_response.dart       # Wrapper response
-│   ├── services/                   # Pembungkus SDK/platform (bukan REST API)
-│   │   ├── location_service.dart      # GPS, izin lokasi, reverse geocoding
-│   │   ├── notification_service.dart  # FCM: token, izin, handler pesan
-│   │   ├── analytics_service.dart     # Firebase Analytics & Crashlytics
-│   │   ├── storage_service.dart       # Secure storage token, prefs
-│   │   └── deep_link_service.dart     # app_links / universal link
-│   ├── theme/
-│   │   └── app_theme.dart          # ThemeData, TextTheme
-│   ├── utils/
-│   │   ├── validators.dart
-│   │   └── formatters.dart
-│   └── widgets/                    # Widget global, TIDAK terikat fitur apa pun
-│       ├── custom_button.dart
-│       ├── loading_indicator.dart
-│       └── error_widget.dart
-├── data/
-│   ├── datasources/
-│   │   └── remote/
-│   │       ├── auth_remote_datasource.dart
-│   │       ├── store_remote_datasource.dart
-│   │       ├── listing_remote_datasource.dart
-│   │       └── ...
-│   ├── models/                 # DTO, JSON serializable
-│   │   ├── user_model.dart
-│   │   ├── store_model.dart
-│   │   ├── listing_model.dart
-│   │   └── ...
-│   └── repositories/           # Implementasi interface domain
-│       ├── auth_repository_impl.dart
-│       ├── store_repository_impl.dart
-│       └── ...
-├── domain/
-│   ├── entities/               # Objek domain (sealed/freezed)
-│   │   ├── user.dart
-│   │   ├── store.dart
-│   │   ├── listing.dart
-│   │   └── ...
-│   ├── repositories/           # Interface
-│   │   ├── auth_repository.dart
-│   │   ├── store_repository.dart
-│   │   └── ...
-│   └── usecases/               # Aksi bisnis
-│       ├── auth/
-│       │   ├── request_otp.dart
-│       │   ├── verify_otp.dart
-│       │   └── get_profile.dart
-│       ├── stores/
-│       │   ├── get_nearby_stores.dart
-│       │   └── create_store.dart
-│       └── ...
-├── presentation/
-│   ├── providers/              # Riverpod AsyncNotifier (state per fitur)
-│   │   ├── auth_provider.dart
-│   │   ├── store_provider.dart
-│   │   ├── listing_provider.dart
-│   │   ├── request_provider.dart
-│   │   ├── offer_provider.dart
-│   │   ├── order_provider.dart
-│   │   └── location_provider.dart
-│   ├── pages/
-│   │   ├── splash/
-│   │   ├── auth/
-│   │   │   ├── login_page.dart
-│   │   │   ├── otp_page.dart
-│   │   │   └── register_page.dart
-│   │   ├── home/
-│   │   │   └── main_shell.dart  # Scaffold with BottomNav
-│   │   ├── explore/            # Tab Jelajahi
-│   │   │   ├── explore_page.dart
-│   │   │   ├── listing_detail_page.dart
-│   │   │   └── widgets/        # Widget khusus halaman explore saja
-│   │   │       ├── explore_filter_sheet.dart
-│   │   │       └── explore_map_view.dart
-│   │   ├── requests/           # Tab Kebutuhan
-│   │   │   ├── requests_page.dart
-│   │   │   ├── create_request_page.dart
-│   │   │   ├── request_detail_page.dart
-│   │   │   └── compare_offers_page.dart
-│   │   ├── orders/             # Tab Transaksi
-│   │   │   ├── orders_page.dart
-│   │   │   └── order_detail_page.dart
-│   │   ├── store/              # Manajemen Toko
-│   │   │   ├── my_store_page.dart
-│   │   │   ├── create_store_page.dart
-│   │   │   └── edit_listing_page.dart
-│   │   └── profile/
-│   │       ├── profile_page.dart
-│   │       ├── edit_profile_page.dart
-│   │       └── verification_page.dart
-│   └── widgets/               # Widget lintas fitur yang terikat domain
-│       ├── listing_card.dart
-│       ├── store_card.dart
-│       ├── request_card.dart
-│       └── offer_card.dart
-└── l10n/                       # Opsional
+│   ├── constants.dart              # AppConstants (baseUrl via --dart-define, warna, format) + UiStrings
+│   ├── theme.dart                  # AppTheme.light / AppTheme.dark (hijau #168A4A)
+│   └── logger.dart                 # appLogger (paket logger)
+├── models/                     # Objek data polos — fromJson MANUAL (tanpa codegen)
+│   ├── user.dart                   # User (status, verified_at, latitude/longitude)
+│   ├── store.dart
+│   ├── listing.dart
+│   ├── customer_request.dart
+│   ├── order.dart
+│   ├── review.dart
+│   ├── notification.dart
+│   ├── conversation.dart
+│   ├── address.dart
+│   ├── category.dart
+│   ├── dashboard.dart              # ringkasan dasbor toko
+│   └── wallet.dart
+├── providers/
+│   └── app_state.dart          # AppState extends ChangeNotifier (sesi, jumlah notif)
+├── routing/
+│   └── app_router.dart         # GoRouter: 35 route + StatefulShellRoute (5 tab) + HomeShell
+├── services/                   # Akses dunia luar (HTTP, auth, FCM)
+│   ├── dio_client.dart             # Dio singleton + interceptor Bearer JWT, refresh 401, retry
+│   ├── api_client.dart             # Semua metode API (/auth, /stores, /listings, /orders, …)
+│   ├── api_compat.dart             # ApiProvider — pembungkus kompatibilitas pemanggilan
+│   ├── auth_service.dart           # OTP flow, simpan/baca token JWT, profil
+│   └── fcm_service.dart            # Firebase Messaging: token, izin, handler pesan
+├── screens/                    # 35 halaman (satu berkas per halaman)
+│   ├── splash_screen.dart          # fade+scale 1200ms → /home atau /onboarding
+│   ├── onboarding_screen.dart      # 3 slide PageView
+│   ├── login_screen.dart           # OTP: input nomor WA + 6 digit kode, countdown 60s
+│   ├── home_screen.dart            # Beranda: hero, tren, terdekat, kebutuhan
+│   ├── search_screen.dart          # Pencarian + filter chips kategori
+│   ├── requests_screen.dart        # Tab Kebutuhan (Daftar/Menawarkan)
+│   ├── orders_screen.dart          # Tab Pesanan
+│   ├── profile_screen.dart         # Tab Profil
+│   ├── listing_detail_screen.dart
+│   ├── create_listing_screen.dart
+│   ├── request_detail_screen.dart
+│   ├── order_detail_screen.dart
+│   ├── checkout_screen.dart        # Ringkasan + kupon + metode bayar/antar
+│   ├── coupon_screen.dart
+│   ├── wallet_screen.dart
+│   ├── address_screen.dart
+│   ├── conversations_screen.dart   # Daftar chat
+│   ├── store_screen.dart           # Toko saya + dasbor + buka toko
+│   ├── stores_nearby_screen.dart
+│   ├── category_screen.dart        # Jelajah kategori
+│   ├── favorites_screen.dart
+│   ├── notifications_screen.dart
+│   ├── notif_prefs_screen.dart
+│   ├── blocked_screen.dart
+│   ├── verification_screen.dart    # Verifikasi KTP
+│   ├── reviews_screen.dart
+│   ├── settings_full_screen.dart
+│   ├── legal_screen.dart           # Bantuan & legal
+│   ├── about_screen.dart
+│   ├── pricing_screen.dart
+│   └── status_screen.dart
+└── widgets/
+    ├── base_screen.dart        # Scaffold + AppBar konsisten
+    └── offline_banner.dart     # Banner "offline" dari connectivity_plus
 ```
 
-### Tiga Lokasi Widget — Kapan Pakai yang Mana
+**Jumlah asli (per `find lib -type f`):** 1 `main.dart` + 3 `core/` + 12
+`models/` + 1 `providers/` + 1 `routing/` + 5 `services/` + 31 `screens/` +
+2 `widgets/` = **56 berkas Dart**.
 
-Ini sumber kebingungan yang paling sering. Aturannya berdasarkan **seberapa
-luas widget itu dipakai** dan **apakah ia tahu soal domain Seekitar**:
+### Di mana widget ditaruh
 
-| Lokasi                             | Tahu domain? | Contoh                                          | Aturan                                                        |
-| :--------------------------------- | :----------- | :---------------------------------------------- | :-------------------------------------------------------------- |
-| `core/widgets/`                    | ❌ Tidak     | `CustomButton`, `LoadingIndicator`              | Bisa disalin ke proyek Flutter lain tanpa diubah              |
-| `presentation/widgets/`            | ✅ Ya        | `ListingCard`, `StoreCard`, `OfferCard`         | Menerima entity domain, dipakai **lebih dari satu** halaman    |
-| `presentation/pages/<fitur>/widgets/` | ✅ Ya     | `ExploreFilterSheet`, `OfferComparisonRow`      | Hanya dipakai **satu** halaman                                 |
+| Lokasi                  | Tahu domain? | Contoh                              | Aturan                                         |
+| :---------------------- | :----------- | :---------------------------------- | :--------------------------------------------- |
+| `widgets/`              | ❌ Tidak     | `BaseScreen`, `OfflineBanner`       | Dipakai banyak layar, tanpa tahu model bisnis  |
+| `screens/<nama>_screen.dart` | ✅ Ya   | `ListingDetailScreen`, `HomeScreen` | Satu layar = satu berkas; bagian UI-nya ditulis privat di berkas yang sama |
 
-**Tes cepat saat ragu:**
+Aturan sederhana: halaman = satu berkas di `screens/`; komponen yang dipakai
+lebih dari satu halaman dan tidak tahu domain → `widgets/`; komponen yang
+tahu domain cukup didefinisikan di dalam berkas layar yang memakainya.
 
-1. Apakah widget ini menyebut tipe domain (`Store`, `Listing`, `Offer`)?
-   Jika **tidak** → `core/widgets/`.
-2. Jika ya, apakah dipakai di lebih dari satu halaman?
-   Ya → `presentation/widgets/`. Tidak → folder `widgets/` di dalam halaman itu.
+### `core/constants.dart` — pusat konstanta
 
-**Aturan promosi:** mulai dari yang paling sempit. Begitu sebuah widget dipakai
-halaman kedua, pindahkan ke `presentation/widgets/`. Jangan langsung menaruh
-semua widget di folder global "untuk berjaga-jaga".
-
-> `core/widgets/` **tidak boleh** meng-import apa pun dari `domain/` atau
-> `data/`. Kalau sampai perlu, berarti widget itu salah tempat.
-
-### `core/services/` vs `data/repositories/`
-
-Keduanya sama-sama "layanan", tapi tanggung jawabnya berbeda:
-
-| | `core/services/` | `data/repositories/` |
-| :-- | :-- | :-- |
-| Bicara dengan | SDK perangkat (GPS, FCM, storage) | REST API backend |
-| Contoh | `LocationService.getCurrentPosition()` | `StoreRepository.getNearbyStores()` |
-| Bergantung pada | Plugin Flutter | `Dio` + datasource |
-
-Alur khasnya menggabungkan keduanya: `LocationService` mengambil koordinat GPS,
-lalu koordinat itu dikirim ke `StoreRepository` untuk mencari toko sekitar.
+Base URL, warna, label, dan formatter dipusatkan di `AppConstants`:
 
 ```dart
-// core/services/location_service.dart
-class LocationService {
-  Future<Position> getCurrentPosition() async {
-    final permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      final requested = await Geolocator.requestPermission();
-      if (requested == LocationPermission.denied) {
-        throw const LocationPermissionDeniedException();
-      }
-    }
-    if (permission == LocationPermission.deniedForever) {
-      throw const LocationPermissionDeniedException();
-    }
-    return Geolocator.getCurrentPosition();
-  }
-}
-
-// Diekspos sebagai provider agar mudah di-mock saat testing.
-@riverpod
-LocationService locationService(Ref ref) => LocationService();
-```
-
-### `core/constants/route_constants.dart`
-
-Path rute ditulis di dua tempat — saat mendaftarkan `GoRoute` dan saat navigasi.
-Kalau di-hardcode, salah ketik baru ketahuan waktu runtime. Pusatkan:
-
-```dart
-// core/constants/route_constants.dart
-abstract final class Routes {
-  static const splash         = '/splash';
-  static const login          = '/login';
-  static const otp            = '/otp';
-  static const completeProfile = '/complete-profile';
-  static const explore        = '/';
-  static const requests       = '/requests';
-  static const createRequest  = '/requests/create';
-  static const orders         = '/orders';
-  static const profile        = '/profile';
-  static const myStore        = '/store';
-  static const favorites      = '/favorites';
-
-  // Rute berparameter: sediakan pola sekaligus pembangunnya.
-  static const listingDetail = '/listing/:id';
-  static String listingDetailOf(String id) => '/listing/$id';
-
-  static const requestDetail = '/requests/:id';
-  static String requestDetailOf(String id) => '/requests/$id';
-
-  static const orderDetail = '/orders/:id';
-  static String orderDetailOf(String id) => '/orders/$id';
+class AppConstants {
+  // Base URL disuntikkan saat build; default untuk pengembangan lokal.
+  static const String baseUrl =
+      String.fromEnvironment('API_BASE_URL', defaultValue: 'http://192.168.201.148:8000/api/v1');
+  static const Duration connectTimeout = Duration(seconds: 15);
+  static const Duration receiveTimeout = Duration(seconds: 15);
+  static const int maxRetries = 2;
+  static const Color primaryColor = Color(0xFF168A4A);
+  // ...
 }
 ```
 
-Pemakaian:
-
-```dart
-GoRoute(path: Routes.login, builder: (_, __) => const LoginPage()),
-
-// Navigasi — tidak ada string mentah:
-context.go(Routes.listingDetailOf(listing.id));
-```
+Tidak ada kelas `Routes` terpisah — path GoRouter ditulis langsung di
+`routing/app_router.dart` dan dipakai layar lewat `context.go(...)` /
+`context.push(...)` dengan string literal yang konsisten di satu tempat.
 
 ---
 
-## 4. STATE MANAGEMENT & DEPENDENCY INJECTION (RIVERPOD)
+## 4. STATE MANAGEMENT & DEPENDENCY INJECTION (PROVIDER)
 
-### 4.1 Providers Global
+State management memakai paket **`provider`** dengan satu `AppState extends
+ChangeNotifier` sebagai state global. Tidak ada codegen, tidak ada
+`ProviderScope`/`ref` — layar membaca state langsung dari widget tree lewat
+`context.watch<T>()` / `context.read<T>()`.
 
-Dependensi global **dideklarasikan sebagai provider**, bukan dibuat di `main()`
-lalu di-override. Dengan begitu `dio` dan `secureStorage` bisa diakses dari
-mana saja lewat `ref.read(...)`, dan tetap mudah diganti saat pengujian.
+### 4.1 Satu `AppState`, disuntikkan di `main()`
 
-```dart
-// core/network/dio_client.dart
-@Riverpod(keepAlive: true)
-Dio dio(Ref ref) {
-  final client = Dio(BaseOptions(
-    baseUrl: Env.apiBaseUrl,
-    connectTimeout: const Duration(seconds: 10),
-    receiveTimeout: const Duration(seconds: 10),
-  ));
-  client.interceptors.add(AuthInterceptor(ref));
-  return client;
-}
-
-// core/services/storage_service.dart
-@Riverpod(keepAlive: true)
-FlutterSecureStorage secureStorage(Ref ref) => const FlutterSecureStorage(
-      aOptions: AndroidOptions(encryptedSharedPreferences: true),
-    );
-```
-
-`keepAlive: true` penting: tanpa itu `Dio` akan dibuang begitu tidak ada
-listener, sehingga koneksi dan interceptor dibangun ulang berkali-kali.
-
-`main()` kini hanya mengurus inisialisasi platform:
+`main.dart` membuat `AppState`, memanggil `init()` (memuat token & profil),
+lalu menyuntikkannya ke seluruh pohon widget:
 
 ```dart
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  runApp(
-    const ProviderScope(
-      // Nonaktifkan auto-retry Riverpod 3 (lihat §4.4).
-      retry: _noRetry,
-      child: SeekitarApp(),
-    ),
-  );
+  _setupErrorHandling();                 // FlutterError.onError + runZonedGuarded
+  final app = AppState();
+  app.init();                            // AuthService.init() → GET /auth/me
+  FcmService().init().catchError((_) {});// token FCM, tanpa memblokir UI
+  runApp(SeekitarApp(app: app));
 }
 
-Duration? _noRetry(int retryCount, Object error) => null;
+class SeekitarApp extends StatelessWidget {
+  final AppState app;
+  const SeekitarApp({super.key, required this.app});
+
+  @override
+  Widget build(BuildContext context) {
+    return ScreenUtilInit(
+      designSize: const Size(390, 844),
+      minTextAdapt: true,
+      builder: (_, __) => ChangeNotifierProvider.value(
+        value: app,
+        child: MaterialApp.router(
+          title: AppConstants.appName,
+          theme: AppTheme.light,
+          themeMode: ThemeMode.light,   // tanpa dark mode — palet terang saja
+          routerConfig: appRouter,
+        ),
+      ),
+    );
+  }
+}
 ```
 
-**Override hanya dipakai di test**, bukan di produksi:
+`AppState` adalah satu-satunya tempat state lintas layar (sesi pengguna,
+jumlah notifikasi belum dibaca). Data per-halaman diambil langsung oleh layar
+melalui `ApiClient` dan disimpan di state lokal `StatefulWidget` — tidak
+perlu provider tambahan.
 
 ```dart
-ProviderScope(
-  overrides: [
-    dioProvider.overrideWithValue(mockDio),
-    secureStorageProvider.overrideWithValue(FakeSecureStorage()),
-  ],
-  child: const SeekitarApp(),
+// lib/providers/app_state.dart
+class AppState extends ChangeNotifier {
+  final AuthService _auth = AuthService();
+  final ApiClient _api = ApiClient();
+
+  User? get user => _auth.user;
+  bool get isLoggedIn => _auth.isLoggedIn;
+  bool get isLoading => _auth.isLoading;
+
+  int _unreadNotif = 0;
+  int get unreadNotif => _unreadNotif;
+
+  Future<void> init() => _auth.init();
+  Future<Map<String, dynamic>> requestOtp(String phone) => _auth.requestOtp(phone);
+  Future<Map<String, dynamic>> verifyOtp(String phone, String otp) => _auth.verifyOtp(phone, otp);
+  Future<void> logout() => _auth.logout();
+
+  Future<void> fetchUnreadCount() async { /* GET /notifications/unread-count */ }
+}
+```
+
+### 4.2 Membaca & memicu dari layar
+
+```dart
+// Membaca state (ikut rebuild saat berubah):
+final app = context.watch<AppState>();
+final user = app.user;
+
+// Memicu aksi tanpa rebuild:
+context.read<AppState>().logout();
+```
+
+Karena `AppState` mengimplementasikan `ChangeNotifier`, `context.watch`
+men-subscribe otomatis dan `notifyListeners()` di dalam `AppState` memicu
+rebuild hanya pada layar yang menontonnya.
+
+### 4.3 State lokal halaman
+
+Untuk data yang hanya dipakai satu layar, cukup state lokal — tidak perlu
+global provider:
+
+```dart
+class LoginScreen extends StatefulWidget { ... }
+
+class _LoginScreenState extends State<LoginScreen> {
+  bool _isSubmitting = false;          // loading tombol
+  int _resendCountdown = 60;           // countdown resend OTP
+
+  Future<void> _verify() async {
+    setState(() => _isSubmitting = true);
+    try {
+      final res = await context.read<AppState>().verifyOtp(_phone, _otp);
+      if (!mounted) return;
+      context.go('/home');
+    } catch (e) {
+      if (!mounted) return;
+      _showError(e);
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+}
+```
+
+> ⚠️ `if (!mounted) return;` setelah setiap `await` — penyebab crash paling
+> umum di Flutter. `context` lintas async harus dicek `mounted` dulu.
+
+### 4.4 Kenapa bukan Riverpod?
+
+Versi dokumen sebelumnya mendeskripsikan Riverpod 3 (`@riverpod`, `Ref`,
+`AsyncValue`, `ProviderScope`). Implementasi yang ada memakai `provider`
+karena: (1) lingkup state globalnya kecil (satu `AppState`), (2) tanpa codegen
+build lebih cepat, dan (3) layar membaca state lewat `context.watch` yang
+bawaan Flutter. Jika suatu saat kompleksitas naik (cache per-request,
+pembatalan otomatis), migrasi bertahap ke Riverpod tetap mungkin — tetapi
+pola di dokumen ini adalah sumber kebenaran saat ini.
+
+---
+
+## 5. LAYER DATA: DIO, API CLIENT, MODELS
+
+### 5.1 DioClient — instance tunggal + interceptor
+
+`DioClient` adalah **singleton** yang menyiapkan `Dio` sekali, menyimpan
+token JWT di `flutter_secure_storage` (kunci `jwt_token`), dan memasang tiga
+interceptor: auth (sisipkan `Authorization: Bearer <token>`), refresh+retry
+(401 → `POST /auth/refresh` → ulangi request), dan log (debug).
+
+```dart
+class DioClient {
+  static final DioClient _instance = DioClient._();
+  factory DioClient() => _instance;
+  DioClient._() {
+    _dio = Dio(BaseOptions(
+      baseUrl: AppConstants.baseUrl,
+      connectTimeout: AppConstants.connectTimeout,
+      receiveTimeout: AppConstants.receiveTimeout,
+      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+    ));
+    _dio.interceptors.addAll([_authInterceptor(), _retryInterceptor(), _logInterceptor()]);
+  }
+
+  late final Dio _dio;
+  final _storage = const FlutterSecureStorage();
+  String? _token;
+
+  Dio get dio => _dio;
+
+  Future<void> setToken(String t) async { _token = t; await _storage.write(key: 'jwt_token', value: t); }
+  Future<void> loadToken() async { _token = await _storage.read(key: 'jwt_token'); }
+  Future<void> clearToken() async { _token = null; await _storage.delete(key: 'jwt_token'); }
+}
+```
+
+**Interceptor 401 → refresh → retry** (berbeda dari versi Sanctum lama yang
+tidak punya refresh):
+
+```dart
+InterceptorsWrapper _authInterceptor() => InterceptorsWrapper(
+  onRequest: (options, handler) {
+    if (_token != null) options.headers['Authorization'] = 'Bearer $_token';
+    handler.next(options);
+  },
+  onError: (error, handler) async {
+    if (error.response?.statusCode == 401 && _token != null) {
+      try {
+        final refreshDio = Dio(BaseOptions(baseUrl: AppConstants.baseUrl));
+        refreshDio.options.headers['Authorization'] = 'Bearer $_token';
+        final res = await refreshDio.post('/auth/refresh');
+        final newToken = (res.data is Map ? res.data['data'] : null)?['token']?.toString();
+        if (newToken == null) throw Exception('Refresh gagal');
+        await setToken(newToken);
+        error.requestOptions.headers['Authorization'] = 'Bearer $newToken';
+        final retry = await _dio.fetch(error.requestOptions);   // ulangi request asli
+        handler.resolve(retry);
+        return;
+      } catch (_) {
+        await clearToken();   // refresh gagal → paksa login ulang
+      }
+    }
+    handler.next(error);
+  },
 );
 ```
 
-### 4.2 Provider Typikal (Auth)
+> ⚠️ Kode `423` berarti akun **dibekukan admin** — bedakan dari `401`
+> (token kedaluwarsa). Layar login menampilkan pesan pembekuan, bukan sekadar
+> "silakan masuk lagi". Bedakan juga `401` dari `NetworkException` (offline):
+> jangan hapus token hanya karena perangkat sedang offline.
 
-```dart
-@riverpod
-class AuthNotifier extends _$AuthNotifier {
-  @override
-  FutureOr<User?> build() async {
-    final storage = ref.read(storageServiceProvider);
-    final token = await storage.readToken();
-
-    if (token == null) return null;
-
-    try {
-      return await ref.read(authRepositoryProvider).getProfile();
-    } on UnauthorizedException {
-      // Token ditolak server (kedaluwarsa/dicabut admin). Bersihkan lalu
-      // perlakukan sebagai belum login — JANGAN lempar error, karena itu
-      // membuat aplikasi macet di layar error saat dibuka.
-      await storage.clearToken();
-      return null;
-    } on NetworkException {
-      // Sedang offline: token belum tentu tidak valid, jadi jangan dihapus.
-      // Lempar agar UI bisa menampilkan tombol "Coba lagi".
-      rethrow;
-    }
-  }
-
-  Future<void> login(String phone, String otp) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      final auth = await ref.read(authRepositoryProvider).verifyOtp(phone, otp);
-      // await — tanpa ini token bisa belum tersimpan saat request berikutnya jalan.
-      await ref.read(storageServiceProvider).saveToken(auth.token);
-      return auth.user;
-    });
-  }
-
-  Future<void> logout() async {
-    // Cabut token di server dulu; kegagalan jaringan tidak boleh
-    // menghalangi pengguna keluar dari perangkatnya sendiri.
-    try {
-      await ref.read(authRepositoryProvider).logout();
-    } on Exception catch (e, s) {
-      ref.read(analyticsServiceProvider).recordError(e, s, fatal: false);
-    }
-
-    await ref.read(storageServiceProvider).clearToken();
-    await ref.read(notificationServiceProvider).deleteToken();  // stop notifikasi
-    state = const AsyncData(null);
-  }
-}
-```
-
-> ⚠️ Membedakan `UnauthorizedException` dari `NetworkException` itu penting.
-> Menghapus token hanya karena perangkat sedang offline akan memaksa pengguna
-> login ulang setiap kali sinyal hilang.
-
-### 4.3 Provider untuk List (Nearby Stores)
-
-Untuk daftar pendek tanpa paginasi, `family` sudah cukup:
-
-```dart
-@riverpod
-Future<List<Store>> nearbyStores(Ref ref, {
-  required double lat, required double lng, double radius = 10,
-}) async {
-  final repository = ref.read(storeRepositoryProvider);
-  return repository.getNearbyStores(lat, lng, radius);
-}
-```
-
-Untuk daftar panjang (katalog, papan kebutuhan) pakai `AsyncNotifier` dengan
-`loadMore` — implementasi lengkapnya di §19.2. Perhatikan bahwa provider ini
-**tidak** memakai `keepAlive`, sehingga hasil pencarian dibuang saat pengguna
-meninggalkan halaman; ini disengaja agar data lokasi tidak basi.
-
-### 4.4 Perubahan Riverpod 3 yang Wajib Diketahui
-
-Proyek ini memakai **Riverpod 3**, yang membawa beberapa breaking change dari
-pola Riverpod 2 yang banyak beredar di tutorial lama.
-
-**1. Subclass `Ref` hasil codegen dihapus.** Tidak ada lagi `NearbyStoresRef`,
-`DioRef`, dan sejenisnya — pakai `Ref` langsung:
-
-```dart
-// ❌ Riverpod 2 (tidak lagi berlaku)
-@riverpod
-Future<List<Store>> nearbyStores(NearbyStoresRef ref) async { ... }
-
-// ✅ Riverpod 3
-@riverpod
-Future<List<Store>> nearbyStores(Ref ref) async { ... }
-```
-
-**2. `AsyncValue.valueOrNull` dihapus.** Gunakan `.value`, yang kini
-mengembalikan `null` saat error (dulu melempar exception):
-
-```dart
-final user = ref.watch(authNotifierProvider).value; // bisa null
-```
-
-**3. Provider gagal kini auto-retry.** Secara default Riverpod mengulang dengan
-backoff (mulai 200 ms, hingga 10 kali). Untuk request yang tidak layak diulang
-— misalnya verifikasi OTP yang salah — matikan retry-nya agar user tidak
-menunggu percobaan sia-sia:
-
-```dart
-ProviderScope(
-  retry: (retryCount, error) => null, // nonaktifkan retry global
-  child: SeekitarApp(),
-)
-```
-
-**4. `StateProvider` & `StateNotifierProvider` dipindah** ke
-`package:flutter_riverpod/legacy.dart`. Untuk kode baru, pakai `Notifier` /
-`AsyncNotifier` saja.
-
----
-
-## 5. LAYER DATA: API, REPOSITORIES, MODELS
-
-### 5.1 Dio Client dengan Interceptors
-
-Provider `dio` sudah didefinisikan di §4.1. Interceptornya:
-
-```dart
-class AuthInterceptor extends Interceptor {
-  AuthInterceptor(this.ref);
-  final Ref ref;
-
-  @override
-  Future<void> onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
-    final token = await ref.read(storageServiceProvider).readToken();
-    if (token != null) {
-      options.headers['Authorization'] = 'Bearer $token';
-    }
-    handler.next(options);
-  }
-
-  @override
-  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
-    final status = err.response?.statusCode;
-
-    // 401: token tidak lagi berlaku -> paksa keluar.
-    // 423: akun dibekukan admin -> keluar DAN tampilkan alasannya.
-    if (status == 401 || status == 423) {
-      await ref.read(storageServiceProvider).clearToken();
-      ref.invalidate(authNotifierProvider);   // GoRouter otomatis ke /login
-
-      if (status == 423) {
-        ref.read(appMessengerProvider).showBlocked(
-          err.response?.data['message'] as String? ?? 'Akun Anda dibekukan.',
-        );
-      }
-    }
-
-    handler.next(err);
-  }
-}
-```
-
-> ⚠️ **Tidak ada mekanisme refresh token.** Backend memakai Sanctum dengan
-> token berumur panjang (30 hari) tanpa endpoint refresh — lihat
-> `API_DOCUMENTATION.md` §2.2. Jadi menambahkan antrian *retry-after-refresh*
-> di interceptor justru sia-sia: satu-satunya pemulihan dari `401` adalah
-> mengulang alur OTP.
->
-> Bedakan `401` dari `423`: yang pertama bisa dipulihkan dengan login ulang,
-> yang kedua **tidak** — akun dibekukan, jadi pengguna harus diberi tahu
-> alasannya alih-alih dilempar ke layar login berulang kali.
-
-**Logging hanya di mode debug** — `LogInterceptor` mencetak seluruh body,
-termasuk OTP dan token:
+**Logging hanya di mode debug** — jangan pernah mencetak body berisi OTP/token
+di produksi:
 
 ```dart
 if (kDebugMode) {
@@ -609,1133 +474,540 @@ if (kDebugMode) {
 }
 ```
 
-### 5.2 Model (User)
+### 5.2 ApiClient — semua endpoint dalam satu kelas
 
-Memakai `json_serializable` dengan kelas immutable manual. **Bukan `freezed`** —
-versi stabil Freezed belum menjangkau Dart 3.12 (lihat §2).
-
-```dart
-@JsonSerializable()
-class UserModel {
-  const UserModel({
-    required this.id,
-    required this.phone,
-    required this.name,
-    required this.verificationLevel,
-    this.avatarUrl,
-    this.location,
-  });
-
-  final String id;
-  final String phone;
-  final String name;
-
-  @JsonKey(name: 'verification_level')
-  final int verificationLevel;
-
-  @JsonKey(name: 'avatar_url')
-  final String? avatarUrl;
-
-  @JsonKey(fromJson: geoPointFromJson, toJson: geoPointToJson)
-  final GeoPoint? location;
-
-  factory UserModel.fromJson(Map<String, dynamic> json) => _$UserModelFromJson(json);
-  Map<String, dynamic> toJson() => _$UserModelToJson(this);
-
-  /// Konversi ke entity domain (lapisan domain tidak tahu soal JSON).
-  User toEntity() => User(
-        id: id,
-        phone: phone,
-        name: name,
-        avatarUrl: avatarUrl,
-        location: location,
-        verificationLevel: VerificationLevel.fromValue(verificationLevel),
-      );
-}
-```
-
-Backend memakai `snake_case`, Dart memakai `camelCase`. Daripada menulis
-`@JsonKey(name: ...)` di setiap field, setel sekali di `build.yaml`:
-
-```yaml
-targets:
-  $default:
-    builders:
-      json_serializable:
-        options:
-          field_rename: snake
-          create_to_json: true
-```
-
-**Koordinat** datang sebagai GeoJSON `[longitude, latitude]` — urutannya
-terbalik dari kebiasaan menulis "lat, lng" (`API_DOCUMENTATION.md` §12.3):
+`ApiClient` membungkus `DioClient` dan menyediakan metode per endpoint.
+Setiap metode mengurai amplop respons `{ success, data, message }` dan
+mengembalikan isi `data` — pemanggil tidak perlu tahu bentuk amplop:
 
 ```dart
-GeoPoint? geoPointFromJson(Map<String, dynamic>? json) {
-  if (json == null) return null;
-  final coords = (json['coordinates'] as List).cast<num>();
-  return GeoPoint(longitude: coords[0].toDouble(), latitude: coords[1].toDouble());
-}
-```
+class ApiClient {
+  final DioClient _client = DioClient();
+  Dio get _dio => _client.dio;
 
-### 5.3 Repository Implementation
-
-Repository **wajib** mengubah `DioException` menjadi exception domain, supaya
-lapisan presentation tidak perlu tahu apa pun tentang Dio:
-
-```dart
-class AuthRepositoryImpl implements AuthRepository {
-  AuthRepositoryImpl(this._dio);
-  final Dio _dio;
-
-  @override
-  Future<AuthResult> verifyOtp(String phone, String otp) async {
-    try {
-      final res = await _dio.post('/auth/verify-otp', data: {'phone': phone, 'otp': otp});
-      final data = res.data['data'] as Map<String, dynamic>;
-
-      return AuthResult(
-        token: data['token'] as String,
-        user: UserModel.fromJson(data['user']).toEntity(),
-      );
-    } on DioException catch (e) {
-      throw mapDioException(e);
+  dynamic _payload(dynamic body) {
+    if (body is Map && body['success'] == true && body.containsKey('data')) {
+      return body['data'];
     }
+    return body;
   }
+
+  Future<T> _get<T>(String path, {Map<String, dynamic>? query, T Function(dynamic json)? parser}) async {
+    final res = await _dio.get(path, queryParameters: query);
+    final body = _payload(res.data);
+    return parser != null ? parser(body) : body as T;
+  }
+
+  Future<Map<String, dynamic>> verifyOtp(String phone, String otp) =>
+      _post('/auth/verify-otp', data: {'phone': phone, 'otp': otp});
+  // ...77 metode: /home, /listings, /stores, /requests, /offers, /orders,
+  // /wallet, /coupons, /conversations, /notifications, /uploads, /reports, dsb.
 }
 ```
 
-Pemetaannya dipusatkan agar konsisten di seluruh repository:
+`api_compat.dart` menyediakan `ApiProvider` — pembungkus kompatibilitas yang
+mengembalikan model terurai (`List<Listing>`, `User`, …) untuk layar lama;
+layar baru cukup memakai `ApiClient` langsung.
+
+### 5.3 Model — `fromJson` manual, bukan codegen
+
+Tidak ada `json_serializable`/`build_runner`. Setiap model menulis
+`fromJson` tangan dan memetakan `snake_case` backend ke `camelCase` Dart:
 
 ```dart
-// core/errors/exceptions.dart
-AppException mapDioException(DioException e) {
-  // Tidak ada respons sama sekali = masalah jaringan, bukan masalah server.
-  if (e.type == DioExceptionType.connectionTimeout ||
-      e.type == DioExceptionType.receiveTimeout ||
-      e.type == DioExceptionType.connectionError) {
-    return const NetworkException('Koneksi bermasalah. Periksa jaringan Anda.');
-  }
-
-  final res = e.response;
-  final message = res?.data is Map ? res!.data['message'] as String? : null;
-
-  return switch (res?.statusCode) {
-    401 => UnauthorizedException(message ?? 'Sesi berakhir, silakan masuk lagi.'),
-    403 => ForbiddenException(message ?? 'Anda tidak berhak melakukan ini.'),
-    404 => NotFoundException(message ?? 'Data tidak ditemukan.'),
-    409 => ConflictException(message ?? 'Aksi ini sudah pernah dilakukan.'),
-    // 422 membawa detail per-field untuk ditandai di form.
-    422 => ValidationException(
-        message ?? 'Data tidak valid.',
-        errors: (res?.data['errors'] as Map?)?.map(
-          (k, v) => MapEntry(k as String, (v as List).cast<String>()),
-        ) ?? {},
-      ),
-    423 => AccountBlockedException(message ?? 'Akun Anda dibekukan.'),
-    429 => RateLimitException(
-        message ?? 'Terlalu banyak percobaan.',
-        retryAfter: int.tryParse(res?.headers.value('retry-after') ?? ''),
-      ),
-    _   => ServerException(message ?? 'Terjadi kesalahan pada server.'),
-  };
-}
-```
-
-> `RateLimitException` membawa `retryAfter` dari header respons, sehingga
-> layar OTP bisa menampilkan hitung mundur yang akurat alih-alih pesan generik.
-
----
-
-## 6. LAYER DOMAIN: USECASES & ENTITIES
-
-### 6.1 Entities (pure Dart)
-
-Entity tidak mengenal JSON maupun Dio — murni Dart, sehingga mudah diuji.
-
-```dart
+// lib/models/user.dart
 class User {
-  const User({
-    required this.id,
-    required this.phone,
-    required this.name,
-    required this.verificationLevel,
-    this.avatarUrl,
-    this.location,
-  });
-
   final String id;
+  final String? name;
   final String phone;
-  final String name;
-  final VerificationLevel verificationLevel;
   final String? avatarUrl;
-  final GeoPoint? location;
+  final String status;          // 'menunggu' | 'terverifikasi' | 'ditolak' | 'diblokir'
+  final double? latitude;
+  final double? longitude;
+  final DateTime? verifiedAt;
 
-  /// Aturan bisnis ikut di entity, bukan tersebar di widget.
-  bool get canOpenStore => verificationLevel.value >= 2;
-  bool get isProfileComplete => name.isNotEmpty && location != null;
+  factory User.fromJson(Map<String, dynamic> json) => User(
+    id: json['id']?.toString() ?? '',
+    name: json['name']?.toString(),
+    phone: json['phone']?.toString() ?? '',
+    avatarUrl: json['avatar_url']?.toString(),
+    status: json['status']?.toString() ?? 'menunggu',
+    latitude: (json['latitude'] as num?)?.toDouble(),
+    longitude: (json['longitude'] as num?)?.toDouble(),
+    verifiedAt: json['verified_at'] != null
+        ? DateTime.tryParse(json['verified_at'].toString()) : null,
+  );
 
-  User copyWith({String? name, String? avatarUrl, GeoPoint? location}) => User(
-        id: id,
-        phone: phone,
-        name: name ?? this.name,
-        verificationLevel: verificationLevel,
-        avatarUrl: avatarUrl ?? this.avatarUrl,
-        location: location ?? this.location,
-      );
-
-  // Riverpod 3 memakai '==' untuk menyaring rebuild, jadi ini wajib —
-  // tanpanya setiap refresh dianggap perubahan dan UI rebuild sia-sia.
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is User && other.id == id && other.name == name &&
-      other.avatarUrl == avatarUrl && other.location == location &&
-      other.verificationLevel == verificationLevel;
-
-  @override
-  int get hashCode => Object.hash(id, name, avatarUrl, location, verificationLevel);
+  bool get isVerified => verifiedAt != null;
+  bool get isBlocked => status == 'diblokir';
+  bool get isProfileComplete => name != null && name!.isNotEmpty && latitude != null;
 }
 ```
 
-Enum domain mencerminkan nilai backend (`DATABASE.md` §4.1):
+> **Koordinat.** API mengirim `latitude`/`longitude` sebagai angka biasa pada
+> `user` dan `store` (backend menyimpannya sebagai kolom DECIMAL). GeoJSON
+> `[longitude, latitude]` hanya muncul pada endpoint peta — jangan tertukar.
+
+## 6. LAYER LAYANAN & SESI: AUTH SERVICE
+
+Tidak ada lapisan `domain/` terpisah (usecase/entity/repository interface) —
+peran itu diisi `services/` + `models/` secara langsung. Ini menjaga kode
+tetap kecil tanpa kehilangan keterpisahan tanggung jawab.
+
+### 6.1 AuthService (ChangeNotifier)
+
+`AuthService` mengelola sesi: memuat token & profil saat start, alur OTP,
+refresh, dan logout. Ia adalah `ChangeNotifier` dan dibungkus `AppState`.
 
 ```dart
-enum VerificationLevel {
-  basic(1), verified(2), pro(3);
+class AuthService extends ChangeNotifier {
+  static final AuthService _instance = AuthService._();
+  factory AuthService() => _instance;
+  AuthService._();
 
-  const VerificationLevel(this.value);
-  final int value;
+  final DioClient _dio = DioClient();
+  final ApiClient _api = ApiClient();
 
-  static VerificationLevel fromValue(int v) =>
-      values.firstWhere((e) => e.value == v, orElse: () => basic);
+  User? _user;
+  bool _loading = true;
+
+  User? get user => _user;
+  bool get isLoggedIn => _user != null && _dio.token != null;
+
+  Future<void> init() async {
+    _loading = true;
+    notifyListeners();
+    await _dio.loadToken();
+    if (_dio.token != null) {
+      try {
+        final res = await _api.me();                       // GET /auth/me
+        _user = User.fromJson(res['user'] as Map<String, dynamic>);
+      } catch (e) {
+        await _dio.clearToken();   // token ditolak → bersihkan, anggap belum login
+      }
+    }
+    _loading = false;
+    notifyListeners();
+  }
+
+  Future<Map<String, dynamic>> verifyOtp(String phone, String otp) async {
+    final res = await _api.verifyOtp(phone, otp);
+    await _dio.setToken(res['token'] as String);           // simpan JWT
+    _user = User.fromJson(res['user'] as Map<String, dynamic>);
+    notifyListeners();
+    return res;
+  }
+
+  Future<void> logout() async {
+    try { await _api.logout(); } catch (_) {}              // blacklist token di server
+    await _dio.clearToken();
+    _user = null;
+    notifyListeners();
+  }
 }
 ```
 
-> ⚠️ `==` dan `hashCode` ditulis manual karena Freezed belum dipakai. Kalau
-> terlupa, Riverpod menganggap setiap objek baru sebagai perubahan state dan
-> widget rebuild terus-menerus. Begitu Freezed 4 stabil, semua boilerplate ini
-> bisa dihapus.
+### 6.2 Alur sesi ringkas
 
-### 6.2 Usecase (Request OTP)
-
-```dart
-class RequestOtp {
-  final AuthRepository repository;
-  RequestOtp(this.repository);
-  Future<void> call(String phone) => repository.requestOtp(phone);
-}
-```
-
-Usecase dapat di-inject menggunakan provider.
+1. **Start:** `DioClient.loadToken()` → jika ada token, `GET /auth/me` untuk
+   profil; `401` → token dihapus.
+2. **Login:** `POST /auth/request-otp` → `POST /auth/verify-otp` → simpan JWT
+   (30 hari) → `context.go('/home')`.
+3. **Saat berjalan:** interceptor menempelkan Bearer; `401` memicu
+   `POST /auth/refresh` lalu mengulang request; refresh gagal → logout.
+4. **Logout:** `POST /auth/logout` (blacklist token) → hapus dari secure
+   storage → kembali ke `/onboarding` atau `/login`.
 
 ---
 
 ## 7. LAYER PRESENTATION: HALAMAN & WIDGET
 
-### 7.1 Halaman Login/OTP
+### 7.1 Halaman Login/OTP (satu layar)
 
-Halaman dengan state lokal (controller, flag loading) memakai
-`ConsumerStatefulWidget` — `TextEditingController` pada `ConsumerWidget` akan
-bocor karena dibuat ulang setiap rebuild.
+Login **dan** pendaftaran digabung dalam satu layar
+(`screens/login_screen.dart`) dengan dua mode ("Masuk" / "Daftar"). OTP
+dikirim dan diverifikasi di layar yang sama — tidak ada halaman OTP terpisah.
 
 ```dart
-class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key});
-  @override
-  ConsumerState<LoginPage> createState() => _LoginPageState();
-}
+class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
+  final _phoneCtrl = TextEditingController(), _otpCtrl = TextEditingController(), _nameCtrl = TextEditingController();
+  bool _otpSent = false, _loading = false;
+  bool _isRegister = false;
+  String? _error;
+  String? _debugOtp;
+  int _countdown = 0;   // countdown kirim ulang (60s)
 
-class _LoginPageState extends ConsumerState<LoginPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _phoneCtrl = TextEditingController();
-  bool _isSubmitting = false;
-
-  @override
-  void dispose() {
-    _phoneCtrl.dispose();   // wajib, kalau tidak controller bocor
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate() || _isSubmitting) return;
-
-    setState(() => _isSubmitting = true);
-    final phone = _normalizePhone(_phoneCtrl.text);
-
+  Future<void> _sendOtp() async {
+    final p = _phoneCtrl.text.trim();
+    if (p.length < 10) { setState(() => _error = 'Masukkan nomor WhatsApp yang valid'); return; }
+    setState(() { _loading = true; _error = null; });
     try {
-      await ref.read(authRepositoryProvider).requestOtp(phone);
-      if (!mounted) return;                         // widget bisa sudah dilepas
-      context.push(Routes.otp, extra: phone);       // push, agar bisa kembali
-    } on RateLimitException catch (e) {
-      _showError('Terlalu banyak percobaan. Coba lagi dalam ${e.retryAfter ?? 60} detik.');
-    } on AppException catch (e) {
-      _showError(e.message);
-    } finally {
-      if (mounted) setState(() => _isSubmitting = false);
-    }
+      final res = await context.read<AppState>().requestOtp(p);
+      if (mounted) {
+        setState(() {
+          _otpSent = true;
+          _debugOtp = res['debug_otp']?.toString();   // mode dummy: OTP diisi otomatis
+        });
+        _startCountdown();
+      }
+    } catch (e) { if (mounted) setState(() => _error = e.toString().replaceAll('Exception: ', '')); }
+    if (mounted) setState(() => _loading = false);
   }
 
-  void _showError(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  /// 08xxx / +62xxx / 62xxx -> 62xxx (format yang diterima backend).
-  String _normalizePhone(String input) {
-    final digits = input.replaceAll(RegExp(r'\D'), '');
-    if (digits.startsWith('0'))  return '62${digits.substring(1)}';
-    if (digits.startsWith('62')) return digits;
-    return '62$digits';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text('Masuk ke Seekitar',
-                    style: Theme.of(context).textTheme.headlineMedium),
-                const SizedBox(height: 24),
-                TextFormField(
-                  controller: _phoneCtrl,
-                  keyboardType: TextInputType.phone,
-                  autofillHints: const [AutofillHints.telephoneNumber],
-                  enabled: !_isSubmitting,
-                  decoration: const InputDecoration(
-                    labelText: 'Nomor WhatsApp',
-                    hintText: '08123456789',
-                    prefixIcon: Icon(Icons.phone),
-                  ),
-                  validator: (v) {
-                    final digits = (v ?? '').replaceAll(RegExp(r'\D'), '');
-                    if (digits.isEmpty) return 'Nomor WhatsApp wajib diisi';
-                    if (digits.length < 10 || digits.length > 15) {
-                      return 'Nomor tidak valid';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                CustomButton(
-                  label: 'Minta OTP',
-                  isLoading: _isSubmitting,
-                  onPressed: _isSubmitting ? null : _submit,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+  Future<void> _verifyOtp() async {
+    setState(() { _loading = true; _error = null; });
+    try {
+      await context.read<AppState>().verifyOtp(_phoneCtrl.text.trim(), _otpCtrl.text.trim());
+      if (_isRegister && _nameCtrl.text.trim().isNotEmpty) {
+        await context.read<AppState>().updateProfile(name: _nameCtrl.text.trim());
+      }
+      if (mounted) context.go('/home');
+    } catch (e) { if (mounted) setState(() => _error = e.toString().replaceAll('Exception: ', '')); }
+    if (mounted) setState(() => _loading = false);
   }
 }
 ```
 
-Tombolnya menampilkan indikator sekaligus mencegah klik ganda — pengiriman OTP
-dua kali akan langsung kena rate limit 3×/menit:
+Hal-hal penting:
 
-```dart
-class CustomButton extends StatelessWidget {
-  const CustomButton({super.key, required this.label, this.onPressed, this.isLoading = false});
-
-  final String label;
-  final VoidCallback? onPressed;
-  final bool isLoading;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 48,
-      child: FilledButton(
-        onPressed: isLoading ? null : onPressed,
-        child: isLoading
-            ? const SizedBox(
-                width: 20, height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-              )
-            : Text(label),
-      ),
-    );
-  }
-}
-```
-
-> Untuk proses yang memblokir seluruh layar (mis. mengunggah KTP), pakai
-> `AbsorbPointer` + overlay gelap, bukan sekadar tombol loading.
+- `context.read<AppState>()` memicu `AuthService`; token JWT disimpan ke
+  `flutter_secure_storage` di dalam `DioClient.setToken()`.
+- Di environment `local`, server mengembalikan `debug_otp` — layar
+  menampilkannya dan mengisinya otomatis agar pengujian cepat.
+- Tombol submit menampilkan `CircularProgressIndicator` dan dinonaktifkan
+  saat `_loading` (mencegah klik ganda → rate limit 3×/menit).
+- `if (!mounted) return;` setelah setiap `await`.
 
 ### 7.2 Halaman Detail Listing
 
-Menampilkan slider foto (`PageView` + `cached_network_image`), deskripsi,
-profil toko mini, tombol “Pesan Sekarang” & “Tanya Penjual”.
+`ListingDetailScreen` menampilkan galeri foto (`PageView` +
+`smooth_page_indicator` + `cached_network_image`), deskripsi, profil toko
+mini, tombol "Pesan Sekarang", "Tanya Penjual" (membuat percakapan lalu
+`context.push('/chat/:id')`), favorit, dan berbagi (`share_plus`).
 
-**“Pesan Sekarang”** membuka bottom sheet, bukan halaman baru — pengguna tetap
-melihat produknya sambil memilih opsi:
+Data diambil `ApiProvider().getListing(id)`; jika listing dikirim lewat
+`extra` dari layar sebelumnya, langsung dirender tanpa request ulang
+(`_load()` memeriksa `widget.listing`).
+
+**"Pesan Sekarang"** membuka halaman checkout (`/checkout`) — bukan bottom
+sheet — yang menerima `Listing` lewat `extra`:
 
 ```dart
-Future<void> _showOrderSheet(BuildContext context, WidgetRef ref, Listing listing) async {
-  final user = ref.read(authNotifierProvider).value;
-
-  // Belum login: simpan tujuan agar bisa kembali setelah masuk.
-  if (user == null) {
-    context.push('${Routes.login}?redirect=${Uri.encodeComponent(Routes.listingDetailOf(listing.id))}');
-    return;
-  }
-
-  final created = await showModalBottomSheet<Order>(
-    context: context,
-    isScrollControlled: true,          // agar tidak tertutup keyboard
-    useSafeArea: true,
-    builder: (_) => OrderFormSheet(listing: listing),
-  );
-
-  if (created != null && context.mounted) {
-    context.push(Routes.orderDetailOf(created.id));
-  }
-}
+ctx.push('/checkout', extra: listing);
 ```
 
-Isi `OrderFormSheet` mengikuti kontrak `POST /orders`
-(`API_DOCUMENTATION.md` §7.1): jumlah (khusus `product`), metode pembayaran
-(`cod`/`transfer`), metode pengiriman (`pickup`/`delivery`), dan alamat yang
-**wajib** muncul hanya bila memilih `delivery`.
+`CheckoutScreen` menyusun body `POST /orders` sesuai `API_DOCUMENTATION.md`
+§7.1: `quantity`, `payment_method` (`cod`/`transfer`), `delivery_method`
+(`pickup`/`delivery`), dan `shipping_address` yang hanya dikirim bila
+`delivery`. Kupon dapat dipakai lewat `/coupon` (extra: `{total, orderId}`).
 
 ---
 
 ## 8. NAVIGASI & ROUTING (GOROUTER)
 
-> ⚠️ **Router harus jadi provider, bukan variabel global.** Contoh yang beredar
-> luas menulis `final goRouter = GoRouter(redirect: (c, s) { ref.read(...) })`
-> — itu **tidak akan kompilasi**, karena `ref` tidak ada di lingkup variabel
-> top-level. Selain itu router perlu tahu kapan status login berubah agar
-> redirect dievaluasi ulang.
-
-Path diambil dari `Routes` (lihat §3), bukan ditulis manual:
+Router adalah **objek statis** `appRouter` di `routing/app_router.dart` —
+bukan provider. Layar berpindah lewat `context.go(...)` (tab & level atas)
+atau `context.push(...)` (halaman detail).
 
 ```dart
-@Riverpod(keepAlive: true)   // router tidak boleh dibuang saat rebuild
-GoRouter goRouter(Ref ref) {
-  // watch: setiap perubahan status auth memicu evaluasi ulang redirect.
-  final auth = ref.watch(authNotifierProvider);
+final appRouter = GoRouter(
+  navigatorKey: _rootKey,
+  initialLocation: '/splash',
+  routes: [
+    GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
+    GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
+    GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+    StatefulShellRoute.indexedStack(
+      builder: (_, __, shell) => HomeShell(navigationShell: shell),
+      branches: [
+        StatefulShellBranch(routes: [GoRoute(path: '/home', builder: (_, __) => const HomeScreen())]),
+        StatefulShellBranch(routes: [GoRoute(path: '/search', builder: (_, __) => const SearchScreen())]),
+        StatefulShellBranch(routes: [GoRoute(path: '/requests', builder: (_, __) => const RequestsScreen())]),
+        StatefulShellBranch(routes: [GoRoute(path: '/orders', builder: (_, __) => const OrdersScreen())]),
+        StatefulShellBranch(routes: [GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen())]),
+      ],
+    ),
+    GoRoute(path: '/listing/:id', builder: (_, s) => ListingDetailScreen(listingId: s.pathParameters['id']!)),
+    GoRoute(path: '/checkout', builder: (_, s) => CheckoutScreen(listing: s.extra as dynamic)),
+    GoRoute(path: '/request/:id', builder: (_, s) => RequestDetailScreen(requestId: s.pathParameters['id']!)),
+    GoRoute(path: '/chat/:id', builder: (_, s) => ChatScreen(conversation: s.extra as Conversation)),
+    // … total 35 GoRoute (lihat app_router.dart)
+  ],
+);
+```
 
-  return GoRouter(
-    initialLocation: Routes.splash,
-    debugLogDiagnostics: kDebugMode,
-    navigatorKey: rootNavigatorKey,      // dipakai deep link & notifikasi (§22)
+`HomeShell` adalah scaffold 5 tab (Beranda, Cari, Kebutuhan, Pesanan,
+Profil) memakai `StatefulNavigationShell`:
 
-    redirect: (context, state) {
-      // Selama status auth belum diketahui, tahan di splash — tanpa ini
-      // pengguna yang sudah login sempat "berkedip" ke halaman login.
-      if (auth.isLoading) {
-        return state.matchedLocation == Routes.splash ? null : Routes.splash;
-      }
+```dart
+class HomeShell extends StatelessWidget {
+  final StatefulNavigationShell navigationShell;
+  const HomeShell({super.key, required this.navigationShell});
 
-      final loggedIn = auth.value != null;
-      final atAuthPage = state.matchedLocation == Routes.login ||
-                         state.matchedLocation == Routes.otp ||
-                         state.matchedLocation == Routes.splash;
-
-      if (!loggedIn) {
-        if (atAuthPage) return null;
-        // Simpan tujuan asal agar bisa dikembalikan setelah login.
-        return '${Routes.login}?redirect=${Uri.encodeComponent(state.matchedLocation)}';
-      }
-
-      // Sudah login tapi profil belum lengkap -> paksa lengkapi dulu.
-      // Ini mencerminkan middleware EnsureProfileComplete di backend.
-      if (!auth.value!.isProfileComplete && state.matchedLocation != Routes.completeProfile) {
-        return Routes.completeProfile;
-      }
-
-      if (atAuthPage) {
-        return state.uri.queryParameters['redirect'] ?? Routes.explore;
-      }
-      return null;
-    },
-
-    routes: [
-      GoRoute(path: Routes.splash, builder: (_, __) => const SplashPage()),
-      GoRoute(path: Routes.login, builder: (_, __) => const LoginPage()),
-      GoRoute(
-        path: Routes.otp,
-        builder: (_, state) => OtpPage(phone: state.extra! as String),
-      ),
-      GoRoute(path: Routes.completeProfile, builder: (_, __) => const CompleteProfilePage()),
-
-      // StatefulShellRoute: tiap tab punya tumpukan navigasi sendiri, jadi
-      // posisi scroll & halaman detail tidak hilang saat berpindah tab.
-      StatefulShellRoute.indexedStack(
-        builder: (_, __, shell) => MainShell(shell: shell),
-        branches: [
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: Routes.explore,
-              builder: (_, __) => const ExplorePage(),
-              routes: [
-                GoRoute(
-                  path: 'listing/:id',        // path relatif terhadap induk
-                  builder: (_, state) => ListingDetailPage(id: state.pathParameters['id']!),
-                ),
-              ],
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: Routes.requests,
-              builder: (_, __) => const RequestsPage(),
-              routes: [
-                GoRoute(path: 'create', builder: (_, __) => const CreateRequestPage()),
-                GoRoute(
-                  path: ':id',
-                  builder: (_, state) => RequestDetailPage(id: state.pathParameters['id']!),
-                ),
-              ],
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: Routes.orders, builder: (_, __) => const OrdersPage()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: Routes.profile, builder: (_, __) => const ProfilePage()),
-          ]),
-        ],
-      ),
-    ],
-
-    errorBuilder: (_, state) => NotFoundPage(uri: state.uri),
+  @override
+  Widget build(BuildContext ctx) => Scaffold(
+    body: navigationShell,
+    bottomNavigationBar: NavigationBar(
+      selectedIndex: navigationShell.currentIndex,
+      onDestinationSelected: (i) => navigationShell.goBranch(i),
+      destinations: const [
+        NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Beranda'),
+        NavigationDestination(icon: Icon(Icons.search_outlined), selectedIcon: Icon(Icons.search), label: 'Cari'),
+        NavigationDestination(icon: Icon(Icons.broadcast_on_personal_outlined), selectedIcon: Icon(Icons.broadcast_on_personal), label: 'Kebutuhan'),
+        NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long), label: 'Pesanan'),
+        NavigationDestination(icon: Icon(Icons.person_outlined), selectedIcon: Icon(Icons.person), label: 'Profil'),
+      ],
+    ),
   );
 }
 ```
 
-Dipakai di `app.dart`:
-
-```dart
-class SeekitarApp extends ConsumerWidget {
-  const SeekitarApp({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return MaterialApp.router(
-      title: 'Seekitar',
-      theme: AppTheme.light,
-      routerConfig: ref.watch(goRouterProvider),
-      debugShowCheckedModeBanner: false,
-    );
-  }
-}
-```
-
----
+`StatefulShellRoute.indexedStack` mempertahankan state tiap tab (posisi
+scroll, hasil pencarian) saat berpindah tab — itulah alasan memakai
+`indexedStack`, bukan `StatefulShellRoute` biasa.
 
 ## 9. AUTENTIKASI & OTP FLOW
 
-1. User masukkan nomor HP → panggil `POST /auth/request-otp`.
-2. Navigasi ke halaman OTP (bawa phone).
-3. User masukkan 6 digit OTP → panggil `POST /auth/verify-otp`.
-4. Simpan token di secure storage, update `AuthNotifier`.
-5. GoRouter otomatis redirect ke home.
+Alur lengkap (lihat juga §6.2 dan `FLOWS.md`):
 
----
+1. **`POST /auth/request-otp`** (throttle 3×/menit per nomor) — server
+   mengirim OTP lewat WhatsApp (atau menampilkan `debug_otp` di mode dummy).
+2. **`POST /auth/verify-otp`** — bila cocok, server membalas
+   `{ token, token_type, expires_in, user }`. Token adalah **JWT** (30 hari).
+3. Klien menyimpan token ke `flutter_secure_storage` (`jwt_token`) dan
+   `AppState.user` terisi → `context.go('/home')`.
+4. Setiap request berikutnya: interceptor menempelkan
+   `Authorization: Bearer <token>`; saat `401`, interceptor memanggil
+   `POST /auth/refresh`, menyimpan token baru, lalu **mengulang request
+   asli**. Bila refresh gagal → token dihapus → kembali ke `/login`.
+5. **Logout** — `POST /auth/logout` (server mem-blacklist token), lalu token
+   lokal dihapus dan `context.go('/onboarding')`.
+
+> Jangan menyimpan token di `shared_preferences` — gunakan
+> `flutter_secure_storage`. Jangan menebak isi payload JWT di klien:
+> interpretasi kedaluwarsa dilakukan server, klien cukup mengikuti `401`.
 
 ## 10. HALAMAN UTAMA & BOTTOM NAVIGATION
 
-`MainShell` menerima `StatefulNavigationShell` dari router (§8), yang sudah
-mengurus indeks aktif dan tumpukan navigasi per tab.
+`HomeScreen` (tab Beranda):
 
-```dart
-class MainShell extends StatelessWidget {
-  const MainShell({super.key, required this.shell});
-  final StatefulNavigationShell shell;
+1. Minta posisi `Geolocator.getCurrentPosition()` (izin via
+   `permission_handler`).
+2. `GET /home?lat=&lng=` → daftar `Listing` (tren & terdekat) +
+   `CustomerRequest` (kebutuhan).
+3. Skeleton `Shimmer.fromColors` saat memuat; `RefreshIndicator` untuk
+   tarik-untuk-muat-ulang.
+4. Kartu listing → `context.push('/listing/:id', extra: listing)`; kartu
+   kebutuhan → `context.push('/request/:id', extra: request)`.
+5. AppBar: lonceng notifikasi → `/notifications`, favorit → `/favorites`.
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: shell,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: shell.currentIndex,
-        onDestinationSelected: (index) => shell.goBranch(
-          index,
-          // Menekan tab yang sedang aktif akan kembali ke akar tab itu —
-          // perilaku standar yang diharapkan pengguna.
-          initialLocation: index == shell.currentIndex,
-        ),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.explore_outlined),
-              selectedIcon: Icon(Icons.explore), label: 'Jelajahi'),
-          NavigationDestination(icon: Icon(Icons.campaign_outlined),
-              selectedIcon: Icon(Icons.campaign), label: 'Kebutuhan'),
-          NavigationDestination(icon: Icon(Icons.receipt_long_outlined),
-              selectedIcon: Icon(Icons.receipt_long), label: 'Transaksi'),
-          NavigationDestination(icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person), label: 'Profil'),
-        ],
-      ),
-    );
-  }
-}
-```
-
-`NavigationBar` (Material 3) dipakai alih-alih `BottomNavigationBar` yang lebih
-lama, agar konsisten dengan tema aplikasi.
-
-> Tab "Kebutuhan" perlu badge saat ada penawaran baru masuk. Bungkus ikonnya
-> dengan `Badge` dan hubungkan ke `unreadOffersProvider`.
+`SplashScreen` memutuskan arah awal: `AppState.init()` memuat token & profil;
+bila `isLoggedIn` → `context.go('/home')`, bila belum pernah onboarding →
+`/onboarding`, selain itu `/login`.
 
 ---
 
 ## 11. FITUR MARKETPLACE (JELAJAHI)
 
-**ExplorePage:**
+**SearchScreen** (`screens/search_screen.dart`) — tab Cari:
 
-- `AppBar` dengan search field (debounce 500 ms).
-- Filter chips horizontal (kategori).
-- `RefreshIndicator` + list `ListingCard`.
-- FAB: “Pasang Kebutuhan”.
-- Infinite scroll lewat `ListingSearchNotifier` (§19.2).
+- `AppBar` opsional (dipakai dari halaman kategori via `/category-search`).
+- Kolom pencarian dengan **debounce 350 ms** (`Timer`).
+- Filter chips tipe: Semua / Barang (`product`) / Jasa (`service`) / Sewa
+  (`rental`).
+- Posisi GPS diambil `Geolocator.getCurrentPosition()` (gagal → fallback
+  Pasuruan `-7.5, 112.0`).
+- Saat mengetik ≥ 2 karakter: `GET /search/suggestions` → daftar sugesti
+  (tappable, langsung ke detail listing).
+- Enter/submit: `GET /listings?lat&lng&keyword&type&category` → daftar hasil.
+- Tap hasil → `context.push('/listing/:id', extra: listing)`.
 
 ### 11.1 Search dengan Debounce
 
-Tanpa debounce, mengetik "beras" mengirim 5 request; empat di antaranya sia-sia
-dan berisiko kena rate limit 60/menit.
+Tanpa debounce, mengetik "beras" mengirim banyak request; empat di antaranya
+sia-sia dan berisiko kena rate limit 60/menit.
 
 ```dart
-class _SearchField extends ConsumerStatefulWidget {
-  const _SearchField();
-  @override
-  ConsumerState<_SearchField> createState() => _SearchFieldState();
+Timer? _debounce;
+
+Future<void> _onChanged(String q) async {
+  _debounce?.cancel();
+  _debounce = Timer(const Duration(milliseconds: 350), _search);
+  if (q.length >= 2) {
+    try {
+      final s = await _api.searchSuggestions(q, type: _filter);
+      if (mounted) setState(() => _suggestions = s);
+    } catch (_) {}
+  } else {
+    if (mounted) setState(() => _suggestions = []);
+  }
 }
 
-class _SearchFieldState extends ConsumerState<_SearchField> {
-  final _controller = TextEditingController();
-  Timer? _debounce;
+@override
+void dispose() { _debounce?.cancel(); _searchCtrl.dispose(); super.dispose(); }
+```
 
-  @override
-  void dispose() {
-    _debounce?.cancel();     // wajib: timer aktif setelah dispose = crash
-    _controller.dispose();
-    super.dispose();
-  }
+`Timer` **wajib dibatalkan di `dispose()`** — timer aktif setelah widget
+dilepas adalah sumber crash klasik.
 
-  void _onChanged(String value) {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), () {
-      // Abaikan kueri terlalu pendek; FULLTEXT butuh minimal 3 karakter.
-      if (value.isNotEmpty && value.trim().length < 3) return;
-      ref.read(listingFilterProvider.notifier).setKeyword(value.trim());
-    });
-  }
+### 11.2 Filter Chips Tipe
 
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: _controller,
-      onChanged: _onChanged,
-      textInputAction: TextInputAction.search,
-      // Enter = cari seketika, tanpa menunggu debounce.
-      onSubmitted: (v) {
-        _debounce?.cancel();
-        ref.read(listingFilterProvider.notifier).setKeyword(v.trim());
-      },
-      decoration: InputDecoration(
-        hintText: 'Cari produk atau jasa…',
-        prefixIcon: const Icon(Icons.search),
-        suffixIcon: _controller.text.isEmpty ? null : IconButton(
-          icon: const Icon(Icons.clear),
-          onPressed: () {
-            _controller.clear();
-            _debounce?.cancel();
-            ref.read(listingFilterProvider.notifier).setKeyword('');
-          },
-        ),
-      ),
-    );
-  }
+Filter disimpan sebagai state lokal (`String? _filter`), bukan provider —
+satu layar, satu pemilik state:
+
+```dart
+_chip(null, 'Semua'), const SizedBox(width: 8),
+_chip('product', 'Barang'), const SizedBox(width: 8),
+_chip('service', 'Jasa'), const SizedBox(width: 8),
+_chip('rental', 'Sewa'),
+
+Widget _chip(String? type, String label) {
+  final selected = _filter == type;
+  return ChoiceChip(
+    label: Text(label),
+    selected: selected,
+    onSelected: (_) { setState(() => _filter = type); _search(); },
+  );
 }
 ```
 
-Filter disimpan di satu notifier agar perubahan apa pun memicu pencarian ulang:
-
-```dart
-@riverpod
-class ListingFilter extends _$ListingFilter {
-  @override
-  ListingQuery build() => const ListingQuery();
-
-  void setKeyword(String v)     => state = state.copyWith(keyword: v);
-  void setCategory(int? id)     => state = state.copyWith(categoryId: id);
-  void setType(ListingType? t)  => state = state.copyWith(type: t);
-  void setSort(ListingSort s)   => state = state.copyWith(sort: s);
-  void reset()                  => state = const ListingQuery();
-}
-```
-
-### 11.2 Filter Chips Kategori
-
-```dart
-class CategoryChips extends ConsumerWidget {
-  const CategoryChips({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final categories = ref.watch(categoriesProvider);
-    final selected   = ref.watch(listingFilterProvider.select((f) => f.categoryId));
-
-    return SizedBox(
-      height: 48,
-      child: categories.when(
-        loading: () => const _ChipsSkeleton(),
-        error: (_, __) => const SizedBox.shrink(),   // filter opsional, jangan blokir layar
-        data: (list) => ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: list.length + 1,
-          separatorBuilder: (_, __) => const SizedBox(width: 8),
-          itemBuilder: (_, i) {
-            if (i == 0) {
-              return FilterChip(
-                label: const Text('Semua'),
-                selected: selected == null,
-                onSelected: (_) => ref.read(listingFilterProvider.notifier).setCategory(null),
-              );
-            }
-            final c = list[i - 1];
-            return FilterChip(
-              label: Text(c.name),
-              selected: selected == c.id,
-              // Menekan chip yang sudah aktif akan membatalkan filternya.
-              onSelected: (on) => ref
-                  .read(listingFilterProvider.notifier)
-                  .setCategory(on ? c.id : null),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-```
-
-Daftar kategori jarang berubah, jadi di-cache seumur aplikasi:
-
-```dart
-@Riverpod(keepAlive: true)
-Future<List<Category>> categories(Ref ref) =>
-    ref.read(categoryRepositoryProvider).getAll();
-```
-
-`ref.watch(...select(...))` membuat chip hanya rebuild saat `categoryId`
-berubah — bukan setiap kali pengguna mengetik di kolom pencarian.
-
-**ListingCard:**
-
-- `Card` dengan gambar, judul, harga, jarak, rating, toko.
-- onTap → navigate ke detail listing.
-
----
+Menekan chip yang sudah aktif akan mengosongkan filter (`type = null`),
+karena `onSelected` selalu menerima `true` — bandingkan nilai lama.
 
 ## 12. FITUR PAPAN KEBUTUHAN (PASANG KEBUTUHAN)
 
-**CreateRequestPage:**
+**RequestsScreen** (tab Kebutuhan) memakai `TabController` dua tab:
+"Terdekat" (semua permintaan dalam radius) dan "Saya" (permintaan sendiri).
 
-- Form input: judul, deskripsi, kategori (dropdown), budget, lokasi (pilih dari map), radius, tanggal.
-- Pin lokasi bisa geser di `GoogleMap`.
-- Tombol “Pasang”.
-- Panggil `POST /requests`, lalu kembali ke halaman Kebutuhan.
+**CreateRequestScreen** (dalam `requests_screen.dart`):
 
-### 12.1 Pemilih Lokasi dengan Google Maps
-
-Pin lokasi wajib dan bisa digeser (PRD §5.2.1). Pola yang dipakai: peta
-statis dengan **pin tetap di tengah layar** — pengguna menggeser petanya, bukan
-menyeret marker. Ini jauh lebih presisi di layar kecil karena jari tidak
-menutupi titik yang dipilih.
+- Form: judul, deskripsi, kategori (dropdown dari `GET /categories`),
+  radius (tetap 15 km — default server), tanggal.
+- Lokasi **tidak** memakai peta interaktif: posisi diambil langsung dari GPS
+  `Geolocator.getCurrentPosition()` saat form dikirim, lalu dikirim sebagai
+  `latitude`/`longitude`:
 
 ```dart
-class LocationPickerPage extends ConsumerStatefulWidget {
-  const LocationPickerPage({super.key, this.initial});
-  final LatLng? initial;
-  @override
-  ConsumerState<LocationPickerPage> createState() => _LocationPickerPageState();
-}
-
-class _LocationPickerPageState extends ConsumerState<LocationPickerPage> {
-  GoogleMapController? _map;
-  LatLng _center = const LatLng(-7.2575, 112.7521);   // Surabaya
-  String? _address;
-  Timer? _geocodeDebounce;
-
-  @override
-  void initState() {
-    super.initState();
-    _center = widget.initial ?? _center;
-    if (widget.initial == null) _useCurrentLocation();
-  }
-
-  @override
-  void dispose() {
-    _geocodeDebounce?.cancel();
-    _map?.dispose();
-    super.dispose();
-  }
-
-  Future<void> _useCurrentLocation() async {
-    try {
-      final pos = await ref.read(locationServiceProvider).getCurrentPosition();
-      final target = LatLng(pos.latitude, pos.longitude);
-      setState(() => _center = target);
-      await _map?.animateCamera(CameraUpdate.newLatLngZoom(target, 16));
-      _reverseGeocode(target);
-    } on LocationPermissionDeniedException {
-      if (mounted) _showPermissionDialog();
-    }
-  }
-
-  /// Reverse geocode di-debounce: tanpa ini, satu gesekan memicu puluhan
-  /// panggilan dan kuota API cepat habis.
-  void _onCameraIdle() {
-    _geocodeDebounce?.cancel();
-    _geocodeDebounce = Timer(const Duration(milliseconds: 600),
-        () => _reverseGeocode(_center));
-  }
-
-  Future<void> _reverseGeocode(LatLng target) async {
-    final addr = await ref.read(locationServiceProvider).addressOf(target);
-    if (mounted) setState(() => _address = addr);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Pilih Lokasi')),
-      body: Stack(
-        alignment: Alignment.center,
-        children: [
-          GoogleMap(
-            initialCameraPosition: CameraPosition(target: _center, zoom: 16),
-            onMapCreated: (c) => _map = c,
-            onCameraMove: (pos) => _center = pos.target,   // tanpa setState
-            onCameraIdle: _onCameraIdle,
-            myLocationEnabled: true,
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled: false,
-          ),
-
-          // Pin tetap di tengah; diangkat setengah tingginya agar ujung
-          // pin benar-benar menunjuk ke titik tengah peta.
-          const Padding(
-            padding: EdgeInsets.only(bottom: 40),
-            child: Icon(Icons.location_pin, size: 40, color: Color(0xFF168A4A)),
-          ),
-
-          Positioned(
-            left: 16, right: 16, bottom: 16,
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(_address ?? 'Mencari alamat…',
-                        style: Theme.of(context).textTheme.bodyMedium),
-                    const SizedBox(height: 12),
-                    CustomButton(
-                      label: 'Pilih Lokasi Ini',
-                      onPressed: () => context.pop(
-                        PickedLocation(latLng: _center, address: _address),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.small(
-        onPressed: _useCurrentLocation,
-        child: const Icon(Icons.my_location),
-      ),
-    );
-  }
-}
+final pos = await Geolocator.getCurrentPosition();
+await _api.createRequest({
+  'title': _titleCtrl.text,
+  'description': _descCtrl.text,
+  'category_id': _catId,
+  'latitude': pos.latitude,
+  'longitude': pos.longitude,
+  'radius_km': 15,
+});
 ```
 
-> ⚠️ `onCameraMove` **tidak** memanggil `setState` — dipanggil puluhan kali per
-> detik saat menggeser, dan rebuild di situ membuat peta tersendat. Simpan ke
-> variabel biasa, lalu perbarui UI di `onCameraIdle`.
->
-> API key Google Maps dikonfigurasi per platform di `AndroidManifest.xml` dan
-> `AppDelegate.swift`; jangan ditaruh di kode Dart.
+> Mengapa tanpa peta: pemilih lokasi interaktif (Google Maps) menambah
+> dependensi berat dan sertifikat API key, sementara kebutuhan MVP cukup
+> dilayani koordinat GPS + alamat reverse-geocoding. Peta interaktif (Leaflet)
+> ada di panel admin (Peta Toko), bukan di aplikasi mobile.
 
-### 12.2 RequestsPage — Dua Tab
-
-- Tab “Kebutuhan Terbaru” (untuk penyedia) dan “Permintaan Saya” (untuk pembeli).
-- Tiap item onTap → navigasi `RequestDetailPage`.
-
-```dart
-class RequestsPage extends ConsumerStatefulWidget {
-  const RequestsPage({super.key});
-  @override
-  ConsumerState<RequestsPage> createState() => _RequestsPageState();
-}
-
-class _RequestsPageState extends ConsumerState<RequestsPage>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 2, vsync: this);
-
-  @override
-  void dispose() {
-    _tabs.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final user = ref.watch(authNotifierProvider).value;
-    final isProvider = user?.canOpenStore ?? false;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Kebutuhan'),
-        bottom: TabBar(
-          controller: _tabs,
-          tabs: const [
-            Tab(text: 'Kebutuhan Terbaru'),
-            Tab(text: 'Permintaan Saya'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabs,
-        children: [
-          // Tab penyedia hanya relevan bagi pemilik toko terverifikasi.
-          isProvider
-              ? const NearbyRequestsTab()
-              : const EmptyState(
-                  icon: Icons.storefront_outlined,
-                  title: 'Khusus Penyedia',
-                  message: 'Buka toko untuk melihat kebutuhan di sekitar Anda.',
-                ),
-          const MyRequestsTab(),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('${Routes.requests}/create'),
-        icon: const Icon(Icons.add),
-        label: const Text('Pasang Kebutuhan'),
-      ),
-    );
-  }
-}
-```
-
-`SingleTickerProviderStateMixin` + `dispose()` wajib — `TabController` yang
-tidak dilepas akan terus memicu animasi setelah halaman ditutup.
-
-### 12.3 CompareOffersPage — Sorting
-
-Pembeli membandingkan penawaran berdasarkan tiga sumbu: harga, kecepatan,
-reputasi.
-
-```dart
-enum OfferSort {
-  cheapest('Termurah'),
-  fastest('Tercepat'),
-  bestRating('Rating Tertinggi'),
-  nearest('Terdekat');
-
-  const OfferSort(this.label);
-  final String label;
-}
-
-@riverpod
-List<Offer> sortedOffers(Ref ref, String requestId) {
-  final offers = ref.watch(offersProvider(requestId)).value ?? const <Offer>[];
-  final sort   = ref.watch(offerSortProvider);
-
-  // Salin dulu: sort() mengubah list aslinya, dan memutasi state provider
-  // secara langsung membuat Riverpod tidak mendeteksi perubahan.
-  final list = [...offers];
-
-  switch (sort) {
-    case OfferSort.cheapest:
-      list.sort((a, b) => a.price.compareTo(b.price));
-    case OfferSort.fastest:
-      // Penawaran tanpa estimasi numerik ditaruh di akhir, bukan dianggap 0.
-      list.sort((a, b) => (a.estimatedHours ?? 1 << 30)
-          .compareTo(b.estimatedHours ?? 1 << 30));
-    case OfferSort.bestRating:
-      list.sort((a, b) => b.store.ratingAvg.compareTo(a.store.ratingAvg));
-    case OfferSort.nearest:
-      list.sort((a, b) => a.store.distanceKm.compareTo(b.store.distanceKm));
-  }
-  return list;
-}
-```
-
-```dart
-DropdownButton<OfferSort>(
-  value: ref.watch(offerSortProvider),
-  items: [
-    for (final s in OfferSort.values)
-      DropdownMenuItem(value: s, child: Text(s.label)),
-  ],
-  onChanged: (v) => v == null ? null : ref.read(offerSortProvider.notifier).set(v),
-)
-```
-
-**RequestDetailPage (pembeli):** detail permintaan + daftar offers, dengan
-tombol “Terima” di tiap kartu. Menerima penawaran bersifat **final** — tampilkan
-dialog konfirmasi, karena aksi itu menutup permintaan dan menolak semua
-penawaran lain (`API_DOCUMENTATION.md` §6.3).
-
----
+`RequestDetailScreen` menampilkan detail permintaan + daftar penawaran
+(`GET /requests/{id}/offers`); pemilik bisa memperpanjang masa berlaku
+(`POST /requests/{id}/extend`) atau menutup permintaan.
 
 ## 13. FITUR PENAWARAN & TRANSAKSI
 
-- **OfferCard:** Menampilkan nama toko, harga, jarak, estimasi, rating.
-- **Accept Offer:** Panggil `PATCH /offers/{id}/accept`, lalu muncul notifikasi sukses.
-- **OrdersPage:** Riwayat pesanan, tab “Sebagai Pembeli” / “Sebagai Penjual”.
-- **OrderDetailPage:** Timeline status (Stepper widget), aksi (konfirmasi, upload bukti), kontak penjual.
+- Penyedia membuka permintaan → `StoreOfferRequest` (`POST
+  /requests/{id}/offers`) dengan `price`, `additional_cost`,
+  `estimation_time`, `notes`. Batas satu penawaran per toko per permintaan
+  (UNIQUE di DB).
+- Pemilik permintaan membandingkan penawaran (urutkan berdasarkan harga /
+  estimasi) dan **menerima** satu (`POST /offers/{id}/accept`) — server
+  membuat `Order`, menutup permintaan, dan menolak penawaran lain.
+- `OrdersScreen` (tab Pesanan) menampilkan daftar order; `OrderDetailScreen`
+  menyajikan detail + aksi sesuai status (unggah bukti transfer, konfirmasi
+  selesai, batalkan, buka dispute, beri ulasan).
+- Status order: `menunggu_konfirmasi → diproses → dikirim → selesai`, plus
+  `dibatalkan` dan `dispute` — diagram lengkap di `API_DOCUMENTATION.md`
+  §7.2 dan `OrderStateMachine` di server.
+- `CheckoutScreen` (pesan langsung dari listing): pilih metode bayar
+  (`cod`/`transfer`) dan antar (`pickup`/`delivery`); saat `delivery`,
+  alamat tujuan wajib diisi. Kupon opsional via `/coupon`.
 
 ---
 
 ## 14. NOTIFIKASI PUSH (FCM)
 
-```dart
-class NotificationService {
-  NotificationService(this._ref);
-  final Ref _ref;
+Implementasi nyata ada di `services/fcm_service.dart` — singleton yang
+dipanggil sekali dari `main()`:
 
-  final _fcm = FirebaseMessaging.instance;
+```dart
+class FcmService {
+  static final FcmService _instance = FcmService._();
+  factory FcmService() => _instance;
+  FcmService._();
+
+  final _api = ApiClient();
   final _local = FlutterLocalNotificationsPlugin();
 
-  Future<void> initialize() async {
-    // iOS & Android 13+ WAJIB meminta izin secara eksplisit.
-    final settings = await _fcm.requestPermission(
-      alert: true, badge: true, sound: true,
-      provisional: false,   // true = izin diam-diam, tapi notifikasi masuk senyap
+  Future<void> init() async {
+    // Android channel
+    const androidChannel = AndroidNotificationChannel(
+      'seekitar', 'Seekitar',
+      description: 'Notifikasi Seekitar', importance: Importance.high,
     );
+    await _local.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>()?.createNotificationChannel(androidChannel);
 
-    if (settings.authorizationStatus == AuthorizationStatus.denied) {
-      // Jangan memaksa. Catat saja, dan tawarkan lagi saat pengguna
-      // memasang kebutuhan pertamanya (saat manfaatnya jelas).
-      _ref.read(analyticsServiceProvider).logEvent('notification_permission_denied');
-      return;
-    }
+    const initSettings = InitializationSettings(
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      iOS: DarwinInitializationSettings(),
+    );
+    await _local.initialize(initSettings);
 
-    await _initLocalNotifications();
-    await _registerToken();
+    // Daftarkan token FCM ke server (POST /auth/fcm-token)
+    final token = await FirebaseMessaging.instance.getToken();
+    if (token != null) await _register(token);
+    FirebaseMessaging.instance.onTokenRefresh.listen(_register);
 
-    // Token bisa berubah sewaktu-waktu (reinstall, clear data, migrasi).
-    _fcm.onTokenRefresh.listen((token) => _sendToken(token));
+    // Foreground: tampilkan notifikasi lokal sendiri (Android tidak
+    // menampilkan notifikasi sistem saat aplikasi terbuka).
+    FirebaseMessaging.onMessage.listen(_showLocalNotification);
 
-    _listenForeground();
-    _listenNotificationTap();
+    // Tap notifikasi dari latar belakang / kondisi mati.
+    FirebaseMessaging.onMessageOpenedApp.listen(_onTap);
+    final initial = await FirebaseMessaging.instance.getInitialMessage();
+    if (initial != null) _onTap(initial);
   }
 
-  Future<void> _registerToken() async {
-    // Di iOS, token FCM baru tersedia setelah APNS token diterima.
-    if (Platform.isIOS) {
-      final apns = await _fcm.getAPNSToken();
-      if (apns == null) return;      // coba lagi di sesi berikutnya
-    }
-    final token = await _fcm.getToken();
-    if (token != null) await _sendToken(token);
+  Future<void> _register(String token) async {
+    try {
+      await _api.registerFcmToken(token, 'android_${token.hashCode}');
+    } catch (_) {}
   }
 
-  Future<void> _sendToken(String token) =>
-      _ref.read(deviceRepositoryProvider).registerToken(
-            token: token,
-            deviceId: await _deviceId(),
-            platform: Platform.isIOS ? 'ios' : 'android',
-          );
-
-  /// Dipanggil saat logout — kalau tidak, pengguna berikutnya di perangkat
-  /// yang sama akan menerima notifikasi milik akun sebelumnya.
-  Future<void> deleteToken() async {
-    await _ref.read(deviceRepositoryProvider).unregisterToken(await _deviceId());
-    await _fcm.deleteToken();
-  }
-}
-```
-
-**Foreground.** Android tidak menampilkan notifikasi sistem saat aplikasi
-terbuka; harus ditampilkan sendiri lewat `flutter_local_notifications`:
-
-```dart
-void _listenForeground() {
-  FirebaseMessaging.onMessage.listen((message) {
-    final notification = message.notification;
-    if (notification == null) return;
-
-    _local.show(
-      message.hashCode,
-      notification.title,
-      notification.body,
+  Future<void> _showLocalNotification(RemoteMessage msg) async {
+    await _local.show(
+      msg.hashCode,
+      msg.notification?.title ?? 'Seekitar',
+      msg.notification?.body ?? '',
       const NotificationDetails(
         android: AndroidNotificationDetails(
-          'seekitar_default', 'Notifikasi Seekitar',
+          'seekitar', 'Seekitar',
+          channelDescription: 'Notifikasi Seekitar',
           importance: Importance.high, priority: Priority.high,
         ),
         iOS: DarwinNotificationDetails(),
       ),
-      payload: jsonEncode(message.data),
+      payload: msg.data.isNotEmpty ? msg.data.toString() : null,
     );
-
-    // Segarkan data terkait agar layar yang terbuka ikut ter-update.
-    _handleDataRefresh(message.data);
-  });
+  }
 }
 ```
 
-**Deep link dari notifikasi.** Ada tiga jalur masuk yang harus ditangani
-semuanya — melewatkan `getInitialMessage()` membuat notifikasi tidak berfungsi
-saat aplikasi dalam keadaan mati:
+**Izin notifikasi:** Android 13+ meminta lewat dialog sistem (dideklarasikan
+di manifest); iOS lewat `requestPermission` — pastikan dipanggil sebelum
+`getToken()`. `FcmService.init()` di `main()` dibungkus
+`.catchError((_) {})` agar kegagalan Firebase tidak memblokir startup.
 
-| Kondisi aplikasi | Sumber event |
-| :-- | :-- |
-| Terbuka (foreground) | `onMessage` → notifikasi lokal → tap payload |
-| Latar belakang | `onMessageOpenedApp` |
-| Mati total | `getInitialMessage()` |
-
-```dart
-Future<void> _listenNotificationTap() async {
-  // Aplikasi dibuka DARI notifikasi saat proses sudah mati.
-  final initial = await _fcm.getInitialMessage();
-  if (initial != null) _navigate(initial.data);
-
-  FirebaseMessaging.onMessageOpenedApp.listen((m) => _navigate(m.data));
-}
-
-void _navigate(Map<String, dynamic> data) {
-  final screen = data['screen'] as String?;
-  final id     = data['entity_id'] as String?;
-  if (screen == null || id == null) return;
-
-  final path = switch (screen) {
-    'request_detail' => Routes.requestDetailOf(id),
-    'listing_detail' => Routes.listingDetailOf(id),
-    'order_detail'   => Routes.orderDetailOf(id),
-    _                => null,
-  };
-  if (path == null) return;
-
-  // Router diakses lewat provider, bukan BuildContext — saat notifikasi
-  // tiba, belum tentu ada context yang valid.
-  _ref.read(goRouterProvider).push(path);
-}
-```
-
-Payload `screen` dan `entity_id` dikirim backend di
-`RequestBroadcastNotification` (`Server_Implementation_Guide.md` §15.1).
+**Navigasi dari notifikasi:** `_onTap` saat ini hanya stub — payload notifikasi
+belum memetakan ke rute tertentu. Saat fitur ini ditambahkan, tangani **tiga
+jalur** sekaligus: `onMessage` (foreground → notifikasi lokal → payload saat
+tap), `onMessageOpenedApp` (latar belakang), dan `getInitialMessage()` (mati
+total).
 
 **Handler background** harus fungsi top-level, bukan method:
 
@@ -1745,74 +1017,30 @@ Future<void> firebaseBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
   // Isolate terpisah: jangan sentuh state aplikasi di sini.
 }
-
 // di main(): FirebaseMessaging.onBackgroundMessage(firebaseBackgroundHandler);
 ```
 
----
-
 ## 15. INTEGRASI WHATSAPP
 
-WhatsApp adalah **satu-satunya** kanal komunikasi di MVP (PRD §5.6), jadi
-kegagalan membukanya tidak boleh berakhir senyap.
+Aplikasi membuka chat WhatsApp lewat deep link `https://wa.me/<nomor>` dengan
+`url_launcher`. Tidak ada `WhatsAppService` terpisah — pemanggilan langsung di
+layar (halaman Tentang, detail listing):
 
 ```dart
-class WhatsAppService {
-  const WhatsAppService(this._analytics);
-  final AnalyticsService _analytics;
+// screens/about_screen.dart
+final whatsapp = _val('whatsapp');              // dari GET /config
+_row(Icons.phone, 'WhatsApp', '+62 $whatsapp', 'https://wa.me/$whatsapp');
+// ...
+onTap: () => launchUrl(Uri.parse(link), mode: LaunchMode.externalApplication),
+```
 
-  Future<void> open(
-    BuildContext context, {
-    required String phone,
-    required String message,
-  }) async {
-    final uri = Uri.parse('https://wa.me/$phone?text=${Uri.encodeComponent(message)}');
+Pada detail listing, teks yang dikirim bisa memakai `whatsapp_text` dari
+response API (`GET /listings/{id}`):
 
-    // canLaunchUrl butuh <queries> di AndroidManifest (lihat catatan bawah),
-    // dan tetap bisa false-negative — karena itu hasil launchUrl juga dicek.
-    var opened = false;
-    try {
-      opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } on PlatformException {
-      opened = false;
-    }
-
-    _analytics.logEvent('whatsapp_click', {'success': opened});
-
-    if (!opened && context.mounted) {
-      await _showFallback(context, phone, message);
-    }
-  }
-
-  /// WhatsApp tidak terpasang: tawarkan salin nomor atau buka WhatsApp Web.
-  Future<void> _showFallback(BuildContext context, String phone, String message) {
-    return showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('WhatsApp tidak tersedia'),
-        content: Text('Nomor penjual: +$phone\n\n'
-            'Aplikasi WhatsApp tidak ditemukan di perangkat ini.'),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: '+$phone'));
-              if (ctx.mounted) Navigator.pop(ctx);
-            },
-            child: const Text('Salin Nomor'),
-          ),
-          TextButton(
-            onPressed: () {
-              launchUrl(Uri.parse('https://web.whatsapp.com/send?phone=$phone'),
-                  mode: LaunchMode.externalApplication);
-              Navigator.pop(ctx);
-            },
-            child: const Text('Buka WhatsApp Web'),
-          ),
-        ],
-      ),
-    );
-  }
-}
+```dart
+final text = res['whatsapp_text']?.toString() ?? _detail?.title ?? '';
+launchUrl(Uri.parse('https://wa.me/$phone?text=${Uri.encodeComponent(text)}'),
+    mode: LaunchMode.externalApplication);
 ```
 
 > ⚠️ Sejak Android 11, `canLaunchUrl` mengembalikan `false` untuk skema yang
@@ -1828,315 +1056,161 @@ class WhatsAppService {
 > </queries>
 > ```
 
-Pesan dibuat otomatis berisi konteks transaksi, sesuai PRD §5.6:
-
-```dart
-String buildOrderMessage(Order order) =>
-    'Halo, saya ingin menanyakan pesanan ${order.orderNumber} '
-    '(${order.listingTitle}) di Seekitar.';
-```
-
----
-
 ## 16. UI/UX GUIDELINES IMPLEMENTASI
 
-- **Warna:** Sesuai Brand Guideline (Hijau Lokal `#168A4A`, Teks Utama `#1F2933`, dll).
-- **Spacing:** Grid 8dp, padding standar 16dp.
-- **Card:** Radius 12dp, shadow ringan.
-- **Error:** Widget error dengan tombol retry.
-- **Empty state:** Ilustrasi kosong dengan teks “Belum ada data”.
+- **Warna:** Hijau Lokal `#168A4A` (primary), `#E7F6EC` (subtle),
+  latar hangat `#F8FAF9`, teks `#1B1F1C` — sesuai `core/theme.dart` &
+  `BRANDING-GUIDELINE.md`.
+- **Dark mode:** sengaja **tidak ada** — `ThemeMode.light` selalu (komentar
+  di `AppTheme`: palet terang menjaga kontras teks & keterbacaan form).
+- **Card:** radius 24dp, elevation 0 dengan shadow ringan.
+- **Empty state:** ikon + teks ("Belum ada listing", "Tidak ada hasil", …)
+  dari `UiStrings` di `core/constants.dart`.
+- **Skeleton:** layar beranda memakai `_skeleton()` (kotak abu-abu
+  `Colors.grey.shade200/100` ber-radius) saat `_loading`; paket `shimmer`
+  tersedia di pubspec bila ingin efek animasi.
 
 ### 16.1 Font Plus Jakarta Sans
 
-Terapkan sekali di `ThemeData`, jangan per-widget:
+Tema mendeklarasikan `fontFamily: 'Plus Jakarta Sans'` sekali di
+`AppTheme._buildLight()` — jangan set font per-widget:
 
 ```dart
-class AppTheme {
-  static ThemeData get light {
-    final base = ThemeData.light(useMaterial3: true);
-
-    return base.copyWith(
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF168A4A)),
-      textTheme: GoogleFonts.plusJakartaSansTextTheme(base.textTheme).apply(
-        bodyColor: const Color(0xFF1F2933),
-        displayColor: const Color(0xFF1F2933),
-      ),
-      cardTheme: CardThemeData(
-        elevation: 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
+static ThemeData _buildLight() {
+  final cs = ColorScheme.fromSeed(seedColor: primary, brightness: Brightness.light);
+  return ThemeData(
+    useMaterial3: true,
+    colorScheme: cs,
+    fontFamily: 'Plus Jakarta Sans',   // wajib dibundel — lihat catatan
+    textTheme: const TextTheme(
+      bodyMedium: TextStyle(color: Color(0xFF1B1F1C), height: 1.4),
+      bodySmall: TextStyle(color: Color(0xFF5C665F), height: 1.35),
+    ),
+  );
 }
 ```
 
-> ⚠️ Secara bawaan `google_fonts` **mengunduh font saat runtime** — teks akan
-> berkedip pada pembukaan pertama, dan gagal total jika pengguna offline. Untuk
-> produksi, bundel font-nya sebagai aset:
+> ⚠️ Aplikasi **tidak** memakai paket `google_fonts` — nama font hanya
+> deklarasi. Bundel berkas TTF-nya di `pubspec.yaml` sebelum rilis, kalau
+> tidak Flutter memakai font sistem:
 >
 > ```yaml
 > flutter:
->   assets:
->     - assets/google_fonts/     # PlusJakartaSans-{Regular,Medium,Bold}.ttf
+>   fonts:
+>     - family: Plus Jakarta Sans
+>       fonts:
+>         - asset: assets/fonts/PlusJakartaSans-Regular.ttf
+>         - asset: assets/fonts/PlusJakartaSans-Bold.ttf
+>           weight: 700
 > ```
->
-> Lalu matikan pengambilan runtime di `main()`:
-> ```dart
-> GoogleFonts.config.allowRuntimeFetching = false;
-> ```
-> Ini penting untuk pengguna di area sinyal lemah — target utama Seekitar.
 
-### 16.2 Skeleton Shimmer
+### 16.2 Skeleton & Empty State
 
-Skeleton dipakai untuk pemuatan **pertama**; `RefreshIndicator` untuk muat ulang.
+Skeleton dipakai untuk pemuatan **pertama**; `RefreshIndicator` untuk muat
+ulang. Contoh pola di `HomeScreen`:
 
 ```dart
-class ListingCardSkeleton extends StatelessWidget {
-  const ListingCardSkeleton({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Shimmer.fromColors(
-      baseColor: Colors.grey.shade300,
-      highlightColor: Colors.grey.shade100,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Container(width: 80, height: 80, color: Colors.white),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(height: 16, width: double.infinity, color: Colors.white),
-                    const SizedBox(height: 8),
-                    Container(height: 14, width: 120, color: Colors.white),
-                  ],
-                ),
-              ),
-            ],
+body: _loading
+    ? _skeleton()                       // placeholder abu-abu
+    : _error != null
+        ? _err(t)                       // pesan + tombol coba lagi
+        : RefreshIndicator(
+            onRefresh: _load,
+            child: CustomScrollView(slivers: [ /* hero, tren, terdekat, kebutuhan */ ]),
           ),
-        ),
-      ),
-    );
-  }
-}
 ```
 
 Bentuk skeleton harus **menyerupai konten aslinya**; placeholder generik justru
 membuat pergeseran tata letak terasa mengganggu saat data tiba.
 
-```dart
-listings.when(
-  loading: () => ListView.builder(
-    itemCount: 6,
-    itemBuilder: (_, __) => const ListingCardSkeleton(),
-  ),
-  error: (e, _) => AppErrorWidget(
-    message: e is AppException ? e.message : 'Terjadi kesalahan',
-    onRetry: () => ref.invalidate(listingSearchProvider),
-  ),
-  data: (items) => items.isEmpty
-      ? const EmptyState(title: 'Belum ada hasil')
-      : ListView.builder(/* … */),
-)
-```
-
 ---
 
 ## 17. TESTING
 
-- **Unit Test:** Usecase, repository (mock `Dio`), model.
-- **Widget Test:** Halaman dengan provider overrides.
-- **Integration Test:** Alur login → jelajahi → pasang kebutuhan.
-
 ```bash
-flutter test                              # unit + widget
-flutter test integration_test             # perlu perangkat/emulator
-flutter test --coverage
+flutter analyze
+flutter test
 ```
 
-### 17.1 Widget Test
+### 17.1 Kondisi saat ini
 
-Kuncinya adalah **`overrides`** pada `ProviderScope` — inilah alasan dependensi
-dideklarasikan sebagai provider (§4.1), bukan dibuat langsung di dalam widget.
+Direktori `test/` berisi satu berkas `widget_test.dart` — **masih template
+bawaan** `flutter create` (widget test "counter" yang merujuk `MyApp`, padahal
+aplikasi memakai `SeekitarApp`). Artinya `flutter test` belum memverifikasi
+layar Seekitar; widget test per layar perlu ditulis.
+
+Pola widget test dengan `provider` — bungkus layar dengan
+`ChangeNotifierProvider.value` memakai `AppState` tiruan (atau `AuthService`
+yang di-*fake*):
 
 ```dart
-// test/presentation/login_page_test.dart
-class MockAuthRepository extends Mock implements AuthRepository {}
-
-void main() {
-  late MockAuthRepository repo;
-
-  setUp(() => repo = MockAuthRepository());
-
-  Widget buildSubject() => ProviderScope(
-        overrides: [authRepositoryProvider.overrideWithValue(repo)],
-        child: const MaterialApp(home: LoginPage()),
-      );
-
-  testWidgets('nomor tidak valid menampilkan pesan galat', (tester) async {
-    await tester.pumpWidget(buildSubject());
-
-    await tester.enterText(find.byType(TextFormField), '123');
-    await tester.tap(find.text('Minta OTP'));
-    await tester.pump();                       // jalankan validator
-
-    expect(find.text('Nomor tidak valid'), findsOneWidget);
-    verifyNever(() => repo.requestOtp(any()));  // API tidak boleh dipanggil
-  });
-
-  testWidgets('nomor 08xxx dinormalkan ke 62xxx sebelum dikirim', (tester) async {
-    when(() => repo.requestOtp(any())).thenAnswer((_) async {});
-
-    await tester.pumpWidget(buildSubject());
-    await tester.enterText(find.byType(TextFormField), '08123456789');
-    await tester.tap(find.text('Minta OTP'));
-    await tester.pump();
-
-    // Normalisasi klien harus cocok dengan aturan server (§18A.6 Server Guide).
-    verify(() => repo.requestOtp('628123456789')).called(1);
-  });
-
-  testWidgets('tombol nonaktif selama pengiriman', (tester) async {
-    final completer = Completer<void>();
-    when(() => repo.requestOtp(any())).thenAnswer((_) => completer.future);
-
-    await tester.pumpWidget(buildSubject());
-    await tester.enterText(find.byType(TextFormField), '08123456789');
-    await tester.tap(find.text('Minta OTP'));
-    await tester.pump();
-
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-
-    await tester.tap(find.byType(FilledButton));  // klik kedua diabaikan
-    await tester.pump();
-    verify(() => repo.requestOtp(any())).called(1);
-
-    completer.complete();
-    await tester.pumpAndSettle();
-  });
+// test/login_screen_test.dart (contoh pola)
+class _FakeAppState extends AppState {
+  @override
+  Future<Map<String, dynamic>> requestOtp(String phone) async {
+    // jangan panggil jaringan — kembalikan debug_otp tiruan
+    return {'debug_otp': '123456'};
+  }
 }
+
+Widget buildSubject() => ChangeNotifierProvider.value(
+      value: _FakeAppState(),
+      child: const MaterialApp(home: LoginScreen()),
+    );
+
+testWidgets('nomor pendek menampilkan pesan galat', (tester) async {
+  await tester.pumpWidget(buildSubject());
+  await tester.enterText(find.byType(TextField).first, '0812');
+  await tester.tap(find.text('Kirim Kode OTP'));
+  await tester.pump();
+  expect(find.text('Masukkan nomor WhatsApp yang valid'), findsOneWidget);
+});
 ```
 
-> ⚠️ **`pump()` vs `pumpAndSettle()`.** `pumpAndSettle()` menunggu semua animasi
-> selesai — dan akan **menggantung selamanya** bila ada animasi berulang seperti
-> `CircularProgressIndicator`. Untuk menguji keadaan memuat, pakai `pump()`.
+> ⚠️ **`pump()` vs `pumpAndSettle()`.** `pumpAndSettle()` menunggu semua
+> animasi selesai — dan akan **menggantung selamanya** bila ada animasi
+> berulang seperti `CircularProgressIndicator` atau countdown. Untuk menguji
+> keadaan memuat, pakai `pump()`.
 
-Daftar widget test minimum:
+Daftar widget test yang direkomendasikan:
 
 | Berkas | Yang diuji |
 | :-- | :-- |
-| `login_page_test.dart` | Validasi nomor, normalisasi, keadaan memuat |
-| `otp_page_test.dart` | 6 digit, hitung mundur kirim ulang, OTP salah |
-| `listing_card_test.dart` | Harga terformat, jarak, penanganan judul panjang |
-| `explore_page_test.dart` | Skeleton → data → keadaan kosong |
-| `offer_card_test.dart` | Total = harga + biaya tambahan (§4.6 DATABASE) |
+| `login_screen_test.dart` | Validasi nomor, tampilan OTP debug, keadaan memuat |
+| `home_screen_test.dart` | Skeleton → data → keadaan kosong |
+| `listing_detail_test.dart` | Galeri, tombol pesan/chat tanpa login |
+| `checkout_test.dart` | Alamat wajib saat `delivery`, body `POST /orders` |
 
 ### 17.2 Integration Test
 
+Belum ada berkas `integration_test/` dan paket `integration_test` tidak ada di
+`pubspec.yaml`. Bila ingin menambahkannya, gunakan paket SDK
+`integration_test` dan jalankan `flutter test integration_test` dengan
+emulator — server dev harus aktif (`./tools/dev/serve`).
+
 ```dart
-// integration_test/create_request_flow_test.dart
+// integration_test/app_test.dart (contoh pola)
+import 'package:integration_test/integration_test.dart';
+import 'package:seekitar_mobile/main.dart' as app;
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-
-  testWidgets('login sampai memasang kebutuhan', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: SeekitarApp()));
+  testWidgets('alur login OTP → beranda', (tester) async {
+    app.main();
     await tester.pumpAndSettle();
-
-    // 1. Masuk
-    await tester.enterText(find.byKey(const Key('phone_field')), '08123456789');
-    await tester.tap(find.text('Minta OTP'));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(find.byKey(const Key('otp_field')), '123456');
-    await tester.pumpAndSettle();
-
-    // 2. Sampai di Jelajahi
-    expect(find.text('Jelajahi'), findsOneWidget);
-
-    // 3. Pasang kebutuhan
-    await tester.tap(find.byType(FloatingActionButton));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(find.byKey(const Key('request_title')), 'Servis AC 1 PK');
-    await tester.tap(find.text('Pasang'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Menunggu penawaran…'), findsOneWidget);
+    // masukkan nomor, kirim OTP, verifikasi, harapkan /home …
   });
 }
 ```
 
-> ⚠️ **Integration test butuh backend yang dapat diprediksi.** Arahkan ke
-> server staging dengan data benih tetap, atau jalankan API tiruan:
-> ```bash
-> flutter test integration_test \
->   --dart-define=API_BASE_URL=http://localhost:8000/api/v1
-> ```
->
-> **OTP tidak bisa diuji ujung-ke-ujung** tanpa menerima WhatsApp sungguhan.
-> Sediakan nomor uji di server yang selalu menerima kode `123456`, aktif
-> **hanya** di environment non-produksi.
->
-> Pakai `Key` yang eksplisit (`Key('phone_field')`) alih-alih mencari lewat
-> teks — teks berubah saat terjemahan atau penulisan ulang, `Key` tidak.
-
-### 17.3 Konfigurasi Linting
-
-Proyek sudah memuat `analysis_options.yaml` bawaan dengan
-`package:flutter_lints`. Untuk arsitektur ini perlu ditambah:
-
-```yaml
-# analysis_options.yaml
-include: package:flutter_lints/flutter.yaml
-
-analyzer:
-  errors:
-    invalid_annotation_target: ignore   # false positive json_serializable
-  exclude:
-    - "**/*.g.dart"        # berkas hasil generate, jangan dianalisis
-    - "**/*.freezed.dart"
-
-linter:
-  rules:
-    - always_use_package_imports    # cegah campur import relatif & package
-    - avoid_print                   # pakai logger, bukan print
-    - prefer_const_constructors     # kurangi rebuild yang tak perlu
-    - prefer_const_widgets
-    - unawaited_futures             # Future yang lupa di-await = bug senyap
-    - use_build_context_synchronously  # BuildContext setelah await = crash
-```
-
-Tambahkan `custom_lint` untuk aturan khusus Riverpod:
-
-```yaml
-dev_dependencies:
-  custom_lint: ^0.7.0
-  riverpod_lint: ^3.0.0
-```
-
-```bash
-dart run custom_lint      # memeriksa pemakaian ref, provider yang tak dipakai
-```
-
-> ⚠️ **`use_build_context_synchronously` adalah aturan terpenting di sini.**
-> Memakai `context` setelah `await` tanpa memeriksa `mounted` adalah penyebab
-> crash paling umum di Flutter — dan seluruh alur di aplikasi ini asinkron.
-> Itulah alasan setiap `await` di §7.1 diikuti pemeriksaan `if (!mounted) return;`.
->
-> `exclude` untuk `*.g.dart` mencegah ribuan peringatan pada kode yang memang
-> tidak kita tulis sendiri.
-
----
-
 ## 18. DEPLOYMENT & CI/CD
 
-- **Build Android:** `flutter build appbundle --release` (Play Store) atau `apk` (distribusi langsung).
+- **Build Android:** `flutter build appbundle --release` (Play Store) atau
+  `--release --apk` (distribusi langsung).
 - **Build iOS:** `flutter build ipa --release`.
-- **GitHub Actions:** `flutter analyze` → `flutter test` → build → unggah artefak.
+- **CI:** repositori **belum** memiliki `.github/workflows` — template berikut
+  siap dipakai saat CI ditambahkan: `flutter analyze` → `flutter test` →
+  build APK → unggah artefak.
 
 ### 18.1 Penandatanganan Android (Keystore)
 
@@ -2158,235 +1232,115 @@ keyAlias=seekitar
 storeFile=/absolute/path/seekitar-release.jks
 ```
 
-```gitignore
-# android/.gitignore
-key.properties
-*.jks
-*.keystore
-```
-
-`android/app/build.gradle.kts`:
-
-```kotlin
-import java.util.Properties
-import java.io.FileInputStream
-
-val keystoreProperties = Properties()
-val keystorePropertiesFile = rootProject.file("key.properties")
-if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
-}
-
-android {
-    signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String?
-            keyPassword = keystoreProperties["keyPassword"] as String?
-            storeFile = keystoreProperties["storeFile"]?.let { file(it) }
-            storePassword = keystoreProperties["storePassword"] as String?
-        }
-    }
-
-    buildTypes {
-        release {
-            signingConfig = signingConfigs.getByName("release")
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-        }
-    }
-}
-```
-
-> ⚠️ **Cadangkan keystore di tempat aman (password manager / brankas tim).**
-> Kehilangannya berarti **tidak bisa lagi memperbarui aplikasi** — satu-satunya
-> jalan adalah menerbitkan aplikasi baru dengan `applicationId` berbeda dan
-> kehilangan seluruh pengguna beserta ulasannya.
->
-> Aktifkan **Play App Signing** agar Google menyimpan kunci penandatanganan
-> akhir; keystore lokal tetap dibutuhkan sebagai kunci unggah.
->
-> ⚠️ R8/ProGuard bisa mem-*strip* kelas yang dipakai refleksi. Model
-> `json_serializable` aman (kodenya dibangkitkan), tetapi Firebase perlu
-> pengecualian:
-> ```proguard
-> -keep class com.google.firebase.** { *; }
-> -keep class io.flutter.plugins.** { *; }
-> ```
-
-**Membangun:**
-
-```bash
-flutter build appbundle --release --dart-define-from-file=config/prod.json
-# keluaran: build/app/outputs/bundle/release/app-release.aab
-```
+Pastikan `android/.gitignore` memuat `key.properties`, `*.jks`, `*.keystore`,
+dan `build/`. Konfigurasi `signingConfigs` di `android/app/build.gradle.kts`
+membaca berkas itu saat ada (lihat template Flutter standar).
 
 ### 18.2 Penandatanganan iOS
 
-iOS memerlukan akun Apple Developer berbayar dan sertifikat distribusi.
+Lakukan di Xcode (Signing & Capabilities) dengan Apple Developer account;
+simpan `.p8`/`.p12` di tempat aman. Untuk rilis TestFlight: `flutter build
+ipa --release` lalu unggah lewat Xcode/Transporter.
 
-| Berkas | Fungsi | Disimpan di |
-| :-- | :-- | :-- |
-| Distribution Certificate (`.p12`) | Identitas penandatangan | Brankas tim |
-| Provisioning Profile (`.mobileprovision`) | Mengikat App ID + sertifikat | Brankas tim |
-| App Store Connect API Key (`.p8`) | Unggah otomatis dari CI | GitHub Secrets |
-
-**Fastlane Match** mengelola sertifikat lewat repositori Git terenkripsi —
-lebih baik daripada saling mengirim `.p12` antaranggota tim:
-
-```ruby
-# ios/fastlane/Fastfile
-default_platform(:ios)
-
-platform :ios do
-  desc "Bangun & unggah ke TestFlight"
-  lane :beta do
-    match(type: "appstore", readonly: is_ci)
-    build_app(scheme: "Runner", export_method: "app-store")
-    upload_to_testflight(skip_waiting_for_build_processing: true)
-  end
-end
-```
-
-```bash
-cd ios && bundle exec fastlane beta
-```
-
-> ⚠️ Build iOS **hanya bisa dilakukan di macOS** — Xcode tidak tersedia di
-> Linux/Windows. Di CI, gunakan runner `macos-latest`, yang jauh lebih mahal
-> dari runner Linux; karena itu build iOS sebaiknya dipicu hanya saat rilis,
-> bukan setiap push.
->
-> Aplikasi Seekitar meminta izin **lokasi**, **kamera**, dan **notifikasi**.
-> Ketiganya wajib punya penjelasan di `Info.plist`, atau Apple akan menolak
-> aplikasi saat peninjauan:
-> ```xml
-> <key>NSLocationWhenInUseUsageDescription</key>
-> <string>Lokasi digunakan untuk menampilkan toko dan penyedia jasa di sekitar Anda.</string>
-> <key>NSCameraUsageDescription</key>
-> <string>Kamera digunakan untuk memotret produk dan dokumen verifikasi.</string>
-> <key>NSPhotoLibraryUsageDescription</key>
-> <string>Galeri digunakan untuk memilih foto produk.</string>
-> ```
-
-### 18.3 GitHub Actions
+### 18.3 GitHub Actions (template)
 
 ```yaml
-# .github/workflows/mobile.yml
-name: Mobile CI
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-
+name: mobile-ci
+on: [push, pull_request]
 jobs:
-  analyze:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
-        with: { channel: stable, cache: true }
+        with:
+          channel: stable
+          flutter-version: 3.44.x
       - run: flutter pub get
-      - run: dart run build_runner build --delete-conflicting-outputs
       - run: flutter analyze
       - run: flutter test
-
-  build-android:
-    needs: analyze
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with: { channel: stable, cache: true }
-
-      # Keystore & konfigurasi disuntikkan dari Secrets, tidak pernah di repo.
-      - name: Siapkan keystore
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/release.jks
-          cat > android/key.properties <<EOF
-          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
-          keyPassword=${{ secrets.KEY_PASSWORD }}
-          keyAlias=seekitar
-          storeFile=release.jks
-          EOF
-          echo '${{ secrets.PROD_CONFIG_JSON }}' > config/prod.json
-
-      - run: flutter pub get
-      - run: dart run build_runner build --delete-conflicting-outputs
-      - run: flutter build appbundle --release --dart-define-from-file=config/prod.json
-
+      - run: flutter build apk --release --dart-define=API_BASE_URL=https://api.seekitar.id/api/v1
       - uses: actions/upload-artifact@v4
         with:
-          name: app-release
-          path: build/app/outputs/bundle/release/app-release.aab
+          name: apk-release
+          path: build/app/outputs/flutter-apk/app-release.apk
 ```
-
-> ⚠️ `dart run build_runner build` **wajib** sebelum `analyze` dan `build`.
-> Berkas `.g.dart` hasil `json_serializable` dan `riverpod_generator` tidak
-> di-commit, jadi tanpa langkah ini seluruh build gagal dengan ratusan galat
-> "tidak ditemukan".
->
-> `config/prod.json` memuat konfigurasi environment (§20) dan **tidak
-> di-commit** — nilainya datang dari GitHub Secrets.
-
----
 
 ## 19. LAMPIRAN: CONTOH KODE PENTING
 
-### 19.1 Dio Client lengkap
-
-(lihat kode di atas)
-
-### 19.2 Nearby Stores Provider dengan Infinite Scroll
+### 19.1 DioClient lengkap
 
 ```dart
-@riverpod
-class NearbyStoresPaginated extends _$NearbyStoresPaginated {
-  static const _perPage = 15;
+class DioClient {
+  static final DioClient _instance = DioClient._();
+  factory DioClient() => _instance;
+  DioClient._() {
+    _dio = Dio(BaseOptions(
+      baseUrl: AppConstants.baseUrl,
+      connectTimeout: AppConstants.connectTimeout,
+      receiveTimeout: AppConstants.receiveTimeout,
+      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+    ));
+    _dio.interceptors.addAll([_authInterceptor(), _retryInterceptor(), _logInterceptor()]);
+  }
 
+  late final Dio _dio;
+  final _storage = const FlutterSecureStorage();
+  String? _token;
+
+  Dio get dio => _dio;
+  String? get token => _token;
+
+  Future<void> setToken(String t) async {
+    _token = t;
+    await _storage.write(key: 'jwt_token', value: t);
+  }
+
+  Future<void> loadToken() async { _token = await _storage.read(key: 'jwt_token'); }
+  Future<void> clearToken() async { _token = null; await _storage.delete(key: 'jwt_token'); }
+
+  InterceptorsWrapper _authInterceptor() => InterceptorsWrapper(
+        onRequest: (options, handler) {
+          if (_token != null) options.headers['Authorization'] = 'Bearer $_token';
+          handler.next(options);
+        },
+        // onError: 401 → POST /auth/refresh → ulangi request (lihat §5.1)
+      );
+}
+```
+
+### 19.2 Paginasi dengan guard
+
+`ApiClient` menerima `page` (listings, notifications, messages). Pola guard
+yang benar saat memuat halaman berikutnya — tiga hal yang mudah salah:
+
+1. **`_page++` sebelum request.** Kalau request gagal, halaman terlanjur naik
+   dan satu halaman data hilang selamanya saat pengguna mencoba lagi.
+2. **Tanpa guard `_isLoadingMore`.** Scroll cepat memicu `loadMore()`
+   berkali-kali, dan item yang sama masuk berulang ke daftar.
+3. **Melempar error ke state.** Kegagalan memuat halaman kedua tidak boleh
+   menghapus halaman pertama yang sudah tampil.
+
+```dart
+class _ListState extends State<SomeListScreen> {
+  final _api = ApiProvider();
+  final _items = <Listing>[];
   int _page = 1;
   bool _hasMore = true;
   bool _isLoadingMore = false;
 
-  @override
-  FutureOr<List<Store>> build(double lat, double lng, {double radius = 10}) async {
-    _page = 1;
-    _hasMore = true;
-    _isLoadingMore = false;
-
-    final stores = await ref
-        .read(storeRepositoryProvider)
-        .getNearbyStores(lat, lng, radius, page: _page);
-
-    _hasMore = stores.length >= _perPage;
-    return stores;
-  }
-
-  Future<void> loadMore() async {
-    // TIGA guard, semuanya perlu:
-    // 1. sudah habis  2. sedang memuat  3. muatan awal belum selesai
-    if (!_hasMore || _isLoadingMore || !state.hasValue) return;
-
+  Future<void> _loadMore() async {
+    if (!_hasMore || _isLoadingMore) return;     // TIGA guard: habis/sedang/awal
     _isLoadingMore = true;
-    final nextPage = _page + 1;
-
+    final next = _page + 1;
     try {
-      final stores = await ref
-          .read(storeRepositoryProvider)
-          .getNearbyStores(lat, lng, radius, page: nextPage);
-
-      // Provider bisa saja sudah dibuang saat request berjalan.
-      if (!ref.mounted) return;
-
-      _page = nextPage;                       // hanya naik jika BERHASIL
-      _hasMore = stores.length >= _perPage;
-      state = AsyncData([...?state.value, ...stores]);
-    } on AppException catch (e) {
-      // Jangan ganti state jadi error — daftar yang sudah tampil akan hilang.
-      // Cukup beri tahu lewat snackbar, biar pengguna bisa mencoba lagi.
-      ref.read(appMessengerProvider).showError(e.message);
+      final items = await _api.getListings(lat: _lat, lng: _lng, page: next);
+      if (!mounted) return;
+      _page = next;                               // hanya naik jika BERHASIL
+      _hasMore = items.length >= 15;
+      setState(() => _items.addAll(items));
+    } catch (_) {
+      // daftar yang sudah tampil tetap utuh
     } finally {
       _isLoadingMore = false;
     }
@@ -2394,139 +1348,35 @@ class NearbyStoresPaginated extends _$NearbyStoresPaginated {
 }
 ```
 
-> ⚠️ Tiga hal yang mudah salah di sini:
->
-> 1. **`_page++` sebelum request.** Kalau request gagal, halaman terlanjur naik
->    dan satu halaman data hilang selamanya saat pengguna mencoba lagi.
-> 2. **Tanpa guard `_isLoadingMore`.** Scroll cepat memicu `loadMore()`
->    berkali-kali, dan item yang sama masuk berulang ke daftar.
-> 3. **Melempar error ke `state`.** Kegagalan memuat halaman kedua tidak boleh
->    menghapus halaman pertama yang sudah tampil.
+Pemicu scroll sebaiknya `NotificationListener<ScrollEndNotification>` (atau
+`ScrollController` dengan margin 300 px), bukan `addListener` mentah yang
+menembak berkali-kali per frame.
 
-Pemicunya di UI — jangan pakai `ScrollController.addListener` biasa, karena
-akan menembak berkali-kali per frame:
+### 19.3 Token & sesi
 
-```dart
-NotificationListener<ScrollEndNotification>(
-  onNotification: (n) {
-    final m = n.metrics;
-    if (m.pixels >= m.maxScrollExtent - 300) {
-      ref.read(nearbyStoresPaginatedProvider(lat, lng).notifier).loadMore();
-    }
-    return false;
-  },
-  child: ListView.builder(/* … */),
-)
-```
-
-### 19.3 Secure Storage Provider
-
-`flutter_secure_storage` bisa **gagal** pada perangkat nyata: keystore Android
-rusak setelah pembaruan OS, atau Keychain iOS terkunci saat perangkat baru
-di-boot dan belum dibuka. Tanpa penanganan, aplikasi crash saat dibuka.
-
-```dart
-@Riverpod(keepAlive: true)
-FlutterSecureStorage secureStorage(Ref ref) => const FlutterSecureStorage(
-      aOptions: AndroidOptions(encryptedSharedPreferences: true),
-      iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
-    );
-
-@Riverpod(keepAlive: true)
-StorageService storageService(Ref ref) =>
-    StorageService(ref.watch(secureStorageProvider), ref.read(analyticsServiceProvider));
-
-class StorageService {
-  const StorageService(this._storage, this._analytics);
-  final FlutterSecureStorage _storage;
-  final AnalyticsService _analytics;
-
-  static const _tokenKey = 'auth_token';
-
-  Future<String?> readToken() async {
-    try {
-      return await _storage.read(key: _tokenKey);
-    } on PlatformException catch (e, s) {
-      // Keystore rusak: perlakukan sebagai "belum login" dan bersihkan,
-      // daripada membiarkan aplikasi gagal dibuka selamanya.
-      _analytics.recordError(e, s, fatal: false);
-      await _safeDeleteAll();
-      return null;
-    }
-  }
-
-  Future<void> saveToken(String token) async {
-    try {
-      await _storage.write(key: _tokenKey, value: token);
-    } on PlatformException catch (e, s) {
-      _analytics.recordError(e, s, fatal: false);
-      // Gagal menyimpan token = pengguna harus login lagi nanti.
-      // Ini harus terlihat, jangan ditelan diam-diam.
-      throw const StorageException('Gagal menyimpan sesi. Coba lagi.');
-    }
-  }
-
-  Future<void> clearToken() => _safeDeleteAll();
-
-  Future<void> _safeDeleteAll() async {
-    try {
-      await _storage.deleteAll();
-    } on PlatformException {
-      // Sudah tidak terbaca; tidak ada lagi yang bisa dilakukan.
-    }
-  }
-}
-```
-
-> `KeychainAccessibility.first_unlock` dipilih agar token tetap terbaca saat
-> aplikasi dibangunkan notifikasi di latar belakang. Nilai bawaan
-> (`unlocked`) membuat pembacaan gagal jika layar sedang terkunci.
-
----
+Semua penyimpanan token dipusatkan di `DioClient` (secure storage, kunci
+`jwt_token`). `AuthService` memakainya lewat `setToken`/`loadToken`/
+`clearToken`; jangan menulis `FlutterSecureStorage` langsung di layar.
 
 ## 20. KONFIGURASI ENVIRONMENT (DEV / STAGING / PROD)
 
-Memakai **`--dart-define-from-file`**, bukan `flutter_dotenv`. Alasannya:
-berkas `.env` ikut terbundel sebagai aset dan **bisa dibaca siapa pun** yang
-membongkar APK, sementara `--dart-define` di-inline saat kompilasi. Nilainya
-juga tersedia sebagai `const`, sehingga bisa dipakai di konteks konstan.
-
-```json
-// config/dev.json  (JANGAN di-commit jika berisi kunci asli)
-{
-  "API_BASE_URL": "http://10.0.2.2:8000/api/v1",
-  "ENVIRONMENT": "dev",
-  "ENABLE_LOGGING": true
-}
-```
-
-```json
-// config/prod.json
-{
-  "API_BASE_URL": "https://api.seekitar.id/api/v1",
-  "ENVIRONMENT": "prod",
-  "ENABLE_LOGGING": false
-}
-```
+Memakai **`--dart-define`**, bukan `flutter_dotenv` maupun
+`--dart-define-from-file`. Alasannya: nilai `String.fromEnvironment` di-inline
+saat kompilasi sebagai `const` — tidak ada berkas yang ikut terbundel ke APK.
 
 ```dart
-// core/config/env.dart
-abstract final class Env {
-  static const apiBaseUrl = String.fromEnvironment(
+// core/constants.dart
+class AppConstants {
+  static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8000/api/v1',
+    defaultValue: 'http://192.168.201.148:8000/api/v1',   // dev lokal
   );
-
-  static const environment = String.fromEnvironment('ENVIRONMENT', defaultValue: 'dev');
-  static const enableLogging = bool.fromEnvironment('ENABLE_LOGGING', defaultValue: true);
-
-  static bool get isProduction => environment == 'prod';
 }
 ```
 
 ```bash
-flutter run  --dart-define-from-file=config/dev.json
-flutter build apk --release --dart-define-from-file=config/prod.json
+flutter run  --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1
+flutter build apk --release --dart-define=API_BASE_URL=https://api.seekitar.id/api/v1
 ```
 
 | Environment | Base URL | Catatan |
@@ -2536,196 +1386,72 @@ flutter build apk --release --dart-define-from-file=config/prod.json
 | Staging | `https://staging-api.seekitar.id/api/v1` | UAT & closed beta |
 | Produksi | `https://api.seekitar.id/api/v1` | |
 
-Selaras dengan tabel di `API_DOCUMENTATION.md` §Base URL.
-
 > ⚠️ `String.fromEnvironment` **harus** `const`. Menulisnya sebagai variabel
 > biasa membuat nilainya selalu kosong tanpa peringatan apa pun saat kompilasi.
 
----
-
 ## 21. ERROR HANDLING GLOBAL
 
-Tiga jalur galat yang harus ditangkap; melewatkan salah satunya berarti crash
-yang tidak pernah terlihat di laporan.
+`main()` memasang dua pengaman global (lihat `_setupErrorHandling`):
 
 ```dart
-Future<void> main() async {
-  // runZonedGuarded menangkap galat asinkron yang lolos dari Flutter.
-  await runZonedGuarded(() async {
-    WidgetsFlutterBinding.ensureInitialized();
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-    // 1. Galat di dalam framework Flutter (build, layout, paint).
-    FlutterError.onError = (details) {
-      FlutterError.presentError(details);          // tetap cetak di konsol
-      FirebaseCrashlytics.instance.recordFlutterFatalError(details);
-    };
-
-    // 2. Galat pada isolate/platform di luar Flutter.
-    PlatformDispatcher.instance.onError = (error, stack) {
-      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-      return true;
-    };
-
-    // 3. Layar merah diganti tampilan yang layak dilihat pengguna.
-    ErrorWidget.builder = (details) => Material(
-          child: AppErrorWidget(
-            message: Env.isProduction
-                ? 'Terjadi kesalahan. Silakan coba lagi.'
-                : details.exceptionAsString(),      // detail hanya saat debug
-          ),
-        );
-
-    runApp(const ProviderScope(child: SeekitarApp()));
-  }, (error, stack) {
-    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+void _setupErrorHandling() {
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);      // tetap cetak di konsol
+    logError('Flutter Error', details.exception, details.stack);
+  };
+  runZonedGuarded(() {}, (error, stack) {
+    logError('Uncaught Error', error, stack);
   });
 }
 ```
 
-**Galat di dalam provider** ditangkap lewat observer, sehingga tidak perlu
-`try-catch` di setiap notifier:
+- `FlutterError.onError` — galat build/layout/paint di dalam framework.
+- `runZonedGuarded` — galat asinkron yang lolos dari zona Flutter.
+- Layar memakai pola `try/catch` + `setState(_error)` dan menampilkan pesan
+  dengan tombol "Coba Lagi"; `if (!mounted) return;` setelah setiap `await`.
+
+> Belum ada `firebase_crashlytics` — galat hanya dicatat lewat `logger`
+> (`core/logger.dart`). Tambahkan Crashlytics bila laporan galat terpusat
+> dibutuhkan.
+
+## 22. LOGGING
+
+Menggunakan paket `logger` — satu instance global `appLogger` di
+`core/logger.dart` dengan pembungkus `logInfo`/`logWarn`/`logError`:
 
 ```dart
-class ErrorLoggingObserver extends ProviderObserver {
-  @override
-  void providerDidFail(ProviderObserverContext context, Object error, StackTrace st) {
-    // Galat yang sudah dipetakan (mis. 401, 422) adalah alur normal,
-    // bukan bug — jangan cemari laporan crash dengannya.
-    if (error is AppException && error is! ServerException) return;
+final appLogger = Logger(
+  printer: PrettyPrinter(methodCount: 1, errorMethodCount: 5, lineLength: 80, colors: true, printEmojis: false),
+  level: Level.debug,
+);
 
-    FirebaseCrashlytics.instance.recordError(
-      error, st,
-      reason: 'Provider ${context.provider.name ?? context.provider.runtimeType} gagal',
-    );
-  }
-}
-
-// ProviderScope(observers: [ErrorLoggingObserver()], …)
+void logInfo(String msg) => appLogger.i(msg);
+void logError(String msg, [dynamic error, StackTrace? stack]) =>
+    appLogger.e(msg, error: error, stackTrace: stack);
 ```
 
-> `providerDidFail` adalah API Riverpod 3; di Riverpod 2 namanya
-> `didAddProvider`/`providerDidFail` dengan tanda tangan berbeda.
+Aturan:
 
----
-
-## 22. LOGGING & ANALYTICS
-
-```dart
-@Riverpod(keepAlive: true)
-AnalyticsService analyticsService(Ref ref) => AnalyticsService(
-      FirebaseAnalytics.instance,
-      FirebaseCrashlytics.instance,
-    );
-
-class AnalyticsService {
-  const AnalyticsService(this._analytics, this._crashlytics);
-  final FirebaseAnalytics _analytics;
-  final FirebaseCrashlytics _crashlytics;
-
-  Future<void> logEvent(String name, [Map<String, Object>? params]) {
-    if (!Env.isProduction) debugPrint('[analytics] $name $params');
-    return _analytics.logEvent(name: name, parameters: params);
-  }
-
-  /// Jangan pernah mengirim nomor telepon / nama sebagai user property —
-  /// itu data pribadi (UU PDP). Cukup ID dan atribut non-identifikasi.
-  Future<void> setUser(User? user) async {
-    await _analytics.setUserId(id: user?.id);
-    await _crashlytics.setUserIdentifier(user?.id ?? '');
-    if (user != null) {
-      await _analytics.setUserProperty(
-        name: 'verification_level',
-        value: user.verificationLevel.value.toString(),
-      );
-    }
-  }
-
-  Future<void> recordError(Object e, StackTrace s, {bool fatal = false}) =>
-      _crashlytics.recordError(e, s, fatal: fatal);
-}
-```
-
-**Event yang dilacak** — dipilih untuk mengukur KPI di PRD §13, bukan sekadar
-mengumpulkan data:
-
-| Event | Parameter | KPI yang diukur |
-| :-- | :-- | :-- |
-| `otp_requested` / `otp_verified` | – | Corong registrasi |
-| `store_created` | `store_type` | Conversion rate penjual (≥25%) |
-| `listing_viewed` | `listing_id`, `distance_km` | Keterlibatan katalog |
-| `request_created` | `category_id`, `radius_km` | Pemakaian papan kebutuhan |
-| `offer_submitted` | `request_id` | Responsivitas penyedia |
-| `offer_accepted` | `price`, `offer_count` | Tingkat konversi lelang |
-| `whatsapp_click` | `success` | Kanal komunikasi (§15) |
-| `order_completed` | `order_type`, `payment_method` | Transaksi selesai |
-
-Pelacakan layar otomatis lewat observer GoRouter:
-
-```dart
-GoRouter(
-  observers: [FirebaseAnalyticsObserver(analytics: FirebaseAnalytics.instance)],
-  // …
-)
-```
-
----
+- **Jangan pernah log OTP, token JWT, atau NIK** — data pribadi (UU PDP).
+- Log di `debugPrint`/`logger` level `debug` untuk alur normal; `error` untuk
+  kegagalan tak terduga.
+- Tidak ada `FirebaseAnalytics` di aplikasi ini — event marketing belum
+  dipasang.
 
 ## 23. DEEP LINK
 
-Dua sumber deep link, keduanya bermuara ke `GoRouter` yang sama:
+Tidak ada paket `app_links` dan tidak ada skema URI kustom yang didaftarkan —
+satu-satunya "jalur masuk dari luar" adalah **tap notifikasi FCM**:
 
-1. **Notifikasi FCM** — sudah ditangani `NotificationService._navigate()` (§14).
-2. **Tautan web** (`https://seekitar.id/listing/abc`) — dibagikan lewat
-   WhatsApp, dan harus membuka aplikasi bila terpasang.
+- Aplikasi terbuka (foreground): `FirebaseMessaging.onMessage` → notifikasi
+  lokal → payload saat tap.
+- Latar belakang: `onMessageOpenedApp`.
+- Mati total: `getInitialMessage()`.
 
-```dart
-@Riverpod(keepAlive: true)
-DeepLinkService deepLinkService(Ref ref) => DeepLinkService(ref)..initialize();
+`FcmService._onTap` saat ini masih stub; saat navigasi dari notifikasi
+diimplementasikan, petakan payload `{screen, entity_id}` ke rute GoRouter
+(`/request/:id`, `/listing/:id`, `/order-detail/:id`) — dan tangani ketiga
+jalur di atas sekaligus, jangan hanya satu.
 
-class DeepLinkService {
-  DeepLinkService(this._ref);
-  final Ref _ref;
-  final _appLinks = AppLinks();
-  StreamSubscription<Uri>? _sub;
+---
 
-  Future<void> initialize() async {
-    // Tautan yang membuka aplikasi dari keadaan mati.
-    final initial = await _appLinks.getInitialLink();
-    if (initial != null) _handle(initial);
-
-    _sub = _appLinks.uriLinkStream.listen(_handle);
-    _ref.onDispose(() => _sub?.cancel());
-  }
-
-  void _handle(Uri uri) {
-    // Path web sengaja dibuat sama dengan path in-app, sehingga tidak perlu
-    // tabel pemetaan terpisah yang gampang basi.
-    final path = uri.path;
-    if (path.isEmpty || path == '/') return;
-
-    _ref.read(analyticsServiceProvider).logEvent('deep_link_opened', {'path': path});
-    _ref.read(goRouterProvider).push(path);
-  }
-}
-```
-
-Konfigurasi platform:
-
-```xml
-<!-- android/app/src/main/AndroidManifest.xml -->
-<intent-filter android:autoVerify="true">
-  <action android:name="android.intent.action.VIEW" />
-  <category android:name="android.intent.category.DEFAULT" />
-  <category android:name="android.intent.category.BROWSABLE" />
-  <data android:scheme="https" android:host="seekitar.id" />
-</intent-filter>
-```
-
-> `autoVerify="true"` mengharuskan berkas `.well-known/assetlinks.json`
-> tersedia di `https://seekitar.id`. Tanpa itu Android tetap menampilkan dialog
-> pemilih aplikasi, bukan langsung membuka Seekitar. Padanan di iOS adalah
-> `apple-app-site-association` untuk Universal Links.
-
-Karena rute web dan aplikasi memakai path yang sama, halaman SEO Laravel
-(`PRD.md` §7.2) otomatis menjadi tautan yang bisa membuka aplikasi.

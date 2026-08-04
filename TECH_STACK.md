@@ -51,7 +51,8 @@ Laravel 11 telah diseragamkan menjadi Laravel 13.
 | :--------------------------------- | :------------------- | :---------------------- | :--------------------------------------------------------------------- |
 | `yajra/laravel-datatables-oracle`  | `^13.0`              | ~~`^11.0`~~             | v13 butuh `illuminate/support: ^13`; v11 mengunci Laravel 11           |
 | `spatie/laravel-permission`        | `^8.0`               | ~~`^6.0`~~              | v8 mendukung `illuminate/auth: ^12.0\|^13.0`; v6 mentok Laravel 11/12  |
-| `laravel/sanctum`                  | `^4.0`               | —                       | Autentikasi token API                                                  |
+| `tymon/jwt-auth`                   | `^2.2`               | —                       | Autentikasi **JWT** API mobile (guard `api`, stateless)                |
+| `laravel/sanctum`                  | `^4.3`               | —                       | Sesi stateful admin (cookie) + kompatibilitas token transisi           |
 
 **Aturan praktis:** versi mayor Yajra Datatables mengikuti versi mayor Laravel.
 Laravel 13 → Yajra 13. Spatie Permission tidak mengikuti pola itu, jadi selalu
@@ -77,56 +78,54 @@ composer require yajra/laravel-datatables-buttons:^13.0
 
 ## 3. MATRIKS KOMPATIBILITAS PAKET MOBILE
 
-Flutter 3.44 membawa Dart 3.12. Ini memaksa **Riverpod 3.x**, karena Riverpod
-2.x tidak dites untuk SDK setinggi itu dan sudah tidak dirawat.
+Aplikasi mobile memakai **`provider` (ChangeNotifier)** untuk state
+management, **GoRouter** untuk navigasi, dan **Dio** untuk HTTP — lihat
+`seekitar_mobile/pubspec.yaml`. Model JSON ditulis manual (`fromJson`), bukan
+codegen, jadi **tidak ada** `build_runner`/`json_serializable`/`freezed`.
 
 | Paket                    | Versi proyek | Catatan kompatibilitas                                     |
 | :----------------------- | :----------- | :--------------------------------------------------------- |
-| `flutter_riverpod`       | `^3.4.0`     | Butuh Dart `^3.12.0`                                        |
-| `go_router`              | `^17.3.0`    | Butuh Dart `^3.10.0`, Flutter `>=3.38.0`                    |
-| `dio`                    | `^5.11.0`    | —                                                           |
-| `google_maps_flutter`    | `^2.18.0`    | —                                                           |
-| `geolocator`             | `^14.0.0`    | —                                                           |
-| `geocoding`              | `^5.0.0`     | —                                                           |
-| `firebase_core`          | `^4.12.0`    | Samakan versi dengan produk Firebase lain                   |
-| `firebase_messaging`     | `^16.4.0`    | Wajib sejalan dengan `firebase_core`                        |
-| `url_launcher`           | `^6.3.0`     | Redirect WhatsApp                                           |
-| `image_picker`           | `^1.2.0`     | —                                                           |
-| `shared_preferences`     | `^2.5.0`     | —                                                           |
-| `flutter_secure_storage` | `^10.3.0`    | Penyimpanan token                                           |
-| `cached_network_image`   | `^3.4.0`     | —                                                           |
-| `json_annotation`        | `^4.12.0`    | Pasangan `json_serializable`                                |
+| `provider`               | `^6.1.0`     | State management — `ChangeNotifierProvider` (bukan Riverpod)|
+| `go_router`              | `^14.8.0`    | Navigasi deklaratif + `StatefulShellRoute` (5 tab bawah)    |
+| `dio`                    | `^5.7.0`     | HTTP client; interceptor 401 → refresh JWT & retry          |
+| `connectivity_plus`      | `^6.1.0`     | Deteksi offline (banner offline)                            |
+| `flutter_secure_storage` | `^9.2.0`     | Penyimpanan token JWT (`jwt_token`)                         |
+| `shared_preferences`     | `^2.3.0`     | Preferensi ringan                                           |
+| `path_provider`          | `^2.1.0`     | Direktori berkas                                            |
+| `flutter_screenutil`     | `^5.9.0`     | Skala UI (designSize 390×844)                               |
+| `cached_network_image`   | `^3.4.0`     | Cache gambar listing/avatar                                 |
+| `shimmer`                | `^3.0.0`     | Skeleton loading                                            |
+| `flutter_rating_bar`     | `^4.0.1`     | Tampilan rating                                             |
+| `smooth_page_indicator`  | `^1.2.0`     | Indikator galeri gambar listing                              |
+| `flutter_svg`            | `^2.0.0`     | Aset SVG (logo dsb.)                                        |
+| `image_picker`           | `^1.1.0`     | Pilih foto (KTP, listing)                                   |
+| `flutter_image_compress` | `^2.4.0`     | Kompresi sebelum unggah                                     |
+| `file_picker`            | `^8.1.0`     | Pilih berkas umum                                           |
+| `geolocator`             | `^13.0.0`    | Posisi pengguna                                             |
+| `geocoding`              | `^3.0.0`     | Reverse geocoding alamat                                    |
+| `firebase_core`          | `^3.6.0`     | Firebase                                                    |
+| `firebase_messaging`     | `^15.1.0`    | FCM push notification                                       |
+| `flutter_local_notifications` | `^18.0.0` | Notifikasi lokal saat aplikasi di latar depan          |
+| `share_plus`             | `^10.0.0`    | Berbagi tautan listing                                      |
+| `url_launcher`           | `^6.3.0`     | Buka WhatsApp/nomor telepon                                  |
+| `intl`                   | `^0.19.0`    | Format tanggal/angka                                        |
+| `permission_handler`     | `^11.3.0`    | Izin lokasi/notifikasi                                      |
+| `logger`                 | `^2.5.0`     | Log aplikasi                                                |
+| `package_info_plus`      | `^8.1.0`    | Versi aplikasi (halaman Tentang)                            |
 
-### ⚠️ Klarifikasi: GoRouter ↔ Riverpod tidak saling bergantung
+### ⚠️ Klarifikasi: GoRouter ↔ state management tidak saling bergantung
 
-Catatan asal menyebut "GoRouter 14 membutuhkan Riverpod 2.x". **Itu keliru.**
 `go_router` hanya bergantung pada `collection`, `logging`, dan `meta` — tidak
-ada Riverpod sama sekali, begitu pula sebaliknya. Keduanya independen.
+ada kaitan dengan `provider` maupun Riverpod. Keduanya independen.
 
-Yang benar-benar mengikat keduanya adalah **versi Dart SDK**, dan keduanya
-sudah cocok di Dart 3.12.
+### Pola state management yang dipakai
 
-### ⚠️ Riverpod 3 punya breaking change yang memengaruhi contoh kode
-
-Riverpod 3 **menghapus semua subclass `Ref`** hasil codegen. Pola lama seperti
-`NearbyStoresRef`, `DioRef`, `SecureStorageRef` sudah tidak ada — ganti dengan
-`Ref` biasa:
-
-```dart
-// Riverpod 2.x (lama)
-@riverpod
-Future<List<Store>> nearbyStores(NearbyStoresRef ref) async { ... }
-
-// Riverpod 3.x (benar)
-@riverpod
-Future<List<Store>> nearbyStores(Ref ref) async { ... }
-```
-
-Perubahan lain yang perlu diwaspadai saat menulis kode:
-
-- `AsyncValue.valueOrNull` dihapus — pakai `.value` (kini bisa `null` saat error).
-- `StateProvider` / `StateNotifierProvider` pindah ke `package:flutter_riverpod/legacy.dart`.
-- Provider yang gagal kini **auto-retry** secara default.
+- Satu `AppState extends ChangeNotifier` global, disuntikkan lewat
+  `ChangeNotifierProvider.value` di `main.dart`.
+- Layar membaca state dengan `context.watch<T>()` / `context.read<T>()`.
+- `ApiClient`/`AuthService` adalah plain class (bukan provider) yang dipakai
+  `AppState`; token JWT dibaca dari secure storage oleh `DioClient` dan
+  disisipkan sebagai `Authorization: Bearer <token>`.
 
 ---
 
@@ -145,21 +144,30 @@ sedangkan simulator iOS bisa langsung pakai `localhost`. Simpan nilai ini di
 
 ---
 
-## 5. KONFIGURASI SANCTUM (API stateless vs Web stateful)
+## 5. KONFIGURASI AUTENTIKASI (JWT untuk API, Sesi untuk Web Admin)
 
-Seekitar memakai Sanctum dalam **dua mode sekaligus**, dan ini sumber
-kebingungan yang umum:
+Seekitar memakai **JWT stateless** (`tymon/jwt-auth`, guard `api`) untuk API
+mobile dan **sesi cookie Laravel** untuk panel admin. Sanctum tetap terpasang
+untuk sesi stateful berbasis cookie (`SANCTUM_STATEFUL_DOMAINS`) dan
+kompatibilitas token lama selama masa transisi — ini sumber kebingungan yang
+umum:
 
 | Kanal                     | Mode          | Mekanisme                                    |
 | :------------------------ | :------------ | :-------------------------------------------- |
-| **Mobile app** (`/api/*`) | **Stateless** | Bearer personal access token, tanpa cookie    |
-| **Admin panel** (web)     | **Stateful**  | Session cookie Laravel biasa                  |
+| **Mobile app** (`/api/*`) | **Stateless** | Bearer JWT (`auth:api`), tanpa cookie         |
+| **Admin panel** (web)     | **Stateful**  | Session cookie Laravel biasa (guard `web`)    |
 
 ### `.env`
 
 ```env
+# JWT — kunci & umur token (config/jwt.php)
+JWT_SECRET=<hasil php artisan jwt:secret>
+JWT_TTL=43200            # 30 hari
+JWT_REFRESH_TTL=20160    # 14 hari — jendela refresh sejak token pertama
+JWT_BLACKLIST_ENABLED=true
+
 # Domain yang boleh memakai autentikasi berbasis cookie (SPA/web admin).
-# Mobile app TIDAK perlu masuk daftar ini — ia memakai Bearer token.
+# Mobile app TIDAK perlu masuk daftar ini — ia memakai Bearer JWT.
 SANCTUM_STATEFUL_DOMAINS=localhost,localhost:8000,127.0.0.1,127.0.0.1:8000,admin.seekitar.id
 
 SESSION_DOMAIN=.seekitar.id
@@ -171,13 +179,15 @@ SESSION_DRIVER=redis
 - **Jangan** masukkan `api.seekitar.id` ke `SANCTUM_STATEFUL_DOMAINS`. Kalau
   dimasukkan, request mobile akan diperlakukan stateful dan mulai menuntut
   CSRF token — penyebab umum error 419 yang membingungkan.
-- Panel admin memakai guard `web`; endpoint API memakai guard `sanctum`.
-  Keduanya harus terdaftar di `config/permission.php` agar Spatie Permission
-  bekerja di dua kanal tersebut.
+- Panel admin memakai guard `web`; endpoint API memakai guard `api` (JWT);
+  guard `sanctum` hanya untuk kompatibilitas transisi. Ketiganya terdaftar di
+  `config/permission.php` agar Spatie Permission bekerja di kanal yang memakai
+  role/permission (web admin dan endpoint admin API).
+- Logout API = mem-blacklist token JWT saat ini (`auth('api')->logout()`);
+  refresh = token lama di-blacklist, token baru diterbitkan
+  (`POST /auth/refresh`, jendela `refresh_ttl`).
 - Untuk produksi, `SESSION_DOMAIN=.seekitar.id` memungkinkan cookie dipakai
   lintas subdomain admin.
-- Token mobile sebaiknya diberi _ability_ terbatas (mis. `user`, `store-owner`)
-  agar cakupan aksesnya jelas.
 
 ---
 
@@ -226,7 +236,7 @@ Keduanya sudah tepat dan **tidak perlu diseragamkan**:
 | :-- | :-- | :-- |
 | `users.verification_level` | Turunan 1–3 (bukan kolom) | **Bertingkat** — level 3 lebih tinggi dari level 2. Kolomnya sudah dihapus; nilainya dihitung `User::verificationLevel` dari stempel `verified_at` + status toko (DATABASE.md §4.1) |
 | `users.status` | ENUM (`UserStatus`) | **Kategori** — `menunggu`, `terverifikasi`, `ditolak`, `diblokir` adalah keadaan kedudukan, bukan tangga kenaikan |
-| `stores.verification_status` | ENUM | **Kategori** — `verified` bukan “lebih tinggi” dari `rejected`, sekadar berbeda |
+| `stores.status` | ENUM (`StoreStatus`) | **Kategori** — `pending`, `verified`, `rejected`, `blocked`; `verified` bukan “lebih tinggi” dari `rejected`, sekadar berbeda. Kolom `verification_status` lama diganti; JSON API tetap memakai kunci `verification_status` untuk klien lama (lihat `StoreResource`) |
 
 Aturannya: pakai `_level` bila nilainya berurutan dan bisa dibandingkan,
 `_status` bila nilainya sekadar keadaan yang setara.

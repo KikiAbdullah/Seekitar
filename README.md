@@ -34,17 +34,17 @@ Dokumen dibaca sebagai **satu himpunan** — semuanya pada versi **2.3**.
 | [`DATABASE.md`](DATABASE.md) | Skema, constraint, indeks, keputusan desain | Menyentuh migrasi atau query |
 | [`API_DOCUMENTATION.md`](API_DOCUMENTATION.md) | Kontrak REST & konvensi global | Membangun endpoint atau memanggilnya |
 | [`Server_Implementation_Guide.md`](Server_Implementation_Guide.md) | Laravel: struktur, keamanan, job, deployment | Mengerjakan backend |
-| [`Mobile_Implementation_Guide.md`](Mobile_Implementation_Guide.md) | Flutter: Riverpod 3, routing, FCM | Mengerjakan mobile |
+| [`Mobile_Implementation_Guide.md`](Mobile_Implementation_Guide.md) | Flutter: provider, routing, FCM | Mengerjakan mobile |
 | [`BRANDING-GUIDELINE.md`](BRANDING-GUIDELINE.md) | Identitas visual & verbal | Menyentuh UI atau materi publik |
 
 ## Tech Stack
 
 | Layer | Teknologi |
 | :-- | :-- |
-| Backend | Laravel 13 · PHP 8.3+ · Sanctum 4 |
+| Backend | Laravel 13 · PHP 8.3+ · JWT (tymon/jwt-auth 2) · Sanctum 4 (sesi admin) |
 | Database | MySQL 8.0.34+ (Spatial) |
 | Cache & Queue | Redis 7 |
-| Mobile | Flutter 3.44+ · Dart 3.12+ · Riverpod 3 |
+| Mobile | Flutter 3.44+ · Dart 3.12+ · provider (ChangeNotifier) |
 | Admin | Blade + Bootstrap 5.3.x + Yajra Datatables 13 |
 | Penyimpanan | S3 / MinIO |
 | Notifikasi | Firebase Cloud Messaging · WhatsApp (Twilio / Kirim WA) |
@@ -104,13 +104,12 @@ Kebutuhan: Flutter 3.44+.
 ```bash
 cd seekitar_mobile
 flutter pub get
-dart run build_runner build --delete-conflicting-outputs
-flutter run --dart-define-from-file=config/dev.json
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1
 ```
 
-> ⚠️ `build_runner` **wajib** dijalankan sebelum `flutter run`. Berkas `.g.dart`
-> tidak di-commit, jadi tanpa langkah ini build gagal dengan ratusan galat
-> "tidak ditemukan".
+> ⚠️ Model JSON ditulis manual (tanpa codegen), jadi **tidak perlu**
+> `build_runner`. Base URL disuntikkan lewat `--dart-define=API_BASE_URL=...`
+> (default di `lib/core/constants.dart` untuk pengembangan lokal).
 >
 > Emulator Android memetakan host ke `10.0.2.2`, bukan `localhost`.
 

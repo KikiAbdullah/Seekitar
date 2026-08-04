@@ -17,7 +17,7 @@
    - runApp(SeekitarApp) → MaterialApp.router
      - Theme: AppTheme.light → `core/theme.dart`
      - Dark Theme: AppTheme.dark → `core/theme.dart`
-     - Router: appRouter → `routing/app_router.dart` → 29 GoRoute
+     - Router: appRouter → `routing/app_router.dart` → 35 GoRoute
 
 ## FLOW 2: SPLASH → ONBOARDING → LOGIN
 
@@ -228,7 +228,7 @@ main.dart
 ├── core/theme.dart              AppTheme.light / AppTheme.dark
 ├── core/logger.dart             appLogger
 ├── providers/app_state.dart     ChangeNotifier (user state)
-├── routing/app_router.dart      29 GoRoute + StatefulNavigationShell
+├── routing/app_router.dart      35 GoRoute + StatefulNavigationShell
 ├── services/dio_client.dart     Dio + JWT interceptor + retry
 ├── services/api_client.dart     77 API methods
 ├── services/api_compat.dart     ApiProvider wrapper
@@ -236,14 +236,14 @@ main.dart
 ├── services/fcm_service.dart    Push notification
 ├── widgets/offline_banner.dart  Connectivity detection
 ├── widgets/base_screen.dart     Scaffold wrapper
-├── models/                      (12 freezed model files)
+├── models/                      (12 model files, fromJson manual, tanpa codegen)
 └── screens/                     (24 screen files)
 ```
 
 ## TOTALS
 - 49 Dart files
 - 24 screens
-- 29 GoRouter routes
+- 35 GoRouter routes
 - 77 ApiClient methods
 - 12 models
 - 5 services

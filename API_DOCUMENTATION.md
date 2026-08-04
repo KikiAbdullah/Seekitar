@@ -2,7 +2,7 @@
 
 **Versi:** 2.3 (Production‑Ready)  
 **Tanggal Publikasi:** 29 Juli 2026  
-**Backend:** Laravel 13 · PHP 8.3+ · Sanctum 4
+**Backend:** Laravel 13 · PHP 8.3+ · JWT (tymon/jwt-auth 2) · Sanctum 4 (sesi admin & transisi)
 
 > **Perubahan 2.3** — verifikasi pengguna menjadi SATU langkah: OTP sudah
 > membuktikan nomor HP, jadi "tahap 1" beserta stempelnya dihapus;
@@ -44,7 +44,7 @@ environment cukup dengan mengganti host.
 ## DAFTAR ISI
 
 1. [Autentikasi & Keamanan](#1-autentikasi--keamanan)
-2. [Users](#2-users) — termasuk Ganti Nomor HP (2.5a), Logout (2.6) & FCM Token (2.7)
+2. [Users](#2-users) — termasuk Refresh (2.2a), Ganti Nomor HP (2.5a), Logout (2.6) & FCM Token (2.7)
 3. [Stores](#3-stores)
 4. [Listings](#4-listings) — termasuk Upload Gambar (4.0) & Wishlist (4.5)
 5. [Customer Requests](#5-customer-requests)
@@ -63,10 +63,15 @@ environment cukup dengan mengganti host.
 Semua endpoint kecuali yang dinyatakan “Public” memerlukan header:
 
 ```
-Authorization: Bearer <personal_access_token>
+Authorization: Bearer <jwt_token>
 ```
 
-Token didapat dari proses OTP WhatsApp.
+Token adalah **JWT stateless** (guard `api`, `tymon/jwt-auth`) yang didapat
+dari proses OTP WhatsApp (`POST /auth/verify-otp`). JWT **tidak disimpan di
+database** — verifikasi dilakukan dari signature + masa berlaku, dan saat
+`401` klien memanggil `POST /auth/refresh` untuk menerbitkan token baru
+(jendela refresh 14 hari), lalu mengulang permintaan. Logout mem-blacklist
+token yang sedang dipakai.
 
 ### Rate Limiting
 
@@ -153,6 +158,10 @@ POST /auth/request-otp
 }
 ```
 
+> Di environment `local`/`testing`, respons menyertakan `debug_otp` (kode
+> dikembalikan langsung, tidak benar-benar dikirim) agar pengembangan tanpa
+> gateway WhatsApp tetap jalan.
+
 **Error:**
 
 - `422` – Validasi gagal (format nomor salah)
@@ -181,7 +190,7 @@ POST /auth/verify-otp
 {
   "success": true,
   "data": {
-    "token": "1|abcdef...",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "token_type": "Bearer",
     "expires_in": 2592000,
     "is_new_user": true,
@@ -208,13 +217,42 @@ POST /auth/verify-otp
 | `expires_in` | Umur token dalam **detik** (30 hari). Klien menyimpan waktu kedaluwarsa, bukan menghitung sendiri. |
 | `is_new_user` | `true` jika akun baru dibuat — klien mengarahkan ke layar lengkapi profil. |
 
-> **Tidak ada `refresh_token`.** Sanctum memakai token berumur panjang tanpa
-> mekanisme refresh. Saat token kedaluwarsa atau ditolak `401`, klien harus
-> mengulang alur OTP. Menambahkan refresh token berarti mengganti Sanctum
-> dengan Passport/OAuth2 — di luar cakupan MVP.
+> **Refresh token.** Token JWT berumur 30 hari dan **bisa diperpanjang**
+> tanpa login ulang lewat `POST /auth/refresh` (lihat §2.2a) selama masih
+> dalam jendela 14 hari sejak token pertama diterbitkan. Saat `401`, klien
+> memanggil refresh lalu mengulang permintaan yang gagal; bila refresh gagal,
+> ulangi alur OTP dari awal.
 >
 > `location: null` pada pengguna baru itu wajar; lokasi diisi pada langkah
-> berikutnya lewat `PATCH /auth/profile`.
+> berikutnya lepas `PATCH /auth/profile`.
+
+### 2.2a Refresh Token
+
+```http
+POST /auth/refresh
+```
+
+**Auth required** – Menerbitkan token JWT baru tanpa login ulang. Token lama
+di-blacklist; token baru tetap memakai jendela `refresh_ttl` (14 hari) sejak
+token pertama diterbitkan.
+
+**Response 200:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "token_type": "Bearer",
+    "expires_in": 2592000
+  }
+}
+```
+
+**Error:**
+
+- `401` – Token tidak valid/kedaluwarsa, atau melewati jendela refresh —
+  klien harus mengulang alur OTP.
 
 **Error:**
 
@@ -392,7 +430,9 @@ menunggu OTP.
 POST /auth/logout
 ```
 
-**Auth required** – Mencabut token yang sedang dipakai.
+**Auth required** – Mem-blacklist token JWT yang sedang dipakai sehingga
+tidak bisa dipakai lagi meski belum kedaluwarsa. Token di perangkat lain
+tetap aktif sampai kedaluwarsanya sendiri.
 
 **Response 200:**
 
@@ -402,9 +442,6 @@ POST /auth/logout
   "message": "Berhasil keluar."
 }
 ```
-
-Hanya token pada request ini yang dicabut; sesi di perangkat lain tetap aktif.
-Untuk keluar dari semua perangkat, kirim `{"all_devices": true}`.
 
 > Klien **wajib** juga menghapus `fcm_token` perangkat (§2.7) saat logout,
 > supaya notifikasi tidak terkirim ke pengguna yang sudah keluar.

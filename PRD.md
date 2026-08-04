@@ -359,7 +359,7 @@ Definisinya di sini agar tidak ditafsirkan berbeda-beda saat perencanaan Fase 2:
   - Nama Toko (uniqueness per kabupaten dicek)
   - Kategori Layanan Utama (bisa pilih hingga 3 subkategori)
   - Jenis Toko: `goods`, `services`, `rental`, atau kombinasi.
-  - **Pinpoint Lokasi Toko** (wajib, drag & drop pin pada peta; koordinat disimpan sebagai `POINT(lng lat)` menggunakan SRID 4326).
+  - **Pinpoint Lokasi Toko** (wajib, drag & drop pin pada peta; koordinat disimpan sebagai kolom `latitude`/`longitude` DECIMAL — lihat DATABASE.md §4.2).
   - Radius Layanan (km) – misal 5 km untuk toko kelontong, 20 km untuk tukang bangunan.
   - Jam operasional per hari (Senin-Minggu, bisa set “Tutup”).
   - Nomor rekening bank/QRIS (opsional untuk menampilkan ke pembeli) – nanti digunakan jika transfer langsung.
@@ -537,10 +537,10 @@ pesanan ke `selesai`. Tidak ada nilai ENUM `dikembalikan`.
 
 | Layer                          | Teknologi                                         | Keterangan                                                                        |
 | :----------------------------- | :------------------------------------------------ | :-------------------------------------------------------------------------------- |
-| **Mobile App**                 | Flutter 3.44+, Riverpod 3, Dio 5, Google Maps Flutter | Satu kode untuk Android & iOS, performa native                                    |
+| **Mobile App**                 | Flutter 3.44+, provider (ChangeNotifier), Dio 5, GoRouter | Satu kode untuk Android & iOS, performa native                                    |
 | **Web Public (SEO)**           | Laravel 13 + Bootstrap 5.3.x (Blade), tanpa Vite/Vue  | Halaman katalog & landing page SEO-friendly, server-side rendering                |
 | **Admin Dashboard**            | Laravel 13 + Bootstrap 5.3.x (Blade)                | Panel admin di subdomain/admin, otentikasi Laravel session & gate                 |
-| **Backend API**                | Laravel 13 (REST API dengan Sanctum 4)              | Semua API untuk mobile app, rate limiting, validasi, queue job broadcast          |
+| **Backend API**                | Laravel 13 (REST API, JWT Bearer via tymon/jwt-auth) | Semua API untuk mobile app, rate limiting, validasi, queue job broadcast          |
 | **Database**                   | MySQL 8.0.34+ (dengan dukungan Spatial)               | Menyimpan semua data transaksional dan geospasial                                 |
 | **Cache & Queue**              | Redis 7                                           | Menyimpan sesi, cache data kategori, antrian notifikasi broadcast (Laravel Queue) |
 | **Storage**                    | AWS S3 (atau MinIO self-hosted)                   | Foto produk, KTP, bukti kerja (terenkripsi)                                       |
@@ -551,18 +551,26 @@ pesanan ke `selesai`. Tidak ada nilai ENUM `dikembalikan`.
 
 ### 7.3 Konfigurasi Geospasial (MySQL Spatial)
 
-- Setiap tabel yang berisi lokasi (`stores.location`, `customer_requests.location`, `users.location`) menggunakan tipe `POINT` dengan SRID 4326 (WGS 84).
-- Indeks spasial `SPATIAL INDEX` dibuat pada kolom lokasi untuk mempercepat query jarak.
-- Perhitungan jarak menggunakan fungsi `ST_Distance_Sphere` yang menghasilkan jarak dalam meter.
-- Query utama pencarian dalam radius (menggunakan Laravel Query Builder dengan raw query):
+- Lokasi disimpan dua cara (detail di `DATABASE.md` §4.2 dan §11):
+  - `customer_requests.location`, `users.location`, `orders.shipping_location`
+    memakai `POINT` SRID 4326 (WGS 84); hanya `customer_requests` yang punya
+    `SPATIAL INDEX` (`cr_location_spatial`).
+  - `stores` memakai pasangan kolom `latitude`/`longitude` DECIMAL berindeks —
+    pencarian radius toko berjalan `whereBetween` (kotak pembatas) + haversine
+    di PHP (`App\Support\Jarak`), tanpa SQL mentah.
+- Perhitungan jarak untuk kolom POINT menggunakan fungsi `ST_Distance_Sphere`
+  (dalam meter), selalu didahului pra-filter `MBRContains` agar indeks spasial
+  terpakai (`HasLocation::scopeNearby`).
+- Query pencarian penyedia di sekitar permintaan (contoh pola POINT):
   ```php
-  Store::whereRaw(
-      "ST_Distance_Sphere(location, ST_GeomFromText(?, 4326, 'axis-order=long-lat')) <= ?",
-      ["POINT({$longitude} {$latitude})", $radius_meter]
-  )->where('is_active', true)->get();
+  CustomerRequest::whereRaw(
+      "MBRContains(ST_GeomFromText(?, 4326, 'axis-order=long-lat'), location) AND
+       ST_Distance_Sphere(location, ST_GeomFromText(?, 4326, 'axis-order=long-lat')) <= ?",
+      [$bbox, "POINT({$longitude} {$latitude})", $radius_meter]
+  );
   ```
 - Nilai $radius_meter dikonversi dari km dengan mengalikan 1000.
-- Untuk menampilkan jarak, gunakan `ST_Distance_Sphere` dan konversi ke km di aplikasi.
+- Untuk menampilkan jarak, gunakan `ST_Distance_Sphere` dan konversi ke km di aplikasi (untuk toko: `Jarak::haversineKm`).
 
 ---
 
@@ -604,14 +612,19 @@ pesanan ke `selesai`. Tidak ada nilai ENUM `dikembalikan`.
 | store_type | SET('goods','services','rental') | Kombinasi jenis usaha |
 | category_ids | JSON | Array ID kategori, mis. `[1,3,7]` |
 | regency | VARCHAR(100) | Kabupaten/kota; lingkup uniqueness nama toko |
+| regency_code | CHAR(4) NULL | Kode BPS wilayah operasi (geofencing) |
 | npwp | VARCHAR(20) NULL | Opsional, pendukung verifikasi Level 3 |
-| location | POINT SRID 4326 | Titik lokasi toko |
+| bank_account / bank_account_name | VARCHAR(100) NULL | Rekening tujuan transfer + atas nama |
+| latitude / longitude | DECIMAL(11,8) / (12,8) | Titik lokasi toko — kolom biasa, bukan POINT |
 | service_radius_km | DECIMAL(5,2) | |
 | operating_hours | JSON | Jam operasional per hari |
 | rating_avg | DECIMAL(3,2) | |
 | total_reviews | INT | |
 | is_active | TINYINT(1) | |
-| verification_status | VARCHAR(20) | `pending`, `verified`, `rejected` |
+| status | ENUM | `pending`, `verified`, `rejected`, `blocked` (menggantikan `verification_status`) |
+| verified_at / verified_by | TIMESTAMP / CHAR(36) NULL | Stempel persetujuan admin |
+| rejected_at / rejected_by / rejected_reason | NULL | Jejak penolakan |
+| blocked_at / blocked_by / blocked_reason | NULL | Jejak pemblokiran |
 | created_at | TIMESTAMP | |
 | updated_at | TIMESTAMP | |
 
@@ -724,7 +737,7 @@ pesanan ke `selesai`. Tidak ada nilai ENUM `dikembalikan`.
 
 ## 9. SPESIFIKASI API & LAYANAN BACKEND
 
-API menggunakan format REST JSON, autentikasi Bearer Token dengan Laravel Sanctum. Rate limiting: 60 request/menit per IP.
+API menggunakan format REST JSON, autentikasi Bearer Token (JWT, `auth:api`). Rate limiting: 60 request/menit per IP.
 
 ### 9.1 Daftar Endpoint Kunci
 
@@ -1159,7 +1172,7 @@ menjadi acuan desainer, bukan pengganti wireframe.
 - MySQL Spatial Documentation: https://dev.mysql.com/doc/refman/8.0/en/spatial-types.html
 - Laravel Documentation: https://laravel.com/docs/13.x
 - Flutter Documentation: https://docs.flutter.dev
-- Riverpod 3 Migration Guide: https://riverpod.dev/docs/3.0_migration
+- Provider (state management Flutter): https://pub.dev/packages/provider
 
 **Dokumen Internal Terkait:**
 

@@ -14,7 +14,7 @@ Disusun per folder/per file: judul halaman, isi, kolom tabel, filter, aksi, part
 
 | File | Isi |
 |------|-----|
-| `layout.blade.php` | Kerangka panel. Font **Plus Jakarta Sans** (Google Fonts), CSS `vendor/fontawesome/css/all.min.css` (Font Awesome), tema `vendor/mordenize/css/style-green.min.css`, DataTables (CDN, fallback lokal `vendor/datatables/`), Leaflet via CDN. `@yield('title')`, `@yield('content')`, `@stack('styles')`, `@stack('scripts')`. Preconnect ke jsdelivr / datatables / tile.openstreetmap / fonts. |
+| `layout.blade.php` | Kerangka panel. Font **Plus Jakarta Sans** (Google Fonts), ikon **Tabler** (`vendor/mordenize`), tema `vendor/mordenize/css/style.min.css` (sudah diwarnai hijau Seekitar), DataTables di-host sendiri (`vendor/mordenize/libs/datatables.net/`), i18n `vendor/datatables/id.json`. `@yield('title')`, `@yield('content')`, `@stack('styles')`, `@stack('scripts')`. Preconnect ke fonts.googleapis / tile.openstreetmap. |
 | `partials/sidebar.blade.php` | Menu navigasi: logo lockup; **Dasbor, Verifikasi Pengguna, Verifikasi Toko, Pengguna, Toko, Listing, Pesanan, Penawaran, Permintaan, Laporan Masalah, Ulasan, Kategori, Blog, Langganan, Iklan Banner, Peta Toko, Biaya Layanan, Pengaturan Sistem, Profil, Keluar**. Semua ikon `fa-regular fa-*`, seragam terpusat; sidebar mini (ikon 24px) saat dicollapse. |
 | `partials/header.blade.php` | Bar atas: tombol toggle sidebar, judul halaman (judul Dinamis), notifikasi dispute + dropdown profil. |
 | `partials/page-header.blade.php` | Header halaman dengan breadcrumb (Dasbor → halaman aktif). |

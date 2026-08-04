@@ -632,7 +632,7 @@ Kepercayaan adalah fondasi marketplace lokal. Identitas visual badge harus jelas
 | :---- | :-------------------------- | :----------------------- | :------------------------------------------ | :--------------- |
 | 1     | **Nomor Terverifikasi**     | Telepon + centang (biru) | OTP WhatsApp                                | Setiap pengguna terdaftar — masuknya membuktikan OTP (buktinya peristiwa OTP yang cocok di nomornya sendiri, bukan stempel kolom) |
 | 2     | **Identitas Terverifikasi** | KTP + centang (biru)     | Unggah KTP & selfie, lolos verifikasi admin | `verified_at` terisi |
-| 3     | **Usaha Terverifikasi**     | Toko + centang (biru)    | Verifikasi lokasi & informasi usaha         | Memiliki ≥ 1 toko `verification_status = 'verified'` |
+| 3     | **Usaha Terverifikasi**     | Toko + centang (biru)    | Verifikasi lokasi & informasi usaha         | Memiliki ≥ 1 toko `status = 'verified'` (kolom `stores.status`; JSON API menyebutnya `verification_status` untuk klien lama) |
 
 > Level adalah **turunan murni** (`User::verificationLevel`), bukan kolom
 > di tabel — tidak ada dua sumber kebenaran yang bisa berbeda pendapat

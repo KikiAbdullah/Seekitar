@@ -48,8 +48,24 @@
    - 4.9a `user_devices`
    - 4.9b `settings`
    - 4.9c `favorites`
-   - 4.10 `service_slots` (Fase 2)
-   - 4.11 `subscriptions` (Fase 2)
+   - 4.9d `personal_access_tokens` & `sessions` (tabel kerangka Sanctum/session)
+   - 4.9e `activity_logs`
+   - 4.9f `notifications`
+   - 4.9g `conversations`
+   - 4.9h `conversation_participants`
+   - 4.9i `messages`
+   - 4.9j `user_addresses`
+   - 4.9k `wallets`
+   - 4.9l `wallet_transactions`
+   - 4.9m `coupons`
+   - 4.9n `coupon_usages`
+   - 4.9o `consent_logs`
+   - 4.9p `reports`
+   - 4.9q `blog_posts`
+   - 4.9r `contact_messages`
+   - 4.9s `advertisements`
+   - 4.10 `service_slots` (Fase 2 — belum dimigrasikan)
+   - 4.11 `subscriptions`
 5. [Strategi Foreign Key & Cascading](#5-strategi-foreign-key--cascading)
 6. [Soft Delete: Implementasi & Cleanup](#6-soft-delete-implementasi--cleanup)
 7. [Indeks Komprehensif & Query Patterns](#7-indeks-komprehensif--query-patterns)
@@ -66,7 +82,12 @@ Database Seekitar dirancang sebagai **Single Source of Truth** untuk seluruh dat
 
 - **Integritas di level database** – Bukan hanya di aplikasi. Setiap aturan bisnis yang bisa diwakili oleh constraint (CHECK, UNIQUE, FOREIGN KEY) HARUS ada di database.
 - **Tak kenal kompromi pada data yatim** – Setiap baris yang ada selalu merujuk ke entitas yang sah.
-- **Geospasial adalah warga kelas satu** – Semua titik disimpan sebagai `POINT` SRID 4326, bukan kolom `lat`/`lng` terpisah.
+- **Geospasial adalah warga kelas satu** – Lokasi disimpan dua cara yang
+  disesuaikan dengan pola pembacaannya: kolom `POINT` SRID 4326 untuk entitas
+  yang dicari dengan radius SQL murni (`users.location`,
+  `customer_requests.location`, `orders.shipping_location`), dan pasangan
+  `DECIMAL` berindeks untuk `stores` yang pencarian radiusnya berjalan lewat
+  `whereBetween` Eloquent + haversine di PHP (lihat §4.2 dan §11).
 - **UUID mencegah prediksi** – Semua ID adalah UUID v4, menghilangkan risiko enumerasi dan memperkuat keamanan.
 - **Soft delete wajib untuk data penting** – `users`, `stores`, `listings` tidak pernah dihapus permanen; hanya disembunyikan.
 - **Siap dioperasikan oleh manusia** – Nama kolom deskriptif, constraint mencegah kesalahan input, dan default value masuk akal.
@@ -78,12 +99,12 @@ di engine lain, dan tanpa itu jaminan integritas di atas ikut gugur:
 
 | Fitur | Dipakai untuk | Tidak ada di |
 | :-- | :-- | :-- |
-| `POINT` + `SRID 4326` | Semua titik lokasi (§7.3) | SQLite, tanpa ekstensi |
-| `SPATIAL INDEX` (R-tree) | Pencarian radius (§11) | SQLite |
+| `POINT` + `SRID 4326` | Lokasi yang dicari radius lewat SQL spasial: `users.location`, `customer_requests.location`, `orders.shipping_location` (§7.3) | SQLite, tanpa ekstensi |
+| `SPATIAL INDEX` (R-tree) | Pencarian penyedia di sekitar permintaan (`cr_location_spatial`, §7.3) | SQLite |
 | Tipe `SET` | `stores.store_type` kombinasi (§4.2) | SQLite, PostgreSQL |
-| `CHECK` constraint | 6 aturan lintas kolom (§4.4, §4.7, §4.8) | SQLite (diabaikan diam-diam) |
+| `CHECK` constraint | 7 aturan lintas kolom (§8) | SQLite (diabaikan diam-diam) |
 | Kolom `GENERATED ... STORED` | Uniqueness nama toko per kabupaten (§4.2) | SQLite lama |
-| `ST_Distance_Sphere` | Jarak dalam meter | SQLite |
+| `ST_Distance_Sphere` | Jarak dalam meter (tahap 2 pencarian radius, §7.3 & §11) | SQLite |
 
 `config/database.php` karena itu **hanya** mendaftarkan koneksi `mysql`;
 koneksi SQLite/PostgreSQL/SQL Server sengaja dihapus agar tidak ada yang
@@ -104,7 +125,7 @@ aturan. Pengujian pun berjalan di MySQL sungguhan — lihat `CONTRIBUTING.md`.
 | Foreign Key     | `nama_tabel_tunggal_id`                  | `store_id`, `buyer_id`       |
 | Indeks Biasa    | `{tabel}_{kolom}_idx`                    | `stores_user_id_idx`         |
 | Indeks Unik     | `{tabel}_{kolom}_unique`                 | `users_phone_unique`         |
-| Indeks Spasial  | `{tabel}_{kolom}_spatial`                | `stores_location_spatial`    |
+| Indeks Spasial  | `{tabel}_{kolom}_spatial`                | `cr_location_spatial`        |
 | Indeks Fulltext | `{tabel}_ft_{kolom}`                     | `listings_ft_title_desc`     |
 | Timestamp       | `created_at`, `updated_at`, `deleted_at` | –                            |
 | Kolom JSON      | Nama deskriptif, isi array/objek         | `operating_hours`, `images`  |
@@ -126,6 +147,22 @@ aturan. Pengujian pun berjalan di MySQL sungguhan — lihat `CONTRIBUTING.md`.
 | `orders`            | Transaksi yang terjadi             | ❌          | Pembeli (`users`), penjual (`stores`), sumber (`offers`/`listings`)    |
 | `reviews`           | Ulasan pasca‑transaksi (dua arah)  | ❌          | Maks 2 per `orders`; ke `stores` (rating toko) atau ke `users`         |
 | `disputes`          | Laporan masalah                    | ❌          | Terkait `orders`, dilaporkan `users`                                   |
+| `user_addresses`    | Buku alamat pengiriman             | ❌          | Milik `users`                                                          |
+| `conversations`     | Percakapan chat                    | ❌          | Terkait `orders` (opsional); peserta via `conversation_participants`   |
+| `messages`          | Pesan chat (append‑only)           | ❌          | Milik `conversations`, dikirim `users`                                 |
+| `wallets`           | Dompet saldo pengguna              | ❌          | Satu‑ke‑satu dengan `users`; mutasi di `wallet_transactions`           |
+| `coupons`           | Kupon diskon                       | ❌          | Dipakai `orders` (via `coupon_id`); jejak di `coupon_usages`           |
+| `notifications`     | Notifikasi dalam aplikasi          | ❌          | Milik `users`                                                          |
+| `activity_logs`     | Jejak audit (morph)                | ❌          | Pelaku `users` (opsional), entitas morph                               |
+| `consent_logs`      | Jejak persetujuan UU PDP           | ❌          | Milik `users`                                                          |
+| `reports`           | Pelaporan konten/pengguna          | ❌          | Pelapor `users`, entitas morph                                         |
+| `blog_posts`        | Artikel blog web publik            | ❌          | –                                                                      |
+| `contact_messages`  | Pesan formulir kontak web          | ❌          | –                                                                      |
+| `advertisements`    | Iklan banner lokal (Fase 2)        | ❌          | Pemesan `users` (opsional)                                             |
+| `subscriptions`     | Langganan toko (Fase 2)            | ❌          | Milik `users`, terkait `stores` (opsional)                             |
+| `personal_access_tokens`, `sessions` | Kerangka Sanctum/session (transisi JWT) | ❌ | Milik `users` |
+| `roles`, `permissions`, `model_has_*`, `role_has_permissions` | RBAC Spatie | ❌ | Terikat `users` (guard `web`) |
+| `cache`, `cache_locks`, `jobs`, `job_batches`, `failed_jobs` | Kerangka Laravel | ❌ | – |
 
 **Diagram Relasi (High Level)**
 
@@ -327,12 +364,14 @@ satu definisi bersama di `User::scopeWhereVerificationLevel`.
 | `regency`             | VARCHAR(100)                                            | Kabupaten/kota tempat toko berada. Diisi dari reverse geocoding saat pinpoint. |
 | `regency_code`        | CHAR(4) NULL                                            | Kode wilayah BPS (mis. `3578`). Sumber kebenaran untuk geofencing.             |
 | `npwp`                | VARCHAR(20) NULL                                        | NPWP usaha (opsional). Syarat pendukung verifikasi Level 3 (PRD §5.3.2).       |
-| `bank_account`        | VARCHAR(100) NULL                                       | Rekening tujuan transfer, mis. `BCA 1234567890 a/n Yanto`. Ditampilkan ke pembeli saat `payment_method = 'transfer'` (§4.7). |
+| `bank_account`        | VARCHAR(100) NULL                                       | Rekening tujuan transfer, mis. `BCA 1234567890`. Ditampilkan ke pembeli saat `payment_method = 'transfer'` (§4.7). |
+| `bank_account_name`   | VARCHAR(100) NULL                                       | Atas nama rekening tujuan transfer. Transfer manual butuh keduanya agar tidak salah kirim. |
 | `store_type`          | SET('goods','services','rental')                        | Kombinasi jenis usaha. SET lebih efisien dari VARCHAR untuk pilihan tetap.     |
 | `category_ids`        | JSON                                                    | Array ID dari `categories`. Contoh: `[1, 3, 7]`.                               |
-| `location`            | POINT SRID 4326                                         | Titik koordinat toko (longitude, latitude). Wajib.                             |
 | `address`             | VARCHAR(255) NULL                                       | Alamat teks toko. Diisi reverse geocoding, bisa disunting pemilik.             |
 | `service_radius_km`   | DECIMAL(5,2) DEFAULT 5.00                               | Radius layanan toko dalam km. Presisi 2 desimal. Lihat catatan di bawah.       |
+| `latitude`            | DECIMAL(11,8) NOT NULL                                  | Lintang lokasi toko — kolom BIASA, bukan POINT. Presisi ±1,1 mm. Dipakai pencarian radius dua tahap (§11). |
+| `longitude`           | DECIMAL(12,8) NOT NULL                                  | Bujur lokasi toko. Berpasangan dengan `latitude` dalam indeks `stores_latlng_idx`. |
 | `accepts_cod`         | TINYINT(1) DEFAULT 1                                    | Menerima bayar di tempat. Sumber badge “Bisa COD”.                             |
 | `offers_delivery`     | TINYINT(1) DEFAULT 0                                    | Mengantar sendiri. Sumber badge “Bisa Diantar”.                                |
 | `allows_pickup`       | TINYINT(1) DEFAULT 1                                    | Punya lokasi fisik yang bisa didatangi. Sumber badge “Ambil di Tempat”.        |
@@ -340,10 +379,15 @@ satu definisi bersama di `User::scopeWhereVerificationLevel`.
 | `rating_avg`          | DECIMAL(3,2) DEFAULT 0.00                               | Rata‑rata rating, dihitung ulang setiap ada ulasan baru.                       |
 | `total_reviews`       | INT UNSIGNED DEFAULT 0                                  | Jumlah total ulasan, counter untuk kalkulasi cepat.                            |
 | `is_active`           | TINYINT(1) DEFAULT 1                                    | Toko nonaktif tidak muncul di pencarian.                                       |
-| `verification_status` | ENUM('pending','verified','rejected') DEFAULT 'pending' | Status verifikasi admin.                                                       |
+| `status`              | ENUM('pending','verified','rejected','blocked') DEFAULT 'pending' | Kedudukan toko — empat keadaan saling eksklusif. Menggantikan `verification_status` (lihat catatan di bawah). |
 | `rejected_reason`     | TEXT NULL                                               | Alasan penolakan admin. Wajib diisi saat status `rejected`.                    |
+| `rejected_at`         | TIMESTAMP NULL                                          | Kapan penolakan terjadi. Jejak audit tulis‑sekali.                             |
+| `rejected_by`         | CHAR(36) NULL FK → `users.id`                           | Admin yang menolak. ON DELETE SET NULL.                                        |
 | `verified_at`         | TIMESTAMP NULL                                          | Kapan toko disetujui — untuk audit & SLA. Merangkap bendera "terverifikasi": NULL berarti belum. |
 | `verified_by`         | CHAR(36) NULL FK → `users.id`                           | Admin yang menyetujui. Selalu diisi berpasangan dengan `verified_at`. ON DELETE SET NULL. |
+| `blocked_at`          | TIMESTAMP NULL                                          | Kapan toko diblokir. Toko diblokir BERSAMA pemiliknya (lihat catatan di bawah). |
+| `blocked_by`          | CHAR(36) NULL FK → `users.id`                           | Admin yang memblokir. ON DELETE SET NULL.                                       |
+| `blocked_reason`      | VARCHAR(255) NULL                                       | Alasan pemblokiran. Wajib diisi saat `status = 'blocked'`.                      |
 | `deleted_at`          | TIMESTAMP NULL                                          | Soft delete.                                                                   |
 | `created_at`          | TIMESTAMP                                               | –                                                                              |
 | `updated_at`          | TIMESTAMP                                               | –                                                                              |
@@ -354,17 +398,42 @@ satu definisi bersama di `User::scopeWhereVerificationLevel`.
 - FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 - FOREIGN KEY (`verified_by`) REFERENCES `users`(`id`) ON DELETE SET NULL —
   admin yang menyetujui; akun admin dihapus permanen tidak menghapus tokonya.
+- FOREIGN KEY (`rejected_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
+- FOREIGN KEY (`blocked_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
 - INDEX `stores_user_id_idx` (`user_id`)
 - INDEX `stores_deleted_at_idx` (`deleted_at`)
-- SPATIAL INDEX `stores_location_spatial` (`location`)
 - INDEX `stores_is_active_idx` (`is_active`) — mempercepat query toko aktif.
+- INDEX `stores_delivery_idx` (`offers_delivery`)
+- INDEX `stores_status_idx` (`status`)
+- INDEX `stores_latlng_idx` (`latitude`, `longitude`) — kotak pembatas
+  pencarian radius dibaca latitude dulu baru longitude (§11).
+- INDEX `stores_status_active_idx` (`status`, `is_active`)
+- CHECK `stores_fulfilment_chk` — minimal satu cara penyerahan aktif (lihat
+  "Kapabilitas layanan" di bawah).
+
+> **Lokasi toko adalah DECIMAL, bukan POINT.** `POINT SRID 4326` memaksa semua
+> pembacaan lewat fungsi spasial mentah (`ST_Latitude`, `ST_Distance_Sphere`,
+> `MBRContains`) yang tidak bisa ditulis murni lewat Eloquent. Pada skala satu
+> kabupaten, kotak pembatas `whereBetween` berindeks (Eloquent murni) menyaring
+> kandidat dalam milidetik, lalu haversine di PHP menyisakan lingkaran
+> akuratnya — lebih cepat dari `ST_Distance_Sphere` per baris, tanpa jebakan
+> `axis-order=long-lat` (implementasi: `Store::scopeWithinBox` +
+> `App\Support\Jarak`). Kolom POINT tetap dipakai untuk
+> `customer_requests.location` dan `orders.shipping_location` yang jarang
+> disaring berindeks DECIMAL.
+
+> **`status` menggantikan `verification_status`.** Empat keadaan eksklusif
+> (`pending | verified | rejected | blocked`) dengan jejak audit tunggal per
+> keadaan. "Diblokir" bukan turunan `is_active`: toko diblokir BERSAMA
+> pemiliknya, dan membuka blokir orang mengembalikan kedudukan tokonya yang
+> sebenarnya.
 
 **SOP verifikasi toko di panel admin** — tiga langkah sebelum `verified_by`/`verified_at`
 diisi, dan modal antrian menyusun berkas persis dalam urutan ini:
 
 1. **Alamat & kabupaten** dicocokkan dengan berkas (`address`, `regency`).
 2. **Foto toko** (`photo`) dipastikan jelas memperlihatkan tempat usaha.
-3. **Koordinat** (`location`) dicocokkan dengan Google Maps lewat tautan
+3. **Koordinat** (`latitude`/`longitude`) dicocokkan dengan Google Maps lewat tautan
    langsung `google.com/maps/search/?api=1&query=lat,lng` yang disediakan
    modal — format resmi Google, tanpa API key.
 
@@ -425,39 +494,23 @@ satu pesanan**. Kolom di sini yang menjadi sumber badge di
 
 **Uniqueness nama toko per kabupaten.** PRD §5.3.3 mensyaratkan nama unik per
 kabupaten, tetapi tanpa kolom wilayah aturan itu tidak bisa ditegakkan sama
-sekali. Karena itu `regency` ditambahkan sebagai lingkup keunikan.
+sekali. Karena itu `regency` (teks nama kabupaten) dan `regency_code` (kode
+BPS 4 digit) ditambahkan sebagai lingkup keunikan.
 
-> ⚠️ **`UNIQUE (name, regency, deleted_at)` TIDAK BEKERJA.** Dalam SQL, `NULL`
-> tidak pernah dianggap sama dengan `NULL`, sehingga dua toko aktif
-> (`deleted_at IS NULL`) bernama sama di kabupaten sama **tetap lolos**.
-> Constraint-nya ada, tapi tidak menegakkan apa pun — jenis bug yang baru
-> ketahuan setelah ada data duplikat di produksi.
+> ⚠️ Kolom generated `name_regency_active` (CONCAT nama + kabupaten) yang
+> pernah direncanakan untuk menegakkan aturan ini di level engine **tidak
+> diimplementasikan** — tidak ada kolom maupun indeks unik tambahan di
+> migrasi `stores`. `regency`/`regency_code` tetap disimpan sebagai lingkup
+> aturan, dan keunikannya dijaga di lapisan aplikasi (validasi saat membuat /
+> memperbarui toko). Jika suatu saat aturan ini perlu dikunci di engine,
+> migrasi baru harus menambahkan kolom generated + UNIQUE KEY — bukan
+> `UNIQUE (name, regency, deleted_at)` polos, karena `NULL` pada `deleted_at`
+> tidak pernah dianggap sama dengan `NULL` di SQL sehingga constraint itu
+> tidak menegakkan apa pun (dua toko aktif bernama sama tetap lolos).
 
-Solusinya memakai **kolom generated** yang bernilai `NULL` saat baris sudah
-di-soft-delete. Karena `NULL` diabaikan indeks unik, nama otomatis bebas
-dipakai ulang setelah toko dihapus:
-
-```sql
-ALTER TABLE stores
-  ADD COLUMN name_regency_active VARCHAR(210)
-    GENERATED ALWAYS AS (
-      CASE WHEN deleted_at IS NULL THEN CONCAT(name, '|', regency) END
-    ) STORED,
-  ADD UNIQUE KEY stores_name_regency_active_unique (name_regency_active);
-```
-
-Perilaku yang dihasilkan (sudah diuji):
-
-| Kasus | Hasil |
-| :-- | :-- |
-| Nama sama, kabupaten berbeda | ✅ Diizinkan |
-| Nama sama, kabupaten sama, keduanya aktif | ❌ Ditolak |
-| Nama sama, yang lama sudah di-soft-delete | ✅ Diizinkan |
-| Beberapa toko terhapus dengan nama sama | ✅ Diizinkan |
-
-> Perbandingan nama bergantung pada collation. Dengan `utf8mb4_unicode_ci`
-> (§Charset), "Warung Bu Sri" dan "warung bu sri" dianggap **sama** — memang
-> yang diinginkan, karena keduanya membingungkan pembeli.
+Perbandingan nama bergantung pada collation. Dengan `utf8mb4_unicode_ci`
+(§Charset), "Warung Bu Sri" dan "warung bu sri" dianggap **sama** — memang
+yang diinginkan, karena keduanya membingungkan pembeli.
 
 **Geofencing kabupaten target (PRD §5.3.3).** Toko di luar kabupaten target
 harus ditolak otomatis. Ada dua tingkat pemeriksaan:
@@ -468,30 +521,21 @@ harus ditolak otomatis. Ada dua tingkat pemeriksaan:
 2. **Akurat (opsional):** simpan poligon batas kabupaten dan uji titiknya —
    reverse geocoding bisa meleset di dekat perbatasan.
 
-```sql
-CREATE TABLE service_areas (
-  id           SMALLINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  regency_code CHAR(4) NOT NULL UNIQUE,
-  name         VARCHAR(100) NOT NULL,
-  boundary     POLYGON SRID 4326 NULL,   -- opsional, dari data BPS/OSM
-  is_active    TINYINT(1) NOT NULL DEFAULT 1,
-  SPATIAL INDEX service_areas_boundary_spatial (boundary)
-);
-```
+**Geofencing kabupaten target (PRD §5.3.3).** Seekitar dikunci pada **satu**
+kabupaten/kota yang ditetapkan lewat konfigurasi, bukan tabel wilayah:
 
 ```php
-// Verifikasi presisi saat poligon tersedia.
-$inside = DB::selectOne(
-    'SELECT ST_Contains(boundary, ST_GeomFromText(?, 4326, ?)) AS ok
-     FROM service_areas WHERE regency_code = ? AND is_active = 1',
-    ["POINT($lng $lat)", 'axis-order=long-lat', $regencyCode]
-)?->ok;
+// config/seekitar.php
+'regency'      => env('SEEKITAR_REGENCY', 'Kabupaten Pasuruan'),
+'regency_code' => env('SEEKITAR_REGENCY_CODE', '3514'),   // kode BPS
 ```
 
-> Kolom `boundary` dibuat NULL-able supaya MVP bisa jalan hanya dengan
-> pencocokan `regency_code`; poligon ditambahkan belakangan tanpa migrasi ulang.
-> Admin tetap meninjau manual sebagai lapis terakhir — geofencing menyaring,
-> bukan menggantikan verifikasi.
+Saat toko dibuat, `regency_code` diisi dari `config('seekitar.regency_code')`
+(di `StoreController::store`), bukan dari input pengguna — karena aplikasi
+hanya melayani satu kabupaten, tidak ada jalur ke toko di luar wilayah itu.
+Tabel `service_areas` berpoligon (`POLYGON SRID 4326`) yang pernah
+direncanakan untuk verifikasi presisi **tidak diimplementasikan**; verifikasi
+administratif tetap menjadi lapis terakhir melalui peninjauan admin.
 
 **Kenapa SET untuk store_type?**  
 Karena tipe toko terbatas (3 pilihan), SET lebih hemat ruang dan memungkinkan pencarian dengan `FIND_IN_SET` atau `LIKE` jika perlu.
@@ -872,7 +916,10 @@ Offer::where('status', OfferStatus::Pending)
 | `listing_id`     | CHAR(36) NULL                                                                                                   | FK ke `listings` (jika langsung beli). |
 | `order_type`     | ENUM('product','service','rental')                                                                              | Menentukan alur status. Nilainya **sama persis** dengan `listings.listing_type`. |
 | `quantity`       | INT UNSIGNED DEFAULT 1                                                                                          | Jumlah unit. Selalu 1 untuk `service`. |
-| `total_amount`   | DECIMAL(12,2)                                                                                                   | Total transaksi.                       |
+| `total_amount`   | DECIMAL(12,2)                                                                                                   | Total transaksi (sebelum potongan).    |
+| `discount_amount`| DECIMAL(10,2) DEFAULT 0.00                                                                                      | Potongan dari kupon yang dipakai.      |
+| `service_fee`    | DECIMAL(12,2) DEFAULT 0.00                                                                                      | Biaya layanan platform per transaksi (Fase 2, `config/seekitar.php`). |
+| `coupon_id`      | CHAR(36) NULL                                                                                                   | FK ke `coupons` — kupon yang dipakai.  |
 | `status`         | ENUM('menunggu_konfirmasi','diproses','dikirim','selesai','dibatalkan','dispute') DEFAULT 'menunggu_konfirmasi' |                                        |
 | `payment_method` | ENUM('cod','transfer')                                                                                          |                                        |
 | `delivery_method`| ENUM('pickup','delivery') DEFAULT 'pickup'                                                                      | Ambil di tempat atau diantar penjual.  |
@@ -895,8 +942,12 @@ Offer::where('status', OfferStatus::Pending)
 - FOREIGN KEY (`store_id`) REFERENCES `stores`(`id`) ON DELETE RESTRICT — toko tidak bisa dihapus jika punya order.
 - FOREIGN KEY (`offer_id`) REFERENCES `offers`(`id`) ON DELETE SET NULL — jika offer dihapus, order tetap ada, sumber jadi null.
 - FOREIGN KEY (`listing_id`) REFERENCES `listings`(`id`) ON DELETE SET NULL
+- FOREIGN KEY (`coupon_id`) REFERENCES `coupons`(`id`) ON DELETE SET NULL —
+  kupon yang dihapus tidak menghapus pesanannya, potongan tetap tercatat di `discount_amount`.
 - INDEX `orders_buyer_id_idx` (`buyer_id`)
 - INDEX `orders_store_id_idx` (`store_id`)
+- INDEX `orders_order_type_idx` (`order_type`)
+- INDEX `orders_created_status_idx` (`created_at`, `status`)
 - FOREIGN KEY (`cancelled_by`) REFERENCES `users`(`id`) ON DELETE SET NULL
 - UNIQUE KEY `orders_order_number_unique` (`order_number`)
 - INDEX `orders_status_idx` (`status`)
@@ -1232,6 +1283,13 @@ CREATE TABLE settings (
 
 ### 4.9d `personal_access_tokens` & `sessions` (tabel kerangka Sanctum/session)
 
+> **Status saat ini:** sejak versi 2.3 autentikasi API mobile memakai **JWT
+> stateless** (`auth:api`, lihat `TECH_STACK.md` §5 dan
+> `Server_Implementation_Guide.md` §6.1) — token JWT **tidak** disimpan di
+> tabel ini. `personal_access_tokens` tetap ada untuk token Sanctum lama yang
+> masih hidup selama masa transisi dan untuk kompatibilitas
+> (`HasApiTokens` masih di model `User`).
+
 Dua tabel bawaan Laravel **diubah dari skema default-nya** karena `users.id`
 Seekitar adalah UUID, bukan BIGINT:
 
@@ -1252,11 +1310,11 @@ kecuali `tokenable_id`):
 | `id` | BIGINT UNSIGNED AUTO_INCREMENT | Primary key bawaan Sanctum. |
 | `tokenable_type` | VARCHAR(255) | Kelas model pemilik token (`uuidMorphs`). |
 | `tokenable_id` | CHAR(36) | UUID `users.id` pemilik token. |
-| `name` | VARCHAR(255) | Nama token (di sini selalu `mobile`). |
+| `name` | VARCHAR(255) | Nama token (mis. `mobile`). |
 | `token` | VARCHAR(64) UNIQUE | SHA-256 dari teks token — teks aslinya tidak pernah disimpan. |
-| `abilities` | TEXT | JSON ability (`["*"]`). |
+| `abilities` | TEXT | JSON ability (mis. `["*"]`). |
 | `last_used_at` | TIMESTAMP NULL | Terakhir token dipakai — untuk audit sesi. |
-| `expires_at` | TIMESTAMP NULL | Seekitar mengisinya 30 hari (TOKEN_TTL di AuthController). |
+| `expires_at` | TIMESTAMP NULL | Kedaluwarsa token Sanctum (tidak dipakai alur JWT). |
 | `created_at` | TIMESTAMP | Standar. |
 | `updated_at` | TIMESTAMP | Standar. |
 
@@ -1273,6 +1331,292 @@ satu-satunya yang membentuk tabel ini.
 > memutus login panel dan API sekaligus. Dan jangan jalankan
 > `vendor:publish --tag=sanctum-migrations`: migrasi BIGINT yang terbit
 > akan bertabrakan dengan tabel yang sudah ada.
+
+### 4.9e `activity_logs`
+
+Jejak audit aplikasi (aksi admin maupun pengguna) untuk investigasi dan
+pemenuhan UU PDP. Morfisme `loggable_*` memungkinkan satu tabel mencatat
+perubahan pada entitas apa pun (listing, toko, order, …).
+
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| `id` | CHAR(36) | PK, UUID. |
+| `user_id` | CHAR(36) NULL FK → `users.id` | Pelaku aksi. NULL jika aksi sistem. ON DELETE SET NULL. |
+| `loggable_type` | VARCHAR(255) NULL | Kelas entitas yang diubah (morph). |
+| `loggable_id` | VARCHAR(255) NULL | ID entitas yang diubah (morph). |
+| `event` | VARCHAR(100) | Nama peristiwa, mis. `store.verified`, `user.blocked`. |
+| `description` | TEXT NULL | Ringkasan manusiawi untuk log. |
+| `old_values` | JSON NULL | Nilai sebelum perubahan. |
+| `new_values` | JSON NULL | Nilai sesudah perubahan. |
+| `ip_address` | VARCHAR(45) NULL | IP pelaku (audit & keamanan). |
+| `user_agent` | VARCHAR(500) NULL | UA pelaku. |
+| `created_at` | TIMESTAMP | Kapan aksi terjadi. |
+
+**Indeks:** `(user_id)`, `(loggable_type, loggable_id)`, `(event)`, `(created_at)`.
+Ditulis lewat `App\Services\ActivityLogger`.
+
+### 4.9f `notifications`
+
+Notifikasi dalam aplikasi (in-app) — terpisah dari FCM: baris ini adalah
+sumber kebenaran daftar notifikasi yang dilihat pengguna; FCM hanyalah
+pengantar.
+
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| `id` | CHAR(36) | PK, UUID. |
+| `user_id` | CHAR(36) FK → `users.id` | Penerima. ON DELETE CASCADE. |
+| `type` | VARCHAR(100) | Kelas/peristiwa, mis. `offer.accepted`. |
+| `title` | VARCHAR(255) | Judul singkat. |
+| `body` | TEXT NULL | Isi lengkap. |
+| `data` | JSON NULL | Payload tambahan (mis. `order_id` untuk navigasi). |
+| `read_at` | TIMESTAMP NULL | Kapan dibaca; NULL = belum. |
+| `created_at` | TIMESTAMP | – |
+| `updated_at` | TIMESTAMP | – |
+
+**Indeks:** `(user_id, read_at)` — daftar belum‑dibaca; `(user_id, created_at)` —
+daftar kronologis.
+
+### 4.9g `conversations`
+
+Percakapan (chat) antara dua pihak, dikaitkan ke order bila ada. Peserta
+disimpan di tabel pivot `conversation_participants`.
+
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| `id` | CHAR(36) | PK, UUID. |
+| `order_id` | CHAR(36) NULL FK → `orders.id` | Order yang melatari percakapan. ON DELETE SET NULL. |
+| `created_at` | TIMESTAMP | – |
+| `updated_at` | TIMESTAMP | – |
+
+### 4.9h `conversation_participants`
+
+Pivot peserta percakapan — bisa lebih dari dua bila nanti admin ikut serta.
+
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| `id` | CHAR(36) | PK, UUID. |
+| `conversation_id` | CHAR(36) FK → `conversations.id` | ON DELETE CASCADE. |
+| `user_id` | CHAR(36) FK → `users.id` | Peserta. ON DELETE CASCADE. |
+| `last_read_at` | TIMESTAMP NULL | Penanda baca per peserta. |
+| `created_at` | TIMESTAMP DEFAULT CURRENT_TIMESTAMP | – |
+
+**Constraint:** UNIQUE `(conversation_id, user_id)` — satu orang sekali dalam
+satu percakapan.
+
+### 4.9i `messages`
+
+Pesan dalam percakapan. Hanya bisa ditambah (append-only) — tidak ada kolom
+`updated_at`, konsisten dengan sifat chat yang tidak bisa diedit.
+
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| `id` | CHAR(36) | PK, UUID. |
+| `conversation_id` | CHAR(36) FK → `conversations.id` | ON DELETE CASCADE. |
+| `sender_id` | CHAR(36) FK → `users.id` | Pengirim. |
+| `message` | TEXT NULL | Isi teks (NULL jika hanya lampiran). |
+| `message_type` | VARCHAR(20) DEFAULT 'text' | `text`, `image`, `system`, dsb. |
+| `attachment_url` | VARCHAR(500) NULL | URL lampiran. |
+| `created_at` | TIMESTAMP DEFAULT CURRENT_TIMESTAMP | – |
+
+**Indeks:** `(conversation_id, created_at)` — membaca riwayat secara
+kronologis.
+
+### 4.9j `user_addresses`
+
+Buku alamat pengguna untuk pengiriman.
+
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| `id` | CHAR(36) | PK, UUID. |
+| `user_id` | CHAR(36) FK → `users.id` | Pemilik. ON DELETE CASCADE. |
+| `label` | VARCHAR(50) | Nama alamat, mis. "Rumah". |
+| `address` | TEXT | Alamat lengkap. |
+| `latitude` | DECIMAL(8,2) NULL | Koordinat (presisi rendah, cukup untuk alamat). |
+| `longitude` | DECIMAL(8,2) NULL | Koordinat. |
+| `regency` | VARCHAR(100) NULL | Kabupaten/kota. |
+| `regency_code` | VARCHAR(10) NULL | Kode BPS. |
+| `recipient_name` | VARCHAR(100) NULL | Nama penerima (jika berbeda dari pemilik). |
+| `recipient_phone` | VARCHAR(20) NULL | Telepon penerima. |
+| `is_default` | TINYINT(1) DEFAULT 0 | Alamat bawaan. |
+| `created_at` | TIMESTAMP | – |
+| `updated_at` | TIMESTAMP | – |
+
+**Indeks:** `(user_id)`.
+
+### 4.9k `wallets`
+
+Dompet saldo per pengguna. Satu pengguna tepat satu dompet (UNIQUE).
+
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| `id` | CHAR(36) | PK, UUID. |
+| `user_id` | CHAR(36) FK → `users.id` | Pemilik. UNIQUE, ON DELETE CASCADE. |
+| `balance` | DECIMAL(12,2) DEFAULT 0.00 | Saldo saat ini. |
+| `total_earned` | DECIMAL(12,2) DEFAULT 0.00 | Akumulasi pemasukan (audit). |
+| `total_withdrawn` | DECIMAL(12,2) DEFAULT 0.00 | Akumulasi penarikan (audit). |
+| `created_at` | TIMESTAMP | – |
+| `updated_at` | TIMESTAMP | – |
+
+> Mutasi saldo **tidak pernah** menimpa kolom langsung tanpa baris
+> `wallet_transactions` — lihat §4.9l.
+
+### 4.9l `wallet_transactions`
+
+Riwayat mutasi dompet — append-only (tanpa `updated_at`), setiap perubahan
+saldo tercatat dengan saldo sebelum/sesudah.
+
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| `id` | CHAR(36) | PK, UUID. |
+| `wallet_id` | CHAR(36) FK → `wallets.id` | Dompet. ON DELETE CASCADE. |
+| `type` | VARCHAR(50) | `topup`, `withdraw`, `refund`, `service_fee`, dsb. |
+| `amount` | DECIMAL(12,2) | Nominal mutasi. |
+| `balance_before` | DECIMAL(12,2) | Saldo sebelum mutasi. |
+| `balance_after` | DECIMAL(12,2) | Saldo sesudah mutasi. |
+| `description` | VARCHAR(255) NULL | Keterangan. |
+| `reference_type` | VARCHAR(255) NULL | Entitas terkait (morph), mis. order. |
+| `reference_id` | VARCHAR(255) NULL | ID entitas terkait. |
+| `status` | VARCHAR(50) DEFAULT 'completed' | `pending`, `completed`, `failed`. |
+| `created_at` | TIMESTAMP | – |
+
+**Indeks:** `(wallet_id, created_at)`.
+
+### 4.9m `coupons`
+
+Kupon diskon. Nilai potongan dihitung dari `type`/`value`, dibatasi
+`min_order_amount` & `max_discount`.
+
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| `id` | CHAR(36) | PK, UUID. |
+| `code` | VARCHAR(50) | Kode kupon. UNIQUE. |
+| `type` | VARCHAR(50) | `percent` atau `fixed`. |
+| `value` | DECIMAL(10,2) | Besaran diskon (persen atau nominal). |
+| `min_order_amount` | DECIMAL(10,2) NULL | Minimum total order agar berlaku. |
+| `max_discount` | DECIMAL(10,2) NULL | Batas maksimum potongan (kupon persen). |
+| `usage_limit` | INT UNSIGNED NULL | Batas pemakaian total; NULL = tak terbatas. |
+| `usage_per_user` | INT UNSIGNED DEFAULT 1 | Batas pemakaian per pengguna. |
+| `used_count` | INT UNSIGNED DEFAULT 0 | Pemakaian terkini (counter). |
+| `is_active` | TINYINT(1) DEFAULT 1 | Aktif/nonaktif manual. |
+| `starts_at` | TIMESTAMP NULL | Masa berlaku mulai. |
+| `expires_at` | TIMESTAMP NULL | Masa berlaku selesai. |
+| `description` | VARCHAR(255) NULL | Keterangan tampil ke pengguna. |
+| `created_at` | TIMESTAMP | – |
+| `updated_at` | TIMESTAMP | – |
+
+**Indeks:** `(code)`, `(is_active, expires_at)` — pencarian kupon yang masih
+berlaku.
+
+### 4.9n `coupon_usages`
+
+Jejak pemakaian kupon per order — dasar penghitungan `usage_limit` dan
+`usage_per_user`.
+
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| `id` | CHAR(36) | PK, UUID. |
+| `coupon_id` | CHAR(36) FK → `coupons.id` | Kupon. ON DELETE CASCADE. |
+| `order_id` | CHAR(36) FK → `orders.id` | Order. ON DELETE CASCADE. |
+| `user_id` | CHAR(36) FK → `users.id` | Pemakai. ON DELETE CASCADE. |
+| `discount_amount` | DECIMAL(10,2) | Potongan aktual yang diterapkan (snapshot). |
+| `created_at` | TIMESTAMP | – |
+
+**Indeks:** `(coupon_id)`, `(user_id)`, `(order_id)`.
+
+### 4.9o `consent_logs`
+
+Jejak persetujuan pengguna (UU PDP) — kapan, untuk tujuan apa, dan dari mana.
+
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| `id` | CHAR(36) | PK, UUID. |
+| `user_id` | CHAR(36) FK → `users.id` | Subjek data. ON DELETE CASCADE. |
+| `purpose` | VARCHAR(100) | Tujuan pemrosesan, mis. `privacy_policy`, `location`. |
+| `granted` | TINYINT(1) | 1 = menyetujui, 0 = menolak. |
+| `ip_address` | VARCHAR(45) NULL | Asal permintaan. |
+| `user_agent` | VARCHAR(500) NULL | Peramban/perangkat. |
+| `created_at` | TIMESTAMP NOT NULL | Kapan persetujuan diberikan/ditarik. |
+
+**Indeks:** `(user_id)`.
+
+### 4.9p `reports`
+
+Pelaporan konten/pengguna (pelanggaran pedoman komunitas) dari pengguna ke
+admin.
+
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| `id` | CHAR(36) | PK, UUID. |
+| `reporter_id` | CHAR(36) FK → `users.id` | Pelapor. ON DELETE CASCADE. |
+| `reportable_type` | VARCHAR(255) | Entitas yang dilaporkan (morph): listing, user, dsb. |
+| `reportable_id` | CHAR(36) | ID entitas. |
+| `reason` | VARCHAR(50) | Alasan (daftar tetap di aplikasi). |
+| `description` | TEXT NULL | Penjelasan pelapor. |
+| `resolved_at` | TIMESTAMP NULL | Kapan admin menuntaskan. |
+| `resolved_by` | CHAR(36) NULL | Admin penuntas (tanpa FK — admin bisa terhapus). |
+| `created_at` | TIMESTAMP | – |
+| `updated_at` | TIMESTAMP | – |
+
+**Indeks:** `(reportable_type, reportable_id)`, `(resolved_at)`.
+
+### 4.9q `blog_posts`
+
+Artikel blog untuk halaman web publik (SEO) — dikelola dari panel admin.
+
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| `id` | BIGINT UNSIGNED AUTO_INCREMENT | PK. |
+| `title` | VARCHAR(200) | Judul. |
+| `slug` | VARCHAR(220) | Slug URL. UNIQUE. |
+| `excerpt` | TEXT NULL | Ringkasan untuk daftar blog. |
+| `body` | LONGTEXT | Isi artikel. |
+| `author` | VARCHAR(100) DEFAULT 'Tim Seekitar' | Penulis. |
+| `category` | VARCHAR(100) DEFAULT 'Edukasi' | Kategori artikel. |
+| `image` | VARCHAR(500) NULL | Gambar sampul. |
+| `image_alt` | VARCHAR(200) NULL | Teks alternatif gambar. |
+| `published_at` | TIMESTAMP NULL | Jadwal terbit; NULL = draf. |
+| `created_at` | TIMESTAMP | – |
+| `updated_at` | TIMESTAMP | – |
+
+### 4.9r `contact_messages`
+
+Pesan dari formulir kontak halaman web publik, masuk ke antrean admin.
+
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| `id` | BIGINT UNSIGNED AUTO_INCREMENT | PK. |
+| `name` | VARCHAR(120) | Nama pengirim. |
+| `email` | VARCHAR(190) | Email pengirim. |
+| `category` | VARCHAR(50) | Jenis pesan (umum, pengaduan, dsb.). |
+| `message` | TEXT | Isi pesan. |
+| `status` | VARCHAR(20) DEFAULT 'new' | `new`, `read`, `replied`. |
+| `created_at` | TIMESTAMP | – |
+| `updated_at` | TIMESTAMP | – |
+
+### 4.9s `advertisements`
+
+Iklan banner lokal (Fase 2) — posisi di feed, harga per hari, dan statistik
+tayang/klik.
+
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| `id` | CHAR(36) | PK, UUID. |
+| `title` | VARCHAR(200) | Judul iklan. |
+| `description` | TEXT NULL | Deskripsi. |
+| `image_url` | VARCHAR(500) NULL | Gambar banner. |
+| `link_url` | VARCHAR(500) NULL | Tujuan klik. |
+| `position` | VARCHAR(50) DEFAULT 'feed' | Posisi penempatan. |
+| `price_per_day` | DECIMAL(12,2) DEFAULT 50000.00 | Harga sewa per hari. |
+| `buyer_id` | CHAR(36) NULL FK → `users.id` | Pemesan iklan. ON DELETE SET NULL. |
+| `status` | VARCHAR(20) DEFAULT 'available' | `available`, `booked`, `running`, `finished`. |
+| `starts_at` | TIMESTAMP NULL | Tayang mulai. |
+| `ends_at` | TIMESTAMP NULL | Tayang selesai. |
+| `impression_count` | INT UNSIGNED DEFAULT 0 | Jumlah tayang. |
+| `click_count` | INT UNSIGNED DEFAULT 0 | Jumlah klik. |
+| `created_at` | TIMESTAMP | – |
+| `updated_at` | TIMESTAMP | – |
+
+**Indeks:** `(status, position)` — iklan aktif per posisi; `(buyer_id, status)`.
 
 ### 4.10 `service_slots` (Fase 2)
 
@@ -1314,12 +1658,12 @@ CREATE TABLE service_slots (
 > (§4.5) — dua pembeli yang menekan tombol nyaris bersamaan bisa memesan slot
 > yang sama.
 
-### 4.11 `subscriptions` (Fase 2)
+### 4.11 `subscriptions`
 
-PRD §12 mencantumkan paket "Penyedia Pro" Rp49.000/bulan dan "Boost Listing"
-Rp9.900/hari, tetapi **tidak ada tabel** untuk menyimpannya. Selama MVP gratis
-(PRD §12: "Fase 1 seluruh fitur gratis"), tabel ini belum dibuat — dicantumkan
-di sini agar rancangannya sudah disepakati.
+Langganan berbayar toko (Fase 2 monetisasi): paket "Pro Monthly" dan "Boost
+Listing". Tabel sudah dimigrasikan; harganya diambil dari
+`config/seekitar.php` (`pro_monthly_price` = 30.000, `boost_listing_price` =
+7.500) bukan dari dokumen.
 
 ```sql
 CREATE TABLE subscriptions (
@@ -1401,7 +1745,7 @@ Seluruh indeks dirancang berdasarkan pola query nyata.
 | Tabel               | Indeks                                       | Tujuan                                                                        |
 | ------------------- | -------------------------------------------- | ----------------------------------------------------------------------------- |
 | `users`             | `users_phone_unique`                         | Login dengan nomor HP.                                                        |
-| `stores`            | `stores_location_spatial`                    | Pencarian toko dalam radius.                                                  |
+| `stores`            | `stores_latlng_idx` (`latitude`, `longitude`) | Pencarian toko dalam radius — `whereBetween` kotak pembatas (§11).            |
 | `stores`            | `stores_is_active_idx`                       | Hanya tampilkan toko aktif.                                                   |
 | `listings`          | `listings_ft_title_desc`                     | Pencarian teks produk/jasa.                                                   |
 | `customer_requests` | `cr_status_expires_idx`                      | Job menutup permintaan expired: `WHERE status='open' AND expires_at < NOW()`. |
@@ -1528,28 +1872,35 @@ innodb_ft_min_token_size=2      # agar "AC", "TV", "HP" bisa dicari
 
 ### 7.3 Indeks Spasial
 
-`stores_location_spatial` dan `cr_location_spatial` sudah didefinisikan di §4.2
-dan §4.5. Dua syarat mutlak agar indeksnya sah:
+Kolom `POINT SRID 4326` di skema ini: `users.location` (NULL),
+`customer_requests.location` (NOT NULL), `orders.shipping_location` (NULL).
+Hanya **satu** yang punya indeks spasial — `cr_location_spatial` di
+`customer_requests.location` (§4.5), karena itulah satu-satunya kolom POINT
+yang disaring radius secara rutin (pencocokan penyedia untuk permintaan).
+Dua syarat mutlak agar indeksnya sah:
 
 ```sql
 -- 1. Kolom WAJIB NOT NULL — MySQL menolak SPATIAL INDEX pada kolom NULL-able
 -- 2. SRID WAJIB ditetapkan pada kolom, bukan hanya pada nilainya
-ALTER TABLE stores MODIFY location POINT NOT NULL SRID 4326;
-ALTER TABLE stores ADD SPATIAL INDEX stores_location_spatial (location);
+ALTER TABLE customer_requests MODIFY location POINT NOT NULL SRID 4326;
+ALTER TABLE customer_requests ADD SPATIAL INDEX cr_location_spatial (location);
 ```
 
 Verifikasi bahwa SRID benar-benar melekat pada kolom:
 
 ```sql
 SELECT COLUMN_NAME, SRS_ID FROM INFORMATION_SCHEMA.ST_GEOMETRY_COLUMNS
-WHERE TABLE_NAME = 'stores';
+WHERE TABLE_NAME = 'customer_requests';
 -- SRS_ID harus 4326, BUKAN NULL
 ```
 
 > ⚠️ Tanpa atribut `SRID 4326` pada definisi kolom, MySQL memperlakukan kolom
 > sebagai SRID tak tentu — indeks spasial **tidak akan dipakai** oleh
-> pengoptimal, meski indeksnya ada. Inilah alasan `users.location` tidak punya
-> indeks spasial (kolomnya NULL-able, lihat §4.1).
+> pengoptimal, meski indeksnya ada. Inilah alasan `users.location` dan
+> `orders.shipping_location` tidak punya indeks spasial (kolomnya NULL-able,
+> lihat §4.1 dan §4.7). Pencarian radius **toko** memakai pasangan
+> `stores.latitude`/`longitude` DECIMAL berindeks, bukan kolom POINT (§4.2,
+> §11).
 
 ---
 
@@ -1563,7 +1914,15 @@ WHERE TABLE_NAME = 'stores';
 6. **Aplikasi wajib gunakan transaksi** – setiap aksi multi‑tabel (contoh: menerima penawaran → update request, update offer, insert order) HARUS dalam `DB::transaction()` **dengan `lockForUpdate()`** pada baris yang jadi rebutan.
 7. **Validasi data JSON** – Di Laravel, gunakan `$casts` dan Form Request untuk memastikan `category_ids` adalah array integer, `images` adalah array URL, dll.
 8. **Mekanisme update rating toko** – `rating_avg` dihitung dari `reviews.store_id` (bukan `reviewee_id`) dan hanya arah `buyer_to_store`, diperbarui dalam transaksi bersama penulisan ulasan.
-9. **CHECK constraint lintas kolom** – aturan yang tidak bisa diwakili ENUM ditegakkan engine: harga wajib untuk product/rental, stok vs slot sesuai tipe, alamat wajib saat `delivery`, `budget_max ≥ budget_min`, dan dispute `lainnya` wajib berdeskripsi. Semua butuh **MySQL 8.0.16+**.
+9. **CHECK constraint lintas kolom** – aturan yang tidak bisa diwakili ENUM ditegakkan engine (7 constraint, butuh **MySQL 8.0.16+**):
+    - `stores_fulfilment_chk` — toko wajib melayani minimal satu cara penyerahan (`offers_delivery` atau `allows_pickup`).
+    - `listings_price_required_chk` — harga wajib kecuali tipe `service`.
+    - `listings_qty_slot_chk` — `product`/`rental` memakai `stock_qty` (bukan `slot`); `service` memakai `slot` (bukan `stock_qty`).
+    - `offers_expiry_chk` — `expires_at > created_at`.
+    - `orders_shipping_chk` — alamat wajib saat `delivery_method = 'delivery'`.
+    - `reviews_store_direction_chk` — arah `buyer_to_store` wajib ber-`store_id`; `store_to_buyer` tidak boleh.
+    - `subscriptions_period_chk` — `ends_at > starts_at`.
+    Aturan yang **tidak** punya CHECK engine (mis. `budget_max ≥ budget_min`, dispute `lainnya` wajib berdeskripsi) dijaga di Form Request — lihat butir 10.
 10. **Batas yang hanya bisa dijaga aplikasi** – panjang array JSON (`images` maks 5 untuk listing, maks 3 untuk request) dan keberadaan ID di `category_ids`. Tidak ada FK/CHECK untuk ini, jadi Form Request adalah satu-satunya penjaga.
 
 ---
@@ -1627,8 +1986,8 @@ Urutan migrasi sesuai dependensi:
 **Contoh migrasi POINT (raw):**
 
 ```php
-DB::statement("ALTER TABLE stores ADD COLUMN location POINT SRID 4326 AFTER category_ids");
-DB::statement("CREATE SPATIAL INDEX stores_location_spatial ON stores(location)");
+DB::statement("ALTER TABLE customer_requests ADD COLUMN location POINT NOT NULL SRID 4326");
+DB::statement("CREATE SPATIAL INDEX cr_location_spatial ON customer_requests(location)");
 ```
 
 **UUID di Laravel 13** – Gunakan `Str::orderedUuid()` saat creating model, atau trait `HasUuids` jika diinginkan.
@@ -1639,47 +1998,63 @@ DB::statement("CREATE SPATIAL INDEX stores_location_spatial ON stores(location)"
 
 ### Pencarian Radius Toko
 
-> ⚠️ **`ST_Distance_Sphere` di klausa `WHERE` TIDAK memakai indeks spasial.**
-> Fungsi ini menghitung jarak untuk **setiap baris** — pada 50 toko tidak
-> terasa, pada 50.000 toko query ini menjadi hambatan utama aplikasi.
+Lokasi toko adalah **kolom DECIMAL berindeks** (`latitude`/`longitude`), jadi
+pencarian radius berjalan **dua tahap, keduanya tanpa SQL mentah**:
 
-**Pola yang benar: saring dulu dengan bounding box, baru hitung jarak tepat.**
+1. **SQL:** kotak pembatas lewat `whereBetween` berindeks (Eloquent murni) —
+   `Store::scopeWithinBox()` memakai `Jarak::kotak()` untuk menghitung batas.
+2. **PHP:** lingkaran akurat lewat `Jarak::haversineKm()` — membuang
+   sudut-sudut kotak yang sebenarnya di luar radius.
 
 ```php
-$meter  = $radiusKm * 1000;
-$latDeg = $meter / 111320;
-$lngDeg = $meter / (111320 * cos(deg2rad($latitude)));
+// App\Support\Jarak — satu-satunya tempat rumus jarak ditulis.
+[$latMin, $latMax, $lngMin, $lngMax] = Jarak::kotak($lat, $lng, $radiusKm);
 
 $stores = Store::query()
-    // TAHAP 1 — MBRContains memakai indeks spasial, membuang sebagian besar baris
-    ->whereRaw(
-        'MBRContains(ST_GeomFromText(?, 4326, ?), location)',
-        [sprintf(
-            'POLYGON((%1$F %2$F, %1$F %4$F, %3$F %4$F, %3$F %2$F, %1$F %2$F))',
-            $longitude - $lngDeg, $latitude - $latDeg,
-            $longitude + $lngDeg, $latitude + $latDeg
-        ), 'axis-order=long-lat']
-    )
-    // TAHAP 2 — jarak akurat, hanya pada kandidat yang lolos tahap 1
-    ->whereRaw(
-        'ST_Distance_Sphere(location, ST_GeomFromText(?, 4326, ?)) <= ?',
-        ["POINT($longitude $latitude)", 'axis-order=long-lat', $meter]
-    )
+    // TAHAP 1 — kotak pembatas berindeks (stores_latlng_idx), Eloquent murni
+    ->whereBetween('latitude',  [$latMin, $latMax])
+    ->whereBetween('longitude', [$lngMin, $lngMax])
     ->where('is_active', 1)
     ->get();
+
+// TAHAP 2 — haversine di PHP untuk kandidat yang lolos kotak.
+$stores = $stores->filter(
+    fn (Store $s) => Jarak::haversineKm($lat, $lng, $s->latitude, $s->longitude) <= $radiusKm
+);
 ```
 
-**Kenapa dua tahap** (hasil pengukuran):
+**Kenapa bukan `ST_Distance_Sphere` atas kolom POINT:** pada skala satu
+kabupaten, `whereBetween` atas indeks DECIMAL menyaring kandidat dalam
+milidetik tanpa deserialisasi geometri per baris maupun konversi WKT; indeks
+DECIMAL biasa juga lebih ringan daripada SPATIAL INDEX untuk rentang kecil.
+Inilah alasan skema 2.3 memensiunkan kolom POINT toko (lihat §4.2).
 
-| Aspek | Nilai |
-| :-- | :-- |
-| Titik dalam bbox yang benar-benar dalam radius | **78,8%** (sesuai teori π/4 ≈ 78,5%) |
-| Baris yang dibuang sebelum perhitungan jarak | **~21%** dari kandidat bbox |
-| Baris yang dibuang sebelum bbox | seluruh tabel di luar kotak — inilah penghematan utamanya |
-| Titik tepi radius yang terlewat | **0 dari 72 arah yang diuji** |
+> ⚠️ **`ST_Distance_Sphere` di klausa `WHERE` TIDAK memakai indeks spasial.**
+> Fungsi ini menghitung jarak untuk **setiap baris**. Untuk kolom POINT yang
+> tetap ada (`customer_requests.location`), pola yang benar tetap
+> dua-tahap: **saring dulu dengan bounding box, baru hitung jarak tepat** —
+> persis yang dilakukan `HasLocation::scopeNearby()` (MBRContains memakai
+> `cr_location_spatial`, lalu `ST_Distance_Sphere` hanya pada kandidat yang
+> lolos kotak):
 
-Bounding box **selalu lebih besar** dari lingkaran radius, jadi tidak ada toko
-sah yang terbuang. Tahap 2 membuang sisa sudut kotak yang di luar lingkaran.
+```php
+// HasLocation::scopeNearby() — dipakai pencocokan penyedia (BroadcastService)
+$meter  = $radiusKm * 1000;   // km → meter; derajat kotak dihitung dari meter
+$latDeg = $meter / self::METER_PER_LAT_DEGREE;
+$lngDeg = $meter / (self::METER_PER_LAT_DEGREE * cos(deg2rad($lat)));
+$bbox   = sprintf('POLYGON((%1$F %2$F, %1$F %4$F, %3$F %4$F, %3$F %2$F, %1$F %2$F))',
+    $lng - $lngDeg, $lat - $latDeg, $lng + $lngDeg, $lat + $latDeg);
+
+return $q
+    // TAHAP 1 — MBRContains memakai indeks spasial, membuang sebagian besar baris
+    ->whereRaw('MBRContains('.SpatialSchema::geomFromTextSql().', location)', [$bbox])
+    // TAHAP 2 — jarak akurat, hanya pada kandidat yang lolos tahap 1
+    ->whereRaw('ST_Distance_Sphere(location, '.SpatialSchema::geomFromTextSql().') <= ?', [self::wkt($lat, $lng), $meter]);
+```
+
+Bounding box **selalu lebih besar** dari lingkaran radius (rasio lingkaran
+terhadap kotak ≈ π/4 ≈ 78,5%), jadi tidak ada entitas sah yang terbuang;
+tahap 2 hanya membuang sudut-sudut kotak yang di luar lingkaran.
 
 > ⚠️ **Rekomendasi memakai `ST_Buffer` untuk ini keliru.** MySQL
 > **tidak mendukung** `ST_Buffer` pada sistem koordinat geografis:
@@ -1730,9 +2105,9 @@ Seluruh pembuatan POINT dipusatkan di `HasLocation::setLocation()` dan
 **Verifikasi indeks benar-benar terpakai:**
 
 ```sql
-EXPLAIN SELECT * FROM stores
+EXPLAIN SELECT * FROM customer_requests
 WHERE MBRContains(ST_GeomFromText('POLYGON((...))', 4326, 'axis-order=long-lat'), location);
--- key harus 'stores_location_spatial', BUKAN NULL
+-- key harus 'cr_location_spatial', BUKAN NULL
 ```
 
 > Pada MySQL 8.0.29 sempat ada regresi yang membuat `MBRContains` mengabaikan
@@ -1802,7 +2177,8 @@ Gunakan transaksi agar tetap konsisten.
 
 | Query | Indeks yang dipakai | Pola wajib |
 | :-- | :-- | :-- |
-| Toko dalam radius | `stores_location_spatial` | `MBRContains` **lalu** `ST_Distance_Sphere` |
+| Toko dalam radius | `stores_latlng_idx` | `whereBetween` kotak pembatas **lalu** haversine di PHP (§11) |
+| Penyedia di sekitar permintaan | `cr_location_spatial` | `MBRContains` **lalu** `ST_Distance_Sphere` |
 | Pencarian katalog | `listings_ft_title_desc` | Sanitasi input sebelum `BOOLEAN MODE` |
 | Broadcast per kategori | `cr_category_status_idx` | `category_id` (=) sebelum `status` (=) |
 | Penawaran per permintaan | `offers_request_status_idx` | |

@@ -9,27 +9,27 @@ Kebutuhan: Flutter 3.44+ (Dart 3.12+).
 
 ```bash
 flutter pub get
-dart run build_runner build --delete-conflicting-outputs
-flutter run --dart-define-from-file=config/dev.json
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1
 ```
 
-> ⚠️ `build_runner` **wajib** dijalankan sebelum `flutter run` — berkas
-> `.g.dart` (json_serializable/Riverpod codegen) tidak di-commit, jadi tanpa
-> langkah ini build gagal dengan ratusan galat "tidak ditemukan".
->
-> Emulator Android memetakan host ke `10.0.2.2`, bukan `localhost` — sesuaikan
-> `baseUrl` di `config/dev.json`.
+> ⚠️ Model JSON ditulis manual (`fromJson`), tanpa codegen — **tidak ada**
+> `build_runner`. Base URL dibaca dari `--dart-define=API_BASE_URL` dengan
+> default di `lib/core/constants.dart`; emulator Android memetakan host ke
+> `10.0.2.2`, bukan `localhost`.
 
 ## Kontrak yang perlu diingat
 
 - Masuk tanpa kata sandi: `POST /auth/request-otp` → `POST /auth/verify-otp`
-  → simpan Bearer token di secure storage.
+  → simpan Bearer JWT di secure storage (`flutter_secure_storage`, kunci
+  `jwt_token`). Token stateless — tidak ada baris token di database.
+- Token kedaluwarsa 30 hari; interceptor Dio otomatis memanggil
+  `POST /auth/refresh` saat `401`, lalu mengulang request (`dio_client.dart`).
 - `verification_level` pada JSON pengguna adalah **turunan baca-saja**
   (1 = masuk OTP, 2 = KTP disetujui, 3 = punya toko terverifikasi) — tidak
   ada endpoint untuk mengubahnya.
 - Ganti nomor HP lewat dua langkah OTP (`/auth/phone/request-otp` →
   `verify-otp`); unggah ulang berkas KTP membuka peninjauan admin ulang.
 
-Panduan lengkap arsitektur (Riverpod 3, GoRouter, FCM, dsb.) ada di
-[`Mobile_Implementation_Guide.md`](../Mobile_Implementation_Guide.md);
+Panduan lengkap arsitektur (provider/ChangeNotifier, GoRouter, FCM, dsb.) ada
+di [`Mobile_Implementation_Guide.md`](../Mobile_Implementation_Guide.md);
 kontrak endpoint di [`API_DOCUMENTATION.md`](../API_DOCUMENTATION.md).

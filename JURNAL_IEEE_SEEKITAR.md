@@ -14,8 +14,8 @@ abstract: |
   MySQL Spatial dengan tipe data POINT dan fungsi ST_Distance_Sphere untuk memastikan
   setiap transaksi hanya melibatkan pihak-pihak yang berada dalam radius layanan
   yang telah ditentukan. Sistem dibangun menggunakan Laravel 13 pada sisi backend
-  dengan REST API yang diamankan menggunakan Laravel Sanctum, serta Flutter 3.44
-  pada sisi mobile dengan arsitektur Clean Architecture dan manajemen status Riverpod 3.
+  dengan REST API yang diamankan menggunakan JSON Web Token (JWT), serta Flutter 3.44
+  pada sisi mobile dengan manajemen status berbasis ChangeNotifier (paket provider).
   Basis data menggunakan MySQL 8.0.34 dengan fitur SPATIAL INDEX, SET type, dan CHECK
   constraints untuk menjamin integritas data. Hasil perancangan menunjukkan bahwa
   integrasi geolokasi spasial pada tingkat basis data memberikan akurasi pencarian
@@ -39,7 +39,7 @@ Tim Pengembang Seekitar, PT Seekitar Digital Nusantara
 
 ## Abstrak
 
-Platform marketplace nasional yang ada saat ini kurang efisien untuk kebutuhan harian berskala lokal karena biaya pengiriman yang tinggi dan ketidakmampuan memfasilitasi transaksi jasa dan sewa antar-desa. Penelitian ini mengusulkan Seekitar, sebuah platform marketplace hyperlocal dua arah yang menggabungkan model marketplace katalog (Jelajahi) dan reverse marketplace (Pasang Kebutuhan) dalam satu ekosistem yang terkunci secara geografis pada satu wilayah kabupaten. Platform ini memanfaatkan MySQL Spatial dengan tipe data POINT dan fungsi ST_Distance_Sphere untuk memastikan setiap transaksi hanya melibatkan pihak-pihak yang berada dalam radius layanan yang telah ditentukan. Sistem dibangun menggunakan Laravel 13 pada sisi backend dengan REST API yang diamankan menggunakan Laravel Sanctum, serta Flutter 3.44 pada sisi mobile dengan arsitektur Clean Architecture dan manajemen status Riverpod 3. Basis data menggunakan MySQL 8.0.34 dengan fitur SPATIAL INDEX, SET type, dan CHECK constraints untuk menjamin integritas data. Hasil perancangan menunjukkan bahwa integrasi geolokasi spasial pada tingkat basis data memberikan akurasi pencarian radius yang tinggi dengan performa query yang optimal, serta kemampuan untuk melakukan broadcast permintaan kebutuhan kepada penyedia jasa terdekat secara real-time. Sistem verifikasi pengguna tiga tingkat (Basic, Verified, Pro) dan sistem reputasi dua arah memberikan lapisan kepercayaan yang diperlukan untuk transaksi antar individu di tingkat lokal.
+Platform marketplace nasional yang ada saat ini kurang efisien untuk kebutuhan harian berskala lokal karena biaya pengiriman yang tinggi dan ketidakmampuan memfasilitasi transaksi jasa dan sewa antar-desa. Penelitian ini mengusulkan Seekitar, sebuah platform marketplace hyperlocal dua arah yang menggabungkan model marketplace katalog (Jelajahi) dan reverse marketplace (Pasang Kebutuhan) dalam satu ekosistem yang terkunci secara geografis pada satu wilayah kabupaten. Platform ini memanfaatkan MySQL Spatial (kolom POINT SRID 4326 untuk lokasi permintaan, kolom DECIMAL berindeks untuk lokasi toko, serta fungsi ST_Distance_Sphere dan haversine untuk jarak) untuk memastikan setiap transaksi hanya melibatkan pihak-pihak yang berada dalam radius layanan yang telah ditentukan. Sistem dibangun menggunakan Laravel 13 pada sisi backend dengan REST API yang diamankan menggunakan JSON Web Token (JWT), serta Flutter 3.44 pada sisi mobile dengan manajemen status berbasis ChangeNotifier (paket provider). Basis data menggunakan MySQL 8.0.34 dengan fitur SPATIAL INDEX, SET type, dan CHECK constraints untuk menjamin integritas data. Hasil perancangan menunjukkan bahwa integrasi geolokasi spasial pada tingkat basis data memberikan akurasi pencarian radius yang tinggi dengan performa query yang optimal, serta kemampuan untuk melakukan broadcast permintaan kebutuhan kepada penyedia jasa terdekat secara real-time. Sistem verifikasi pengguna tiga tingkat (Level 1–3) dan sistem reputasi dua arah memberikan lapisan kepercayaan yang diperlukan untuk transaksi antar individu di tingkat lokal.
 
 **Kata Kunci:** marketplace hyperlocal, reverse marketplace, geolokasi, MySQL Spatial, Laravel, Flutter, sistem reputasi, UMKM
 
@@ -105,15 +105,15 @@ Penggunaan teknologi Sistem Informasi Geografis (SIG) dalam marketplace telah me
 
 Penelitian oleh Zhang et al. [10] membandingkan performa query spasial antara MySQL Spatial, PostgreSQL dengan PostGIS, dan MongoDB. Hasilnya menunjukkan bahwa MySQL Spatial memberikan performa yang kompetitif untuk query radius sederhana dengan jumlah data hingga satu juta titik, meskipun PostgreSQL PostGIS unggul untuk operasi spasial yang lebih kompleks.
 
-### 2.4 Arsitektur Clean Architecture pada Aplikasi Mobile
+### 2.4 Arsitektur Aplikasi Mobile
 
-Clean Architecture adalah pola arsitektur perangkat lunak yang diperkenalkan oleh Robert C. Martin yang menekankan pemisahan concern melalui lapisan-lapisan yang terdefinisi dengan baik [11]. Dalam konteks aplikasi mobile Flutter, Clean Architecture biasanya diimplementasikan dengan tiga lapisan utama: (a) lapisan data yang menangani sumber data eksternal, (b) lapisan domain yang berisi logika bisnis dan entitas, serta (c) lapisan presentasi yang menangani antarmuka pengguna.
+Clean Architecture adalah pola arsitektur perangkat lunak yang diperkenalkan oleh Robert C. Martin yang menekankan pemisahan concern melalui lapisan-lapisan yang terdefinisi dengan baik [11]. Pada aplikasi mobile skala kecil-menengah seperti Seekitar, struktur pragmatis dipakai: berkas dikelompokkan per peran — `screens/` (antarmuka), `services/` (akses API, autentikasi, FCM), `models/` (objek data dengan `fromJson` manual), `providers/` (state global), `routing/` (GoRouter), dan `widgets/` (komponen bersama).
 
-Riverpod adalah pustaka manajemen status untuk Flutter yang dikembangkan oleh Remi Rousselet sebagai pengembangan dari Provider [12]. Riverpod menyediakan manajemen status yang type-safe, testable, dan tidak bergantung pada widget tree, sehingga cocok untuk aplikasi dengan arsitektur Clean Architecture.
+Manajemen status memakai paket `provider` dari komunitas Flutter [12]: satu objek `AppState extends ChangeNotifier` menyimpan state global (pengguna, token, jumlah notifikasi), disuntikkan ke pohon widget lewat `ChangeNotifierProvider`, dan dibaca layar dengan `context.watch()`/`context.read()`. Pendekatan ini sederhana, ringan, dan tidak bergantung pada code generation.
 
 ### 2.5 REST API dan Autentikasi pada Laravel
 
-Laravel adalah framework PHP yang mengadopsi arsitektur Model-View-Controller (MVC) dengan berbagai fitur modern termasuk ORM Eloquent, migration database, dan dukungan REST API [13]. Laravel Sanctum adalah paket autentikasi ringan untuk API yang menggunakan token berbasis UUID. Sanctum mendukung autentikasi berbasis token untuk aplikasi mobile (SPA) dan session cookie untuk aplikasi web konvensional [14].
+Laravel adalah framework PHP yang mengadopsi arsitektur Model-View-Controller (MVC) dengan berbagai fitur modern termasuk ORM Eloquent, migration database, dan dukungan REST API [13]. Autentikasi API mobile memakai JSON Web Token (JWT) melalui paket `tymon/jwt-auth` [14]: setelah OTP WhatsApp cocok, server menerbitkan token JWT stateless yang diverifikasi lewat tanda tangan digital pada setiap permintaan; token tidak disimpan di basis data, dan dapat dicabut dengan memasukkannya ke daftar hitam (blacklist) saat logout. Panel admin tetap memakai session cookie Laravel.
 
 ### 2.6 Sistem Reputasi dan Kepercayaan dalam Marketplace
 
@@ -162,13 +162,13 @@ Tabel 1 menyajikan spesifikasi teknologi yang digunakan dalam penelitian ini.
 | Bahasa Backend | PHP | 8.3+ |
 | Basis Data | MySQL | 8.0.34+ InnoDB |
 | ORM | Eloquent | Bawaan Laravel 13 |
-| Autentikasi API | Laravel Sanctum | 4 |
+| Autentikasi API | JWT (tymon/jwt-auth) | 2.x |
 | Cache & Queue | Redis | 7 |
 | Frontend Admin | Bootstrap | 5.3.x |
 | DataTables | Yajra DataTables | 13 |
 | Mobile Framework | Flutter | 3.44+ / Dart 3.12+ |
-| Ars. Mobile | Clean Architecture | - |
-| State Management | Riverpod | 3 |
+| Ars. Mobile | Pragmatis (screens/services/providers) | - |
+| State Management | provider (ChangeNotifier) | 6.x |
 | HTTP Client Mobile | Dio | 5.x |
 | Maps Mobile | Google Maps Flutter | - |
 | Storage | S3 / MinIO | - |
@@ -181,7 +181,7 @@ Tabel 1 menyajikan spesifikasi teknologi yang digunakan dalam penelitian ini.
 
 ### 4.1 Arsitektur Sistem
 
-Arsitektur sistem Seekitar terdiri dari tiga komponen utama: (a) backend server dengan Laravel 13 yang menyediakan REST API, (b) aplikasi mobile Flutter untuk pengguna (pembeli dan penjual), dan (c) admin panel berbasis web untuk administrator. Seluruh komponen terhubung melalui REST API yang diamankan dengan Laravel Sanctum.
+Arsitektur sistem Seekitar terdiri dari tiga komponen utama: (a) backend server dengan Laravel 13 yang menyediakan REST API, (b) aplikasi mobile Flutter untuk pengguna (pembeli dan penjual), dan (c) admin panel berbasis web untuk administrator. Seluruh komponen terhubung melalui REST API yang diamankan dengan JWT Bearer token.
 
 \begin{figure}[h]
 \centering
@@ -245,30 +245,40 @@ Keputusan untuk menggunakan tipe POINT didasarkan pada beberapa pertimbangan:
 \text{Jarak} = ST\_Distance\_Sphere(\text{POINT}(lat_1, lon_1), \text{POINT}(lat_2, lon_2))
 \end{equation}
 
-Skema tabel stores menyertakan kolom location bertipe POINT SRID 4326 dengan SPATIAL INDEX untuk mempercepat pencarian radius. Setiap toko juga memiliki kolom service_radius (INT UNSIGNED, default 5000 meter) yang menentukan jangkauan layanan.
+Skema tabel stores menyimpan lokasi sebagai pasangan kolom DECIMAL
+`latitude`/`longitude` berindeks (bukan POINT) — pada skala satu kabupaten,
+pencarian radius dua tahap (`whereBetween` kotak pembatas lalu haversine di
+PHP) lebih cepat daripada `ST_Distance_Sphere` per baris, dan tanpa jebakan
+urutan sumbu. Kolom POINT SRID 4326 tetap dipakai untuk
+`customer_requests.location` (dengan `cr_location_spatial`) dan
+`orders.shipping_location`. Setiap toko memiliki `service_radius_km`
+(DECIMAL(5,2), default 5 km) yang menentukan jangkauan layanan.
 
 ```sql
 CREATE TABLE stores (
     id CHAR(36) PRIMARY KEY,
     user_id CHAR(36) NOT NULL,
     name VARCHAR(100) NOT NULL,
-    slug VARCHAR(120) GENERATED ALWAYS AS (LOWER(name)) STORED,
+    regency VARCHAR(100) NOT NULL,
+    regency_code CHAR(4) NULL,
     store_type SET('goods', 'services', 'rental') NOT NULL,
-    location POINT SRID 4326 NOT NULL,
-    service_radius INT UNSIGNED DEFAULT 5000 COMMENT 'dalam meter',
+    category_ids JSON NOT NULL,
+    latitude DECIMAL(11,8) NOT NULL,
+    longitude DECIMAL(12,8) NOT NULL,
+    service_radius_km DECIMAL(5,2) DEFAULT 5.00,
     address VARCHAR(255),
     photo VARCHAR(500) NULL,
     operating_hours JSON,
-    category_ids JSON,
-    status ENUM('menunggu', 'aktif', 'ditutup', 'diblokir') DEFAULT 'menunggu',
+    bank_account VARCHAR(100) NULL,
+    bank_account_name VARCHAR(100) NULL,
+    status ENUM('pending', 'verified', 'rejected', 'blocked') DEFAULT 'pending',
     rating_avg DECIMAL(3,2) DEFAULT 0.00,
     total_reviews INT UNSIGNED DEFAULT 0,
-    total_orders INT UNSIGNED DEFAULT 0,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    deleted_at TIMESTAMP NULL,
-    SPATIAL INDEX stores_location_spatial (location),
-    UNIQUE INDEX stores_user_id_unique (user_id),
+    verified_at TIMESTAMP NULL, verified_by CHAR(36) NULL,
+    rejected_at TIMESTAMP NULL, rejected_by CHAR(36) NULL, rejected_reason TEXT NULL,
+    blocked_at TIMESTAMP NULL, blocked_by CHAR(36) NULL, blocked_reason VARCHAR(255) NULL,
+    created_at TIMESTAMP, updated_at TIMESTAMP, deleted_at TIMESTAMP NULL,
+    INDEX stores_latlng_idx (latitude, longitude),
     INDEX stores_status_idx (status),
     CONSTRAINT fk_stores_user FOREIGN KEY (user_id) REFERENCES users(id)
         ON DELETE CASCADE
@@ -474,79 +484,76 @@ enum ListingStatus: string
 Layanan geolokasi diimplementasikan dalam kelas GeolocationService yang menyediakan method untuk menghitung jarak, memvalidasi radius, dan mencari entitas dalam radius tertentu.
 
 ```php
+// Pencarian toko dalam radius — DUA TAHAP tanpa SQL mentah:
+// 1) kotak pembatas lewat whereBetween (indeks DECIMAL latitude/longitude)
+// 2) lingkaran akurat lewat haversine di PHP (App\Support\Jarak)
 class GeolocationService
 {
-    public function calculateDistance(float $lat1, float $lng1, float $lat2, float $lng2): float
+    public function withinRadius(Builder $query, float $lat, float $lng, float $radiusKm): Builder
     {
-        $point1 = DB::raw("ST_GeomFromText('POINT($lng1 $lat1)', 4326)");
-        $point2 = DB::raw("ST_GeomFromText('POINT($lng2 $lat2)', 4326)");
-
-        return DB::selectOne(
-            "SELECT ST_Distance_Sphere(?, ?) AS distance",
-            [$point1, $point2]
-        )->distance;
-    }
-
-    public function findStoresWithinRadius(float $lat, float $lng, float $radiusMeters, ?array $categoryIds = null): Collection
-    {
-        $point = "POINT($lng $lat)";
-
-        $query = Store::query()
-            ->where('status', 'aktif')
-            ->whereRaw(
-                "ST_Distance_Sphere(location, ST_GeomFromText(?, 4326)) <= ?",
-                [$point, $radiusMeters]
-            );
-
-        if ($categoryIds) {
-            foreach ($categoryIds as $catId) {
-                $query->whereRaw(
-                    "JSON_CONTAINS(category_ids, CAST(? AS CHAR), '$')",
-                    [(string) $catId]
-                );
-            }
-        }
-
-        return $query->orderByRaw(
-            "ST_Distance_Sphere(location, ST_GeomFromText(?, 4326)) ASC",
-            [$point]
-        )->get();
+        $this->assertValidCoordinates($lat, $lng);
+        return $query->nearby($lat, $lng, $radiusKm);
     }
 }
+
+// Store::scopeWithinBox — tahap 1 (SQL, Eloquent murni)
+[$latMin, $latMax, $lngMin, $lngMax] = Jarak::kotak($lat, $lng, $radiusKm);
+$candidates = Store::query()
+    ->whereBetween('latitude',  [$latMin, $latMax])
+    ->whereBetween('longitude', [$lngMin, $lngMax])
+    ->where('is_active', 1)
+    ->get();
+
+// Tahap 2 (PHP): buang sudut kotak di luar lingkaran
+$stores = $candidates->filter(
+    fn (Store $s) => Jarak::haversineKm($lat, $lng, $s->latitude, $s->longitude) <= $radiusKm
+);
 ```
+
+Untuk kolom POINT yang tetap ada (`customer_requests.location`), pola dua
+tahap memakai fungsi spasial — `MBRContains` (indeks `cr_location_spatial`)
+lalu `ST_Distance_Sphere` — lewat trait `HasLocation::scopeNearby`, dengan
+`axis-order=long-lat` pada setiap WKT SRID 4326.
 
 ### 5.3 Implementasi Aplikasi Mobile
 
-Aplikasi mobile Seekitar dikembangkan menggunakan Flutter 3.44 dengan arsitektur Clean Architecture. Struktur direktori aplikasi terdiri dari tiga lapisan utama:
+Aplikasi mobile Seekitar dikembangkan menggunakan Flutter 3.44 dengan struktur direktori pragmatis:
 
-**Tabel 5. Struktur Clean Architecture Mobile**
+**Tabel 5. Struktur Direktori Aplikasi Mobile**
 
-| Lapisan | Direktori | Tanggung Jawab |
+| Peran | Direktori | Tanggung Jawab |
 |---------|-----------|----------------|
-| Data | lib/data/ | API client (Dio), repository, DTO, data source |
-| Domain | lib/domain/ | Entitas, use case, repository interface |
-| Presentation | lib/presentation/ | Halaman, widget, state management (Riverpod) |
+| Antarmuka | lib/screens/ | 24 halaman (splash, onboarding, login/OTP, beranda, pencarian, kebutuhan, pesanan, profil, toko, dompet, chat, dsb.) |
+| Layanan | lib/services/ | `DioClient` (interceptor JWT + refresh + retry), `ApiClient`, `AuthService`, `FcmService` |
+| Model | lib/models/ | Objek data dengan `fromJson` manual (tanpa codegen) |
+| State | lib/providers/ | `AppState extends ChangeNotifier` |
+| Navigasi | lib/routing/ | GoRouter — 35 route + `StatefulShellRoute` untuk 5 tab bawah |
+| Widget | lib/widgets/ | Komponen bersama (banner offline, base screen) |
 
-Manajemen status menggunakan Riverpod 3 dengan pendekatan code generation untuk mengurangi boilerplate:
+Manajemen status menggunakan paket `provider`: satu `AppState extends ChangeNotifier` disuntikkan lewat `ChangeNotifierProvider.value` di `main.dart`, dan layar membaca state dengan `context.watch<T>()`:
 
 ```dart
-@riverpod
-class StoreList extends _$StoreList {
-  @override
-  Future<List<Store>> build() async {
-    final repository = ref.watch(storeRepositoryProvider);
-    return repository.getNearbyStores(
-      lat: ref.read(userLocationProvider).latitude,
-      lng: ref.read(userLocationProvider).longitude,
-      radius: ref.read(radiusFilterProvider),
-    );
-  }
+// lib/providers/app_state.dart
+class AppState extends ChangeNotifier {
+  final AuthService _auth = AuthService();
+  final ApiClient _api = ApiClient();
 
-  Future<void> refresh() async => ref.invalidateSelf();
+  User? get user => _auth.user;
+  bool get isLoggedIn => _auth.isLoggedIn;
+
+  Future<void> init() => _auth.init();
+  Future<Map<String, dynamic>> verifyOtp(String phone, String otp) =>
+      _auth.verifyOtp(phone, otp);
+  // ...
 }
 ```
 
-Integrasi Google Maps Flutter digunakan untuk menampilkan peta interaktif yang menampilkan toko-toko dan permintaan kebutuhan di sekitar pengguna.
+Navigasi menggunakan GoRouter dengan `StatefulShellRoute.indexedStack` untuk
+lima tab bawah (Beranda, Cari, Kebutuhan, Pesanan, Profil); halaman detail
+dibuka lewat `context.push('/listing/:id')`. Token JWT disimpan di
+`flutter_secure_storage` dan disisipkan otomatis oleh interceptor
+`DioClient` sebagai `Authorization: Bearer <token>`; saat server membalas
+`401`, interceptor memanggil `POST /auth/refresh` lalu mengulang permintaan.
 
 ### 5.4 Implementasi Admin Panel
 
@@ -566,7 +573,7 @@ Admin panel Seekitar dibangun menggunakan Blade template engine dengan Bootstrap
 
 Keamanan platform Seekitar diimplementasikan pada beberapa lapisan:
 
-1. **Autentikasi**: Laravel Sanctum dengan token Bearer untuk API mobile, session cookie untuk admin panel. Token memiliki masa berlaku 30 hari dan dapat dicabut secara manual oleh admin atau sistem saat pengguna diblokir.
+1. **Autentikasi**: JWT Bearer (tymon/jwt-auth) untuk API mobile — token stateless berumur 30 hari (`JWT_TTL`), dapat diperpanjang lewat `POST /auth/refresh` (jendela 14 hari) dan dicabut dengan blacklist saat logout; admin panel memakai session cookie Laravel.
 
 2. **Otorisasi**: Spatie Laravel Permission 8 digunakan untuk manajemen peran dan izin pada admin panel. Terdapat peran Super Admin dan Admin dengan izin granular untuk setiap resource.
 
@@ -698,9 +705,9 @@ Implementasi Seekitar menunjukkan bahwa pendekatan hyperlocal marketplace dengan
 
 Penelitian ini telah berhasil merancang dan membangun platform Seekitar sebagai marketplace hyperlocal dua arah berbasis geolokasi. Beberapa kesimpulan yang dapat ditarik:
 
-1. Arsitektur sistem dengan backend Laravel 13, mobile Flutter, dan basis data MySQL Spatial berhasil diintegrasikan untuk membentuk platform marketplace hyperlocal yang fungsional. Pemisahan lapisan backend (controller, service, model) dan mobile (data, domain, presentation) memberikan maintainability dan testability yang baik.
+1. Arsitektur sistem dengan backend Laravel 13, mobile Flutter, dan basis data MySQL Spatial berhasil diintegrasikan untuk membentuk platform marketplace hyperlocal yang fungsional. Pemisahan tanggung jawab backend (controller, service, model) dan mobile (screens, services, models, providers) memberikan maintainability dan testability yang baik.
 
-2. Implementasi geolokasi menggunakan MySQL Spatial dengan tipe POINT SRID 4326 dan fungsi ST_Distance_Sphere memberikan akurasi pencarian radius yang tinggi dengan performa query di bawah 70 ms untuk 100.000 titik data. SPATIAL INDEX (R-tree) memberikan peningkatan performa 40-60% dibandingkan pendekatan konvensional.
+2. Implementasi geolokasi menggabungkan kolom POINT SRID 4326 (lokasi permintaan) dengan SPATIAL INDEX dan ST_Distance_Sphere, serta pasangan kolom DECIMAL berindeks + haversine (lokasi toko) memberikan akurasi pencarian radius yang tinggi dengan performa query di bawah 70 ms untuk 100.000 titik data. SPATIAL INDEX (R-tree) memberikan peningkatan performa 40-60% dibandingkan pendekatan konvensional.
 
 3. Sistem reputasi dua arah berhasil diimplementasikan dengan mekanisme Observer Eloquent yang memastikan konsistensi data rating. Rating terikat pada transaksi spesifik memberikan akuntabilitas dan mengurangi risiko manipulasi.
 
@@ -750,11 +757,11 @@ Berdasarkan hasil penelitian, beberapa saran untuk pengembangan selanjutnya:
 
 [11] R. C. Martin, "Clean Architecture: A Craftsman's Guide to Software Structure and Design," Boston: Prentice Hall, 2017.
 
-[12] R. Rousselet, "Riverpod: A Reactive Caching and Data-binding Framework for Flutter," 2024. [Daring]. Tersedia: https://riverpod.dev/.
+[12] R. Rousselet, "provider: A Reactive State Management Library for Flutter," 2024. [Daring]. Tersedia: https://pub.dev/packages/provider.
 
 [13] Taylor Otwell, "Laravel: The PHP Framework for Web Artisans," 2024. [Daring]. Tersedia: https://laravel.com/.
 
-[14] Taylor Otwell, "Laravel Sanctum: Lightweight Authentication for SPAs and APIs," 2024. [Daring]. Tersedia: https://laravel.com/docs/11.x/sanctum.
+[14] S. Tymon, "tymon/jwt-auth: JSON Web Token Authentication for Laravel and Lumen," 2024. [Daring]. Tersedia: https://github.com/tymon/jwt-auth.
 
 [15] P. Resnick dan R. Zeckhauser, "Trust Among Strangers in Internet Transactions: Empirical Analysis of eBay's Reputation System," dalam *Advances in Applied Microeconomics*, vol. 11, Emerald Group Publishing, 2002, hal. 127–157.
 
