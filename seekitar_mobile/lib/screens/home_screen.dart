@@ -159,13 +159,30 @@ class _HomeScreenState extends State<HomeScreen> {
             colors: [Colors.transparent, Colors.black.withOpacity(0.25)],
           ),
         )),
-        Padding(padding: const EdgeInsets.all(24), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-          Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: Colors.black.withOpacity(0.35), borderRadius: BorderRadius.circular(20)), child: Text(_regency.isNotEmpty ? 'Pasar Lokal $_regency' : 'Pasar Lokal Satu Kabupaten', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2))),
-          const Spacer(),
-          Text('Yang kamu\nbutuhkan, ada\ndi sekitar.', style: TextStyle(fontSize: 26, height: 1.15, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5, shadows: [Shadow(color: Colors.black.withOpacity(0.35), blurRadius: 6), Shadow(color: Colors.black.withOpacity(0.2), blurRadius: 2, offset: const Offset(0, 1))])),
-          const SizedBox(height: 16),
-          Row(children: [_pill('Barang'), const SizedBox(width: 8), _pill('Jasa'), const SizedBox(width: 8), _pill('Sewa')]),
-        ])),
+        // Isi hero dibungkus Center + FittedBox(scaleDown) agar TIDAK pernah
+        // overflow: konten (±160px) semula lebih tinggi dari ruang dalam
+        // 200-48=152px sehingga RenderFlex meluap ~13px. FittedBox mengecilkan
+        // konten otomatis bila ruang kurang, termasuk saat textScaleFactor
+        // sistem diperbesar.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: Colors.black.withOpacity(0.35), borderRadius: BorderRadius.circular(20)), child: Text(_regency.isNotEmpty ? 'Pasar Lokal $_regency' : 'Pasar Lokal Satu Kabupaten', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2))),
+                  const SizedBox(height: 14),
+                  Text('Yang kamu\nbutuhkan, ada\ndi sekitar.', style: TextStyle(fontSize: 26, height: 1.15, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5, shadows: [Shadow(color: Colors.black.withOpacity(0.35), blurRadius: 6), Shadow(color: Colors.black.withOpacity(0.2), blurRadius: 2, offset: const Offset(0, 1))])),
+                  const SizedBox(height: 14),
+                  Row(children: [_pill('Barang'), const SizedBox(width: 8), _pill('Jasa'), const SizedBox(width: 8), _pill('Sewa')]),
+                ],
+              ),
+            ),
+          ),
+        ),
       ]),
     )),
   );
