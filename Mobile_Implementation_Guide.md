@@ -249,7 +249,7 @@ Base URL, warna, label, dan formatter dipusatkan di `AppConstants`:
 class AppConstants {
   // Base URL disuntikkan saat build; default untuk pengembangan lokal.
   static const String baseUrl =
-      String.fromEnvironment('API_BASE_URL', defaultValue: 'http://192.168.201.148:8000/api/v1');
+      String.fromEnvironment('API_BASE_URL', defaultValue: 'http://192.168.201.162:8000/api/v1');
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 15);
   static const int maxRetries = 2;
@@ -1369,7 +1369,7 @@ saat kompilasi sebagai `const` — tidak ada berkas yang ikut terbundel ke APK.
 class AppConstants {
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.201.148:8000/api/v1',   // dev lokal
+    defaultValue: 'http://192.168.201.162:8000/api/v1',   // dev lokal
   );
 }
 ```
@@ -1388,6 +1388,12 @@ flutter build apk --release --dart-define=API_BASE_URL=https://api.seekitar.id/a
 
 > ⚠️ `String.fromEnvironment` **harus** `const`. Menulisnya sebagai variabel
 > biasa membuat nilainya selalu kosong tanpa peringatan apa pun saat kompilasi.
+>
+> ⚠️ **URL dev memakai `http://`, jadi Android butuh izin tambahan** (sudah
+> dipasang di `android/app/src/main/AndroidManifest.xml`): permission
+> `INTERNET` dan `android:usesCleartextTraffic="true"` (Android 9+ memblokir
+> traffic plaintext secara default). Sebelum rilis produksi, ganti ke HTTPS
+> dan hapus `usesCleartextTraffic` agar hanya koneksi terenkripsi yang diizinkan.
 
 ## 21. ERROR HANDLING GLOBAL
 

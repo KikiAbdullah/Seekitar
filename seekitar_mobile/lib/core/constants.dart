@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppConstants {
   static const String appName = 'Seekitar';
-  static const String baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://192.168.201.148:8000/api/v1');
+  static const String baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://192.168.201.162:8000/api/v1');
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 15);
   static const int maxRetries = 2;
