@@ -165,7 +165,15 @@
       const qrUrl       = @json(route('admin.whatsapp.qr'));
       const logoutUrl   = @json(route('admin.whatsapp.logout'));
       const sendUrl     = @json(route('admin.whatsapp.send-test'));
-      const csrfToken   = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+      // Token CSRF: dari meta (kini tersedia di layout admin), fallback ke
+      // cookie XSRF-TOKEN bila meta tidak ada.
+      function csrfToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        if (meta) return meta.getAttribute('content') || '';
+        const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : '';
+      }
 
       const dot      = document.getElementById('wa-dot');
       const statusEl = document.getElementById('wa-status-text');
@@ -173,7 +181,6 @@
       const lastEl   = document.getElementById('wa-last');
       const onlineBox = document.getElementById('wa-qr-online');
       const qrBox    = document.getElementById('wa-qr-box');
-      const qrEmpty  = document.getElementById('wa-qr-empty');
       let qrPolling  = false;
 
       function fmtLast(v) {
@@ -213,12 +220,10 @@
           if (data.online) {
             renderStatus({ online: true });
             qrBox.innerHTML = '';
-            qrEmpty = document.getElementById('wa-qr-empty');
             return;
           }
           if (data.qr) {
             qrBox.innerHTML = '<img src="' + data.qr + '" alt="QR Code WhatsApp" width="240" height="240">';
-            qrEmpty = null;
           }
         } catch (_) {}
         finally { qrPolling = false; }
@@ -246,7 +251,7 @@
           if (!result.isConfirmed) return;
           const res = await fetch(logoutUrl, {
             method: 'POST',
-            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken() },
           });
           const json = await res.json();
           if (json.success) {
@@ -269,18 +274,37 @@
         try {
           const res = await fetch(sendUrl, {
             method: 'POST',
-            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken() },
             body: JSON.stringify({
               phone: document.getElementById('wa-send-phone').value.trim(),
               text: document.getElementById('wa-send-text').value.trim(),
             }),
           });
-          const json = await res.json();
+
+          // 419 = CSRF ditolak (token tidak terkirim). 409 = gateway belum
+          // tersambung. Tangani keduanya dengan pesan yang jelas.
+          if (res.status === 419) {
+            result.innerHTML = '<span class="text-danger">✗ Sesi kedaluwarsa (419). Muat ulang halaman lalu coba lagi.</span>';
+            return;
+          }
+
+          let json;
+          try { json = await res.json(); }
+          catch (_) {
+            result.innerHTML = '<span class="text-danger">✗ Respons tidak valid (HTTP ' + res.status + ').</span>';
+            return;
+          }
+
+          if (res.status === 409 || (json && !json.success && (json.message || '').includes('belum tersambung'))) {
+            result.innerHTML = '<span class="text-warning">⚠ WhatsApp belum tersambung. Scan QR dulu.</span>';
+            return;
+          }
+
           result.innerHTML = json.success
             ? '<span class="text-success">✓ ' + json.message + '</span>'
-            : '<span class="text-danger">✗ ' + (json.message || 'Gagal') + '</span>';
+            : '<span class="text-danger">✗ ' + (json.message || 'Gagal (HTTP ' + res.status + ')') + '</span>';
         } catch (_) {
-          result.innerHTML = '<span class="text-danger">✗ Gagal terhubung ke gateway.</span>';
+          result.innerHTML = '<span class="text-danger">✗ Gagal terhubung ke gateway. Pastikan service Node berjalan (npm start).</span>';
         } finally {
           btn.disabled = false;
         }
