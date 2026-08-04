@@ -6,7 +6,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../core/constants.dart';
 import '../core/theme.dart';
 import '../models/customer_request.dart';
 import '../models/listing.dart';
@@ -29,16 +28,9 @@ class _HomeScreenState extends State<HomeScreen> {
   static const double _fallbackLat = -7.5;
   static const double _fallbackLng = 112.0;
 
-  /// Akar server (tanpa `/api/v1`) untuk mengambil aset statis publik,
-  /// mis. `http://192.168.201.162:8000`.
-  String get _serverRoot {
-    final base = AppConstants.baseUrl;
-    final idx = base.indexOf('/api/v1');
-    return idx > 0 ? base.substring(0, idx) : base;
-  }
-
-  /// Gambar hero beranda yang disajikan Laravel dari `public/img/web/`.
-  String get _heroUrl => '$_serverRoot/img/web/hero-baru.jpg';
+  /// Gambar hero beranda — disalin dari server `public/img/web/hero-baru.jpg`
+  /// ke aset aplikasi (`assets/images/hero.jpg`) agar tampil tanpa jaringan.
+  static const String _heroAsset = 'assets/images/hero.jpg';
 
   @override void initState() { super.initState(); _load(); }
 
@@ -145,8 +137,9 @@ class _HomeScreenState extends State<HomeScreen> {
     child: ClipRRect(borderRadius: BorderRadius.circular(28), child: SizedBox(
       height: 200,
       child: Stack(fit: StackFit.expand, children: [
-        // Latar: gambar hero dari server (public/img/web/hero-baru.jpg).
-        _networkImage(_heroUrl, fit: BoxFit.cover, ph: _heroFallback(), cacheWidth: 1170),
+        // Latar: hero-baru.jpg (disalin ke aset aplikasi — tanpa jaringan).
+        Image.asset(_heroAsset, fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _heroFallback()),
         // Overlay agar teks tetap terbaca di atas gambar yang terang.
         DecoratedBox(decoration: BoxDecoration(
           gradient: LinearGradient(
