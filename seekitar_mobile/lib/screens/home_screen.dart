@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../core/theme.dart';
 import '../models/customer_request.dart';
@@ -124,9 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
           SliverToBoxAdapter(child: _sectionHeader('Kebutuhan Sekitar', null)),
           SliverList(delegate: SliverChildBuilderDelegate((_, i) => _reqCard(_requests[i]), childCount: math.min(3, _requests.length))),
         ],
-        SliverToBoxAdapter(child: _duaSisiPasar(t)),
-        SliverToBoxAdapter(child: _playStoreCta(t)),
-        const SliverToBoxAdapter(child: SizedBox(height: 100)),
+        const SliverToBoxAdapter(child: SizedBox(height: 32)),
       ])),
     );
   }
@@ -276,77 +273,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _ph() => Container(decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.green.shade100, Colors.green.shade50])));
   Widget _tinyPh() => Container(width: 72, height: 72, decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), gradient: LinearGradient(colors: [Colors.green.shade100, Colors.green.shade50])), child: const Icon(Icons.image, color: Colors.green, size: 28));
-
-  // ── DUA SISI PASAR ──
-  Widget _duaSisiPasar(ThemeData t) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 28, 16, 0),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('Dibangun untuk Kamu', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.3)),
-      const SizedBox(height: 12),
-      Row(children: [
-        Expanded(child: _sideCard(t, Icons.search, 'Untuk Pembeli', ['Cari barang, jasa, sewa dari toko terverifikasi', 'Bandingkan penjual terdekat', 'Transaksi langsung, rating tercatat'], () => context.push('/search'))),
-        const SizedBox(width: 10),
-        Expanded(child: _sideCard(t, Icons.store, 'Untuk Penjual', ['Buka toko gratis selamanya', 'Dapat notifikasi kebutuhan', 'Badge verifikasi terpercaya'], () => context.push('/create-store'))),
-      ]),
-    ]),
-  );
-
-  Widget _sideCard(ThemeData t, IconData icon, String title, List<String> items, VoidCallback onTap) => GestureDetector(
-    onTap: onTap,
-    child: Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10)]),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Container(width: 40, height: 40, decoration: BoxDecoration(color: AppTheme.primarySubtle, borderRadius: BorderRadius.circular(12)), child: Icon(icon, size: 20, color: t.colorScheme.primary)),
-      const SizedBox(height: 12),
-      Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-      const SizedBox(height: 10),
-      ...items.map((i) => Padding(padding: const EdgeInsets.only(bottom: 6), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(Icons.check_circle, size: 14, color: t.colorScheme.primary), const SizedBox(width: 6),
-        Expanded(child: Text(i, style: TextStyle(fontSize: 11, color: Colors.grey.shade700, height: 1.3))),
-      ]))),
-      const SizedBox(height: 8),
-      Align(alignment: Alignment.centerRight, child: Text('Lihat ›', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: t.colorScheme.primary))),
-    ]),
-  ));
-
-  // ── PLAY STORE CTA ──
-  Widget _playStoreCta(ThemeData t) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 28, 16, 0),
-    child: Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(gradient: LinearGradient(colors: [AppTheme.primary, const Color(0xFF0F6B38)]), borderRadius: BorderRadius.circular(24)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          const Icon(Icons.phone_android, color: Colors.white, size: 28), const SizedBox(width: 10),
-          const Expanded(child: Text('Download Seekitar\ndi Google Play', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800, height: 1.2))),
-          Image.asset('assets/images/logo.png', width: 48, height: 48, color: Colors.white),
-        ]),
-        const SizedBox(height: 12),
-        const Text('Notifikasi real-time, chat penjual, lacak pesanan — semua di aplikasi.', style: TextStyle(color: Colors.white70, fontSize: 13)),
-        const SizedBox(height: 16),
-        SizedBox(width: double.infinity, child: ElevatedButton.icon(
-          onPressed: _openPlayStore,
-          icon: const Icon(Icons.download, size: 20), label: const Text('Download Gratis'),
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: t.colorScheme.primary, padding: const EdgeInsets.symmetric(vertical: 14)),
-        )),
-      ]),
-    ),
-  );
-
-  Future<void> _openPlayStore() async {
-    final uri = Uri.parse('https://play.google.com/store');
-    try {
-      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      if (!ok && mounted) _toast('Tidak dapat membuka Google Play di perangkat ini.');
-    } catch (_) {
-      if (mounted) _toast('Tidak dapat membuka Google Play di perangkat ini.');
-    }
-  }
-
-  void _toast(String msg) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating));
-  }
 
   // ── SKELETON / EMPTY / ERROR ──
   Widget _skeleton() => ListView(padding: EdgeInsets.zero, children: [
