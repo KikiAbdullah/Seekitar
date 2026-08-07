@@ -183,7 +183,7 @@
         <div class="card-body p-4">
           <h5 class="fw-bold mb-3 text-dark">Toko Penjual</h5>
           <div class="d-flex align-items-center gap-3 mb-3">
-            <img src="{{ $listing->store?->photo ? asset('storage/' . $listing->store?->photo) : 'https://placehold.co/100x100?text=Toko' }}" class="rounded-circle border" width="48" height="48" style="object-fit: cover;">
+            <img src="{{ $listing->store ? (\App\Support\PlaceholderImg::src($listing->store->getRawOriginal('photo')) ?? 'https://placehold.co/100x100?text=Toko') : 'https://placehold.co/100x100?text=Toko' }}" class="rounded-circle border" width="48" height="48" style="object-fit: cover;">
             <div>
               <div class="d-flex align-items-center gap-2">
                 <h6 class="fw-bold mb-0 text-dark">{{ $listing->store?->name }}</h6>

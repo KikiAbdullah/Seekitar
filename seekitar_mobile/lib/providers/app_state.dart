@@ -7,6 +7,10 @@ class AppState extends ChangeNotifier {
   final AuthService _auth = AuthService();
   final ApiClient _api = ApiClient();
 
+  AppState() {
+    _auth.addListener(notifyListeners);
+  }
+
   User? get user => _auth.user;
   bool get isLoggedIn => _auth.isLoggedIn;
   bool get isLoading => _auth.isLoading;
@@ -20,6 +24,8 @@ class AppState extends ChangeNotifier {
   Future<Map<String, dynamic>> verifyOtp(String phone, String otp) => _auth.verifyOtp(phone, otp);
   Future<void> logout() => _auth.logout();
   Future<void> updateProfile({String? name, String? address, double? lat, double? lng}) => _auth.updateProfile(name: name, address: address, lat: lat, lng: lng);
+  Future<void> refreshUser() => _auth.refreshUser();
+  void applyUser(User user) => _auth.setUser(user);
 
   Future<void> fetchUnreadCount() async {
     try {

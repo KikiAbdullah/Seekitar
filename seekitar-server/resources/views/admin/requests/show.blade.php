@@ -66,7 +66,7 @@
               <h5 class="alert-heading fw-bold mb-3"><i class="ti ti-circle-check" aria-hidden="true"></i> Penawaran Diterima Pembeli</h5>
               <div class="d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center gap-3">
-                  <img src="{{ $request->acceptedOffer->store->photo ? asset('storage/' . $request->acceptedOffer->store->photo) : 'https://placehold.co/100x100?text=Toko' }}" class="rounded-circle border" width="48" height="48" style="object-fit: cover;">
+                  <img src="{{ $request->acceptedOffer->store ? (\App\Support\PlaceholderImg::src($request->acceptedOffer->store->getRawOriginal('photo')) ?? 'https://placehold.co/100x100?text=Toko') : 'https://placehold.co/100x100?text=Toko' }}" class="rounded-circle border" width="48" height="48" style="object-fit: cover;">
                   <div>
                     <h6 class="fw-bold mb-0 text-dark">{{ $request->acceptedOffer->store->name }}</h6>
                     <span class="fs-2 text-muted">ID Toko: {{ $request->acceptedOffer->store_id }}</span>
@@ -106,7 +106,7 @@
                     <tr>
                       <td>
                         <div class="d-flex align-items-center gap-3">
-                          <img src="{{ $off->store->photo ? asset('storage/' . $off->store->photo) : 'https://placehold.co/100x100?text=Toko' }}" class="rounded-circle border" width="40" height="40" style="object-fit: cover;">
+                          <img src="{{ \App\Support\PlaceholderImg::src($off->store->getRawOriginal('photo')) ?? 'https://placehold.co/100x100?text=Toko' }}" class="rounded-circle border" width="40" height="40" style="object-fit: cover;">
                           <div>
                             <h6 class="fw-semibold mb-0 fs-3">{{ $off->store->name }}</h6>
                             <span class="fs-2 text-muted">Rating: {{ $off->store->total_reviews > 0 ? '★ ' . \App\Support\Angka::desimal($off->store->rating_avg, 1) : 'baru' }}</span>

@@ -9,7 +9,7 @@
       <div class="card shadow-sm">
         <div class="card-body p-4">
           <div class="d-md-flex align-items-start gap-4 mb-4">
-            <img src="{{ $store->photo ? asset('storage/' . $store->photo) : 'https://placehold.co/150x150?text=Toko' }}" class="rounded border shadow-sm mb-3 mb-md-0" width="120" height="120" style="object-fit: cover;">
+            <img src="{{ \App\Support\PlaceholderImg::src($store->getRawOriginal('photo')) ?? 'https://placehold.co/150x150?text=Toko' }}" class="rounded border shadow-sm mb-3 mb-md-0" width="120" height="120" style="object-fit: cover;">
             <div class="flex-grow-1">
               <div class="d-flex align-items-center gap-2 mb-1">
                 <h3 class="fw-bold mb-0 text-dark">{{ $store->name }}</h3>

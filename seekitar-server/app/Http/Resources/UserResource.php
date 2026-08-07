@@ -29,6 +29,11 @@ class UserResource extends JsonResource
             // Tidak ada kolom pengatur — klien tidak akan menemukan cara
             // menuliskannya, memang sengaja.
             'verification_level' => $this->verification_level->value,
+            'verified_at'        => $this->verified_at?->toIso8601ZuluString(),
+            // Status berkas KTP untuk UI mobile (wajib setelah daftar):
+            // null = belum unggah, terisi = menunggu/sudah ditinjau.
+            'ktp_submitted_at'   => $this->ktp_submitted_at?->toIso8601ZuluString(),
+            'status'             => $this->status?->value ?? $this->status,
 
             // Reputasi sebagai PEMBELI — dari ulasan store_to_buyer (cermin
             // toko↔pembeli; ReviewObserver yang menjaga angkanya).

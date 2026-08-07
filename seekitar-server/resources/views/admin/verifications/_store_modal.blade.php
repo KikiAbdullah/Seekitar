@@ -10,13 +10,50 @@
           <div class="col-lg-7">
             <div class="border rounded p-3 text-center bg-white shadow-sm mb-3">
               <h6 class="fw-semibold mb-2 text-dark">Foto Tampak Depan Toko</h6>
-              @if ($store->photo)
-                <a href="{{ asset('storage/' . $store->photo) }}" target="_blank">
-                  <img src="{{ asset('storage/' . $store->photo) }}" class="img-fluid rounded border shadow-sm mb-2" style="max-height: 350px; width: 100%; object-fit: cover;" alt="Foto Depan Toko">
+              @php
+                // Konteks VERIFIKASI wajib memakai nilai MENTAH, bukan accessor
+                // `photo` yang memberi placeholder untuk data kosong (Store.php).
+                // PlaceholderImg::src() memberi URL host-relatif (/storage/...)
+                // yang mengikuti host yang sedang dibuka admin.
+                $storePhotoUrl = \App\Support\PlaceholderImg::src($store->getRawOriginal('photo'));
+              @endphp
+              @if ($storePhotoUrl)
+                <a href="{{ $storePhotoUrl }}" class="wa-lightbox d-inline-block" title="Perbesar Foto Toko">
+                  <img src="{{ $storePhotoUrl }}" class="img-fluid rounded border shadow-sm mb-2 wa-lightbox-img" style="max-height: 350px; width: 100%; object-fit: cover;" alt="Foto Depan Toko">
                 </a>
+                <div class="text-muted fs-2">Klik foto untuk memperbesar</div>
               @else
                 <div class="p-5 text-muted bg-light border-dashed rounded">tidak ada foto depan toko</div>
               @endif
+            </div>
+
+            {{-- Peta lokasi toko: pin di titik koordinat (Google Maps embed, tanpa API key). --}}
+            <div class="card border mb-3">
+              <div class="card-body p-4">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                  <i class="ti ti-map-pin fs-5 text-primary" aria-hidden="true"></i>
+                  <h6 class="fw-bold mb-0 text-dark">Lokasi Toko</h6>
+                </div>
+                @if ($store->latitude && $store->longitude)
+                  <div class="rounded overflow-hidden border">
+                    <iframe
+                      src="https://maps.google.com/maps?q={{ $store->latitude }},{{ $store->longitude }}&z=16&output=embed"
+                      style="width: 100%; height: 260px; border: 0;"
+                      loading="lazy"
+                      allowfullscreen
+                      referrerpolicy="no-referrer-when-downgrade"
+                      title="Peta lokasi {{ $store->name }}"></iframe>
+                  </div>
+                  <div class="text-muted mt-2 fs-2">
+                    Koordinat: <code>{{ number_format((float) $store->latitude, 6) }}, {{ number_format((float) $store->longitude, 6) }}</code>
+                  </div>
+                @else
+                  <div class="text-danger p-4 text-center bg-light border-dashed rounded">
+                    <i class="ti ti-map-pin-off fs-3 d-block mb-1" aria-hidden="true"></i>
+                    Koordinat toko belum disetel
+                  </div>
+                @endif
+              </div>
             </div>
 
             <div class="card border">
@@ -66,9 +103,6 @@
               <div class="card-body p-3">
                 <h6 class="fw-semibold mb-2 text-dark">Alamat & Operasional Toko</h6>
                 <p class="mb-1 fs-3 text-dark"><strong>Alamat:</strong> {{ $store->address ?? '—' }}</p>
-                @if ($store->latitude && $store->longitude)
-                  <p class="mb-1 fs-3 text-muted"><strong>Koordinat:</strong> <code>{{ $store->latitude }}, {{ $store->longitude }}</code></p>
-                @endif
                 <p class="mb-0 fs-3 text-muted"><strong>Radius Pelayanan:</strong> {{ $store->service_radius_km }} km</p>
               </div>
             </div>

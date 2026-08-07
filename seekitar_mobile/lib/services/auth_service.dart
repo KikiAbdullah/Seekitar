@@ -74,4 +74,16 @@ class AuthService extends ChangeNotifier {
     _user = User.fromJson(res['user'] as Map<String, dynamic>);
     notifyListeners();
   }
+
+  Future<void> refreshUser() async {
+    if (_dio.token == null) return;
+    final res = await _api.me();
+    _user = User.fromJson(res['user'] as Map<String, dynamic>);
+    notifyListeners();
+  }
+
+  void setUser(User user) {
+    _user = user;
+    notifyListeners();
+  }
 }

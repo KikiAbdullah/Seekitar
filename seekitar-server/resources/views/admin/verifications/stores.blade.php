@@ -4,6 +4,7 @@
 
 @push('styles')
   <link rel="stylesheet" href="{{ asset('vendor/mordenize/libs/datatables.net-bs5/css/dataTables.bootstrap5.min.css') }}">
+  <link rel="stylesheet" href="{{ asset('vendor/mordenize/libs/magnific-popup/dist/magnific-popup.css') }}">
   <style>
     .table-action-btn {
       display: inline-flex;
@@ -21,6 +22,10 @@
       background-color: #fcefe2 !important;
       font-weight: 600;
     }
+    /* Lightbox foto harus DI ATAS modal verifikasi (Bootstrap modal = 1055). */
+    .mfp-bg { z-index: 2070; }
+    .mfp-wrap { z-index: 2071; }
+    .mfp-content { z-index: 2072; }
   </style>
 @endpush
 
@@ -68,6 +73,7 @@
 
 @push('scripts')
   <script src="{{ asset('vendor/mordenize/libs/datatables.net/js/jquery.dataTables.min.js') }}"></script>
+  <script src="{{ asset('vendor/mordenize/libs/magnific-popup/dist/jquery.magnific-popup.min.js') }}"></script>
   <script>
     $(function () {
       var table = $('#stores-verifications-table').DataTable({
@@ -120,6 +126,16 @@
         if (selectedRow) {
           $('#verifyStoreModal-' + selectedRow.id).modal('show');
         }
+      });
+
+      // Lightbox foto toko: muncul di atas modal verifikasi.
+      $('.wa-lightbox').magnificPopup({
+        type: 'image',
+        closeOnContentClick: true,
+        closeBtnInside: true,
+        mainClass: 'mfp-img-mobile',
+        image: { verticalFit: true },
+        zoom: { enabled: true, duration: 300 },
       });
     });
   </script>

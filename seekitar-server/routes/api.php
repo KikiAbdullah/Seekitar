@@ -81,6 +81,8 @@ Route::prefix('v1')->group(function (): void {
         Route::post('auth/fcm-token', [DeviceController::class, 'store']);
         Route::delete('auth/fcm-token', [DeviceController::class, 'destroy']);
         Route::post('auth/verification/ktp', [VerificationController::class, 'uploadKtp']);
+        Route::get('auth/verification/photo/{kind}', [VerificationController::class, 'myPhoto'])
+            ->whereIn('kind', ['ktp', 'selfie']);
         Route::post('uploads/images', [UploadController::class, 'store']);
 
         // --- Home / Discovery feed -----------------------------------

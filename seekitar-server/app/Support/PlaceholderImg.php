@@ -83,4 +83,38 @@ final class PlaceholderImg
             rawurlencode($text ?? 'Seekitar'),
         );
     }
+
+    /**
+     * URL HOST-RELATIF (`/storage/...`) untuk pemakaian di Blade.
+     *
+     * Berbeda dengan storageUrl() yang memakai APP_URL — di panel admin
+     * browser bisa membuka host lain (mis. localhost padahal APP_URL
+     * 192.168.0.101), dan URL mutlak dari APP_URL jadi tidak terjangkau.
+     * Path relatif mengikuti host yang sedang dibuka.
+     *
+     * Terima path relatif ('stores/x.jpg') atau URL absolut lama.
+     * Mengembalikan null bila tidak ada file.
+     */
+    public static function src(?string $value, string $disk = 'public'): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (str_starts_with($value, 'http')) {
+            $pos = strpos($value, '/storage/');
+            if ($pos !== false) {
+                $value = substr($value, $pos + 9);
+            }
+        }
+
+        $value = ltrim($value, '/');
+
+        // Sumber kebenaran: file benar-benar ada di disk.
+        if (! Storage::disk($disk)->exists($value)) {
+            return null;
+        }
+
+        return '/storage/'.$value;
+    }
 }

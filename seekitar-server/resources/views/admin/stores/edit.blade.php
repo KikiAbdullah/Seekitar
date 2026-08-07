@@ -180,7 +180,7 @@
                   <div class="card-body p-4">
                     <h5 class="fw-semibold mb-3">Foto Depan Toko</h5>
                     <div class="mb-3 text-center">
-                      <img src="{{ $store->photo ? asset('storage/' . $store->photo) : 'https://placehold.co/150x150?text=Toko' }}" class="img-fluid rounded border shadow-sm" style="max-height: 150px; object-fit: cover;">
+                      <img src="{{ \App\Support\PlaceholderImg::src($store->getRawOriginal('photo')) ?? 'https://placehold.co/150x150?text=Toko' }}" class="img-fluid rounded border shadow-sm" style="max-height: 150px; object-fit: cover;">
                     </div>
                     <div class="mb-3">
                       <label for="photo" class="form-label">Unggah Foto Baru</label>

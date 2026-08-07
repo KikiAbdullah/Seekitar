@@ -4,6 +4,7 @@
 
 @push('styles')
   <link rel="stylesheet" href="{{ asset('vendor/mordenize/libs/datatables.net-bs5/css/dataTables.bootstrap5.min.css') }}">
+  <link rel="stylesheet" href="{{ asset('vendor/mordenize/libs/magnific-popup/dist/magnific-popup.css') }}">
   <style>
     .table-action-btn {
       display: inline-flex;
@@ -20,6 +21,20 @@
     .row-selected td {
       background-color: #fcefe2 !important;
       font-weight: 600;
+    }
+    /*
+     * Lightbox foto KTP/wajah harus tampil DI ATAS modal verifikasi.
+     * Magnific Popup default z-index 1043/1042 sedangkan Bootstrap 5 modal
+     * 1055 — tanpa ini, modal menutupi gambar yang diperbesar.
+     */
+    .mfp-bg {
+      z-index: 2070;
+    }
+    .mfp-wrap {
+      z-index: 2071;
+    }
+    .mfp-content {
+      z-index: 2072;
     }
   </style>
 @endpush
@@ -69,6 +84,7 @@
 
 @push('scripts')
   <script src="{{ asset('vendor/mordenize/libs/datatables.net/js/jquery.dataTables.min.js') }}"></script>
+  <script src="{{ asset('vendor/mordenize/libs/magnific-popup/dist/jquery.magnific-popup.min.js') }}"></script>
   <script src="{{ asset('js/checklist-gate.js') }}"></script>
   <script>
     $(function () {
@@ -123,6 +139,17 @@
         if (selectedRow) {
           $('#verifyModal-' + selectedRow.id).modal('show');
         }
+      });
+
+      // Lightbox foto KTP & wajah: gambar besar muncul sebagai popup overlay.
+      // Modals dibuat sekali di halaman, jadi cukup init sekali di sini.
+      $('.wa-lightbox').magnificPopup({
+        type: 'image',
+        closeOnContentClick: true,
+        closeBtnInside: true,
+        mainClass: 'mfp-img-mobile',
+        image: { verticalFit: true },
+        zoom: { enabled: true, duration: 300 },
       });
     });
   </script>

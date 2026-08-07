@@ -67,7 +67,7 @@ class ApiProvider {
     return (r as List?)?.map((s) => Store.fromJson(s as Map<String,dynamic>)).toList() ?? [];
   }
   Future<Store> getStore(String id) async { final r = await _api.storeDetail(id); return Store.fromJson(r['store'] as Map<String,dynamic>); }
-  Future<Store> createStore(Map<String,dynamic> body) async { final r = await _api.createStore(body); return Store.fromJson(r['store'] as Map<String,dynamic>); }
+  Future<Store> createStore(Map<String,dynamic> body, {File? photo}) async { final r = await _api.createStore(body, photo: photo); return Store.fromJson(r['store'] as Map<String,dynamic>); }
   Future<Store> updateStore(String id, Map<String,dynamic> body) async { final r = await _api.updateStore(id, body); return Store.fromJson(r['store'] as Map<String,dynamic>); }
   Future<List<Review>> getStoreReviews(String id) async {
     final r = await _api.storeReviews(id);
@@ -190,7 +190,8 @@ class ApiProvider {
   Future<Map<String,dynamic>> uploadImage(File file, {String purpose = 'listing'}) => _api.uploadImage(file, purpose: purpose);
   Future<Map<String,dynamic>> validateCoupon(String code, double orderTotal) => _api.validateCoupon(code, orderTotal);
   Future<Map<String,dynamic>> applyCoupon(String code, String orderId) => _api.applyCoupon(code, orderId);
-  Future<Map<String,dynamic>> uploadKtp(File ktpImage, File selfieImage, {String? nik}) => _api.uploadKtp(ktpImage, selfieImage, nik: nik);
+  Future<Map<String,dynamic>> uploadKtp(File ktpImage, File selfieImage, {required String nik, String? address, double? latitude, double? longitude}) => _api.uploadKtp(ktpImage, selfieImage, nik: nik, address: address, latitude: latitude, longitude: longitude);
+  Future<List<int>> verificationPhoto(String kind) => _api.verificationPhoto(kind);
 
   // ─── Reports ───
   Future<void> report(String targetType, String targetId, String reason, {String? description}) => _api.report({'target_type': targetType, 'target_id': targetId, 'reason': reason, if (description != null) 'description': description});

@@ -25,7 +25,8 @@ class Listing {
     storeId: json['store']?['id']?.toString(), storeName: json['store']?['name']?.toString(),
     storeDistrict: json['store']?['district']?.toString() ?? json['store']?['regency']?.toString(),
     storeOwnerId: json['store']?['owner_id']?.toString(),
-    storeVerified: json['store']?['verified_at'] != null,
+    // StoreResource mengirim `verification_status`, bukan `verified_at`.
+    storeVerified: (json['store']?['verification_status']?.toString() ?? '') == 'verified',
     distanceKm: (json['distance_km'] as num?)?.toDouble(),
     createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at'].toString()) : null,
     isFavorited: json['is_favorited'] ?? false,

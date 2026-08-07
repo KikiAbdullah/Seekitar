@@ -94,7 +94,7 @@
               <div class="card-body p-4">
                 <h5 class="fw-bold mb-3 text-dark">Toko Penerima Manfaat</h5>
                 <div class="d-flex align-items-center gap-3 mb-3">
-                  <img src="{{ $subscription->store->photo ? asset('storage/' . $subscription->store->photo) : 'https://placehold.co/100x100?text=Toko' }}" class="rounded border" width="48" height="48" style="object-fit: cover;">
+                  <img src="{{ \App\Support\PlaceholderImg::src($subscription->store->getRawOriginal('photo')) ?? 'https://placehold.co/100x100?text=Toko' }}" class="rounded border" width="48" height="48" style="object-fit: cover;">
                   <div>
                     <h6 class="fw-bold mb-0 text-dark">{{ $subscription->store->name }}</h6>
                     <span class="fs-2 text-muted">ID: {{ $subscription->store->id }}</span>

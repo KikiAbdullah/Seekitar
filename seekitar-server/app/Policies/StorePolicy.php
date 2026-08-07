@@ -11,6 +11,10 @@ class StorePolicy
     /**
      * Membuka toko butuh verifikasi KTP (Level 2) — PRD §5.3.2.
      * Tanpa syarat ini, akun anonim bisa berjualan tanpa jejak identitas.
+     *
+     * PLUS aturan SATU toko per pengguna: toko yang sudah pernah dibuat
+     * (status apa pun — pending/ditolak/diblokir tetap miliknya) menghalangi
+     * pembuatan toko baru.
      */
     public function create(User $user): bool
     {
@@ -18,7 +22,12 @@ class StorePolicy
         // tahap 2 terisi). Penting: syarat ini diperiksa ULANG di titik
         // persetujuan admin (VerificationController::approveStore), karena
         // level bisa turun setelah pengajuan masuk antrian.
-        return $user->canOpenStore();
+        if (! $user->canOpenStore()) {
+            return false;
+        }
+
+        // 1 pengguna = 1 toko (termasuk toko yang masih menunggu/ditolak).
+        return ! Store::where('user_id', $user->id)->exists();
     }
 
     public function update(User $user, Store $store): bool

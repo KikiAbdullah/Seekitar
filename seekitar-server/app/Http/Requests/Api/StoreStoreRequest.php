@@ -21,6 +21,23 @@ class StoreStoreRequest extends FormRequest
         return $this->user() !== null;
     }
 
+    /**
+     * Saat dikirim via multipart (foto toko), `operating_hours` sampai sebagai
+     * JSON string — dekode kembali menjadi array sebelum validasi.
+     */
+    protected function prepareForValidation(): void
+    {
+        $hours = $this->input('operating_hours');
+
+        if (is_string($hours) && $hours !== '') {
+            $decoded = json_decode($hours, true);
+
+            if (is_array($decoded)) {
+                $this->merge(['operating_hours' => $decoded]);
+            }
+        }
+    }
+
     public function rules(): array
     {
         return [

@@ -24,18 +24,37 @@
                       <td class="text-muted ps-0">Alamat Domisili</td>
                       <td class="text-dark">{{ $user->address ?? '—' }}</td>
                     </tr>
-                    <tr>
-                      <td class="text-muted ps-0">Koordinat</td>
-                      <td class="text-dark">
-                        @if ($user->latitude && $user->longitude)
-                          <code>{{ $user->latitude }}, {{ $user->longitude }}</code>
-                        @else
-                          <span class="text-danger">belum disetel</span>
-                        @endif
-                      </td>
-                    </tr>
                   </tbody>
                 </table>
+              </div>
+            </div>
+
+            {{-- Peta lokasi domisili: pin di titik koordinat (Google Maps embed, tanpa API key). --}}
+            <div class="card border mb-3">
+              <div class="card-body p-4">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                  <i class="ti ti-map-pin fs-5 text-primary" aria-hidden="true"></i>
+                  <h6 class="fw-bold mb-0 text-dark">Lokasi Domisili</h6>
+                </div>
+                @if ($user->latitude && $user->longitude)
+                  <div class="rounded overflow-hidden border">
+                    <iframe
+                      src="https://maps.google.com/maps?q={{ $user->latitude }},{{ $user->longitude }}&z=16&output=embed"
+                      style="width: 100%; height: 260px; border: 0;"
+                      loading="lazy"
+                      allowfullscreen
+                      referrerpolicy="no-referrer-when-downgrade"
+                      title="Peta lokasi {{ $user->name }}"></iframe>
+                  </div>
+                  <div class="text-muted mt-2 fs-2">
+                    Koordinat: <code>{{ number_format($user->latitude, 6) }}, {{ number_format($user->longitude, 6) }}</code>
+                  </div>
+                @else
+                  <div class="text-danger p-4 text-center bg-light border-dashed rounded">
+                    <i class="ti ti-map-pin-off fs-3 d-block mb-1" aria-hidden="true"></i>
+                    Koordinat belum disetel
+                  </div>
+                @endif
               </div>
             </div>
 
@@ -44,9 +63,10 @@
                 <div class="border rounded p-3 text-center bg-white shadow-sm h-100">
                   <h6 class="fw-semibold mb-2 text-dark">Foto KTP</h6>
                   @if ($user->ktp_image)
-                    <a href="{{ route('admin.verifications.users.media', [$user, 'kind' => 'ktp']) }}" target="_blank">
-                      <img src="{{ route('admin.verifications.users.media', [$user, 'kind' => 'ktp']) }}" class="img-fluid rounded border mb-2" style="max-height: 250px; object-fit: contain;" alt="Foto KTP">
+                    <a href="{{ route('admin.verifications.users.media', [$user, 'kind' => 'ktp']) }}" class="wa-lightbox d-inline-block" title="Perbesar Foto KTP">
+                      <img src="{{ route('admin.verifications.users.media', [$user, 'kind' => 'ktp']) }}" class="img-fluid rounded border mb-2 wa-lightbox-img" style="max-height: 250px; object-fit: contain;" alt="Foto KTP">
                     </a>
+                    <div class="text-muted fs-2">Klik foto untuk memperbesar</div>
                   @else
                     <div class="p-5 text-muted bg-light border-dashed rounded">tidak ada foto KTP</div>
                   @endif
@@ -56,9 +76,10 @@
                 <div class="border rounded p-3 text-center bg-white shadow-sm h-100">
                   <h6 class="fw-semibold mb-2 text-dark">Foto Wajah (Selfie)</h6>
                   @if ($user->selfie_image)
-                    <a href="{{ route('admin.verifications.users.media', [$user, 'kind' => 'selfie']) }}" target="_blank">
-                      <img src="{{ route('admin.verifications.users.media', [$user, 'kind' => 'selfie']) }}" class="img-fluid rounded border mb-2" style="max-height: 250px; object-fit: contain;" alt="Foto Wajah">
+                    <a href="{{ route('admin.verifications.users.media', [$user, 'kind' => 'selfie']) }}" class="wa-lightbox d-inline-block" title="Perbesar Foto Wajah">
+                      <img src="{{ route('admin.verifications.users.media', [$user, 'kind' => 'selfie']) }}" class="img-fluid rounded border mb-2 wa-lightbox-img" style="max-height: 250px; object-fit: contain;" alt="Foto Wajah">
                     </a>
+                    <div class="text-muted fs-2">Klik foto untuk memperbesar</div>
                   @else
                     <div class="p-5 text-muted bg-light border-dashed rounded">tidak ada foto wajah</div>
                   @endif

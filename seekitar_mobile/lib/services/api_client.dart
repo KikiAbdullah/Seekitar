@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'dio_client.dart';
@@ -105,7 +106,35 @@ class ApiClient {
   }
   Future<List<dynamic>> mineStores() => _get('/stores/mine');
   Future<Map<String,dynamic>> storeDetail(String id) => _get('/stores/$id');
-  Future<Map<String,dynamic>> createStore(Map<String,dynamic> body) => _post('/stores', data: body);
+  Future<Map<String,dynamic>> createStore(Map<String,dynamic> body, {File? photo}) async {
+    if (photo != null) {
+      // Multipart: Laravel 11+ aturan `boolean` HANYA menerima
+      // [true,false,0,1,'0','1'] — string "true"/"false" DITOLAK (422),
+      // jadi boolean dikonversi ke '1'/'0'. Array butuh notasi `key[]`
+      // agar Laravel mem-parsenya sebagai array. operating_hours (objek
+      // bersarang) dikirim sebagai JSON string yang didekode ulang
+      // StoreStoreRequest::prepareForValidation.
+      final fd = <String,dynamic>{};
+      for (final e in body.entries) {
+        final v = e.value;
+        if (v is bool) {
+          fd[e.key] = v ? '1' : '0';
+        } else if (v is List) {
+          for (final item in v) {
+            fd['${e.key}[]'] = item.toString();
+          }
+        } else {
+          fd[e.key] = v;
+        }
+      }
+      final hours = fd['operating_hours'];
+      if (hours is Map) fd['operating_hours'] = jsonEncode(hours);
+      fd['photo'] = await MultipartFile.fromFile(photo.path);
+      final res = await _dio.post('/stores', data: FormData.fromMap(fd));
+      return Map<String,dynamic>.from(_payload(res.data) as Map);
+    }
+    return _post('/stores', data: body);
+  }
   Future<Map<String,dynamic>> updateStore(String id, Map<String,dynamic> body) => _patch('/stores/$id', data: body);
   Future<List<dynamic>> storeReviews(String id) => _get('/stores/$id/reviews');
   Future<Map<String,dynamic>> storeDashboard(String id) => _get('/stores/$id/dashboard');
@@ -180,10 +209,25 @@ class ApiClient {
   Future<void> report(Map<String,dynamic> body) => _post('/reports', data: body);
 
   // ─── Verification ──────────────────────────────────
-  Future<Map<String,dynamic>> uploadKtp(File ktpImage, File selfieImage, {String? nik}) => uploadMultiple('/auth/verification/ktp', [
+  Future<Map<String,dynamic>> uploadKtp(File ktpImage, File selfieImage, {required String nik, String? address, double? latitude, double? longitude}) => uploadMultiple('/auth/verification/ktp', [
     MapEntry('ktp_image', ktpImage),
     MapEntry('selfie_image', selfieImage),
-  ], fields: {if (nik != null) 'nik': nik});
+  ], fields: {
+    'nik': nik,
+    if (address != null) 'address': address,
+    if (latitude != null) 'latitude': latitude.toString(),
+    if (longitude != null) 'longitude': longitude.toString(),
+  });
+
+  /// Foto identitas milik sendiri (ktp / selfie) sebagai bytes — dipakai
+  /// halaman "sudah terverifikasi" untuk menampilkan berkas yang dikirim.
+  Future<List<int>> verificationPhoto(String kind) async {
+    final res = await _dio.get(
+      '/auth/verification/photo/$kind',
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return (res.data as List<dynamic>).cast<int>();
+  }
 
   // ─── FCM / Device ──────────────────────────────────
   Future<void> registerFcmToken(String token, String deviceId) => _post('/auth/fcm-token', data: {'fcm_token': token, 'device_id': deviceId, 'platform': 'android'});
