@@ -211,6 +211,14 @@
             <span class="hide-menu">Pengaturan</span>
           </a>
         </li>
+        <li class="sidebar-item">
+          <a class="sidebar-link {{ request()->routeIs('admin.wallet.*') ? 'active' : '' }}" href="{{ route('admin.wallet.index') }}" aria-expanded="false">
+            <span>
+              <i class="ti ti-wallet" aria-hidden="true"></i>
+            </span>
+            <span class="hide-menu">Dompet</span>
+          </a>
+        </li>
         @endcan
         @can('manage-whatsapp')
         <li class="sidebar-item">

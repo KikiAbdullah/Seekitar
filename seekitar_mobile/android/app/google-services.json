@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "749729476970",
+    "project_id": "seekitar-a146a",
+    "storage_bucket": "seekitar-a146a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:749729476970:android:7023ab96d0049fd2e9f513",
+        "android_client_info": {
+          "package_name": "id.seekitar.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCBPieE81XQbWoxALsOIVxeC7QTcZjnYro"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

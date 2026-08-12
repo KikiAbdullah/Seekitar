@@ -3,11 +3,13 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import '../../core/text_utils.dart';
 import '../../core/theme.dart';
 import '../../models/listing.dart';
-import '../../models/store.dart';
 import '../../providers/app_state.dart';
 import '../../services/api_compat.dart';
+import '../../services/dio_client.dart';
+import '../../widgets/error_view.dart';
 
 class ListingDetailScreen extends StatefulWidget {
   final String listingId;
@@ -24,8 +26,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   bool _isMine = false;
   bool _chatting = false;
   final _pageCtrl = PageController();
-  int _imgIdx = 0;
   bool _reporting = false;
+  String? _error;
 
   @override void initState() { super.initState(); _load(); }
   @override void dispose() { _pageCtrl.dispose(); super.dispose(); }
@@ -33,10 +35,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   String get _id => _detail?.id ?? widget.listingId;
 
   Future<void> _load() async {
-    if (widget.listing != null) { setState(() { _detail = widget.listing; _loading = false; }); _checkMine(); return; }
-    setState(() => _loading = true);
-    try { final d = await _api.getListing(widget.listingId); setState(() { _detail = d; _loading = false; }); _checkMine(); }
-    catch (_) { setState(() => _loading = false); }
+    if (widget.listing != null) { setState(() { _detail = widget.listing; _loading = false; }); await _checkMine(); return; }
+    setState(() { _loading = true; _error = null; });
+    try { final d = await _api.getListing(widget.listingId); if (!mounted) return; setState(() { _detail = d; _loading = false; }); await _checkMine(); }
+    catch (e) { if (mounted) setState(() { _error = DioClient.friendly(e); _loading = false; }); }
   }
 
   Future<void> _checkMine() async {
@@ -55,9 +57,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     setState(() => _chatting = true);
     try {
       final conv = await _api.createConversation(ownerId);
-      if (mounted) ctx.push('/chat/${conv.id}', extra: conv);
+      if (mounted) await ctx.push('/chat/${conv.id}', extra: conv);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: ${DioClient.friendly(e)}')));
     }
     if (mounted) setState(() => _chatting = false);
   }
@@ -96,7 +98,6 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   }
 
   Future<void> _report() async {
-    final reasonCtrl = TextEditingController();
     final reason = await showModalBottomSheet<String>(context: context, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))), builder: (ctx) => Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))), const SizedBox(height: 20),
       const Text('Laporkan Listing', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)), const SizedBox(height: 16),
@@ -110,7 +111,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       try {
         await _api.report('listing', _id, reason);
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Laporan terkirim. Tim kami akan meninjaunya.')));
-      } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e'))); }
+      } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: ${DioClient.friendly(e)}'))); }
       if (mounted) setState(() => _reporting = false);
     }
   }
@@ -119,7 +120,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     final t = Theme.of(ctx);
     if (_loading) return Scaffold(appBar: AppBar(), body: const Center(child: CircularProgressIndicator()));
     final l = _detail;
-    if (l == null) return Scaffold(appBar: AppBar(), body: const Center(child: Text('Listing tidak ditemukan')));
+    if (l == null) {
+      return Scaffold(appBar: AppBar(), body: _error != null ? ErrorView(message: _error!, onRetry: _load) : const Center(child: Text('Listing tidak ditemukan')));
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('Detail'), actions: [
@@ -129,7 +132,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       bottomNavigationBar: _bottomBar(t),
       body: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         SizedBox(height: 280, child: l.images.isNotEmpty ? Stack(children: [
-          PageView.builder(controller: _pageCtrl, onPageChanged: (i) => setState(() => _imgIdx = i), itemCount: l.images.length, itemBuilder: (_, i) => Image.network(l.images[i], width: double.infinity, fit: BoxFit.cover, errorBuilder: (_,__,___) => _galleryFallback())),
+          PageView.builder(controller: _pageCtrl, itemCount: l.images.length, itemBuilder: (_, i) => Image.network(l.images[i], width: double.infinity, fit: BoxFit.cover, errorBuilder: (_,__,___) => _galleryFallback())),
           Positioned(top: 12, left: 12, child: Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)), child: Text(l.typeLabel, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)))),
           if (l.images.length > 1) Positioned(bottom: 16, left: 0, right: 0, child: Center(child: SmoothPageIndicator(controller: _pageCtrl, count: l.images.length, effect: const WormEffect(activeDotColor: Colors.white, dotColor: Colors.white38, dotHeight: 8, dotWidth: 8)))),
         ]) : _galleryFallback()),
@@ -139,7 +142,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
           Text(l.priceDisplay, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: t.colorScheme.primary)),
           const SizedBox(height: 16),
           if (l.storeName != null) Card(child: Padding(padding: const EdgeInsets.all(16), child: Row(children: [
-            CircleAvatar(radius: 28, backgroundColor: Colors.green.shade50, child: Text((l.storeName ?? 'T').substring(0, 2).toUpperCase(), style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.bold))),
+            CircleAvatar(radius: 28, backgroundColor: Colors.green.shade50, child: Text(avatarInitials(l.storeName), style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.bold))),
             const SizedBox(width: 12),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [Text(l.storeName!, style: const TextStyle(fontWeight: FontWeight.w600)), if (l.storeVerified == true) ...[const SizedBox(width: 4), const Icon(Icons.verified, size: 18, color: Colors.green)]],),

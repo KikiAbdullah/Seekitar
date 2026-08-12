@@ -67,6 +67,7 @@ class AdminDisputeController extends Controller
                 OrderStatus::from($data['resolution']),
                 $data['resolution'] === 'dibatalkan' ? $data['resolution_note'] : null,
                 $request->user()->id,
+                true,
             );
             $order->save();
         });

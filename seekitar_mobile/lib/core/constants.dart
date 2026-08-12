@@ -1,8 +1,14 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class AppConstants {
   static const String appName = 'Seekitar';
-  static const String baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://192.168.201.162:8000/api/v1');
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    // IP dev hanya untuk debug; di release wajib diisi via --dart-define,
+    // kalau kosong DioClient melempar error jelas saat di-construct.
+    defaultValue: kReleaseMode ? '' : 'http://192.168.201.148:8000/api/v1',
+  );
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 15);
   static const int maxRetries = 2;
@@ -13,10 +19,14 @@ class AppConstants {
   static const Color heroBlob = Color(0xFFC9F2DD);
 
   static String formatRupiah(double value) {
-    if (value == value.roundToDouble()) {
-      return 'Rp ${value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}';
-    }
-    return 'Rp ${value.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}';
+    return 'Rp ${value.roundToDouble().toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}';
+  }
+
+  /// Format tanggal konsisten di seluruh aplikasi: `d/m/y` (waktu lokal).
+  static String formatDate(DateTime? d) {
+    if (d == null) return '-';
+    final dt = d.toLocal();
+    return '${dt.day}/${dt.month}/${dt.year}';
   }
 
   static String typeLabel(String type) => {'product': 'Barang', 'service': 'Jasa', 'rental': 'Sewa'}[type] ?? type;

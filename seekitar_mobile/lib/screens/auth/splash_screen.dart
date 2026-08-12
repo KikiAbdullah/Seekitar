@@ -26,7 +26,22 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   Future<void> _check() async {
     final app = context.read<AppState>();
-    await Future.delayed(const Duration(seconds: 2));
+    final started = DateTime.now();
+    const minShown = Duration(milliseconds: 1500);
+    // Tunggu auto-login (AuthService.init) selesai — pakai batas waktu
+    // supaya splash tidak menggantung bila server lambat/mati. Sebelumnya
+    // menunggu durasi tetap 2s sehingga user yang sudah login bisa salah
+    // diarahkan ke onboarding/login saat /auth/me lambat.
+    final deadline = started.add(const Duration(seconds: 20));
+    while (app.isLoading && mounted && DateTime.now().isBefore(deadline)) {
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+    if (!mounted) return;
+    // Logo animasi (1200ms) tetap tampil walau init sangat cepat.
+    final elapsed = DateTime.now().difference(started);
+    if (elapsed < minShown) {
+      await Future.delayed(minShown - elapsed);
+    }
     if (!mounted) return;
     final prefs = await SharedPreferences.getInstance();
     final seenOnboarding = prefs.getBool('onboarding_seen') ?? false;

@@ -5,13 +5,16 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_osm_plugin/flutter_osm_plugin.dart';
 import '../../models/category.dart';
-import '../../models/listing.dart';
 import '../../models/store.dart';
 import '../../models/dashboard.dart';
+import '../../core/constants.dart';
+import '../../core/text_utils.dart';
 import '../../services/api_compat.dart';
+import '../../services/dio_client.dart';
 import '../../providers/app_state.dart';
 import 'package:provider/provider.dart';
 import '../common/location_picker_screen.dart';
+import '../../widgets/error_view.dart';
 
 class CreateStoreScreen extends StatefulWidget { const CreateStoreScreen({super.key}); @override State<CreateStoreScreen> createState() => _CreateStoreScreenState(); }
 
@@ -150,7 +153,7 @@ class _CreateStoreScreenState extends State<CreateStoreScreen> {
       }, photo: _photo);
       if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Toko berhasil dibuka! Menunggu verifikasi admin.'))); Navigator.pop(context, true); }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(DioClient.friendly(e))));
     }
     if (mounted) setState(() => _loading = false);
   }
@@ -422,10 +425,10 @@ class _CreateStoreScreenState extends State<CreateStoreScreen> {
 
 class StoreDashboardScreen extends StatefulWidget { final String storeId; final Store? store; const StoreDashboardScreen({super.key, this.storeId = '', this.store}); @override State<StoreDashboardScreen> createState() => _StoreDashboardScreenState(); }
 class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
-  final _api = ApiProvider(); StoreDashboard? _dash; Store? _store; bool _loading = true;
+  final _api = ApiProvider(); StoreDashboard? _dash; Store? _store; bool _loading = true; String? _error;
   @override void initState() { super.initState(); _load(); }
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = null; });
     try {
       final sid = widget.store?.id ?? widget.storeId;
       // Bila hanya storeId yang diteruskan (mis. dari Profil), ambil objek
@@ -435,14 +438,11 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
       final d = await _api.getStoreDashboard(sid);
       if (mounted) setState(() { _dash = d; _store = s; _loading = false; });
     }
-    catch (_) { if (mounted) setState(() { _store = widget.store; _loading = false; }); }
-  }
-  Future<void> _deleteListing(Listing l) async {
-    final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(title: const Text('Hapus Listing?'), content: Text('Hapus "${l.title}"?'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')), ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('Hapus'))]));
-    if (ok == true) { await _api.deleteListing(l.id); _load(); }
+    catch (e) { if (mounted) setState(() { _error = DioClient.friendly(e); _loading = false; }); }
   }
   @override Widget build(BuildContext ctx) {
     if (_loading) return Scaffold(appBar: AppBar(), body: const Center(child: CircularProgressIndicator()));
+    if (_error != null) return Scaffold(appBar: AppBar(), body: ErrorView(message: _error!, onRetry: _load));
     final d = _dash; final t = Theme.of(ctx); final name = _store?.name ?? 'Toko'; final sid = _store?.id ?? widget.storeId;
     final isOwner = _store?.ownerId == context.read<AppState>().user?.id;
     // Hanya toko yang SUDAH diverifikasi admin yang boleh pasang listing.
@@ -452,7 +452,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
       floatingActionButton: canAdd ? FloatingActionButton.extended(onPressed: () => ctx.push('/create-listing', extra: _store).then((_) => _load()), icon: const Icon(Icons.add), label: const Text('Pasang Listing'), backgroundColor: t.colorScheme.primary) : null,
       body: ListView(padding: const EdgeInsets.all(16), children: [
         Card(child: Padding(padding: const EdgeInsets.all(16), child: Row(children: [
-          CircleAvatar(radius: 30, backgroundColor: Colors.green.shade50, child: Text(name.substring(0, 2).toUpperCase(), style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.bold))),
+          CircleAvatar(radius: 30, backgroundColor: Colors.green.shade50, child: Text(avatarInitials(name), style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.bold))),
           const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), if (_store?.isVerified == true) const Icon(Icons.verified, size: 18, color: Colors.green)]),
             GestureDetector(onTap: () => ctx.push('/store/$sid/reviews', extra: name), child: Text('⭐ ${d?.avgRating.toStringAsFixed(1) ?? "0"} · ${d?.totalReviews ?? 0} ulasan  ›', style: TextStyle(fontSize: 13, color: t.colorScheme.primary))),
@@ -462,7 +462,7 @@ class _StoreDashboardScreenState extends State<StoreDashboardScreen> {
           const SizedBox(height: 16),
           Row(children: [_stat('Listing', '${d.totalListings}', Icons.inventory, t), _stat('Pesanan', '${d.totalOrders}', Icons.receipt, t), _stat('Menunggu', '${d.pendingOrders}', Icons.hourglass_empty, t)]),
           const SizedBox(height: 10),
-          Row(children: [_stat('Omzet', 'Rp ${d.totalRevenue.toStringAsFixed(0)}', Icons.attach_money, t), _stat('Bln Ini', '${d.ordersThisMonth} psn', Icons.trending_up, t)]),
+          Row(children: [_stat('Omzet', AppConstants.formatRupiah(d.totalRevenue), Icons.attach_money, t), _stat('Bln Ini', '${d.ordersThisMonth} psn', Icons.trending_up, t)]),
         ],
         // Status toko + tombol pasang listing hanya bila terverifikasi.
         if (isOwner && !(_store?.isVerified == true)) ...[

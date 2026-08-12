@@ -23,38 +23,41 @@ use App\Models\Order;
 final class OrderStateMachine
 {
     /**
-     * Transisi yang diizinkan: status asal => daftar status tujuan.
+     * Transisi yang diizinkan untuk PENJUAL: status asal => daftar status tujuan.
      *
      * @var array<string, array<int, OrderStatus>>
      */
-    private const TRANSITIONS = [
-        // Penjual menerima -> diproses; menolak, atau pembeli membatalkan.
+    private const SELLER_TRANSITIONS = [
         'menunggu_konfirmasi' => [OrderStatus::Diproses, OrderStatus::Dibatalkan, OrderStatus::Dispute],
-
-        // Sudah dikerjakan. Pembeli TIDAK bisa lagi membatalkan sepihak
-        // (PRD §5.4.1), tetapi pembatalan oleh penjual masih mungkin,
-        // mis. stok ternyata habis.
         'diproses' => [OrderStatus::Dikirim, OrderStatus::Dibatalkan, OrderStatus::Dispute],
-
-        // Barang di jalan / siap diambil / sedang disewa.
-        'dikirim' => [OrderStatus::Selesai, OrderStatus::Dispute],
-
-        // Status akhir — tidak ada jalan keluar.
+        'dikirim' => [OrderStatus::Dispute],
         'selesai'    => [],
         'dibatalkan' => [],
-
-        // Dispute membeku sampai admin memutuskan (API §9). Hasilnya hanya
-        // dua: transaksi diteruskan sebagai selesai, atau dibatalkan.
         'dispute' => [OrderStatus::Selesai, OrderStatus::Dibatalkan],
     ];
 
+    /**
+     * Transisi yang diizinkan untuk PEMBELI: status asal => daftar status tujuan.
+     *
+     * @var array<string, array<int, OrderStatus>>
+     */
+    private const BUYER_TRANSITIONS = [
+        'menunggu_konfirmasi' => [OrderStatus::Dibatalkan, OrderStatus::Dispute],
+        'diproses' => [OrderStatus::Dispute],
+        'dikirim' => [OrderStatus::Selesai, OrderStatus::Dispute],
+        'selesai'    => [],
+        'dibatalkan' => [],
+        'dispute' => [],
+    ];
+
     /** @return array<int, OrderStatus> */
-    public function allowedFrom(OrderStatus $from): array
+    public function allowedFrom(OrderStatus $from, bool $isSeller): array
     {
-        return self::TRANSITIONS[$from->value] ?? [];
+        $transitions = $isSeller ? self::SELLER_TRANSITIONS : self::BUYER_TRANSITIONS;
+        return $transitions[$from->value] ?? [];
     }
 
-    public function canTransition(OrderStatus $from, OrderStatus $to): bool
+    public function canTransition(OrderStatus $from, OrderStatus $to, bool $isSeller): bool
     {
         // Menyetel status ke nilainya sendiri bukan transisi, dan bukan error:
         // `save()` pada model yang statusnya tidak berubah harus tetap lolos.
@@ -62,16 +65,16 @@ final class OrderStateMachine
             return true;
         }
 
-        return in_array($to, $this->allowedFrom($from), true);
+        return in_array($to, $this->allowedFrom($from, $isSeller), true);
     }
 
     /**
      * @throws InvalidOrderTransitionException
      */
-    public function assertCanTransition(OrderStatus $from, OrderStatus $to): void
+    public function assertCanTransition(OrderStatus $from, OrderStatus $to, bool $isSeller): void
     {
-        if (! $this->canTransition($from, $to)) {
-            throw InvalidOrderTransitionException::between($from, $to, $this->allowedFrom($from));
+        if (! $this->canTransition($from, $to, $isSeller)) {
+            throw InvalidOrderTransitionException::between($from, $to, $this->allowedFrom($from, $isSeller));
         }
     }
 
@@ -82,11 +85,12 @@ final class OrderStateMachine
      * supaya tidak ada jalur yang lupa mengisinya — kolom itu dipakai jendela
      * ulasan 7 hari (PRD §5.4.1) dan audit pembatalan.
      */
-    public function transition(Order $order, OrderStatus $to, ?string $reason = null, ?string $byUserId = null): Order
+    public function transition(Order $order, OrderStatus $to, ?string $reason = null, ?string $byUserId = null, bool $isAdmin = false): Order
     {
         $from = $order->status;
+        $isSeller = $isAdmin || ($byUserId !== null && $order->store?->user_id === $byUserId);
 
-        $this->assertCanTransition($from, $to);
+        $this->assertCanTransition($from, $to, $isSeller);
 
         if ($from === $to) {
             return $order;
@@ -110,6 +114,6 @@ final class OrderStateMachine
     /** Status akhir: dipakai UI untuk menyembunyikan tombol aksi. */
     public function isFinal(OrderStatus $status): bool
     {
-        return $this->allowedFrom($status) === [];
+        return $this->allowedFrom($status, true) === [] && $this->allowedFrom($status, false) === [];
     }
 }

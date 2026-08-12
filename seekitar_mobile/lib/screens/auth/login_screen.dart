@@ -15,8 +15,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   bool _otpSent = false, _loading = false;
   bool _isRegister = false;
   String? _error;
-  String? _debugOtp;
   int _countdown = 0;
+  bool _countdownActive = false;
   /// Nomor HP yang SUDAH dinormalisasi (62xxx) — dipakai saat verifikasi OTP
   /// agar selalu sama dengan nomor yang menerima OTP, meski field diedit.
   String? _normalizedPhone;
@@ -39,8 +39,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       _otpSent = false;
       _otpCtrl.clear();
       _error = null;
-      _debugOtp = null;
       _countdown = 0;
+      _countdownActive = false;
       _normalizedPhone = null;
     });
   }
@@ -59,13 +59,25 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
   bool _isValidPhone(String phone) => RegExp(r'^62[0-9]{8,13}$').hasMatch(phone);
 
-  void _startCountdown() { _countdown = 60; Future.doWhile(() async { await Future.delayed(const Duration(seconds: 1)); if (!mounted) return false; setState(() => _countdown--); return _countdown > 0; }); }
+  void _startCountdown() {
+    // Matikan loop lama dulu (jika masih jalan saat kirim ulang) supaya
+    // hitungan mundur tidak berjalan ganda → berakhir 2x lebih cepat.
+    _countdownActive = false;
+    _countdown = 60;
+    _countdownActive = true;
+    Future.doWhile(() async {
+      await Future.delayed(const Duration(seconds: 1));
+      if (!mounted || !_countdownActive) return false;
+      setState(() => _countdown--);
+      return _countdown > 0;
+    });
+  }
 
   Future<void> _sendOtp() async {
     final p = normalizePhone(_phoneCtrl.text);
     if (!_isValidPhone(p)) { setState(() => _error = 'Nomor WhatsApp tidak valid. Contoh: 081234567890'); return; }
     if (_isRegister && _nameCtrl.text.trim().isEmpty) { setState(() => _error = 'Masukkan nama lengkapmu dulu'); return; }
-    setState(() { _loading = true; _error = null; _debugOtp = null; });
+    setState(() { _loading = true; _error = null; });
     try {
       final res = await context.read<AppState>().requestOtp(p);
       if (mounted) {
@@ -85,11 +97,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             return;
           }
         }
-        final debugOtp = res['debug_otp']?.toString();
         setState(() {
           _otpSent = true;
           _normalizedPhone = p;   // kunci verifikasi = nomor yang menerima OTP
-          _debugOtp = debugOtp;
         });
         _startCountdown();
       }
@@ -124,21 +134,24 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         }
         return 'Terlalu banyak percobaan. Tunggu beberapa saat lalu coba lagi.';
       }
-      return DioClient().getMessage(e);
+      return DioClient.friendly(e);
     }
-    return e.toString().replaceAll('Exception: ', '');
+    return 'Terjadi kesalahan. Coba lagi nanti.';
   }
 
   Future<void> _verifyOtp() async {
     final o = _otpCtrl.text.trim();
     if (o.length < 4) { setState(() => _error = 'Masukkan kode OTP'); return; }
+    // Tangkap state & nilai field SEBELUM await — supaya tidak memakai
+    // BuildContext/controller yang mungkin sudah mati saat request selesai.
+    final app = context.read<AppState>();
+    final phone = _normalizedPhone ?? normalizePhone(_phoneCtrl.text);
+    final name = _isRegister ? _nameCtrl.text.trim() : null;
     setState(() { _loading = true; _error = null; });
     try {
-      // Pakai nomor ternormalisasi yang sama dengan saat OTP dikirim,
-      // bukan membaca ulang field (yang bisa saja sudah diedit user).
-      await context.read<AppState>().verifyOtp(_normalizedPhone ?? normalizePhone(_phoneCtrl.text), o);
-      if (_isRegister && _nameCtrl.text.trim().isNotEmpty) {
-        await context.read<AppState>().updateProfile(name: _nameCtrl.text.trim());
+      await app.verifyOtp(phone, o);
+      if (name != null && name.isNotEmpty) {
+        await app.updateProfile(name: name);
       }
       if (mounted) context.go('/home');
     }
@@ -254,7 +267,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         ),
                         const SizedBox(height: 8),
                         Align(alignment: Alignment.centerRight, child: TextButton(
-                          onPressed: _countdown > 0 ? null : () { setState(() => _otpSent = false); _otpCtrl.clear(); _sendOtp(); },
+                          onPressed: _countdown > 0 ? null : () { _otpCtrl.clear(); _sendOtp(); },
                           child: Text(_countdown > 0 ? 'Kirim ulang dalam ${_countdown}s' : 'Kirim ulang OTP', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _countdown > 0 ? Colors.grey : t.colorScheme.primary)),
                         )),
                       ],

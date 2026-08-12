@@ -44,3 +44,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 /android/build/
+
+# Release signing — rahasia, JANGAN pernah di-commit
+/android/key.properties
+/android/app/upload-keystore.jks
+*.jks
+*.keystore

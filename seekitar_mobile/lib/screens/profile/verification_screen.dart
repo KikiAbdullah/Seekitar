@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../models/user.dart';
 import '../../providers/app_state.dart';
 import '../../services/api_compat.dart';
+import '../../services/dio_client.dart';
 import '../common/location_picker_screen.dart';
 
 class VerificationScreen extends StatefulWidget {
@@ -167,7 +168,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
         });
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal membuka peta: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal membuka peta: ${DioClient.friendly(e)}')));
     } finally {
       if (mounted) setState(() => _gettingLocation = false);
     }
@@ -196,9 +197,9 @@ class _VerificationScreenState extends State<VerificationScreen> {
       } else if (mounted) {
         await context.read<AppState>().refreshUser();
       }
-      setState(() => _status = 'submitted');
+      if (mounted) setState(() => _status = 'submitted');
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Berkas terkirim! Ditinjau maksimal 1x24 jam.')));
-    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e'))); }
+    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: ${DioClient.friendly(e)}'))); }
     if (mounted) setState(() => _loading = false);
   }
 

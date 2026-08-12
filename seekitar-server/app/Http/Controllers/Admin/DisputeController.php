@@ -115,7 +115,7 @@ class DisputeController extends Controller
             $order = $dispute->order()->firstOrFail();
             $this->states->transition($order, OrderStatus::from($data['resolution']),
                 $data['resolution'] === 'dibatalkan' ? $data['resolution_note'] : null,
-                $request->user()->id);
+                $request->user()->id, true);
             $order->save();
         });
 

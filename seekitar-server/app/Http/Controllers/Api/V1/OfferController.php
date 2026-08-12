@@ -17,8 +17,10 @@ use App\Models\Offer;
 use App\Models\Order;
 use App\Models\Store;
 use App\Services\SettingService;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 class OfferController extends Controller
 {
@@ -33,28 +35,43 @@ class OfferController extends Controller
 
         $this->authorize('createFor', [Offer::class, $store, $customerRequest]);
 
-        // Satu toko satu penawaran per permintaan — kalau tidak, penyedia
-        // bisa membanjiri daftar dan menenggelamkan pesaing.
-        $exists = $customerRequest->offers()
-            ->where('store_id', $store->id)
-            ->whereIn('status', [OfferStatus::Pending, OfferStatus::Accepted])
-            ->exists();
+        try {
+            $offer = DB::transaction(function () use ($request, $customerRequest, $store): Offer {
+                // Lock the request row to prevent race condition on duplicate offer check
+                $lockedRequest = CustomerRequest::whereKey($customerRequest->id)->lockForUpdate()->firstOrFail();
 
-        if ($exists) {
-            return $this->fail('Toko ini sudah mengirim penawaran untuk permintaan tersebut.', 422);
+                // Satu toko satu penawaran per permintaan — kalau tidak, penyedia
+                // bisa membanjiri daftar dan menenggelamkan pesaing.
+                $exists = $lockedRequest->offers()
+                    ->where('store_id', $store->id)
+                    ->whereIn('status', [OfferStatus::Pending, OfferStatus::Accepted])
+                    ->exists();
+
+                if ($exists) {
+                    abort(409, 'Toko ini sudah mengirim penawaran untuk permintaan tersebut.');
+                }
+
+                $offer = new Offer($request->safe()->except('store_id'));
+                $offer->request_id = $lockedRequest->id;
+                $offer->store_id   = $store->id;
+                $offer->status     = OfferStatus::Pending;
+
+                // Penawaran tidak boleh hidup lebih lama dari permintaannya —
+                // penawaran yang masih "aktif" pada permintaan mati membingungkan.
+                $offerExpiry = now()->addHours($this->settings->int('offer_expiry_hours', 48));
+                $offer->expires_at = $offerExpiry->min($lockedRequest->expires_at);
+
+                $offer->save();
+
+                return $offer;
+            });
+        } catch (QueryException $e) {
+            // Unique constraint violation (23000) — race condition edge case
+            if ($e->getCode() === '23000') {
+                throw new ConflictHttpException('Toko ini sudah mengirim penawaran untuk permintaan tersebut.');
+            }
+            throw $e;
         }
-
-        $offer = new Offer($request->safe()->except('store_id'));
-        $offer->request_id = $customerRequest->id;
-        $offer->store_id   = $store->id;
-        $offer->status     = OfferStatus::Pending;
-
-        // Penawaran tidak boleh hidup lebih lama dari permintaannya —
-        // penawaran yang masih "aktif" pada permintaan mati membingungkan.
-        $offerExpiry = now()->addHours($this->settings->int('offer_expiry_hours', 48));
-        $offer->expires_at = $offerExpiry->min($customerRequest->expires_at);
-
-        $offer->save();
 
         return $this->created(['offer' => new OfferResource($offer->load('store'))]);
     }

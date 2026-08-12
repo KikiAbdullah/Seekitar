@@ -71,13 +71,10 @@ class AuthController extends Controller
         // perilaku akun-otomatis-saat-verifikasi tidak berubah.
         $registered = User::withTrashed()->where('phone', $phone)->exists();
 
-        $payload = ['is_registered' => $registered];
-        $debug   = $this->debugOtpPayload($code);
-        if ($debug !== null) {
-            $payload = array_merge($payload, $debug);
-        }
-
-        return $this->ok($payload, 'OTP sedang dikirim ke WhatsApp Anda.');
+        return $this->ok(
+            ['is_registered' => $registered],
+            'OTP sedang dikirim ke WhatsApp Anda.',
+        );
     }
 
     /**
@@ -162,7 +159,7 @@ class AuthController extends Controller
             return $this->fail('Gagal mengirim OTP. Coba lagi sesaat lagi.', 503);
         }
 
-        return $this->ok($this->debugOtpPayload($code), 'OTP telah dikirim ke nomor baru Anda.');
+        return $this->ok(null, 'OTP telah dikirim ke nomor baru Anda.');
     }
 
     /**
@@ -306,32 +303,15 @@ class AuthController extends Controller
         return $this->ok(null, 'Akun Anda telah dianonimkan sesuai permintaan.');
     }
 
-    private function debugOtpPayload(string $code): ?array
-    {
-        if (app()->isProduction()) {
-            return null;
-        }
-
-        return [
-            'debug_otp' => $code,
-            'otp_delivery' => strtolower((string) env('OTP_DELIVERY', 'log')),
-        ];
-    }
-
     /**
-     * Verifikasi OTP, dengan pintu darurat development.
+     * Verifikasi OTP terhadap hash yang tersimpan (OtpService).
      *
-     * Di luar produksi (dummy mode, tanpa gateway WhatsApp sungguhan) kode
-     * apa pun yang lolos validasi `digits:6` diterima — supaya integrasi
-     * mobile ↔ Laravel bisa diuji end-to-end. Di produksi tetap diverifikasi
-     * ketat terhadap hash yang dikirim gateway.
+     * Kode yang salah, pernah dipakai, atau kedaluwarsa → false. Tidak ada
+     * pintu darurat development: OTP adalah satu-satunya faktor autentikasi,
+     * jadi kode 6 digit sembarang TIDAK boleh diterima di lingkungan mana pun.
      */
     private function otpAccepted(string $phone, string $code): bool
     {
-        if ($this->otp->verify($phone, $code)) {
-            return true;
-        }
-
-        return ! app()->isProduction();
+        return $this->otp->verify($phone, $code);
     }
 }

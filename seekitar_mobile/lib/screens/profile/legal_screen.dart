@@ -1,5 +1,6 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/api_compat.dart';
 
@@ -16,8 +17,7 @@ class _HelpLegalScreenState extends State<HelpLegalScreen> {
 
   Future<void> _load() async {
     try {
-      final c = await _api.config();
-      final base = c['regency']?.toString() ?? '';
+      await _api.config();
       // Derive web URL from play store or hardcoded
       _webBase = 'https://seekitar.id';
       if (mounted) setState(() {});
@@ -67,6 +67,6 @@ class _HelpLegalScreenState extends State<HelpLegalScreen> {
     title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
     subtitle: Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
     trailing: const Icon(Icons.open_in_new, size: 16, color: Colors.grey),
-    onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+    onTap: () { try { unawaited(launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication)); } catch (_) {} },
   );
 }

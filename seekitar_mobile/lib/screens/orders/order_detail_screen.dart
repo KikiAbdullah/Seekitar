@@ -5,10 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants.dart';
+import '../../core/text_utils.dart';
 import '../../core/theme.dart';
 import '../../models/order.dart';
 import '../../providers/app_state.dart';
 import '../../services/api_compat.dart';
+import '../../services/dio_client.dart';
+import '../../widgets/error_view.dart';
 
 /// Detail pesanan — titik tengah alur transaksi.
 ///
@@ -27,17 +30,18 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   Order? _order;
   bool _loading = false;
   bool _processing = false;
+  String? _error;
 
   @override void initState() { super.initState(); _order = widget.order; _load(); }
 
   Order? get o => _order;
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = null; });
     try {
       final fresh = await _api.getOrder(widget.orderId);
       if (mounted) setState(() { _order = fresh; _loading = false; });
-    } catch (_) { if (mounted) setState(() => _loading = false); }
+    } catch (e) { if (mounted) setState(() { _error = DioClient.friendly(e); _loading = false; }); }
   }
 
   Future<void> _apply(Future Function() fn, {String? done}) async {
@@ -47,12 +51,29 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       if (done != null && mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(done)));
       if (mounted) await _load();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: ${DioClient.friendly(e)}')));
     }
     if (mounted) setState(() => _processing = false);
   }
 
   Future<void> _transition(String status, {String? reason}) => _apply(() => _api.updateOrderStatus(widget.orderId, status, reason: reason));
+
+  /// Konfirmasi SEBELUM transisi status yang mengunci/selesai — sekali
+  /// diproses, tidak bisa dibatalkan.
+  Future<void> _confirmTransition(String status, String title, String message) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Ya')),
+        ],
+      ),
+    );
+    if (ok == true && mounted) await _transition(status);
+  }
 
   Future<void> _cancel() async {
     final c = TextEditingController();
@@ -116,8 +137,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     setState(() => _processing = true);
     try {
       final conv = await _api.createConversation(participantId, orderId: order.id);
-      if (mounted) ctx.push('/chat/${conv.id}', extra: conv);
-    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e'))); }
+      if (mounted) await ctx.push('/chat/${conv.id}', extra: conv);
+    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: ${DioClient.friendly(e)}'))); }
     if (mounted) setState(() => _processing = false);
   }
 
@@ -127,7 +148,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     final t = Theme.of(ctx);
     final order = o;
     if (order == null) {
-      return Scaffold(appBar: AppBar(title: const Text('Detail Pesanan')), body: Center(child: _loading ? const CircularProgressIndicator() : const Text('Pesanan tidak ditemukan')));
+      return Scaffold(appBar: AppBar(title: const Text('Detail Pesanan')), body: Center(child: _loading ? const CircularProgressIndicator() : _error != null ? ErrorView(message: _error!, onRetry: _load) : const Text('Pesanan tidak ditemukan')));
     }
     final isBuyer = _isBuyer;
     final color = AppConstants.orderStatusColor(order.status);
@@ -214,7 +235,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   Widget _storeCard(ThemeData t, Order order, bool isBuyer) => Card(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), child: ListTile(
     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-    leading: CircleAvatar(radius: 24, backgroundColor: Colors.green.shade50, child: Text((order.storeName ?? 'T').substring(0, 1).toUpperCase(), style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.w800, fontSize: 16))),
+    leading: CircleAvatar(radius: 24, backgroundColor: Colors.green.shade50, child: Text(avatarInitials(order.storeName, maxChars: 1), style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.w800, fontSize: 16))),
     title: Text(order.storeName ?? 'Toko', style: const TextStyle(fontWeight: FontWeight.w700)),
     subtitle: Text(isBuyer ? 'Penjual' : 'Pembeli: ${o?.buyerName ?? '-'}', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
     trailing: OutlinedButton.icon(onPressed: _processing ? null : _chat, icon: const Icon(Icons.chat_bubble_outline, size: 16), label: const Text('Chat')),
@@ -271,7 +292,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         acts.add(OutlinedButton.icon(onPressed: _processing ? null : _cancel, icon: const Icon(Icons.close, size: 20), label: const Text('Batalkan Pesanan'), style: OutlinedButton.styleFrom(foregroundColor: Colors.red, minimumSize: const Size(double.infinity, 48))));
       }
       if (order.status == 'dikirim') {
-        acts.add(ElevatedButton.icon(onPressed: _processing ? null : () => _transition('selesai'), icon: const Icon(Icons.task_alt, size: 20), label: const Text('Konfirmasi Diterima'), style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 48))));
+        acts.add(ElevatedButton.icon(onPressed: _processing ? null : () => _confirmTransition('selesai', 'Konfirmasi Diterima?', 'Pastikan barang sudah sesuai sebelum mengonfirmasi. Tindakan ini tidak bisa dibatalkan.'), icon: const Icon(Icons.task_alt, size: 20), label: const Text('Konfirmasi Diterima'), style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 48))));
       }
     } else {
       if (order.status == 'menunggu_konfirmasi') {
@@ -279,11 +300,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         acts.add(const SizedBox(height: 8));
         acts.add(OutlinedButton.icon(onPressed: _processing ? null : _cancel, icon: const Icon(Icons.close, size: 20), label: const Text('Batalkan'), style: OutlinedButton.styleFrom(foregroundColor: Colors.red, minimumSize: const Size(double.infinity, 48))));
       } else if (order.status == 'diproses') {
-        acts.add(ElevatedButton.icon(onPressed: _processing ? null : () => _transition('dikirim'), icon: const Icon(Icons.local_shipping_outlined, size: 20), label: Text(order.isDelivery ? 'Tandai Dikirim' : 'Tandai Siap Diambil'), style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, minimumSize: const Size(double.infinity, 48))));
+        acts.add(ElevatedButton.icon(onPressed: _processing ? null : () => _confirmTransition('dikirim', order.isDelivery ? 'Tandai Dikirim?' : 'Tandai Siap Diambil?', 'Konfirmasi bahwa pesanan sudah dikirim/disiapkan untuk diambil.'), icon: const Icon(Icons.local_shipping_outlined, size: 20), label: Text(order.isDelivery ? 'Tandai Dikirim' : 'Tandai Siap Diambil'), style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, minimumSize: const Size(double.infinity, 48))));
         acts.add(const SizedBox(height: 8));
         acts.add(OutlinedButton.icon(onPressed: _processing ? null : _cancel, icon: const Icon(Icons.close, size: 20), label: const Text('Batalkan'), style: OutlinedButton.styleFrom(foregroundColor: Colors.red, minimumSize: const Size(double.infinity, 48))));
       } else if (order.status == 'dikirim') {
-        acts.add(ElevatedButton.icon(onPressed: _processing ? null : () => _transition('selesai'), icon: const Icon(Icons.task_alt, size: 20), label: const Text('Tandai Selesai'), style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 48))));
+        acts.add(ElevatedButton.icon(onPressed: _processing ? null : () => _confirmTransition('selesai', 'Tandai Selesai?', 'Konfirmasi bahwa pesanan sudah selesai. Tindakan ini tidak bisa dibatalkan.'), icon: const Icon(Icons.task_alt, size: 20), label: const Text('Tandai Selesai'), style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 48))));
       }
     }
     if (order.canReview) {

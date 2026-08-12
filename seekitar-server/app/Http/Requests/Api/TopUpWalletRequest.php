@@ -14,7 +14,8 @@ class TopUpWalletRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'amount' => ['required', 'numeric', 'min:1000'],
+            'amount' => ['required', 'numeric', 'min:1000', 'max:10000000'],
+            'method' => ['sometimes', 'string', 'in:transfer'],
         ];
     }
 }

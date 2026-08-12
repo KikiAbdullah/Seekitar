@@ -1,6 +1,7 @@
+import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +10,8 @@ import '../../core/theme.dart';
 import '../../models/customer_request.dart';
 import '../../models/listing.dart';
 import '../../services/api_compat.dart';
+import '../../services/dio_client.dart';
+import '../../services/location_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,10 +25,6 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _loading = true;
   String? _error;
   String _regency = '';
-
-  /// Fallback saat GPS tidak tersedia: pusat Kabupaten Pasuruan.
-  static const double _fallbackLat = -7.5;
-  static const double _fallbackLng = 112.0;
 
   /// Gambar hero beranda — disalin dari server `public/img/web/hero-baru.jpg`
   /// ke aset aplikasi (`assets/images/hero.jpg`) agar tampil tanpa jaringan.
@@ -47,7 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _loading = false;
       });
       // Muat nama kabupaten dari /config — gagal tidak menggagalkan feed.
-      _loadConfig();
+      unawaited(_loadConfig());
     } catch (e) {
       if (!mounted) return;
       setState(() { _error = _friendlyError(e); _loading = false; });
@@ -61,45 +60,27 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) {}
   }
 
-  /// Pesan error yang bisa dibaca pengguna; detail teknis hanya di debug.
+  /// Pesan error yang bisa dibaca pengguna — dipetakan dari tipe DioException,
+  /// bukan parsing teks exception (rapuh & case-sensitive).
   String _friendlyError(Object e) {
-    if (kDebugMode) return e.toString();
-    final s = e.toString();
-    if (s.contains('401')) return 'Sesi berakhir. Silakan masuk kembali.';
-    if (s.contains('Connection') || s.contains('SocketException') || s.contains('Timeout')) {
-      return 'Tidak dapat terhubung ke server. Periksa koneksi internet.';
+    if (e is DioException) {
+      if (e.response?.statusCode == 401) return 'Sesi berakhir. Silakan masuk kembali.';
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.connectionError) {
+        return 'Tidak dapat terhubung ke server. Periksa koneksi internet.';
+      }
+      return DioClient.friendly(e);
     }
     return 'Terjadi kesalahan saat memuat data.';
   }
 
   Future<Position> _determinePosition() async {
-    try {
-      if (!await Geolocator.isLocationServiceEnabled()) return _fallbackPosition();
-      var p = await Geolocator.checkPermission();
-      if (p == LocationPermission.denied) p = await Geolocator.requestPermission();
-      if (p == LocationPermission.denied || p == LocationPermission.deniedForever) {
-        return _fallbackPosition();
-      }
-      // Timeout agar layar tidak menggantung saat GPS lambat/indoor.
-      return await Geolocator.getCurrentPosition()
-          .timeout(const Duration(seconds: 15));
-    } catch (_) {
-      return _fallbackPosition();
-    }
+    // Timeout & penanganan izin terpusat; fallback hanya untuk tampilan
+    // (pencarian "terdekat"), bukan untuk menyimpan data.
+    final pos = await locate();
+    return pos ?? defaultPosition();
   }
-
-  Position _fallbackPosition() => Position(
-        latitude: _fallbackLat,
-        longitude: _fallbackLng,
-        timestamp: DateTime.now(),
-        accuracy: 0,
-        altitude: 0,
-        altitudeAccuracy: 0,
-        heading: 0,
-        headingAccuracy: 0,
-        speed: 0,
-        speedAccuracy: 0,
-      );
 
   @override Widget build(BuildContext context) {
     final t = Theme.of(context);

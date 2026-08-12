@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
@@ -9,12 +10,19 @@ import 'providers/app_state.dart';
 import 'routing/app_router.dart';
 import 'services/fcm_service.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   _setupErrorHandling();
+  // Firebase (untuk FCM). Dijaga agar app tetap jalan walau google-services.json
+  // belum terpasang — push notification aktif otomatis setelah file disediakan.
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    logError('Firebase init gagal', e);
+  }
   final app = AppState();
-  app.init();
-  FcmService().init().catchError((_) {});
+  unawaited(app.init());
+  unawaited(FcmService().init());
   runApp(SeekitarApp(app: app));
 }
 

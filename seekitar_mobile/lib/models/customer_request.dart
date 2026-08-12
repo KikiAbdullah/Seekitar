@@ -1,3 +1,5 @@
+import '../core/text_utils.dart';
+
 class CustomerRequest {
   final String id, title;
   final String? description;
@@ -36,10 +38,11 @@ class CustomerRequest {
   /// (`displayName()`), jadi dihitung di klien bila `initials` tidak ada.
   String get initials {
     if (userInitials != null && userInitials!.isNotEmpty) return userInitials!;
-    if (userName == null || userName!.isEmpty) return '?';
-    final parts = userName!.trim().split(RegExp(r'\s+'));
-    if (parts.length == 1) return parts.first[0].toUpperCase();
-    return (parts.first[0] + parts.last[0]).toUpperCase();
+    final name = userName?.trim();
+    if (name == null || name.isEmpty) return '?';
+    final parts = name.split(RegExp(r'\s+'));
+    if (parts.length == 1) return firstChars(parts.first, 1).toUpperCase();
+    return (firstChars(parts.first, 1) + firstChars(parts.last, 1)).toUpperCase();
   }
 
   bool get isExpired => expiresAt != null && expiresAt!.isBefore(DateTime.now());

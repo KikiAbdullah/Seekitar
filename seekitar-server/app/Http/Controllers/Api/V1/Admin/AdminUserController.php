@@ -83,9 +83,10 @@ class AdminUserController extends Controller
             }
             $user->save();
 
-            if ($blocked) {
-                $user->tokens()->delete();
-            }
+            // JWT bersifat stateless (tak ada tabel token yang bisa dihapus).
+            // Akses API diputus seketika oleh middleware `user.active` yang
+            // memeriksa isBlocked() di tiap request — begitu status Diblokir,
+            // token yang sudah terbit pun langsung ditolak (423).
 
             // Cascade yang sama dengan panel web: kedudukan tokonya diseret
             // ke blocked beserta jejaknya, dan pulih saat blokir dicabut.

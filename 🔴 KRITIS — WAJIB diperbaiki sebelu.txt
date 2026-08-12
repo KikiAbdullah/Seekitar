@@ -1,0 +1,35 @@
+🔴 KRITIS — WAJIB diperbaiki sebelum rilis
+1. Wallet = "money minting" — WalletController.php:38-79: topup mengkredit saldo tanpa pembayaran/gateway; withdraw tidak cek saldo & tidak memotong (balance_after = balanceBefore). User bisa isi saldo sendiri lalu cairkan. → Wajib referensi pembayaran terverifikasi + lockForUpdate + potong saldo saat withdraw.
+2. Blokir user tidak mencabut JWT aktif — AdminUserController:87 hanya hapus token Sanctum; JWT stateless hidup 30 hari. User diblokir tetap bisa pakai API. → middleware auth:api cek isBlocked() per request.
+3. Bug blokir UUID→int — BlockController.php:83-86: array_map('intval', ...) mengubah semua UUID jadi 0 → data korup, unblock tak pernah cocok.
+4. Bug retensi data — DataRetentionCommand.php:97: update kolom properties yang tidak ada (tabel punya old_values/new_values) → job harian privacy:retention selalu gagal.
+5. APP_DEBUG=true, APP_ENV=local, APP_URL=http://192.168.0.101 di .env — stack trace + SQL bocor bila dipakai produksi.
+6. QUEUE_CONNECTION=sync — SendOtpJob jalan inline, retry/backoff tak berlaku, request terblokir.
+7. Tidak ada terminasi HTTPS — tanpa trustProxies, forceScheme, HSTS; SESSION_SECURE_COOKIE tidak diset.
+8. Token gateway WhatsApp lemah + PM2 mematikan auth — ecosystem.config.js:27 set BAILEYS_TOKEN: ''; dotenv tak menimpa → auth mati total saat start PM2.
+🟠 TINGGI
+ 9. Upload: ekstensi dari nama klien ($file->extension()) → file {uuid}.php di disk publik → risiko RCE. Pakai guessExtension().
+10. 429 kehilangan Retry-After — custom render membuang header (bootstrap/app.php:133).
+11. 409 vs 422 menyimpang dari dokumen — duplikasi offer, transisi tak sah, ulasan ganda, dispute ganda → seharusnya 409.
+12. Offer kedaluwarsa → re-submit → unique violation → 500 (SQL bocor di non-prod).
+13. /kontak publik tanpa throttle; /status bocorkan detail DB/infra.
+14. N+1 chat — MessageResource lazy-load sender per pesan tanpa with('sender').
+15. Transisi status order tidak bedakan peran — pembeli bisa "Terima & Proses" (memotong penjual).
+16. CORS * + credentials — wajib set FRONTEND_URL.
+17. CACHE_STORE=database — rate limiter & OTP nulis ke MySQL tiap request.
+18. tmp/ cleanup terjadwal TIDAK ada (komentar UploadController bohong) → file menumpuk.
+19. Super-admin password default (config/seekitar.php fallback) bila .env tanpa SEEKITAR_SUPER_ADMIN_*.
+20. Kupon: race double-use + exception leak ke respons; topup/withdraw/orders tanpa idempotency.
+🟡 SEDANG
+21. Feed home/nearby/listing tidak di-cache (CacheService ada tapi 0 pemanggil).
+22. get()->take(500) memuat semua kandidat (bukan LIMIT SQL); radius request hitung ST_Distance_Sphere 2×.
+23. whereJsonContains(category_ids) full-scan per broadcast; listings.title tanpa index (search per keystroke).
+24. Gambar upload tanpa resize/kompresi server-side (5MB mentah).
+25. Scheduler tak berjalan (Laragon php artisan serve, tak ada cron/schedule:work).
+26. OTP ganti-nomor sinkron (blokir request); requestOtp sudah queue.
+27. Kontrak mobile mismatch: conversation unread_count vs has_unread, User location GeoJSON tak terbaca → isProfileComplete selalu false; meta pagination dibuang client (paging tak pernah jalan).
+28. No backup DB; logging single + debug (perlu daily + warning).
+29. .env.example kurang 4 key (OTP_DELIVERY, OTP_EMAIL_TO, BAILEYS_REDIS_URL, BAILEYS_CHANNEL_SEND).
+🟢 RENDAH & sudah baik
+- Sudah benar: envelope API seragam (24 controller), Policies anti-IDOR, escaping blade, kriptografi (OTP hash, NIK encrypted), rate limit OTP lengkap, pagination cap 50, eager loading mayoritas, indeks spasial + bbox, transaksi lockForUpdate (order/accept/coupon), disk privat KTP/bukti bayar, secrets tidak hardcoded, .gitignore benar.
+- Dependency: league/commonmark sudah saya update → 2.9.1, composer audit = 0 vuln (2 high + 1 medium sebelumnya).

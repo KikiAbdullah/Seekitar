@@ -6,6 +6,7 @@ import '../../core/theme.dart';
 import '../../models/listing.dart';
 import '../../providers/app_state.dart';
 import '../../services/api_compat.dart';
+import '../../services/dio_client.dart';
 
 /// Alur transaksi: konfirmasi pembelian → kirim ke POST /orders → lanjut ke
 /// detail pesanan. Data diambil langsung dari listing yang sedang dibuka.
@@ -45,6 +46,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Future<void> _submit() async {
+    // Anti double-submit: tombol sudah disable saat _submitting, tapi guard
+    // ini melindungi jalur lain (mis. submit ulang setelah timeout).
+    if (_submitting) return;
     // Proteksi lapisan kedua: hanya pengguna terverifikasi yang boleh beli.
     final u = context.read<AppState>().user;
     if (u == null || !u.isVerified) {
@@ -56,6 +60,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
     if (_delivery == 'delivery' && _addressCtrl.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Alamat pengiriman wajib diisi.')));
+      return;
+    }
+    // Validasi bisnis: stok habis / jumlah melebihi stok / harga belum ada
+    // TIDAK boleh lolos — mencegah pesanan Rp 0 atau stok minus.
+    if (l.listingType == 'product' && (l.stockQty ?? 0) <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Stok barang sedang habis.')));
+      return;
+    }
+    if (_qty > _maxQty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Jumlah melebihi stok tersedia.')));
+      return;
+    }
+    if (l.listingType != 'service' && (l.price == null || l.price! <= 0)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Harga barang belum tersedia.')));
       return;
     }
     setState(() => _submitting = true);
@@ -73,7 +91,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ctx.pushReplacement('/order-detail/${order.id}', extra: order);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal membuat pesanan: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal membuat pesanan: ${DioClient.friendly(e)}')));
         setState(() => _submitting = false);
       }
     }

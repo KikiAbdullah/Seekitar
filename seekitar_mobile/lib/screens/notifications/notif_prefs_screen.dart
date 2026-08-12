@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../models/notification.dart';
 import '../../services/api_compat.dart';
+import '../../services/dio_client.dart';
+import '../../widgets/error_view.dart';
 
 class NotifPrefsScreen extends StatefulWidget {
   const NotifPrefsScreen({super.key});
@@ -12,13 +14,14 @@ class _NotifPrefsScreenState extends State<NotifPrefsScreen> {
   List<NotificationPreference> _channels = [];
   bool _loading = true;
   bool _saving = false;
+  String? _error;
 
   @override void initState() { super.initState(); _load(); }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = null; });
     try { final c = await _api.getNotifPreferences(); if (mounted) setState(() { _channels = c; _loading = false; }); }
-    catch (_) { if (mounted) setState(() => _loading = false); }
+    catch (e) { if (mounted) setState(() { _error = DioClient.friendly(e); _loading = false; }); }
   }
 
   Future<void> _save() async {
@@ -26,13 +29,14 @@ class _NotifPrefsScreenState extends State<NotifPrefsScreen> {
     try {
       await _api.updateNotifPreferences(_channels.map((c) => {'key': c.key, 'enabled': c.enabled}).toList());
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Preferensi disimpan')));
-    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e'))); }
+    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: ${DioClient.friendly(e)}'))); }
     if (mounted) setState(() => _saving = false);
   }
 
   @override Widget build(BuildContext ctx) => Scaffold(
     appBar: AppBar(title: const Text('Notifikasi'), actions: [TextButton(onPressed: _saving ? null : _save, child: Text(_saving ? 'Menyimpan...' : 'Simpan'))]),
     body: _loading ? const Center(child: CircularProgressIndicator())
+      : _error != null ? ErrorView(message: _error!, onRetry: _load)
       : RefreshIndicator(onRefresh: _load, child: ListView(children: _channels.map((c) => SwitchListTile(
         title: Text(c.label, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15)),
         subtitle: Text(c.enabled ? 'Aktif' : 'Nonaktif', style: TextStyle(fontSize: 12, color: c.enabled ? Colors.green : Colors.grey)),

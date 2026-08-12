@@ -126,15 +126,19 @@ class OrderController extends Controller
         ]);
 
         $to = OrderStatus::from($data['status']);
+        $userId = $request->user()->id;
 
-        if (! $this->states->canTransition($order->status, $to)) {
+        if (! $this->states->canTransition($order->status, $to, $order->store?->user_id === $userId)) {
+            // Transisi status tidak sah — konflik bisnis (state machine), bukan
+            // validasi input. 409 Conflict supaya klien bisa bedakan dari
+            // input tidak valid (422).
             return $this->fail(
                 sprintf('Status tidak bisa diubah dari "%s" ke "%s".', $order->status->value, $to->value),
-                422,
+                409,
             );
         }
 
-        $this->states->transition($order, $to, $data['reason'] ?? null, $request->user()->id);
+        $this->states->transition($order, $to, $data['reason'] ?? null, $userId);
         $order->save();
 
         return $this->ok(['order' => new OrderResource($order->fresh())]);
@@ -178,7 +182,8 @@ class OrderController extends Controller
         $direction = $isBuyer ? ReviewDirection::BuyerToStore : ReviewDirection::StoreToBuyer;
 
         if ($order->reviews()->where('direction', $direction)->exists()) {
-            return $this->fail('Anda sudah memberi ulasan untuk pesanan ini.', 422);
+            // Ulasan ganda — 409 Conflict (duplikasi bisnis), bukan 422 validasi.
+            return $this->fail('Anda sudah memberi ulasan untuk pesanan ini.', 409);
         }
 
         $review = Review::create([
@@ -207,7 +212,8 @@ class OrderController extends Controller
         ]);
 
         if ($order->disputes()->exists()) {
-            return $this->fail('Laporan untuk pesanan ini sudah ada.', 422);
+            // Dispute ganda — 409 Conflict (duplikasi bisnis).
+            return $this->fail('Laporan untuk pesanan ini sudah ada.', 409);
         }
 
         $dispute = DB::transaction(function () use ($order, $data, $request): Dispute {

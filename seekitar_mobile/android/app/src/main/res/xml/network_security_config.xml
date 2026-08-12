@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Keamanan jaringan: HTTP polos (cleartext) DIBLOKIR secara default.
+  Hanya host pengembangan yang diizinkan cleartext — produksi memakai
+  HTTPS (https://seekitar.id). Tambahkan IP LAN dev di sini bila berubah.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Server dev di jaringan lokal -->
+        <domain includeSubdomains="false">192.168.201.162</domain>
+        <!-- Emulator Android: 10.0.2.2 = localhost host -->
+        <domain includeSubdomains="false">10.0.2.2</domain>
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>

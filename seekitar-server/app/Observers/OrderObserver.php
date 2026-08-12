@@ -38,7 +38,16 @@ class OrderObserver
 
         // Jaring pengaman TERAKHIR: transisi tidak sah ditolak dari jalur
         // mana pun, bukan hanya lewat API.
-        $this->states->assertCanTransition($from, $order->status);
+        // Observer tidak punya konteks user, jadi cek apakah transisi valid untuk SELLER ATAU BUYER.
+        $allowedForSeller = $this->states->allowedFrom($from, true);
+        $allowedForBuyer  = $this->states->allowedFrom($from, false);
+        $allAllowed = array_merge($allowedForSeller, $allowedForBuyer);
+
+        if (! in_array($order->status, $allAllowed, true) && $from !== $order->status) {
+            throw new \App\Exceptions\InvalidOrderTransitionException(
+                sprintf('Transisi dari "%s" ke "%s" tidak diizinkan.', $from->value, $order->status->value)
+            );
+        }
 
         match ($order->status) {
             OrderStatus::Selesai    => $order->completed_at ??= now(),

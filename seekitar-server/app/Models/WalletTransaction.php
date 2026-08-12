@@ -23,6 +23,7 @@ class WalletTransaction extends Model
         'description',
         'reference_type',
         'reference_id',
+        'reference',
         'status',
     ];
 

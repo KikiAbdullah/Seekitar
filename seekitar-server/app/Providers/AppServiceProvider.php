@@ -102,6 +102,12 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // URL di-generate dengan skema HTTPS di produksi (asset, redirect,
+        // signed route, dsb.) — memastikan tidak ada tautan http:// bocor.
+        if (app()->isProduction()) {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
+        }
+
         /*
          * Laravel sejak v11 merender ->links() dengan view Tailwind — panel
          * ini Bootstrap 5, hasilnya pagination "rusak": daftar tanpa gaya
@@ -268,6 +274,10 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('offers', fn (Request $request) => Limit::perMinute(30)
             ->by('offers:'.$request->user()?->id));
+
+        // Contact form: limit per IP to prevent spam
+        RateLimiter::for('contact', fn (Request $request) => Limit::perMinute(5)
+            ->by('contact:'.$request->ip()));
 
         // Login admin memakai kata sandi — sasaran empuk tebak-paksa, jadi
         // dibatasi DUA sumbu (§18A.5):

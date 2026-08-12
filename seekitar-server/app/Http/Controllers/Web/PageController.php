@@ -314,7 +314,7 @@ class PageController extends Controller
             'storage' => $this->checkStorage(),
             'notifications' => $this->checkNotifications(),
         ];
-        $healthy = !collect($checks)->containsStrict('ok', false); // null is not false, so not unhealthy
+        $healthy = !collect($checks)->containsStrict('ok', false);
         return view('web.status', [
             'checks' => $checks,
             'healthy' => $healthy,
@@ -327,9 +327,9 @@ class PageController extends Controller
         try {
             DB::connection()->getPdo();
             DB::select('SELECT 1');
-            return ['ok' => true, 'message' => 'Koneksi dan query berhasil'];
-        } catch (\Throwable $e) {
-            return ['ok' => false, 'message' => 'Database tidak terjangkau atau bermasalah: ' . $e->getMessage()];
+            return ['ok' => true, 'message' => 'Koneksi database normal'];
+        } catch (\Throwable) {
+            return ['ok' => false, 'message' => 'Database tidak terjangkau'];
         }
     }
 
@@ -341,10 +341,10 @@ class PageController extends Controller
             $read = Cache::get($key);
             Cache::forget($key);
             return $read === true
-                ? ['ok' => true, 'message' => 'Tulis & baca cache berhasil']
+                ? ['ok' => true, 'message' => 'Cache berfungsi']
                 : ['ok' => false, 'message' => 'Cache tidak konsisten'];
-        } catch (\Throwable $e) {
-            return ['ok' => false, 'message' => 'Cache tidak terjangkau atau bermasalah: ' . $e->getMessage()];
+        } catch (\Throwable) {
+            return ['ok' => false, 'message' => 'Cache tidak terjangkau'];
         }
     }
 
@@ -354,12 +354,12 @@ class PageController extends Controller
         try {
             $probe = $dir.DIRECTORY_SEPARATOR.'health-'.Str::random(6).'.tmp';
             if (@file_put_contents($probe, 'ok') === false) {
-                return ['ok' => false, 'message' => 'Direktori penyimpanan tidak dapat ditulis'];
+                return ['ok' => false, 'message' => 'Penyimpanan tidak dapat ditulis'];
             }
             @unlink($probe);
             return ['ok' => true, 'message' => 'Penyimpanan dapat ditulis'];
-        } catch (\Throwable $e) {
-            return ['ok' => false, 'message' => 'Penyimpanan bermasalah: ' . $e->getMessage()];
+        } catch (\Throwable) {
+            return ['ok' => false, 'message' => 'Penyimpanan bermasalah'];
         }
     }
 
@@ -367,7 +367,7 @@ class PageController extends Controller
     {
         $token = config('services.kirimwa.token');
         if (empty($token)) {
-            return ['ok' => null, 'message' => 'Gateway WhatsApp belum dikonfigurasi (tidak diperiksa)'];
+            return ['ok' => null, 'message' => 'Gateway WhatsApp belum dikonfigurasi'];
         }
         return ['ok' => true, 'message' => 'Gateway WhatsApp terkonfigurasi'];
     }

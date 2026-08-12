@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/category.dart';
 import '../../services/api_compat.dart';
+import '../../services/dio_client.dart';
+import '../../widgets/error_view.dart';
 
 class CategoryBrowseScreen extends StatefulWidget {
   const CategoryBrowseScreen({super.key});
@@ -12,21 +14,22 @@ class _CategoryBrowseScreenState extends State<CategoryBrowseScreen> {
   final _api = ApiProvider();
   List<Category> _items = [];
   bool _loading = true;
+  String? _error;
   Category? _selected;
 
   @override void initState() { super.initState(); _load(); }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = null; });
     try { final c = await _api.getCategories(); if (mounted) setState(() { _items = c; _loading = false; }); }
-    catch (_) { if (mounted) setState(() => _loading = false); }
+    catch (e) { if (mounted) setState(() { _error = DioClient.friendly(e); _loading = false; }); }
   }
 
   static const _icons = [Icons.home, Icons.shopping_bag, Icons.build, Icons.local_shipping, Icons.phone_android, Icons.chair, Icons.restaurant, Icons.brush, Icons.pets, Icons.sports_esports, Icons.music_note, Icons.camera_alt, Icons.book, Icons.medical_services, Icons.more_horiz];
 
   @override Widget build(BuildContext ctx) => Scaffold(
     appBar: AppBar(title: Text(_selected != null ? _selected!.name : 'Kategori')),
-    body: _loading ? const Center(child: CircularProgressIndicator()) : _selected != null ? _subCategoryView(ctx) : _mainGrid(ctx),
+    body: _loading ? const Center(child: CircularProgressIndicator()) : _selected != null ? _subCategoryView(ctx) : _error != null ? ErrorView(message: _error!, onRetry: _load) : _mainGrid(ctx),
   );
 
   Widget _mainGrid(BuildContext ctx) => RefreshIndicator(onRefresh: _load, child: GridView.builder(padding: const EdgeInsets.all(16), gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.9), itemCount: _items.length, itemBuilder: (_, i) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_osm_plugin/flutter_osm_plugin.dart';
+import '../../services/location_service.dart';
 
 /// Layar pemilih titik lokasi berbasis OpenStreetMap.
 ///
@@ -37,7 +38,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     // Tile Carto Voyager — bebas dipakai tanpa API key & tanpa blokir.
     _controller = MapController.customLayer(
       initPosition: widget.initial ??
-          GeoPoint(latitude: -7.6406, longitude: 112.9074), // Kab. Pasuruan
+          // Pandangan awal peta = pusat Kab. Pasuruan (bukan data tersimpan).
+          GeoPoint(latitude: kDefaultLat, longitude: kDefaultLng),
       customTile: CustomTile(
         urlsServers: [
           TileURLs(

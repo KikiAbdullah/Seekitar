@@ -1,10 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:geolocator/geolocator.dart';
 import '../../models/listing.dart';
 import '../../services/api_compat.dart';
-
+import '../../services/location_service.dart';
 class SearchScreen extends StatefulWidget {
   final int? category;
   final String? label;
@@ -20,6 +19,7 @@ class _SearchScreenState extends State<SearchScreen> {
   String? _filter;
   bool _loading = false;
   double? _lat, _lng;
+  int _reqSeq = 0;
 
   @override void initState() { super.initState(); _getLoc(); }
   @override void dispose() { _debounce?.cancel(); _searchCtrl.dispose(); super.dispose(); }
@@ -27,32 +27,47 @@ class _SearchScreenState extends State<SearchScreen> {
   Timer? _debounce;
 
   Future<void> _getLoc() async {
-    try { final p = await Geolocator.getCurrentPosition(); setState(() { _lat = p.latitude; _lng = p.longitude; }); _search(); }
-    catch (_) { setState(() { _lat = -7.5; _lng = 112.0; }); _search(); }
+    // Timeout GPS terpusat; fallback pusat kabupaten hanya untuk pencarian.
+    final p = await locate();
+    if (!mounted) return;
+    setState(() { _lat = p?.latitude ?? kDefaultLat; _lng = p?.longitude ?? kDefaultLng; });
+    await _search();
   }
 
   Future<void> _search() async {
     if (_lat == null) return;
+    final seq = ++_reqSeq;
     setState(() => _loading = true);
-    try { final items = await _api.getListings(lat: _lat!, lng: _lng!, keyword: _searchCtrl.text.isEmpty ? null : _searchCtrl.text, type: _filter, category: widget.category); if (mounted) setState(() => _listings = items); }
-    catch (_) {}
-    if (mounted) setState(() => _loading = false);
+    try {
+      final items = await _api.getListings(lat: _lat!, lng: _lng!, keyword: _searchCtrl.text.isEmpty ? null : _searchCtrl.text, type: _filter, category: widget.category);
+      // Abaikan hasil basi dari request yang lebih lama — hanya request
+      // terbaru yang boleh menimpa daftar.
+      if (mounted && seq == _reqSeq) setState(() => _listings = items);
+    } catch (_) {}
+    if (mounted && seq == _reqSeq) setState(() => _loading = false);
   }
 
   Future<void> _onChanged(String q) async {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 350), _search);
-    if (q.length >= 2) { try { final s = await _api.searchSuggestions(q, type: _filter); if (mounted) setState(() => _suggestions = s); } catch (_) {} }
+    if (q.length >= 2) {
+      final seq = ++_reqSeq;
+      try { final s = await _api.searchSuggestions(q, type: _filter); if (mounted && seq == _reqSeq) setState(() => _suggestions = s); } catch (_) {}
+    }
     else { if (mounted) setState(() => _suggestions = []); }
   }
 
-  void _clear() { _searchCtrl.clear(); setState(() => _suggestions = []); _search(); }
+  void _clear() {
+    _searchCtrl.clear();
+    setState(() => _suggestions = []);
+    unawaited(_search());
+  }
 
   @override Widget build(BuildContext ctx) => Scaffold(
     appBar: widget.showAppBar ? AppBar(title: Text(widget.label ?? 'Cari')) : null,
     body: SafeArea(child: Column(children: [
       Padding(padding: const EdgeInsets.fromLTRB(16, 8, 8, 8), child: Row(children: [
-        Expanded(child: Container(decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(16)), child: TextField(controller: _searchCtrl, onChanged: _onChanged, onSubmitted: (_) { _search(); setState(() => _suggestions = []); }, decoration: InputDecoration(hintText: 'Cari barang, jasa, sewa...', prefixIcon: const Icon(Icons.search, size: 22), suffixIcon: _searchCtrl.text.isNotEmpty ? const Icon(Icons.close, size: 18) : null, border: InputBorder.none, filled: false, fillColor: Colors.transparent)))),
+        Expanded(child: Container(decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(16)), child: TextField(controller: _searchCtrl, onChanged: _onChanged, onSubmitted: (_) { unawaited(_search()); setState(() => _suggestions = []); }, decoration: InputDecoration(hintText: 'Cari barang, jasa, sewa...', prefixIcon: const Icon(Icons.search, size: 22), suffixIcon: _searchCtrl.text.isNotEmpty ? IconButton(icon: const Icon(Icons.close, size: 18), onPressed: _clear, tooltip: 'Bersihkan') : null, border: InputBorder.none, filled: false, fillColor: Colors.transparent)))),
       ])),
       SingleChildScrollView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6), child: Row(children: [
         _chip(null, 'Semua'), const SizedBox(width: 8),

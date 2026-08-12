@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 
 final appLogger = Logger(
@@ -8,7 +9,9 @@ final appLogger = Logger(
     colors: true,
     printEmojis: false,
   ),
-  level: Level.debug,
+  // Debug: semua level. Release: hanya warning & error (log HTTP harian
+  // ditekan supaya tidak bocor ke logcat produksi).
+  level: kDebugMode ? Level.debug : Level.warning,
 );
 
 void logInfo(String msg) => appLogger.i(msg);

@@ -30,7 +30,8 @@ Route::name('web.')->group(function (): void {
     Route::get('/tentang', [PageController::class, 'about'])->name('about');
     Route::get('/bantuan', [PageController::class, 'help'])->name('help');
     Route::get('/kontak', [PageController::class, 'contact'])->name('contact');
-    Route::post('/kontak', [PageController::class, 'contactStore'])->name('contact.store');
+    Route::post('/kontak', [PageController::class, 'contactStore'])->name('contact.store')
+        ->middleware('throttle:contact');
 
     // --- Katalog publik -----------------------------------------------------
     Route::get('/cari', [PageController::class, 'listings'])->name('listings');

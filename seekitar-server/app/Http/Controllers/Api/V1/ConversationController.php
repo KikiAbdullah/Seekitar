@@ -21,7 +21,7 @@ class ConversationController extends Controller
         $userId = $request->user()->id;
 
         $conversations = Conversation::whereHas('participants', fn ($q) => $q->where('user_id', $userId))
-            ->with(['participants.user', 'lastMessage'])
+            ->with(['participants.user', 'lastMessage.sender'])
             ->latest()
             ->paginate($this->perPage());
 
@@ -34,7 +34,7 @@ class ConversationController extends Controller
             return $this->fail('Percakapan tidak ditemukan.', 404);
         }
 
-        $conversation->load(['participants.user', 'lastMessage']);
+        $conversation->load(['participants.user', 'lastMessage.sender']);
 
         return $this->ok(new ConversationResource($conversation));
     }
@@ -58,7 +58,7 @@ class ConversationController extends Controller
             ->first();
 
         if ($existing) {
-            $existing->load(['participants.user', 'lastMessage']);
+            $existing->load(['participants.user', 'lastMessage.sender']);
 
             return $this->ok(new ConversationResource($existing));
         }
@@ -88,6 +88,7 @@ class ConversationController extends Controller
         }
 
         $messages = $conversation->messages()
+            ->with('sender')
             ->latest()
             ->paginate($this->perPage());
 
@@ -116,6 +117,8 @@ class ConversationController extends Controller
             'message_type'   => $validated['message_type'] ?? 'text',
             'attachment_url' => $validated['attachment_url'] ?? null,
         ]);
+
+        $message->load('sender');
 
         return $this->created(new MessageResource($message));
     }

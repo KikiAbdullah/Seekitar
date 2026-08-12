@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\StoreMapController;
 use App\Http\Controllers\Admin\SubscriptionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VerificationController;
+use App\Http\Controllers\Admin\WalletController;
 use App\Http\Controllers\Admin\WhatsAppController;
 use Illuminate\Support\Facades\Route;
 
@@ -278,5 +279,14 @@ Route::middleware(['auth', 'role:admin|super-admin'])->group(function (): void {
         Route::post('whatsapp/logout', [WhatsAppController::class, 'logout'])->name('whatsapp.logout');
         Route::post('whatsapp/reset', [WhatsAppController::class, 'reset'])->name('whatsapp.reset');
         Route::post('whatsapp/send-test', [WhatsAppController::class, 'sendTest'])->name('whatsapp.send-test');
+    });
+
+    // Wallet — verifikasi top up & selesaikan/tolak penarikan.
+    Route::middleware('permission:manage-settings')->group(function (): void {
+        Route::get('wallet', [WalletController::class, 'index'])->name('wallet.index');
+        Route::post('wallet/topups/{transaction}/confirm', [WalletController::class, 'confirmTopup'])->name('wallet.topups.confirm');
+        Route::post('wallet/topups/{transaction}/cancel', [WalletController::class, 'cancelTopup'])->name('wallet.topups.cancel');
+        Route::post('wallet/withdrawals/{transaction}/complete', [WalletController::class, 'completeWithdrawal'])->name('wallet.withdrawals.complete');
+        Route::post('wallet/withdrawals/{transaction}/reject', [WalletController::class, 'rejectWithdrawal'])->name('wallet.withdrawals.reject');
     });
 });

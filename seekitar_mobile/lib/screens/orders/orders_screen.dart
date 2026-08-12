@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants.dart';
+import '../../core/text_utils.dart';
 import '../../models/order.dart';
 import '../../services/api_compat.dart';
 import '../../services/dio_client.dart';
@@ -28,7 +29,7 @@ class _OrdersScreenState extends State<OrdersScreen> with SingleTickerProviderSt
       final isIncomplete = e is DioException && e.response?.statusCode == 403;
       if (mounted) setState(() {
         _profileIncomplete = isIncomplete;
-        _error = isIncomplete ? null : (e is DioException ? DioClient().getMessage(e) : e.toString());
+        _error = isIncomplete ? null : DioClient.friendly(e);
         _loading = false;
       });
     }
@@ -44,16 +45,16 @@ class _OrdersScreenState extends State<OrdersScreen> with SingleTickerProviderSt
     const SizedBox(height: 6),
     Padding(padding: const EdgeInsets.symmetric(horizontal: 44), child: Text('Isi nama dan aktifkan lokasi untuk melihat pesanan.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600, height: 1.4))),
     const SizedBox(height: 18),
-    ElevatedButton.icon(onPressed: () async { await ctx.push('/profile'); _load(); }, icon: const Icon(Icons.person_outline), label: const Text('Lengkapi Profil')),
+    ElevatedButton.icon(onPressed: () async { await ctx.push('/profile'); if (mounted) await _load(); }, icon: const Icon(Icons.person_outline), label: const Text('Lengkapi Profil')),
   ]));
   Widget _err() => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.cloud_off, size: 48, color: Colors.grey), const SizedBox(height: 12), Text(_error!, style: const TextStyle(color: Colors.grey)), const SizedBox(height: 16), ElevatedButton.icon(onPressed: _load, icon: const Icon(Icons.refresh), label: const Text('Coba Lagi'))]));
   Widget _list(List<Order> orders, bool seller) => orders.isEmpty ? const Center(child: Text('Belum ada pesanan', style: TextStyle(color: Colors.grey))) : RefreshIndicator(onRefresh: _load, child: ListView.builder(itemCount: orders.length, itemBuilder: (_, i) {
     final o = orders[i];
-    return Card(margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5), child: InkWell(borderRadius: BorderRadius.circular(24), onTap: () async { await ctx.push('/order-detail/${o.id}', extra: o); if (mounted) _load(); }, child: Padding(padding: const EdgeInsets.all(14), child: Row(children: [
+    return Card(margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5), child: InkWell(borderRadius: BorderRadius.circular(24), onTap: () async { await ctx.push('/order-detail/${o.id}', extra: o); if (mounted) await _load(); }, child: Padding(padding: const EdgeInsets.all(14), child: Row(children: [
       ClipRRect(borderRadius: BorderRadius.circular(14), child: (o.listingImages?.isNotEmpty == true) ? Image.network(o.listingImages!.first, width: 60, height: 60, fit: BoxFit.cover) : Container(width: 60, height: 60, color: Colors.green.shade50, child: const Icon(Icons.receipt, color: Colors.green))),
       const SizedBox(width: 14),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(o.listingTitle ?? 'Pesanan #${o.id.substring(0, 8)}', maxLines: 1, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+        Text(o.listingTitle ?? 'Pesanan #${firstChars(o.id, 8)}', maxLines: 1, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
         const SizedBox(height: 4), Text(seller ? 'Pembeli: ${o.buyerName ?? '-'}' : 'Toko: ${o.storeName ?? '-'}', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
         const SizedBox(height: 4), Text(o.priceDisplay, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Theme.of(context).colorScheme.primary)),
       ])),

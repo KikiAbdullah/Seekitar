@@ -78,12 +78,21 @@ class BlockController extends Controller
     {
         $raw = $user->blocked_user_ids;
 
-        if (is_string($raw)) {
-            $decoded = json_decode($raw, true);
-            return is_array($decoded) ? array_map('intval', $decoded) : [];
+        $decoded = is_string($raw) ? json_decode($raw, true) : $raw;
+        if (! is_array($decoded)) {
+            return [];
         }
 
-        return is_array($raw) ? array_map('intval', $raw) : [];
+        // users.id adalah UUID — JANGAN di-cast ke int (mengubah semua jadi 0,
+        // membuat unblock tak pernah cocok). Data lama yang terlanjur korup
+        // (`0`, non-UUID) dibuang; akan hilang permanen saat saveBlockedIds.
+        return array_values(array_filter(
+            array_map('strval', $decoded),
+            static fn (string $id) => preg_match(
+                '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i',
+                $id,
+            ) === 1,
+        ));
     }
 
     private function saveBlockedIds($user, array $ids): void

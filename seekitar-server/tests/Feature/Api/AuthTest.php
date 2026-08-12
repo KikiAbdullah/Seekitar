@@ -2,12 +2,14 @@
 
 namespace Tests\Feature\Api;
 
+use App\Enums\UserStatus;
 use App\Models\User;
 use App\Services\Contracts\WhatsAppGateway;
 use App\Services\OtpService;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Tymon\JWTAuth\Facades\JWTAuth;
 use Tests\RefreshesDatabase;
 use Tests\TestCase;
 
@@ -116,6 +118,28 @@ class AuthTest extends TestCase
         $response = $this->getJson('/api/v1/auth/me');
 
         $response->assertStatus(401);
+    }
+
+    /**
+     * Regresi K3: blokir user harus memutus akses JWT yang MASIH HIDUP.
+     *
+     * JWT stateless tidak bisa dicabut server-side, jadi middleware
+     * `user.active` (EnsureUserNotBlocked) wajib menolak 423 di tiap request
+     * selama status user Diblokir.
+     */
+    public function test_blocked_user_rejected_despite_valid_jwt(): void
+    {
+        $user = User::factory()->create(['status' => UserStatus::Diblokir]);
+
+        // JWT asli & masih berlaku (subjek = user diblokir).
+        $token = JWTAuth::fromUser($user);
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->getJson('/api/v1/auth/me');
+
+        $response->assertStatus(423)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'Akun Anda diblokir. Hubungi dukungan Seekitar.');
     }
 
     public function test_logout_revokes_token(): void

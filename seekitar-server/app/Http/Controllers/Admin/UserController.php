@@ -327,9 +327,8 @@ class UserController extends Controller
             }
             $user->save();
 
-            if ($blocking) {
-                $user->tokens()->delete();
-            }
+            // JWT stateless — tak ada token yang bisa dihapus; akses API
+            // diputus middleware `user.active` (isBlocked) di tiap request.
 
             // Orang yang bermasalah membuat tokonya ikut bermasalah:
             // kedudukan tokonya ikut diblokir (bukan sekadar nonaktif),

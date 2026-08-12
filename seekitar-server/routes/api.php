@@ -65,8 +65,7 @@ Route::prefix('v1')->group(function (): void {
     | Perlu token
     |----------------------------------------------------------------------
     */
-    Route::middleware('auth:api')->group(function (): void {
-
+    Route::middleware(['auth:api', 'user.active'])->group(function (): void {
         // --- Profil & perangkat ---------------------------------------
         Route::get('auth/me', [AuthController::class, 'me']);
         Route::patch('auth/profile', [AuthController::class, 'updateProfile']);
@@ -84,6 +83,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('auth/verification/photo/{kind}', [VerificationController::class, 'myPhoto'])
             ->whereIn('kind', ['ktp', 'selfie']);
         Route::post('uploads/images', [UploadController::class, 'store']);
+Route::delete('uploads/images', [UploadController::class, 'destroy']);
 
         // --- Home / Discovery feed -----------------------------------
         Route::get('home', [HomeController::class, 'index']);

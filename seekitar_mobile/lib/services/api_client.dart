@@ -81,6 +81,7 @@ class ApiClient {
 
   // ─── Uploads ───────────────────────────────────────
   Future<Map<String,dynamic>> uploadImage(File file, {String purpose = 'listing'}) => upload('/uploads/images', file, fields: {'purpose': purpose});
+  Future<void> deleteUpload(String path) => _delete('/uploads/images', query: {'path': path});
 
   // ─── Listings ──────────────────────────────────────
   Future<List<dynamic>> listings({required double lat, required double lng, double? radius, int? category, String? type, String? keyword, String sort = 'nearest', int page = 1}) {

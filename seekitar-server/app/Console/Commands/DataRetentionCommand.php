@@ -94,11 +94,17 @@ class DataRetentionCommand extends Command
             ->where('created_at', '<', $cutoff)
             ->update([
                 'description' => DB::raw("CONCAT(LEFT(description, 1), '***')"),
-                'properties'  => null,
+                // Kolom aktual tabel: old_values/new_values/ip_address/user_agent.
+                // (Bukan `properties` — kolom itu tidak ada dan akan membuat
+                // query ini melempar Unknown column.)
+                'old_values'  => null,
+                'new_values'  => null,
+                'ip_address'  => null,
+                'user_agent'  => null,
             ]);
 
         Log::channel('privacy')->info('Old activity logs anonymized', [
-            'count' => $updated,
+            'count'  => $updated,
             'cutoff' => $cutoff->toDateTimeString(),
         ]);
 

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:geolocator/geolocator.dart';
 import '../../models/category.dart';
 import '../../models/customer_request.dart';
 import '../../services/api_compat.dart';
+import '../../services/dio_client.dart';
+import '../../services/location_service.dart';
+import '../../widgets/error_view.dart';
 
 class RequestsScreen extends StatefulWidget {
   const RequestsScreen({super.key});
@@ -15,23 +17,26 @@ class _RequestsScreenState extends State<RequestsScreen> with SingleTickerProvid
   late TabController _tabCtrl;
   List<CustomerRequest> _nearby = [], _mine = [];
   bool _loading = true;
+  String? _error;
   BuildContext get ctx => context;
 
   @override void initState() { super.initState(); _tabCtrl = TabController(length: 2, vsync: this); _load(); }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = null; });
     try {
-      final pos = await Geolocator.getCurrentPosition();
+      final pos = await locate() ?? defaultPosition();
       final results = await Future.wait<Object>([_api.getRequests(lat: pos.latitude, lng: pos.longitude), _api.myRequests()]);
       if (!mounted) return;
       setState(() { _nearby = results[0] as List<CustomerRequest>; _mine = results[1] as List<CustomerRequest>; _loading = false; });
-    } catch (_) { setState(() => _loading = false); }
+    } catch (e) { if (mounted) setState(() { _error = DioClient.friendly(e); _loading = false; }); }
   }
 
   @override Widget build(BuildContext ctx) => Scaffold(
     appBar: AppBar(title: const Text('Kebutuhan Sekitar'), bottom: TabBar(controller: _tabCtrl, tabs: const [Tab(text: 'Terdekat'), Tab(text: 'Saya')])),
-    body: _loading ? const Center(child: CircularProgressIndicator()) : TabBarView(controller: _tabCtrl, children: [
+    body: _loading ? const Center(child: CircularProgressIndicator())
+      : _error != null ? ErrorView(message: _error!, onRetry: _load)
+      : TabBarView(controller: _tabCtrl, children: [
       RefreshIndicator(onRefresh: _load, child: _nearby.isEmpty ? const Center(child: Text('Belum ada permintaan')) : ListView.builder(itemCount: _nearby.length, itemBuilder: (_, i) => _card(_nearby[i]))),
       RefreshIndicator(onRefresh: _load, child: _mine.isEmpty ? const Center(child: Text('Belum ada permintaan')) : ListView.builder(itemCount: _mine.length, itemBuilder: (_, i) => _card(_mine[i]))),
     ]),
@@ -79,14 +84,26 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
   }
 
   Future<void> _submit() async {
+    if (_loading) return;
+    final title = _titleCtrl.text.trim();
+    final desc = _descCtrl.text.trim();
+    if (title.isEmpty) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Judul kebutuhan wajib diisi'))); return; }
+    if (title.length < 5) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Judul minimal 5 huruf'))); return; }
+    if (desc.isEmpty) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deskripsi kebutuhan wajib diisi'))); return; }
     if (_catId == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pilih kategori terlebih dahulu'))); return; }
     setState(() => _loading = true);
     try {
-      final pos = await Geolocator.getCurrentPosition();
-      await _api.createRequest({'title': _titleCtrl.text, 'description': _descCtrl.text, 'category_id': _catId, 'latitude': pos.latitude, 'longitude': pos.longitude, 'radius_km': 15});
+      // Koordinat untuk DISIMPAN — wajib GPS asli, jangan fallback kabupaten.
+      final pos = await locate();
+      if (pos == null) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Aktifkan GPS untuk memasang kebutuhan.')));
+        if (mounted) setState(() => _loading = false);
+        return;
+      }
+      await _api.createRequest({'title': title, 'description': desc, 'category_id': _catId, 'latitude': pos.latitude, 'longitude': pos.longitude, 'radius_km': 15});
       if (mounted) Navigator.pop(context);
-    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()))); }
-    setState(() => _loading = false);
+    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(DioClient.friendly(e)))); }
+    if (mounted) setState(() => _loading = false);
   }
 
   @override Widget build(BuildContext ctx) => Scaffold(appBar: AppBar(title: const Text('Pasang Kebutuhan')), body: Padding(padding: const EdgeInsets.all(16), child: Column(children: [

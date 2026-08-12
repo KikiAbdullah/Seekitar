@@ -37,7 +37,17 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'store.owner'        => \App\Http\Middleware\EnsureStoreOwner::class,
             'profile.complete'   => \App\Http\Middleware\EnsureProfileComplete::class,
+            'user.active'        => \App\Http\Middleware\EnsureUserNotBlocked::class,
+            'https'              => \App\Http\Middleware\EnsureHttps::class,
         ]);
+
+        // Terminasi HTTPS di produksi (redirect + HSTS). Aman di dev (no-op).
+        $middleware->append(\App\Http\Middleware\EnsureHttps::class);
+
+        // Di belakang reverse proxy/load balancer (nginx, Cloudflare, dsb.):
+        // percayai header X-Forwarded-* agar isSecure()/ip()/scheme benar.
+        // Ganti dengan daftar IP proxy bila perlu; '*' = percaya semua proxy.
+        $middleware->trustProxies(at: env('TRUSTED_PROXIES', '*'));
 
         // Autentikasi berbasis cookie HANYA untuk domain di
         // SANCTUM_STATEFUL_DOMAINS (web admin). Aplikasi mobile memakai
@@ -130,11 +140,21 @@ return Application::configure(basePath: dirname(__DIR__))
                 $errors = ['exception' => [$e::class.': '.$e->getMessage()]];
             }
 
-            return response()->json([
+            // 429: simpan header Retry-After / X-RateLimit-* dari exception
+            $response = response()->json([
                 'success' => false,
                 'message' => $message,
                 'errors'  => $errors,
             ], $status);
+
+            if ($e instanceof \Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException
+                || $e instanceof \Illuminate\Http\Exceptions\ThrottleRequestsException) {
+                foreach ($e->getHeaders() as $k => $v) {
+                    $response->headers->set($k, $v);
+                }
+            }
+
+            return $response;
         });
 
         $exceptions->report(function (Throwable $e) {

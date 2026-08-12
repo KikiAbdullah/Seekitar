@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import '../../models/store.dart';
 import '../../services/api_compat.dart';
+import '../../services/dio_client.dart';
 
 class CreateListingScreen extends StatefulWidget {
   final Store store;
@@ -50,6 +50,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     if (_type != 'service' && (_stock == null || _stock!.isEmpty)) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Stok wajib diisi'))); return; }
     if (_type == 'service' && (_slot == null || _slot!.isEmpty)) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Slot wajib diisi untuk jasa'))); return; }
     setState(() => _loading = true);
+    final uploadedPaths = <String>[];
     try {
       final uploaded = <String>[];
       if (_images.isNotEmpty) {
@@ -57,7 +58,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         for (final f in _images) {
           final r = await _api.uploadImage(f, purpose: 'listing');
           final url = r['url']?.toString() ?? r['path']?.toString() ?? '';
+          final path = r['path']?.toString();
           if (url.isNotEmpty) uploaded.add(url);
+          if (path != null && path.isNotEmpty) uploadedPaths.add(path);
         }
         setState(() => _uploading = false);
       }
@@ -74,7 +77,14 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
 
       await _api.createListing(body);
       if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing berhasil dipasang!'))); Navigator.pop(context, true); }
-    } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e'))); }
+    } catch (e) {
+      // Cleanup best-effort: gambar yang sudah ter-upload dibuang agar tidak
+      // menjadi file orphan di server (server juga membersihkan tmp > 24 jam).
+      for (final p in uploadedPaths) {
+        try { await _api.deleteUpload(p); } catch (_) {}
+      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: ${DioClient.friendly(e)}')));
+    }
     if (mounted) setState(() { _loading = false; _uploading = false; });
   }
 

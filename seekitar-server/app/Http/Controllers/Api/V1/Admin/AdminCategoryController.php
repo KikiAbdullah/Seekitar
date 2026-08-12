@@ -59,17 +59,17 @@ class AdminCategoryController extends Controller
     public function destroy(Category $category): JsonResponse
     {
         if ($category->children()->exists()) {
-            return $this->fail('Pindahkan atau hapus subkategori terlebih dahulu.', 422);
+            return $this->fail('Pindahkan atau hapus subkategori terlebih dahulu.', 409);
         }
 
         if ($category->customerRequests()->exists()) {
-            return $this->fail('Kategori masih dipakai permintaan.', 422);
+            return $this->fail('Kategori masih dipakai permintaan.', 409);
         }
 
         $usedByStore = Store::whereRaw('JSON_CONTAINS(category_ids, ?)', [(string) $category->id])->exists();
 
         if ($usedByStore) {
-            return $this->fail('Kategori masih dipakai toko.', 422);
+            return $this->fail('Kategori masih dipakai toko.', 409);
         }
 
         $category->delete();

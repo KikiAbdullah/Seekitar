@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../core/constants.dart';
 import '../../services/api_compat.dart';
+import '../../services/dio_client.dart';
 import '../../models/wallet.dart';
+import '../../widgets/error_view.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -12,20 +15,23 @@ class _WalletScreenState extends State<WalletScreen> {
   Wallet? _wallet;
   List<WalletTransaction> _txs = [];
   bool _loading = true;
+  bool _busy = false;
+  String? _error;
 
   @override void initState() { super.initState(); _load(); }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = null; });
     try {
       final results = await Future.wait<Object>([_api.getWallet(), _api.getWalletTransactions()]);
       final wallet = results[0] as Wallet;
       final txs = results[1] as List<WalletTransaction>;
       if (mounted) setState(() { _wallet = wallet; _txs = txs; _loading = false; });
-    } catch (_) { if (mounted) setState(() => _loading = false); }
+    } catch (e) { if (mounted) setState(() { _error = DioClient.friendly(e); _loading = false; }); }
   }
 
   Future<void> _topup() async {
+    if (_busy) return;
     final ctrl = TextEditingController();
     final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -33,13 +39,16 @@ class _WalletScreenState extends State<WalletScreen> {
       content: TextField(controller: ctrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Jumlah (Rp)', hintText: '50000')),
       actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')), ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Top Up'))],
     ));
-    if (ok == true && ctrl.text.isNotEmpty) {
-      try { await _api.topup(double.parse(ctrl.text)); _load(); if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Top up berhasil!'))); }
-      catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e'))); }
-    }
+if (ok == true && ctrl.text.isNotEmpty) {
+        setState(() => _busy = true);
+        try { await _api.topup(double.parse(ctrl.text)); if (mounted) await _load(); if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Top up diajukan. Saldo dikredit setelah pembayaran diverifikasi admin.'))); }
+        catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: ${DioClient.friendly(e)}'))); }
+        if (mounted) setState(() => _busy = false);
+      }
   }
 
   Future<void> _withdraw() async {
+    if (_busy) return;
     final amountCtrl = TextEditingController();
     final bankCtrl = TextEditingController();
     final accCtrl = TextEditingController();
@@ -56,15 +65,17 @@ class _WalletScreenState extends State<WalletScreen> {
       actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')), ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Tarik'))],
     ));
     if (ok == true && amountCtrl.text.isNotEmpty) {
-      try {
+      setState(() => _busy = true);
+try {
         await _api.withdraw({
           'amount': double.parse(amountCtrl.text),
           'bank_name': bankCtrl.text,
           'bank_account': accCtrl.text,
         });
-        _load();
+        if (mounted) await _load();
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Penarikan diajukan. Diproses 1x24 jam.')));
-      } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e'))); }
+      } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: ${DioClient.friendly(e)}'))); }
+      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -72,7 +83,9 @@ class _WalletScreenState extends State<WalletScreen> {
     final t = Theme.of(ctx);
     return Scaffold(
       appBar: AppBar(title: const Text('Dompet')),
-      body: _loading ? const Center(child: CircularProgressIndicator()) : RefreshIndicator(
+      body: _loading ? const Center(child: CircularProgressIndicator())
+        : _error != null ? ErrorView(message: _error!, onRetry: _load)
+        : RefreshIndicator(
         onRefresh: _load,
         child: ListView(padding: const EdgeInsets.all(16), children: [
           Card(child: Padding(padding: const EdgeInsets.all(24), child: Column(children: [
@@ -81,9 +94,9 @@ class _WalletScreenState extends State<WalletScreen> {
             Text(_wallet?.balanceDisplay ?? 'Rp 0', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: t.colorScheme.primary)),
             const SizedBox(height: 20),
             Row(children: [
-              Expanded(child: ElevatedButton.icon(onPressed: _topup, icon: const Icon(Icons.add_circle_outline, size: 20), label: const Text('Top Up'))),
+              Expanded(child: ElevatedButton.icon(onPressed: _busy ? null : _topup, icon: const Icon(Icons.add_circle_outline, size: 20), label: const Text('Top Up'))),
               const SizedBox(width: 12),
-              Expanded(child: OutlinedButton.icon(onPressed: _withdraw, icon: const Icon(Icons.credit_card, size: 20), label: const Text('Tarik'))),
+              Expanded(child: OutlinedButton.icon(onPressed: _busy ? null : _withdraw, icon: const Icon(Icons.credit_card, size: 20), label: const Text('Tarik'))),
             ]),
           ]))),
           const SizedBox(height: 16),
@@ -95,7 +108,7 @@ class _WalletScreenState extends State<WalletScreen> {
             subtitle: Text(tx.amountDisplay, style: TextStyle(color: tx.type == 'withdrawal' ? Colors.red : Colors.green, fontWeight: FontWeight.w600)),
             trailing: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
               Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)), child: Text(tx.status, style: const TextStyle(fontSize: 11))),
-              Text(tx.createdAt.toString().substring(0, 10), style: TextStyle(fontSize: 10, color: Colors.grey.shade400)),
+              Text(AppConstants.formatDate(tx.createdAt), style: TextStyle(fontSize: 10, color: Colors.grey.shade400)),
             ]),
           ))),
         ]),

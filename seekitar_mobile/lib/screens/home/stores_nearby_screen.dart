@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:geolocator/geolocator.dart';
+import '../../core/text_utils.dart';
 import '../../models/store.dart';
 import '../../services/api_compat.dart';
+import '../../services/dio_client.dart';
+import '../../services/location_service.dart';
 
 class StoresNearbyScreen extends StatefulWidget {
   const StoresNearbyScreen({super.key});
@@ -20,14 +22,12 @@ class _StoresNearbyScreenState extends State<StoresNearbyScreen> {
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final pos = await Geolocator.getCurrentPosition();
+      // Timeout GPS terpusat; fallback pusat kabupaten hanya untuk pencarian.
+      final pos = await locate() ?? defaultPosition();
       final s = await _api.nearbyStores(lat: pos.latitude, lng: pos.longitude);
       if (mounted) setState(() { _items = s; _loading = false; });
-    } catch (_) {
-      try {
-        final s = await _api.nearbyStores(lat: -7.5, lng: 112.0);
-        if (mounted) setState(() { _items = s; _loading = false; });
-      } catch (e) { if (mounted) setState(() { _error = e.toString(); _loading = false; }); }
+    } catch (e) {
+      if (mounted) setState(() { _error = DioClient.friendly(e); _loading = false; });
     }
   }
 
@@ -38,7 +38,7 @@ class _StoresNearbyScreenState extends State<StoresNearbyScreen> {
       : RefreshIndicator(onRefresh: _load, child: ListView.builder(itemCount: _items.length, itemBuilder: (_, i) {
         final s = _items[i];
         return Card(child: ListTile(
-          leading: CircleAvatar(radius: 26, backgroundColor: Colors.green.shade50, child: Text(s.name[0].toUpperCase(), style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.w800, fontSize: 16))),
+          leading: CircleAvatar(radius: 26, backgroundColor: Colors.green.shade50, child: Text(avatarInitials(s.name, maxChars: 1), style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.w800, fontSize: 16))),
           title: Row(children: [Text(s.name, style: const TextStyle(fontWeight: FontWeight.w700)), if (s.isVerified) const Icon(Icons.verified, size: 16, color: Colors.green)]),
           subtitle: Text('⭐ ${s.ratingAvg.toStringAsFixed(1)} · ${s.reviewsCount} ulasan${s.distanceKm != null ? ' · ${s.distanceKm!.toStringAsFixed(1)} km' : ''}', style: const TextStyle(fontSize: 12)),
           trailing: const Icon(Icons.chevron_right),

@@ -11,6 +11,7 @@ use App\Http\Resources\WalletTransactionResource;
 use App\Models\Wallet;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use RuntimeException;
 
 class WalletController extends Controller
 {
@@ -41,15 +42,16 @@ class WalletController extends Controller
             ['user_id' => $request->user()->id]
         );
 
-        $transaction = $wallet->addBalance(
+        // TIDAK mengkredit langsung — buat transaksi pending dengan reference
+        // unik. Saldo dikredit admin/gateway setelah pembayaran diverifikasi.
+        $transaction = $wallet->createTopupPending(
             $request->validated('amount'),
-            'topup',
-            'Top up saldo',
+            $request->validated('method', 'transfer'),
         );
 
         return $this->ok(
             ['transaction' => new WalletTransactionResource($transaction)],
-            'Top up berhasil',
+            'Top up diajukan. Saldo dikredit setelah pembayaran diverifikasi.',
         );
     }
 
@@ -57,24 +59,19 @@ class WalletController extends Controller
     {
         $wallet = Wallet::where('user_id', $request->user()->id)->firstOrFail();
 
-        $balanceBefore = $wallet->balance;
-
-        $transaction = $wallet->transactions()->create([
-            'type'           => 'withdrawal',
-            'amount'         => -$request->validated('amount'),
-            'balance_before' => $balanceBefore,
-            'balance_after'  => $balanceBefore,
-            'description'    => sprintf(
-                'Penarikan saldo ke %s (%s)',
-                $request->validated('bank_account'),
+        try {
+            $transaction = $wallet->requestWithdrawal(
+                $request->validated('amount'),
                 $request->validated('bank_name'),
-            ),
-            'status'         => 'pending',
-        ]);
+                $request->validated('bank_account'),
+            );
+        } catch (RuntimeException) {
+            return $this->fail('Saldo tidak mencukupi untuk penarikan.', 422);
+        }
 
         return $this->ok(
             ['transaction' => new WalletTransactionResource($transaction)],
-            'Permintaan penarikan berhasil diajukan',
+            'Permintaan penarikan diajukan. Saldo di-hold sampai payout diproses.',
         );
     }
 }

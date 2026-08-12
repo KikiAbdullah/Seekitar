@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/api_compat.dart';
+import '../../services/dio_client.dart';
+import '../../widgets/error_view.dart';
 
 class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
@@ -11,19 +15,21 @@ class _AboutScreenState extends State<AboutScreen> {
   final _api = ApiProvider();
   Map<String,dynamic>? _config;
   bool _loading = true;
+  String? _error;
 
   @override void initState() { super.initState(); _load(); }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = null; });
     try { final c = await _api.config(); if (mounted) setState(() { _config = c; _loading = false; }); }
-    catch (_) { if (mounted) setState(() => _loading = false); }
+    catch (e) { if (mounted) setState(() { _error = DioClient.friendly(e); _loading = false; }); }
   }
 
   String _val(String key) => _config?[key]?.toString() ?? '-';
 
   @override Widget build(BuildContext ctx) {
     if (_loading) return Scaffold(appBar: AppBar(title: const Text('Tentang')), body: const Center(child: CircularProgressIndicator()));
+    if (_error != null) return Scaffold(appBar: AppBar(title: const Text('Tentang')), body: ErrorView(message: _error!, onRetry: _load));
     final t = Theme.of(ctx);
     final regency = _val('regency');
     final company = _val('company_name');
@@ -80,10 +86,20 @@ class _AboutScreenState extends State<AboutScreen> {
     );
   }
 
-  Widget _row(IconData icon, String label, String value, String link) => Padding(padding: const EdgeInsets.symmetric(vertical: 5), child: Row(children: [
-    Icon(icon, size: 18, color: Colors.grey.shade500), const SizedBox(width: 8),
-    SizedBox(width: 90, child: Text(label, style: TextStyle(color: Colors.grey.shade500, fontSize: 13))),
-    Expanded(child: GestureDetector(onTap: () => launchUrl(Uri.parse(link)), child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))))]));
+  Widget _row(IconData icon, String label, String value, String link) {
+    // Baris kontak hanya bisa diketuk bila nilainya nyata — mencegah
+    // `mailto:-` / `https://wa.me/-` saat config belum terisi.
+    final uri = Uri.tryParse(link);
+    final enabled = value.isNotEmpty && value != '-' && uri != null && uri.hasScheme;
+    return Padding(padding: const EdgeInsets.symmetric(vertical: 5), child: Row(children: [
+      Icon(icon, size: 18, color: Colors.grey.shade500), const SizedBox(width: 8),
+      SizedBox(width: 90, child: Text(label, style: TextStyle(color: Colors.grey.shade500, fontSize: 13))),
+      Expanded(child: GestureDetector(
+        onTap: enabled ? () { try { unawaited(launchUrl(uri)); } catch (_) {} } : null,
+        child: Text(value, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: enabled ? null : Colors.grey.shade400)),
+      )),
+    ]));
+  }
 
   Widget _value(String title, String desc) => Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
     const Icon(Icons.check_circle, size: 18, color: Color(0xFF168A4A)), const SizedBox(width: 10),

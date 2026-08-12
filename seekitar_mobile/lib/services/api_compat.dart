@@ -188,6 +188,7 @@ class ApiProvider {
 
   // ─── Upload ───
   Future<Map<String,dynamic>> uploadImage(File file, {String purpose = 'listing'}) => _api.uploadImage(file, purpose: purpose);
+  Future<void> deleteUpload(String path) => _api.deleteUpload(path);
   Future<Map<String,dynamic>> validateCoupon(String code, double orderTotal) => _api.validateCoupon(code, orderTotal);
   Future<Map<String,dynamic>> applyCoupon(String code, String orderId) => _api.applyCoupon(code, orderId);
   Future<Map<String,dynamic>> uploadKtp(File ktpImage, File selfieImage, {required String nik, String? address, double? latitude, double? longitude}) => _api.uploadKtp(ktpImage, selfieImage, nik: nik, address: address, latitude: latitude, longitude: longitude);

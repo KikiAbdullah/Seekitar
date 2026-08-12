@@ -23,8 +23,10 @@ module.exports = {
         NODE_ENV: 'production',
         HOST: '127.0.0.1',
         PORT: 3001,
-        // ⚠️ WAJIB diisi: token sama dengan BAILEYS_TOKEN di .env Laravel.
-        BAILEYS_TOKEN: '',
+        // Token diambil dari .env gateway (dotenv TIDAK menimpa env yang
+        // sudah ada). JANGAN set BAILEYS_TOKEN di sini — nilai kosong di
+        // sini dulu membuat auth gateway MATI total (token menjadi '').
+        // Token wajib sama dengan BAILEYS_TOKEN di .env Laravel.
         // Jalur cepat socket: URL Redis, mis. redis://127.0.0.1:6379.
         // Biarkan kosong untuk memakai HTTP saja.
         REDIS_URL: '',
