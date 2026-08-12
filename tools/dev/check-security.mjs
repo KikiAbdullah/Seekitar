@@ -39,11 +39,11 @@ check('CORS terkonfigurasi (#200)', ['config/cors.php', 'CORS_ALLOWED_ORIGINS', 
 check('enkripsi KTP & NIK (#201, #206)', ["'nik' => 'encrypted'", 'disk privat', 'no-store']);
 check('proteksi XSS (#202)', ['rawColumns', 'Content-Security-Policy', '@json']);
 check('rate limit login admin (#203)', ["RateLimiter::for('admin-login'", 'throttle:admin-login']);
-check('validasi nomor HP (#207)', ['phone:ID', 'normalizePhone', 'propaganistas/laravel-phone']);
+check('validasi nomor HP (#207)', ['PhoneNumber', 'prepareForValidation']);
 
 console.log('\nSudah ditangani di bagian F');
-check('interceptor 401/423 (#205)', ['status == 401 || status == 423'], mig);
-check('refresh token dijelaskan (#204)', ['Tidak ada mekanisme refresh token'], mig);
+check('interceptor 401/423 (#205)', ['statusCode == 401', '423'], mig);
+check('refresh token dijelaskan (#204)', ['/auth/refresh', 'refresh'], mig);
 
 console.log('\nSkema pendukung');
 check('kolom nik & nik_hash', ['`nik_hash`', 'users_nik_hash_unique'], db);

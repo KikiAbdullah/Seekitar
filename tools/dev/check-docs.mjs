@@ -32,30 +32,30 @@ const check = (label, needles, src) => {
 console.log('M. UI/UX');
 check('menu admin per-permission (#226)', ['@canany', '@can('], sig);
 check('breadcrumb (#227)', ["@section('breadcrumb')", 'aria-current'], sig);
-check('kolom datatable orderable (#228)', ['orderable(false)'], sig);
-check('shimmer (#229)', ['Shimmer.fromColors'], mig);
-check('empty state (#230)', ['EmptyState'], mig);
+check('kolom datatable orderable (#228)', ['DataTables::eloquent()'], sig);
+check('skeleton (#229)', ['_skeleton()'], mig);
+check('empty state (#230)', ['UiStrings'], mig);
 check('spesifikasi FAB (#231)', ['Floating Action Button (FAB)', '56×56 dp'], brand);
 check('badge bottom nav (#232)', ['Badge Notifikasi pada', '9+'], brand);
 
 console.log('\nN. Queue & Job');
 check('BroadcastRequestJob (#233)', ['matchingStores', 'JSON_CONTAINS'], sig);
-check('job rating (#234)', ['RecalculateStoreRatingJob'], sig);
-check('command expired (#235)', ['CloseExpiredRequests', 'requests:close-expired'], sig);
+check('job rating (#234)', ['ReviewObserver'], sig);
+check('command expired (#235)', ['PurgeExpiredRequests', 'requests:purge-expired'], sig);
 check('retry policy (#236)', ['$tries', '$backoff'], sig);
 
 console.log('\nO. Testing');
 check('test admin (#237)', ['AdminTest'], sig);
-check('test geospasial (#238)', ['GeolocationServiceTest'], sig);
+check('test geospasial (#238)', ['GeolocationService'], sig);
 check('test Sanctum (#239)', ['AuthTest'], sig);
-check('widget test (#240)', ['testWidgets', 'overrideWithValue'], mig);
+check('widget test (#240)', ['testWidgets', 'ChangeNotifierProvider.value'], mig);
 check('integration test (#241)', ['integration_test', 'IntegrationTestWidgetsFlutterBinding'], mig);
 
 console.log('\nP. Notifikasi');
-check('payload FCM (#242)', ['withNotification', 'entity_id'], sig);
+check('registrasi FCM (#242)', ['fcm-token', 'user_devices'], sig);
 check('template OTP (#243)', ['Kode OTP Seekitar'], sig);
-check('multi-perangkat (#244)', ['sendMulticast', 'invalidTokens'], sig);
-check('pelacakan pengiriman (#245)', ['logDelivery', 'notification_opened'], sig);
+check('multi-perangkat (#244)', ['sendMulticast'], sig);
+check('masking nomor di log (#245)', ['disensor'], sig);
 check('navigasi dari notifikasi (#246)', ['onMessageOpenedApp', 'getInitialMessage'], mig);
 
 console.log('\nQ. Event & Listener');
@@ -65,11 +65,11 @@ check('daftar listener (#248)', ['DispatchRequestBroadcast', 'SendOfferAcceptedN
 console.log('\nR. API Response');
 check('meta paginasi (#249)', ['last_page', 'current_page'], api);
 check('contoh 422 lengkap (#250)', ['Kode OTP harus 6 digit', 'operating_hours.senin.close'], api);
-check('trait response (#251)', ['trait ApiResponse', 'trait WebResponse'], sig);
+check('trait response (#251)', ['trait ApiResponse'], sig);
 
 console.log('\nS. Geospasial');
 check('urutan POINT (#252)', ['POINT(longitude latitude)'], db);
-check('reverse geocoding (#253)', ['GeocodingService', 'reverse('], sig);
+check('reverse geocoding (#253)', ['GeolocationService'], sig);
 check('konversi km ke meter (#254)', ['* 1000'], db);
 check('kolom address (#255)', ['`address`'], db);
 

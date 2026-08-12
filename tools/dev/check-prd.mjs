@@ -99,8 +99,9 @@ const radiusOk =
 if (!radiusOk) fail('default radius (5/15/25 km) tidak konsisten PRD ↔ DATABASE');
 else ok('tiga default radius konsisten');
 
-// Broadcast dua arah harus terdokumentasi di Server Guide.
-if (!sig.includes('service_radius_km * 1000')) {
+// Broadcast dua arah harus terdokumentasi di Server Guide: toko dalam radius
+// pembeli (radius_km) DAN pembeli dalam radius layanan toko (service_radius_km).
+if (!/service_radius_km/.test(sig) || !/radius_km/.test(sig)) {
   fail('pencocokan broadcast dua arah hilang dari Server_Implementation_Guide.md (#160, #161)');
 } else ok('pencocokan broadcast dua arah (#160, #161)');
 

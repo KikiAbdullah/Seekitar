@@ -14,13 +14,12 @@ Disusun per folder/per file: judul halaman, isi, kolom tabel, filter, aksi, part
 
 | File | Isi |
 |------|-----|
-| `layout.blade.php` | Kerangka panel. Font **Plus Jakarta Sans** (Google Fonts), ikon **Tabler** (`vendor/mordenize`), tema `vendor/mordenize/css/style.min.css` (sudah diwarnai hijau Seekitar), DataTables di-host sendiri (`vendor/mordenize/libs/datatables.net/`), i18n `vendor/datatables/id.json`. `@yield('title')`, `@yield('content')`, `@stack('styles')`, `@stack('scripts')`. Preconnect ke fonts.googleapis / tile.openstreetmap. |
-| `partials/sidebar.blade.php` | Menu navigasi: logo lockup; **Dasbor, Verifikasi Pengguna, Verifikasi Toko, Pengguna, Toko, Listing, Pesanan, Penawaran, Permintaan, Laporan Masalah, Ulasan, Kategori, Blog, Langganan, Iklan Banner, Peta Toko, Biaya Layanan, Pengaturan Sistem, Profil, Keluar**. Semua ikon `fa-regular fa-*`, seragam terpusat; sidebar mini (ikon 24px) saat dicollapse. |
-| `partials/header.blade.php` | Bar atas: tombol toggle sidebar, judul halaman (judul Dinamis), notifikasi dispute + dropdown profil. |
-| `partials/page-header.blade.php` | Header halaman dengan breadcrumb (Dasbor → halaman aktif). |
-| `partials/table-page.blade.php` | Kerangka tabel DataTables: judul, breadcrumb, area filter, tombol Export/Excel, tombol Tambah (opsional), tabel, modal hapus umum. |
+| `layouts/admin.blade.php` | Kerangka panel. Font **Plus Jakarta Sans** (Google Fonts), ikon **Tabler** (`vendor/mordenize`), tema `vendor/mordenize/css/style.min.css` (sudah diwarnai hijau Seekitar), DataTables di-host sendiri (`vendor/mordenize/libs/datatables.net/`), i18n `vendor/datatables/id.json`. `@yield('title')`, `@yield('content')`, `@stack('styles')`, `@stack('scripts')`. Preconnect ke fonts.googleapis / tile.openstreetmap. |
+| `partials/sidebar.blade.php` | Menu navigasi: logo lockup; **Dasbor, Pengguna, Toko, Verifikasi KTP, Verifikasi Toko, Kategori, Listing, Permintaan, Penawaran, Pesanan, Ulasan, Blog, Iklan Banner, Langganan, Laporan Masalah, Biaya Layanan, Pengaturan, Dompet, WhatsApp Gateway**. Tidak ada item "Peta Toko" — peta tersarang: item Toko ikut aktif via `routeIs('admin.maps.stores')` (sidebar.blade.php:40). Semua ikon **Tabler `ti ti-*`**, seragam terpusat; sidebar mini (ikon 24px) saat dicollapse; tiap item dibungkus `@can`. |
+| `partials/header.blade.php` | Bar atas: tombol toggle sidebar + dropdown profil kanan (**Profil Saya, Ubah Kata Sandi, Log Out**). Tidak ada judul dinamis/notifikasi. |
+| `partials/table-page.blade.php` | Kerangka tabel DataTables generik (judul + breadcrumb, filter `data-dt-filter`, tombol Ekspor CSV, toolbar aksi baris terpilih, server-side). **Ada di disk tetapi TIDAK di-`@include` oleh view mana pun** — halaman index ditulis manual (lihat pola di bawah). |
 
-**Pola umum index:** `@extends('admin.layout')` + `admin.partials.table-page` dengan parameter `$judul`, `$tableId`, `$ajax`, `$columns`, `filterView`/include `_filter` per modul. Kolom di-render server-side; cell partial (`_actions`, `_nama`, `_status`, dll.) di-`include` per baris.
+**Pola umum index:** semua view `@extends('admin.layouts.admin')` lalu **menulis halaman DataTable sendiri** (kartu + header aksi, toolbar filter `_filter` per modul via `data-dt-filter`, tabel `serverSide`, DataTables di-`@push('scripts')` per halaman). `partials/table-page.blade.php` menyediakan pola generik tapi tidak dipakai. Cell partial (`_actions`, `_nama`, `_status`, dll.) di-`include` per baris.
 
 ### A.2 Dashboard
 
@@ -46,9 +45,9 @@ Disusun per folder/per file: judul halaman, isi, kolom tabel, filter, aksi, part
 | File | Isi |
 |------|-----|
 | `users.blade.php` | **Antrian Verifikasi Identitas** (pengguna yang mau buka toko). SLA **1×24 jam**, diurutkan paling lama dulu. Klik baris → modal `_user_modal`. |
-| `partials/_user_modal.blade.php` | Modal verifikasi identitas 3 langkah: **(1)** foto wajah ↔ KTP berdampingan, **(2)** data berkas (nama, NIK, alamat KTP), **(3)** domisili: alamat vs titik peta. Ada checklist gerbang — tombol **Setujui** terkunci sampai checklist tercentang. Penolakan memakai collapse di dalam modal. |
+| `_user_modal.blade.php` | Modal verifikasi identitas 3 langkah: **(1)** foto wajah ↔ KTP berdampingan, **(2)** data berkas (nama, NIK, alamat KTP), **(3)** domisili: alamat vs titik peta. Ada checklist gerbang — tombol **Setujui** terkunci sampai checklist tercentang. Penolakan memakai collapse di dalam modal. |
 | `stores.blade.php` | **Antrian Verifikasi Toko** — hanya toko yang pemiliknya sudah terverifikasi. Modal `_store_modal`. |
-| `partials/_store_modal.blade.php` | Modal verifikasi toko: **(1)** alamat & identitas pemilik, **(2)** foto toko, **(3)** koordinat toko vs Google Maps. Tombol **Verifikasi** terkunci sampai checklist tercentang. `getRawOriginal('photo')` dipakai untuk cek file foto asli. |
+| `_store_modal.blade.php` | Modal verifikasi toko: **(1)** alamat & identitas pemilik, **(2)** foto toko, **(3)** koordinat toko vs Google Maps. Tombol **Verifikasi** terkunci sampai checklist tercentang. `getRawOriginal('photo')` dipakai untuk cek file foto asli. |
 
 ### A.6 Pengguna (`users/`)
 
@@ -128,7 +127,7 @@ Disusun per folder/per file: judul halaman, isi, kolom tabel, filter, aksi, part
 |------|-----|
 | `index.blade.php` | Tabel kategori + tombol **"Kategori"** (buat baru). |
 | `form.blade.php` | Form tambah/sunting: nama, slug, deskripsi, kategori induk (parent), urutan, aktif. |
-| `_actions.blade.php` | **Sunting / Hapus**. |
+| — | Aksi **Edit / Hapus** dirender inline per baris (index.blade.php:44-55), tanpa partial `_actions`. |
 
 ### A.15 Blog (`blog/`)
 
@@ -180,6 +179,12 @@ Disusun per folder/per file: judul halaman, isi, kolom tabel, filter, aksi, part
 |------|-----|
 | `index.blade.php` | **"Gateway WhatsApp"** (permission `manage-whatsapp`, driver `baileys`): kartu status (Online/Offline, nomor tersambung, terakhir tersambung) + tombol Muat Ulang & Cabut Sesi (konfirmasi SweetAlert2), kotak QR code untuk scan (auto-poll 3 dtk saat offline), langkah scan, dan form uji kirim pesan. Bila driver bukan `baileys`, menampilkan pesan cara mengaktifkannya. |
 
+### A.22 Dompet (`wallet/`)
+
+| File | Isi |
+|------|-----|
+| `index.blade.php` | **"Dompet — Verifikasi Pembayaran"** (permission `manage-settings`, route `admin.wallet.index`): kartu **Top Up Pending** (referensi monospace, pengguna, jumlah, diajukan, aksi **Konfirmasi/Batal**) + kartu **Penarikan Pending (payout)** (referensi, pengguna, jumlah, rekening, diajukan, aksi **Selesai/Tolak**). Keduanya dirender server-side (loop `@foreach`), bukan DataTables; ada empty state tiap kartu. |
+
 ---
 
 ## B. Situs Web (`resources/views/web/`)
@@ -207,6 +212,8 @@ Disusun per folder/per file: judul halaman, isi, kolom tabel, filter, aksi, part
 | `for-sellers.blade.php` | Untuk Penjual & Penyedia Jasa | Hero berfoto (`_hero` + `penyedia.webp`, pill **"Gratis · Tanpa komisi"**, judul *"Buka toko, jangkau tetangga"*); **statistik** (`$stats`: toko terverifikasi, listing aktif, wilayah operasi); **7 keuntungan** (Gratis Selamanya, Pelanggan Terdekat, Verifikasi Terpercaya, Siaran Kebutuhan, Transaksi Terpantau, Rating & Reputasi, Fitur Premium Opsional); **4 langkah** (unduh & daftar, verifikasi identitas, atur toko, listing barang); **3 testimonial** (Warung Sembako Ibu Wati, Servis AC Barokah, Sewa Tenda Rizki); **CTA** → "Buka Toko Gratis" (ke `web.help`) + "Lihat Detail Biaya" (ke `web.pricing`). |
 | `guidelines.blade.php` | Pedoman Komunitas | `.doc-toc` 6 bagian: Prinsip dasar, Konten dilarang, Perilaku dilarang, Pelaporan, Sanksi (tabel Ringan/Sedang/Berat), Banding. *"Terakhir diperbarui: 30 Juli 2026"*. |
 | `help.blade.php` | Pusat Bantuan | Hero berfoto (`bantuan.webp`). **Accordion FAQ 4 grup**: Akun & Keamanan (3), Pembayaran (2), Permintaan & Penawaran (3), Verifikasi & Ulasan (2). CTA → Kontak & Tentang. |
+| `listing-detail.blade.php` | Detail Listing | Route `/listing/{listing}`. Breadcrumb Beranda → Cari; galeri `detail-gallery` (badge tipe, `fetchpriority="high"`, fallback `placehold.co`); harga + badge **"per hari / per periode sewa"** untuk sewa; kartu toko (avatar, nama + centang, lokasi); CTA **Download di Google Play** (web hanya katalog — transaksi lewat aplikasi); info ringkas (tipe, stok/slot, tanggal, COD, radius layanan); deskripsi `.doc-content`; statistik toko (listing, rating, ulasan); "Lainnya dari {toko}"; CTA bawah. |
+| `listings.blade.php` | Cari (Katalog Publik) | Route `/cari`. Hero `hero-wrap` (pill "Katalog Publik", H1 *"Temukan kebutuhanmu di sekitar"*); form cari **keyword + kategori + tipe** (Barang/Jasa/Sewa); hasil grid kartu `listing-card` (thumb `listing-thumb`, badge tipe, nama toko + centang terverifikasi, harga `Angka::rupiah` / "Hubungi Penjual", tanggal); pill filter cepat per tipe + **Reset**; empty state; pagination `$listings->links()`. |
 | `pricing.blade.php` | Biaya & Harga | Alert "gratis untuk semua"; tabel **biaya pembeli** (semua gratis); tabel **biaya penjual** (Sekarang vs Kedepan: Boost, Pro, Iklan Banner — diambil dari `config('seekitar.monetization.*')`); **biaya flat per transaksi** (mulai Rp1.500, bukan persentase); pembayaran langsung; fitur premium opsional; perubahan biaya diumumkan ≥30 hari sebelum berlaku. |
 | `privacy.blade.php` | Kebijakan Privasi | Legal UU PDP. `.doc-toc` 8 bagian: Data dikumpulkan, Cara dilindungi, Data dibagikan, Tidak dijual, Cookie & teknologi, Pelanggaran data (1×24 jam penanganan, 3×24 jam notifikasi, lapor ke Kominfo), Hak subjek data, Kontak. *"Terakhir diperbarui: 30 Juli 2026"*. |
 | `refund.blade.php` | Kebijakan Pengembalian & Sengketa | `.doc-toc` 6 bagian: Posisi Seekitar (platform penghubung, mediator), Jenis sengketa (6), Cara melapor (lewat app — membekukan pesanan; email — tidak), Proses mediasi (4 langkah), Keputusan, Pembatasan tanggung jawab. *"Terakhir diperbarui: 30 Juli 2026"*. |
@@ -221,7 +228,8 @@ Disusun per folder/per file: judul halaman, isi, kolom tabel, filter, aksi, part
 ## C. Catatan
 
 - Semua halaman legal/statis memakai `@include('web.partials._hero')`; halaman legal memakai daftar isi sticky `.doc-toc` dan konten `.doc-content` (didefinisikan di `partials/_styles.blade.php`).
-- Semua halaman admin memakai `@extends('admin.layout')` (kecuali `auth/login.blade.php` yang mandiri).
+- Semua halaman admin memakai `@extends('admin.layouts.admin')` (kecuali `auth/login.blade.php` yang mandiri).
+- Daftar partial per modul bersifat **indikatif** — sebagian partial nyata (mis. `orders/_filter`, `orders/_actions`, `users/_filter`, `stores/_filter`, `verifications/_user_info`, `_user_action`, `_user_submitted`, `_user_context`, `_store_info`, `_store_action`, `_store_owner`, `partials/_order_badge`) tidak selalu dicantumkan. `admin/users/_actions.blade.php` ada tetapi tidak dipakai — index memakai aksi inline `action-show`/`action-edit`.
 - Badge warna/label dibaca dari enum (`->color()`, `->label()`, `->icon()`), tidak hardcoded di blade.
 - **Optimasi performa (31 Jul 2026):** `@import` Google Fonts dihapus dari `style.min.css` → font dimuat lewat `<link>` + preconnect; jQuery & Owl Carousel dipindah dari layout global ke `home` saja (via `@push`); `custom.js` ditulis ulang murni vanilla JS (tanpa jQuery) dengan guard tiap slider; CSS yang dibagi (`.hero-wrap`, `.stat-num`, `.feature-icon`, `.check-item`, dll.) dipusatkan di `partials/_styles.blade.php` sehingga halaman statis/legal tidak perlu `@push('styles')` lagi; `img.hero-img` memakai `fetchpriority="high"` + `decoding="async"`. Skrip global memakai `defer`.
 - Data kontak & nama perusahaan diambil dari `config('seekitar.contacts.*')` dan `config('seekitar.company.*')`; nama wilayah dari `config('seekitar.regency')`.

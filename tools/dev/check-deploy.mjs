@@ -34,9 +34,10 @@ check('Laravel Pulse (#214)', ['laravel/pulse', 'viewPulse', 'pulse:trim']);
 
 console.log('\nBuild mobile');
 check('keystore Android (#215)', ['key.properties', 'signingConfigs', 'keytool -genkey'], mig);
-check('build iOS (#216)', ['18.2 Penandatanganan iOS', 'fastlane', 'NSLocationWhenInUseUsageDescription'], mig);
+check('build iOS (#216)', ['18.2 Penandatanganan iOS', 'macOS', 'rencana'], mig);
 check('environment Flutter (#217)', ['--dart-define-from-file'], mig);
-check('CI build_runner sebelum build', ['dart run build_runner build'], mig);
+// Tanpa codegen (build_runner/freezed dihapus) → CI tidak butuh build_runner.
+check('CI tanpa build_runner', ['flutter analyze', 'flutter build apk'], mig);
 
 console.log('\nRoadmap');
 check('buffer stabilisasi (#218)', ['Buffer: Stabilisasi', 'Tidak ada fitur baru'], prd);

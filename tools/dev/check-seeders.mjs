@@ -72,7 +72,7 @@ if (!taxonomy) {
   if (tooLong.length) fail(`slug melebihi VARCHAR(50): ${tooLong.join(', ')}`);
 }
 
-// ───────────────────────────────────────────── 3. Permission: 12, sesuai §6.2
+// ───────────────────────────────────────────── 3. Permission: 17, sesuai §6.2
 console.log('\nRolesAndPermissionsSeeder');
 const roleSrc = read(`${SEEDERS}/RolesAndPermissionsSeeder.php`);
 const sig = read('Server_Implementation_Guide.md');
@@ -80,9 +80,9 @@ const sig = read('Server_Implementation_Guide.md');
 const permsInSeeder = [...roleSrc.matchAll(/^\s{8}'([a-z-]+)',$/gm)].map(m => m[1])
   .filter(p => p.startsWith('manage-') || p.startsWith('verify-'));
 
-if (permsInSeeder.length !== 12) {
-  fail(`permission berjumlah ${permsInSeeder.length}, dokumen §6.2 menyebut 12`);
-} else ok('12 permission');
+if (permsInSeeder.length !== 17) {
+  fail(`permission berjumlah ${permsInSeeder.length}, dokumen §6.2 menyebut 17`);
+} else ok('17 permission');
 
 // Tiap permission harus benar-benar tercantum di Server Guide §6.2.
 const missingInDoc = permsInSeeder.filter(p => !sig.includes(`\`${p}\``));

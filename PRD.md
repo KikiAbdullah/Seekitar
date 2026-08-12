@@ -744,7 +744,7 @@ API menggunakan format REST JSON, autentikasi Bearer Token (JWT, `auth:api`). Ra
 **Authentication**
 
 - `POST /api/auth/request-otp` (body: phone) → Kirim OTP WhatsApp
-- `POST /api/auth/verify-otp` (body: phone, otp) → Mengembalikan token akses (Personal Access Token)
+- `POST /api/auth/verify-otp` (body: phone, otp) → Mengembalikan token akses (JWT Bearer)
 
 **Stores**
 
@@ -953,16 +953,18 @@ Setiap notifikasi membawa `data` payload yang berisi `type`, `entity_id`, dan `s
 
 | Sumber Pendapatan        | Deskripsi                                                                                                                                                    | Estimasi Harga       |
 | :----------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------- |
-| **Paket “Penyedia Pro”** | Langganan bulanan. Fitur: Auto-reply penawaran (dengan template), lencana Pro di profil & pencarian, prioritas muncul di broadcast (bukan prioritas mutlak). | Rp 49.000/bulan      |
-| **Boost Listing**        | Tampil di urutan teratas hasil pencarian kecamatan/kategori selama 24 jam.                                                                                   | Rp 9.900/hari        |
-| **Admin Fee (Escrow)**   | Jika kelak menerapkan in-app wallet & escrow, biaya 1-2% dari nilai transaksi yang dibayarkan via platform.                                                  | 1.5%                 |
+| **Paket “Penyedia Pro”** | Langganan bulanan. Fitur: Auto-reply penawaran (dengan template), lencana Pro di profil & pencarian, prioritas muncul di broadcast (bukan prioritas mutlak). | Rp 30.000/bulan      |
+| **Boost Listing**        | Tampil di urutan teratas hasil pencarian kecamatan/kategori selama 7 hari.                                                                                   | Rp 7.500             |
+| **Admin Fee**            | Biaya flat per transaksi (toggleable lewat pengaturan admin, default nonaktif) — bukan persentase escrow.                                                    | Rp 1.500/transaksi   |
 | **Iklan Lokal**          | Toko bisa memasang banner di feed beranda dengan segmentasi radius.                                                                                          | Mulai Rp 50.000/hari |
+
+> Nilai di atas adalah default dari `config/seekitar.php` dan dapat diubah lewat pengaturan admin (Biaya Layanan).
 
 ---
 
 ## 13. METRIK KEBERHASILAN & KPI
 
-Selain target GMV dan DAU, detail metrik berikut dilacak via dashboard analitik (Google Analytics for Firebase / Mixpanel).
+Selain target GMV dan DAU, detail metrik berikut dilacak via query database dan laporan/dashboard ringkasan admin (Google Analytics for Firebase / Mixpanel belum terpasang — menjadi rencana ke depan).
 
 | Kategori       | Nama Metrik               | Definisi                                                     | Target 3 Bulan |
 | :------------- | :------------------------ | :----------------------------------------------------------- | :------------- |
@@ -1042,7 +1044,7 @@ Perkiraan dengan tim kecil (2-3 orang full-stack Laravel + Flutter, 1 UI/UX). Fa
 | :-------- | :---------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **1-2**   | Setup Infrastruktur & Database      | Provisioning server, MySQL 8.0.34+, Redis 7, Firebase project, CI/CD (GitHub Actions + Laravel Forge), inisialisasi proyek Laravel 13 dan Flutter                       |
 | **3-4**   | Backend Core: Auth, Profil, Toko    | API registrasi, OTP, CRUD profil, buka toko + endpoint geospasial toko, admin verifikasi toko                                                                           |
-| **5-6**   | Frontend: Auth & Profil UI, Peta    | Flutter screen register, home skeleton, integrasi Google Maps, komponen pilih lokasi. Web Laravel landing & halaman katalog SSR (Blade)                                 |
+| **5-6**   | Frontend: Auth & Profil UI, Peta    | Flutter screen register, home skeleton, integrasi peta OpenStreetMap (flutter_osm_plugin), komponen pilih lokasi. Web Laravel landing & halaman katalog SSR (Blade)                                 |
 | **7-8**   | Engine 1: Marketplace Katalog       | Backend listing, pencarian full-text, filter radius, frontend feed katalog, detail listing, pemesanan langsung                                                          |
 | **9-10**  | Engine 2: Papan Kebutuhan & Bidding | Backend request, broadcast job Redis (Laravel Queue), offer API, notifikasi FCM. Frontend form pasang kebutuhan, halaman permintaan, daftar penawaran, terima penawaran |
 | **11-12** | Pesanan, Review & Dispute           | State machine pesanan, integrasi halaman status di mobile, review pasca-selesai, laporan/dispute di admin (Laravel Blade)                                               |

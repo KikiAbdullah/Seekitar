@@ -11,7 +11,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
-const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
+// Normalisasi CRLF → LF agar regex ` ```\n` dan `^## ` tidak gagal di Windows.
+const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8').replace(/\r\n/g, '\n');
 
 /** Ambil satu bab berdasarkan heading `## <n>. ` sampai heading berikutnya. */
 function section(text, startRe, endRe) {
@@ -47,12 +48,12 @@ const sig = read('Server_Implementation_Guide.md');
 const sig4 = directoryTrees(section(sig, /^## 4\. STRUKTUR PROYEK/, /^## 5\./));
 
 const SERVER_REQUIRED = [
-  ['app/Services/', ['Services/', 'BroadcastService', 'GeolocationService', 'NotificationService']],
+  ['app/Services/', ['Services/', 'BroadcastService', 'GeolocationService', 'OtpService', 'OrderStateMachine']],
   ['app/Enums/', ['Enums/', 'OrderStatus.php', 'RequestStatus.php', 'OfferStatus.php', 'StoreType.php', 'VerificationLevel.php']],
-  ['app/DataTables/', ['DataTables/']],
+  ['app/DataTables/', ['DataTables/', 'UsersDataTable.php']],
   ['database/seeders/', ['seeders/', 'CategorySeeder.php', 'RolesAndPermissionsSeeder.php']],
-  ['app/Jobs/', ['Jobs/', 'BroadcastRequestJob.php']],
-  ['app/Listeners/', ['Listeners/', 'SendOfferAcceptedNotification.php']],
+  ['app/Jobs/', ['Jobs/', 'BroadcastRequestJob.php', 'SendOtpJob.php']],
+  ['app/Events/', ['Events/', 'OrderStatusChanged.php', 'OfferAccepted.php', 'CustomerRequestCreated.php']],
 ];
 
 for (const [label, needles] of SERVER_REQUIRED) {
@@ -68,10 +69,12 @@ const mig3raw = section(mig, /^## 3\. STRUKTUR PROYEK/, /^## 4\. STATE MANAGEMEN
 const mig3 = directoryTrees(mig3raw);
 
 const MOBILE_REQUIRED = [
-  ['core/services/', ['services/', 'location_service.dart', 'notification_service.dart', 'analytics_service.dart']],
-  ['presentation/providers/', ['providers/', 'auth_provider.dart']],
-  ['route_constants.dart', ['route_constants.dart']],
-
+  ['core/', ['core/', 'constants.dart', 'theme.dart', 'logger.dart', 'text_utils.dart']],
+  ['services/', ['services/', 'api_client.dart', 'dio_client.dart', 'auth_service.dart', 'fcm_service.dart', 'location_service.dart', 'api_compat.dart']],
+  ['providers/', ['providers/', 'app_state.dart']],
+  ['routing/', ['routing/', 'app_router.dart']],
+  ['widgets/', ['widgets/', 'base_screen.dart', 'offline_banner.dart', 'error_view.dart']],
+  ['screens/', ['screens/', 'location_picker_screen.dart', 'order_detail_screen.dart']],
 ];
 
 for (const [label, needles] of MOBILE_REQUIRED) {
@@ -80,11 +83,11 @@ for (const [label, needles] of MOBILE_REQUIRED) {
   else ok(label);
 }
 
-// Penjelasan tiga lokasi widget ada di prosa (bukan pohon direktori).
-const WIDGET_DOC = ['core/widgets/', 'presentation/widgets/', 'Tiga Lokasi Widget'];
+// Penjelasan penempatan widget ada di prosa (bukan pohon direktori).
+const WIDGET_DOC = ['Satu layar = satu berkas', 'widgets/'];
 const missingWidgetDoc = WIDGET_DOC.filter(n => !mig3raw.includes(n));
-if (missingWidgetDoc.length) fail(`penjelasan 3 lokasi widget — hilang: ${missingWidgetDoc.join(', ')}`);
-else ok('penjelasan 3 lokasi widget');
+if (missingWidgetDoc.length) fail(`penjelasan penempatan widget — hilang: ${missingWidgetDoc.join(', ')}`);
+else ok('penjelasan penempatan widget');
 
 // ------------------------------------------------- Enum vs skema DATABASE.md
 console.log('\nEnum harus cocok dengan ENUM di DATABASE.md');

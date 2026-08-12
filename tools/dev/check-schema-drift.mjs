@@ -30,6 +30,15 @@ const db = read('DATABASE.md');
 const MIG_DIR = path.join(ROOT, 'seekitar-server/database/migrations');
 const MODEL_DIR = path.join(ROOT, 'seekitar-server/app/Models');
 
+/**
+ * Tabel scaffolding framework (Laravel/Sanctum) yang memang tidak
+ * didokumentasikan di DATABASE.md §4 — bukan skema domain Seekitar.
+ */
+const FRAMEWORK_TABLES = new Set([
+  'cache', 'cache_locks', 'jobs', 'job_batches', 'failed_jobs',
+  'sessions', 'password_reset_tokens',
+]);
+
 let problems = 0;
 const fail = m => { console.log(`  ❌ ${m}`); problems++; };
 const ok = m => console.log(`  ✅ ${m}`);
@@ -53,7 +62,7 @@ function docColumns(tbl) {
     // Baris tabel markdown. Baris ENUM/nilai (kolom kedua bukan tipe SQL)
     // ikut tersaring karena tidak diawali pola `| \`x\` | TIPE`.
     const md = t.match(/^\|\s*`([a-z_0-9]+)`\s*\|\s*([A-Za-z(]+)/);
-    if (md && /^(CHAR|VARCHAR|TEXT|TINYINT|SMALLINT|INT|BIGINT|DECIMAL|FLOAT|DOUBLE|BOOLEAN|DATE|DATETIME|TIMESTAMP|JSON|ENUM|SET|POINT|GEOMETRY|BLOB|BINARY)/i.test(md[2])) {
+    if (md && /^(CHAR|VARCHAR|TEXT|LONGTEXT|MEDIUMTEXT|TINYINT|SMALLINT|INT|BIGINT|DECIMAL|FLOAT|DOUBLE|BOOLEAN|DATE|DATETIME|TIMESTAMP|JSON|ENUM|SET|POINT|GEOMETRY|BLOB|BINARY)/i.test(md[2])) {
       cols.add(md[1]);
     }
   }
@@ -64,7 +73,7 @@ function docColumns(tbl) {
     for (const line of create[1].split('\n')) {
       const t = line.trim().replace(/^`|`$/g, '');
       const cm = t.match(/^`?([a-z_0-9]+)`?\s+([A-Za-z]+)/);
-      const isColumn = cm && /^(CHAR|VARCHAR|TEXT|TINYINT|SMALLINT|INT|BIGINT|DECIMAL|FLOAT|DOUBLE|BOOLEAN|DATE|DATETIME|TIMESTAMP|JSON|ENUM|SET|POINT|GEOMETRY|BLOB|BINARY)/i.test(cm[2]);
+      const isColumn = cm && /^(CHAR|VARCHAR|TEXT|LONGTEXT|MEDIUMTEXT|TINYINT|SMALLINT|INT|BIGINT|DECIMAL|FLOAT|DOUBLE|BOOLEAN|DATE|DATETIME|TIMESTAMP|JSON|ENUM|SET|POINT|GEOMETRY|BLOB|BINARY)/i.test(cm[2]);
       // Urutan penting: uji "nama TIPE" LEBIH DULU. Kalau baris konstraint
       // disaring duluan, kolom bernama `key` ikut terbuang karena namanya
       // bertabrakan dengan kata kunci KEY — persis bug yang sempat terjadi.
@@ -90,7 +99,7 @@ function migrationTables() {
    */
   const byTable = new Map();
 
-  for (const f of fs.readdirSync(MIG_DIR).filter(x => x.startsWith('2026_07_27_')).sort()) {
+  for (const f of fs.readdirSync(MIG_DIR).filter(x => x.endsWith('.php')).sort()) {
     const raw = fs.readFileSync(path.join(MIG_DIR, f), 'utf8');
 
     // HANYA badan up(). Tanpa pemotongan ini, `dropColumn` di down() ikut
@@ -102,36 +111,47 @@ function migrationTables() {
       ? raw
       : raw.slice(upStart, downStart === -1 ? undefined : downStart);
 
-    const tm = src.match(/Schema::(?:create|table)\('([a-z_]+)'/);
-    if (!tm) continue;
+    // Satu file migrasi bisa membuat BEBERAPA tabel (mis. users +
+    // password_reset_tokens + sessions di satu berkas bawaan Laravel, atau
+    // cache + jobs). Bagi berkas per pemanggilan Schema::create/table dan
+    // ekstrak kolom hanya dari segmen tabel itu — kalau tidak, kolom tabel
+    // lain ikut salah diklaim milik tabel pertama.
+    const tableMatches = [...src.matchAll(/Schema::(?:create|table)\('([a-z_0-9]+)'/g)];
+    if (tableMatches.length === 0) continue;
 
-    const table = tm[1];
-    if (!byTable.has(table)) byTable.set(table, { files: [], cols: new Set() });
-    const entry = byTable.get(table);
-    entry.files.push(f);
+    for (let ti = 0; ti < tableMatches.length; ti++) {
+      const table = tableMatches[ti][1];
+      if (FRAMEWORK_TABLES.has(table)) continue;
+      const segEnd = ti + 1 < tableMatches.length ? tableMatches[ti + 1].index : src.length;
+      const seg = src.slice(tableMatches[ti].index, segEnd);
 
-    let m;
-    COLRE.lastIndex = 0;   // regex /g berbagi state antar pemanggilan
-    while ((m = COLRE.exec(src)) !== null) entry.cols.add(m[1]);
+      if (!byTable.has(table)) byTable.set(table, { files: [], cols: new Set() });
+      const entry = byTable.get(table);
+      entry.files.push(f);
 
-    if (/\$table->timestamps\(\)/.test(src)) { entry.cols.add('created_at'); entry.cols.add('updated_at'); }
-    if (/\$table->softDeletes\(\)/.test(src)) entry.cols.add('deleted_at');
-    if (/\$table->rememberToken\(\)/.test(src)) entry.cols.add('remember_token');
-    // Makro Blueprint lain yang menyembunyikan nama kolom sebenarnya.
-    if (/\$table->id\(\)/.test(src)) entry.cols.add('id');
-    for (const mm of src.matchAll(/\$table->(?:uuidMorphs|morphs)\('([a-z_0-9]+)'\)/g)) {
-      entry.cols.add(mm[1] + '_type');
-      entry.cols.add(mm[1] + '_id');
-    }
+      let m;
+      COLRE.lastIndex = 0;
+      while ((m = COLRE.exec(seg)) !== null) entry.cols.add(m[1]);
 
-    // Kolom spasial ditambahkan lewat raw SQL di SpatialSchema.
-    for (const sm of src.matchAll(/addLocationColumn\(\s*'[a-z_]+'[^)]*?(?:column:\s*'([a-z_0-9]+)')?\s*\)/g)) {
-      entry.cols.add(sm[1] ?? 'location');
-    }
+      if (/\$table->timestamps\(\)/.test(seg)) { entry.cols.add('created_at'); entry.cols.add('updated_at'); }
+      if (/\$table->softDeletes\(\)/.test(seg)) entry.cols.add('deleted_at');
+      if (/\$table->rememberToken\(\)/.test(seg)) entry.cols.add('remember_token');
+      // Makro Blueprint lain yang menyembunyikan nama kolom sebenarnya.
+      if (/\$table->id\(\)/.test(seg)) entry.cols.add('id');
+      for (const mm of seg.matchAll(/\$table->(?:uuidMorphs|morphs)\('([a-z_0-9]+)'\)/g)) {
+        entry.cols.add(mm[1] + '_type');
+        entry.cols.add(mm[1] + '_id');
+      }
 
-    // Kolom yang dibuang migrasi berikutnya tidak boleh ikut terhitung.
-    for (const dm of src.matchAll(/dropColumn\(\[([^\]]*)\]\)/g)) {
-      for (const c of dm[1].matchAll(/'([a-z_0-9]+)'/g)) entry.cols.delete(c[1]);
+      // Kolom spasial ditambahkan lewat raw SQL di SpatialSchema.
+      for (const sm of seg.matchAll(/addLocationColumn\(\s*'[a-z_]+'[^)]*?(?:column:\s*'([a-z_0-9]+)')?\s*\)/g)) {
+        entry.cols.add(sm[1] ?? 'location');
+      }
+
+      // Kolom yang dibuang migrasi berikutnya tidak boleh ikut terhitung.
+      for (const dm of seg.matchAll(/dropColumn\(\[([^\]]*)\]\)/g)) {
+        for (const c of dm[1].matchAll(/'([a-z_0-9]+)'/g)) entry.cols.delete(c[1]);
+      }
     }
   }
 
@@ -194,6 +214,10 @@ const NOT_FILLABLE = new Set([
   'latitude', 'longitude', 'location', 'shipping_location',
   // Turunan, dihitung sistem — bukan input pengguna.
   'rating_avg', 'total_reviews',
+  // Dihitung/dikelola server, bukan diisi lewat mass-assignment request.
+  'service_fee',
+  'notification_prefs',
+  'blocked_user_ids',
 ]);
 
 for (const [table, modelFile] of Object.entries(MODEL_OF)) {

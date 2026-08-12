@@ -181,7 +181,9 @@ if (exists(`${APP}/Services/OrderStateMachine.php`)) {
   } else ok("'dikirim' tidak bisa dibatalkan sepihak");
 
   // Enam nilai ENUM, tidak lebih (PRD §5.4 menolak status bercabang).
-  const states = [...src.matchAll(/^\s{8}'([a-z_]+)'\s*=>/gm)].map(m => m[1]);
+  // Matriks dipisah per peran (SELLER_TRANSITIONS + BUYER_TRANSITIONS) sehingga
+  // tiap status muncul dua kali — hitung status UNIK, bukan jumlah baris.
+  const states = [...new Set([...src.matchAll(/^\s{8}'([a-z_]+)'\s*=>/gm)].map(m => m[1]))];
   if (states.length !== 6) fail(`matriks memuat ${states.length} status, ENUM hanya punya 6`);
   else ok('6 status, sesuai ENUM orders.status');
 }

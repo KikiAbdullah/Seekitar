@@ -7,7 +7,7 @@
 **State Management:** provider (`ChangeNotifier` + `ChangeNotifierProvider`)  
 **HTTP Client:** Dio 5.x (interceptor JWT + refresh + retry)  
 **Database Lokal:** tidak ada (tanpa cache lokal; `shared_preferences` untuk preferensi ringan)  
-**Maps & Geolokasi:** Geolocator + Geocoding (tanpa `google_maps_flutter`)  
+**Maps & Geolokasi:** Geolocator + OpenStreetMap (`flutter_osm_plugin`) — tanpa `google_maps_flutter`  
 **Push Notification:** Firebase Cloud Messaging (FCM) + `flutter_local_notifications`  
 **WhatsApp Redirection:** url_launcher  
 **CI/CD:** GitHub Actions (build APK/IPA)
@@ -105,28 +105,28 @@ ditulis manual.
 | HTTP Client          | `dio`                                   | ^5.7.0   | REST API calls; interceptor JWT/refresh/retry |
 | Routing              | `go_router`                             | ^14.8.0  | Navigasi deklaratif + `StatefulShellRoute` |
 | Geolokasi            | `geolocator`                            | ^13.0.0  | Mendapatkan posisi GPS                 |
-| Geocoding            | `geocoding`                             | ^3.0.0   | Reverse geocoding (koordinat → alamat) |
+| Geocoding            | `geocoding`                             | ^3.0.0   | Reverse geocoding (dideklarasikan, belum dipakai) |
 | Push Notification    | `firebase_messaging`                    | ^15.1.0  | FCM untuk notifikasi                   |
 | Firebase Core        | `firebase_core`                         | ^3.6.0   | Inisialisasi Firebase                  |
 | Notifikasi Lokal     | `flutter_local_notifications`           | ^18.0.0  | Notif saat aplikasi di latar depan     |
 | WhatsApp             | `url_launcher`                          | ^6.3.0   | Membuka WhatsApp / nomor telepon       |
 | Image Picker         | `image_picker`                          | ^1.1.0   | Ambil foto produk, KTP                 |
 | Kompresi Gambar      | `flutter_image_compress`                | ^2.5.1   | Kompresi sebelum unggah                |
-| Cached Network Image | `cached_network_image`                  | ^3.4.0   | Cache gambar                           |
+| Cached Network Image | `cached_network_image`                  | ^3.4.0   | Cache gambar (dideklarasikan, belum dipakai — galeri memakai `Image.network`) |
 | Local Storage        | `shared_preferences`                    | ^2.3.0   | Preferensi ringan                      |
 | Secure Storage       | `flutter_secure_storage`                | ^10.3.1  | Token JWT disimpan aman (`jwt_token`)  |
 | Konektivitas         | `connectivity_plus`                     | ^6.1.0   | Banner offline                         |
-| Path                 | `path_provider`                         | ^2.1.0   | Direktori berkas                       |
+| Path                 | `path_provider`                         | ^2.1.0   | Direktori berkas (dideklarasikan, belum dipakai) |
 | Skala UI             | `flutter_screenutil`                    | ^5.9.0   | Design size 390×844                    |
 | Rating               | `flutter_rating_bar`                    | ^4.0.1   | Tampilan bintang rating                |
 | Indikator Galeri     | `smooth_page_indicator`                 | ^1.2.0   | Dots galeri gambar listing             |
-| SVG                  | `flutter_svg`                           | ^2.0.0   | Logo & aset vektor                     |
-| Skeleton Loading     | `shimmer`                               | ^3.0.0   | Placeholder saat memuat data           |
+| SVG                  | `flutter_svg`                           | ^2.0.0   | Aset vektor (dideklarasikan, belum dipakai — aset memakai PNG) |
+| Skeleton Loading     | `shimmer`                               | ^3.0.0   | Skeleton (dideklarasikan, belum dipakai — skeleton custom `_skeleton()`) |
 | Berbagi              | `share_plus`                            | ^13.3.0  | Bagikan tautan listing (SharePlus.instance.share) |
-| Format               | `intl`                                  | ^0.19.0  | Format tanggal/angka Rupiah            |
-| Izin Platform        | `permission_handler`                    | ^11.3.0  | Izin lokasi, notifikasi                |
+| Format               | `intl`                                  | ^0.19.0  | Format tanggal/angka (dideklarasikan, belum dipakai — manual di `AppConstants`) |
+| Peta OSM             | `flutter_osm_plugin`                    | 1.4.6    | Peta interaktif OpenStreetMap (pemilih lokasi, toko, verifikasi) |
 | Log                  | `logger`                                | ^2.5.0   | Log aplikasi                           |
-| Info Paket           | `package_info_plus`                     | ^10.2.1  | Versi aplikasi (halaman Tentang)       |
+| Info Paket           | `package_info_plus`                     | ^10.2.1  | Versi aplikasi (dideklarasikan, belum dipakai) |
 
 **Dev dependencies:** `flutter_test`, `flutter_lints`, `flutter_native_splash`.
 
@@ -148,9 +148,9 @@ berpasangan; menaikkan salah satu saja sering memicu konflik di build Android.
 
 - `freezed` / `json_serializable` / `build_runner` — model memakai `fromJson`
   manual; tanpa codegen, build lebih cepat dan tidak ada berkas `.g.dart`.
-- `google_maps_flutter` — pemilih lokasi cukup dengan koordinat GPS +
-  reverse geocoding; peta interaktif ada di web admin (Leaflet), bukan di
-  aplikasi mobile.
+- `google_maps_flutter` — peta interaktif memakai OpenStreetMap via
+  `flutter_osm_plugin` (pemilih lokasi, halaman toko, verifikasi KTP) yang
+  gratis tanpa API key.
 - `pull_to_refresh_flutter3` — tidak lagi dirawat. Pakai `RefreshIndicator`
   bawaan Flutter yang sudah memadai.
 
@@ -163,8 +163,9 @@ lib/
 ├── main.dart                   # Entry point: init AppState + FCM, runApp
 ├── core/
 │   ├── constants.dart              # AppConstants (baseUrl via --dart-define, warna, format) + UiStrings
-│   ├── theme.dart                  # AppTheme.light / AppTheme.dark (hijau #168A4A)
-│   └── logger.dart                 # appLogger (paket logger)
+│   ├── theme.dart                  # AppTheme.light saja — tanpa dark mode (hijau #168A4A)
+│   ├── logger.dart                 # appLogger (paket logger)
+│   └── text_utils.dart             # helper teks (avatarInitials, firstChars, dsb.)
 ├── models/                     # Objek data polos — fromJson MANUAL (tanpa codegen)
 │   ├── user.dart                   # User (status, verified_at, latitude/longitude)
 │   ├── store.dart
@@ -187,24 +188,26 @@ lib/
 │   ├── api_client.dart             # Semua metode API (/auth, /stores, /listings, /orders, …)
 │   ├── api_compat.dart             # ApiProvider — pembungkus kompatibilitas pemanggilan
 │   ├── auth_service.dart           # OTP flow, simpan/baca token JWT, profil
-│   └── fcm_service.dart            # Firebase Messaging: token, izin, handler pesan
-├── screens/                    # 35 halaman (satu berkas per halaman)
+│   ├── fcm_service.dart            # Firebase Messaging: token, izin, handler pesan
+│   └── location_service.dart       # GPS (locate) + fallback pusat Kab. Pasuruan
+├── screens/                    # 32 layar (satu berkas per layar)
 │   ├── splash_screen.dart          # fade+scale 1200ms → /home atau /onboarding
 │   ├── onboarding_screen.dart      # 3 slide PageView
 │   ├── login_screen.dart           # OTP: input nomor WA + 6 digit kode, countdown 60s
 │   ├── home_screen.dart            # Beranda: hero, tren, terdekat, kebutuhan
 │   ├── search_screen.dart          # Pencarian + filter chips kategori
-│   ├── requests_screen.dart        # Tab Kebutuhan (Daftar/Menawarkan)
+│   ├── requests_screen.dart        # Tab Kebutuhan Sekitar (Terdekat/Saya)
 │   ├── orders_screen.dart          # Tab Pesanan
 │   ├── profile_screen.dart         # Tab Profil
 │   ├── listing_detail_screen.dart
 │   ├── create_listing_screen.dart
 │   ├── request_detail_screen.dart
 │   ├── order_detail_screen.dart
-│   ├── checkout_screen.dart        # Ringkasan + kupon + metode bayar/antar
+│   ├── checkout_screen.dart        # Ringkasan + metode bayar/antar (tanpa kupon di MVP)
 │   ├── coupon_screen.dart
 │   ├── wallet_screen.dart
 │   ├── address_screen.dart
+│   ├── location_picker_screen.dart # Peta OSM (flutter_osm_plugin) — pilih titik lokasi
 │   ├── conversations_screen.dart   # Daftar chat
 │   ├── store_screen.dart           # Toko saya + dasbor + buka toko
 │   ├── stores_nearby_screen.dart
@@ -222,12 +225,13 @@ lib/
 │   └── status_screen.dart
 └── widgets/
     ├── base_screen.dart        # Scaffold + AppBar konsisten
-    └── offline_banner.dart     # Banner "offline" dari connectivity_plus
+    ├── offline_banner.dart     # Banner "offline" dari connectivity_plus
+    └── error_view.dart         # Pesan galat + tombol "Coba Lagi"
 ```
 
-**Jumlah asli (per `find lib -type f`):** 1 `main.dart` + 3 `core/` + 12
-`models/` + 1 `providers/` + 1 `routing/` + 5 `services/` + 31 `screens/` +
-2 `widgets/` = **56 berkas Dart**.
+**Jumlah asli (per `find lib -type f`):** 1 `main.dart` + 4 `core/` + 12
+`models/` + 1 `providers/` + 1 `routing/` + 6 `services/` + 32 `screens/` +
+3 `widgets/` = **60 berkas Dart**.
 
 ### Di mana widget ditaruh
 
@@ -247,8 +251,11 @@ Base URL, warna, label, dan formatter dipusatkan di `AppConstants`:
 ```dart
 class AppConstants {
   // Base URL disuntikkan saat build; default untuk pengembangan lokal.
-  static const String baseUrl =
-      String.fromEnvironment('API_BASE_URL', defaultValue: 'http://192.168.201.162:8000/api/v1');
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    // IP dev hanya untuk debug; di release wajib diisi via --dart-define.
+    defaultValue: kReleaseMode ? '' : 'http://192.168.201.148:8000/api/v1',
+  );
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 15);
   static const int maxRetries = 2;
@@ -276,12 +283,17 @@ ChangeNotifier` sebagai state global. Tidak ada codegen, tidak ada
 lalu menyuntikkannya ke seluruh pohon widget:
 
 ```dart
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   _setupErrorHandling();                 // FlutterError.onError + runZonedGuarded
+  try {
+    await Firebase.initializeApp();      // gagal → hanya log, app tetap jalan
+  } catch (e) {
+    logError('Firebase init gagal', e);
+  }
   final app = AppState();
-  app.init();                            // AuthService.init() → GET /auth/me
-  FcmService().init().catchError((_) {});// token FCM, tanpa memblokir UI
+  unawaited(app.init());                 // AuthService.init() → GET /auth/me
+  unawaited(FcmService().init());        // token FCM, tanpa memblokir UI
   runApp(SeekitarApp(app: app));
 }
 
@@ -464,13 +476,15 @@ InterceptorsWrapper _authInterceptor() => InterceptorsWrapper(
 > "silakan masuk lagi". Bedakan juga `401` dari `NetworkException` (offline):
 > jangan hapus token hanya karena perangkat sedang offline.
 
-**Logging hanya di mode debug** — jangan pernah mencetak body berisi OTP/token
-di produksi:
+**Logging:** `LogInterceptor` (kustom) **selalu** dipasang — mencatat metode,
+status, dan path request; body permintaan/respons **tidak** ikut dicetak.
+Level log dibatasi `logger` (`lib/core/logger.dart`): semua level saat
+`kDebugMode`, hanya warning & error di produksi. Jangan pernah log OTP, token
+JWT, atau NIK (UU PDP):
 
 ```dart
-if (kDebugMode) {
-  client.interceptors.add(LogInterceptor(requestBody: true, responseBody: true));
-}
+// lib/core/logger.dart
+level: kDebugMode ? Level.debug : Level.warning,
 ```
 
 ### 5.2 ApiClient — semua endpoint dalam satu kelas
@@ -499,7 +513,7 @@ class ApiClient {
 
   Future<Map<String, dynamic>> verifyOtp(String phone, String otp) =>
       _post('/auth/verify-otp', data: {'phone': phone, 'otp': otp});
-  // ...77 metode: /home, /listings, /stores, /requests, /offers, /orders,
+  // ...82 metode: /home, /listings, /stores, /requests, /offers, /orders,
   // /wallet, /coupons, /conversations, /notifications, /uploads, /reports, dsb.
 }
 ```
@@ -633,35 +647,44 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   bool _otpSent = false, _loading = false;
   bool _isRegister = false;
   String? _error;
-  String? _debugOtp;
+  String? _normalizedPhone;   // nomor E.164 (62xxx) yang menerima OTP
   int _countdown = 0;   // countdown kirim ulang (60s)
 
   Future<void> _sendOtp() async {
-    final p = _phoneCtrl.text.trim();
-    if (p.length < 10) { setState(() => _error = 'Masukkan nomor WhatsApp yang valid'); return; }
+    final p = normalizePhone(_phoneCtrl.text);
+    if (!_isValidPhone(p)) { setState(() => _error = 'Nomor WhatsApp tidak valid. Contoh: 081234567890'); return; }
     setState(() { _loading = true; _error = null; });
     try {
       final res = await context.read<AppState>().requestOtp(p);
       if (mounted) {
-        setState(() {
-          _otpSent = true;
-          _debugOtp = res['debug_otp']?.toString();   // mode dummy: OTP diisi otomatis
-        });
+        final registered = res['is_registered'];   // server menentukan mode
+        if (registered != null) {
+          if (_isRegister && registered == true) {
+            setState(() { _error = 'Nomor sudah terdaftar. Masuk dengan nomor ini?'; _loading = false; });
+            return;   // + SnackBar aksi "Masuk"
+          }
+          if (!_isRegister && registered == false) {
+            setState(() { _error = 'Nomor belum terdaftar. Buat akun baru?'; _loading = false; });
+            return;   // + SnackBar aksi "Daftar"
+          }
+        }
+        setState(() { _otpSent = true; _normalizedPhone = p; });
         _startCountdown();
       }
-    } catch (e) { if (mounted) setState(() => _error = e.toString().replaceAll('Exception: ', '')); }
+    } catch (e) { if (mounted) setState(() => _error = _friendlyError(e)); }
     if (mounted) setState(() => _loading = false);
   }
 
   Future<void> _verifyOtp() async {
     setState(() { _loading = true; _error = null; });
     try {
-      await context.read<AppState>().verifyOtp(_phoneCtrl.text.trim(), _otpCtrl.text.trim());
+      final phone = _normalizedPhone ?? normalizePhone(_phoneCtrl.text);
+      await context.read<AppState>().verifyOtp(phone, _otpCtrl.text.trim());
       if (_isRegister && _nameCtrl.text.trim().isNotEmpty) {
         await context.read<AppState>().updateProfile(name: _nameCtrl.text.trim());
       }
       if (mounted) context.go('/home');
-    } catch (e) { if (mounted) setState(() => _error = e.toString().replaceAll('Exception: ', '')); }
+    } catch (e) { if (mounted) setState(() => _error = _friendlyError(e)); }
     if (mounted) setState(() => _loading = false);
   }
 }
@@ -671,8 +694,10 @@ Hal-hal penting:
 
 - `context.read<AppState>()` memicu `AuthService`; token JWT disimpan ke
   `flutter_secure_storage` di dalam `DioClient.setToken()`.
-- Di environment `local`, server mengembalikan `debug_otp` — layar
-  menampilkannya dan mengisinya otomatis agar pengujian cepat.
+- Nomor dinormalisasi ke E.164 (`62…`); respons `requestOtp` memuat
+  `is_registered` yang menentukan mode: nomor terdaftar → ajakan "Masuk",
+  belum terdaftar → ajakan "Daftar" (SnackBar + tombol aksi). Tidak ada
+  `debug_otp` di aplikasi.
 - Tombol submit menampilkan `CircularProgressIndicator` dan dinonaktifkan
   saat `_loading` (mencegah klik ganda → rate limit 3×/menit).
 - `if (!mounted) return;` setelah setiap `await`.
@@ -680,25 +705,29 @@ Hal-hal penting:
 ### 7.2 Halaman Detail Listing
 
 `ListingDetailScreen` menampilkan galeri foto (`PageView` +
-`smooth_page_indicator` + `cached_network_image`), deskripsi, profil toko
-mini, tombol "Pesan Sekarang", "Tanya Penjual" (membuat percakapan lalu
-`context.push('/chat/:id')`), favorit, dan berbagi (`share_plus`).
+`smooth_page_indicator` + `Image.network`, bukan `cached_network_image`),
+deskripsi, profil toko mini, dan CTA bawah "Chat" + "Beli Sekarang" (membuat
+percakapan lalu `context.push('/chat/:id')`). AppBar hanya punya dua aksi:
+**bagikan** (`share_plus`) dan **lapor** (bottom sheet 5 alasan) — tidak ada
+tombol favorit di halaman detail (listing_detail_screen.dart:128-131).
 
 Data diambil `ApiProvider().getListing(id)`; jika listing dikirim lewat
 `extra` dari layar sebelumnya, langsung dirender tanpa request ulang
 (`_load()` memeriksa `widget.listing`).
 
-**"Pesan Sekarang"** membuka halaman checkout (`/checkout`) — bukan bottom
-sheet — yang menerima `Listing` lewat `extra`:
+**"Beli Sekarang"** membuka halaman checkout (`/checkout`) — bukan bottom
+sheet — yang menerima `Listing` lewat `extra`, dan hanya boleh oleh pengguna
+terverifikasi:
 
 ```dart
 ctx.push('/checkout', extra: listing);
 ```
 
 `CheckoutScreen` menyusun body `POST /orders` sesuai `API_DOCUMENTATION.md`
-§7.1: `quantity`, `payment_method` (`cod`/`transfer`), `delivery_method`
-(`pickup`/`delivery`), dan `shipping_address` yang hanya dikirim bila
-`delivery`. Kupon dapat dipakai lewat `/coupon` (extra: `{total, orderId}`).
+§7.1: `listing_id`, `quantity`, `payment_method` (`cod`/`transfer`),
+`delivery_method` (`pickup`/`delivery`), `shipping_address` yang hanya dikirim
+bila `delivery`, dan `notes` opsional. **Tanpa field kupon** — rute `/coupon`
+ada di `app_router.dart:75` tapi belum terhubung ke checkout (MVP).
 
 ---
 
@@ -770,7 +799,8 @@ scroll, hasil pencarian) saat berpindah tab — itulah alasan memakai
 Alur lengkap (lihat juga §6.2 dan `FLOWS.md`):
 
 1. **`POST /auth/request-otp`** (throttle 3×/menit per nomor) — server
-   mengirim OTP lewat WhatsApp (atau menampilkan `debug_otp` di mode dummy).
+   mengirim OTP lewat WhatsApp gateway (`WHATSAPP_DRIVER=baileys`); saat dev,
+   driver fallback `log`/`email` menulis OTP ke log server.
 2. **`POST /auth/verify-otp`** — bila cocok, server membalas
    `{ token, token_type, expires_in, user }`. Token adalah **JWT** (30 hari).
 3. Klien menyimpan token ke `flutter_secure_storage` (`jwt_token`) dan
@@ -790,12 +820,13 @@ Alur lengkap (lihat juga §6.2 dan `FLOWS.md`):
 
 `HomeScreen` (tab Beranda):
 
-1. Minta posisi `Geolocator.getCurrentPosition()` (izin via
-   `permission_handler`).
+1. Minta posisi `Geolocator.getCurrentPosition()` (izin lokasi via
+   `Geolocator.checkPermission`/`requestPermission` — bukan `permission_handler`).
 2. `GET /home?lat=&lng=` → daftar `Listing` (tren & terdekat) +
    `CustomerRequest` (kebutuhan).
-3. Skeleton `Shimmer.fromColors` saat memuat; `RefreshIndicator` untuk
-   tarik-untuk-muat-ulang.
+3. Skeleton `_skeleton()` (kotak abu-abu `Colors.grey.shade200/100`
+   ber-radius — paket `shimmer` tidak dipakai) saat memuat;
+   `RefreshIndicator` untuk tarik-untuk-muat-ulang.
 4. Kartu listing → `context.push('/listing/:id', extra: listing)`; kartu
    kebutuhan → `context.push('/request/:id', extra: request)`.
 5. AppBar: lonceng notifikasi → `/notifications`, favorit → `/favorites`.
@@ -815,7 +846,7 @@ bila `isLoggedIn` → `context.go('/home')`, bila belum pernah onboarding →
 - Filter chips tipe: Semua / Barang (`product`) / Jasa (`service`) / Sewa
   (`rental`).
 - Posisi GPS diambil `Geolocator.getCurrentPosition()` (gagal → fallback
-  Pasuruan `-7.5, 112.0`).
+  pusat Kab. Pasuruan `-7.5994, 112.8189`, dari `location_service.dart`).
 - Saat mengetik ≥ 2 karakter: `GET /search/suggestions` → daftar sugesti
   (tappable, langsung ke detail listing).
 - Enter/submit: `GET /listings?lat&lng&keyword&type&category` → daftar hasil.
@@ -852,7 +883,8 @@ dilepas adalah sumber crash klasik.
 ### 11.2 Filter Chips Tipe
 
 Filter disimpan sebagai state lokal (`String? _filter`), bukan provider —
-satu layar, satu pemilik state:
+satu layar, satu pemilik state. Chip dirender sebagai `GestureDetector` +
+`Container` kustom (bukan `ChoiceChip`) agar gaya selaras tema:
 
 ```dart
 _chip(null, 'Semua'), const SizedBox(width: 8),
@@ -862,16 +894,23 @@ _chip('rental', 'Sewa'),
 
 Widget _chip(String? type, String label) {
   final selected = _filter == type;
-  return ChoiceChip(
-    label: Text(label),
-    selected: selected,
-    onSelected: (_) { setState(() => _filter = type); _search(); },
+  return GestureDetector(
+    onTap: () { setState(() => _filter = type); _search(); },
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: selected ? AppConstants.primaryColor : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: selected ? AppConstants.primaryColor : Colors.grey.shade300),
+      ),
+      child: Text(label, style: TextStyle(color: selected ? Colors.white : Colors.black87)),
+    ),
   );
 }
 ```
 
-Menekan chip yang sudah aktif akan mengosongkan filter (`type = null`),
-karena `onSelected` selalu menerima `true` — bandingkan nilai lama.
+Menekan chip yang sama akan **menerapkan filter yang sama lagi** (bukan
+mengosongkan) — perilaku ini sesuai implementasi `search_screen.dart`.
 
 ## 12. FITUR PAPAN KEBUTUHAN (PASANG KEBUTUHAN)
 
@@ -882,8 +921,9 @@ karena `onSelected` selalu menerima `true` — bandingkan nilai lama.
 
 - Form: judul, deskripsi, kategori (dropdown dari `GET /categories`),
   radius (tetap 15 km — default server), tanggal.
-- Lokasi **tidak** memakai peta interaktif: posisi diambil langsung dari GPS
-  `Geolocator.getCurrentPosition()` saat form dikirim, lalu dikirim sebagai
+- Lokasi memakai **pemilih titik di peta OpenStreetMap**
+  (`location_picker_screen.dart`, `flutter_osm_plugin`) atau GPS langsung
+  `Geolocator.getCurrentPosition()`; hasilnya dikirim sebagai
   `latitude`/`longitude`:
 
 ```dart
@@ -898,10 +938,10 @@ await _api.createRequest({
 });
 ```
 
-> Mengapa tanpa peta: pemilih lokasi interaktif (Google Maps) menambah
-> dependensi berat dan sertifikat API key, sementara kebutuhan MVP cukup
-> dilayani koordinat GPS + alamat reverse-geocoding. Peta interaktif (Leaflet)
-> ada di panel admin (Peta Toko), bukan di aplikasi mobile.
+> Peta interaktif memakai **OpenStreetMap** (`flutter_osm_plugin`) — gratis
+> tanpa API key. Diterapkan pada pemilih lokasi (`location_picker_screen.dart`),
+> halaman toko, dan verifikasi KTP. Peta Leaflet di panel admin (Peta Toko)
+> tetap terpisah di web.
 
 `RequestDetailScreen` menampilkan detail permintaan + daftar penawaran
 (`GET /requests/{id}/offers`); pemilik bisa memperpanjang masa berlaku
@@ -924,7 +964,7 @@ await _api.createRequest({
   §7.2 dan `OrderStateMachine` di server.
 - `CheckoutScreen` (pesan langsung dari listing): pilih metode bayar
   (`cod`/`transfer`) dan antar (`pickup`/`delivery`); saat `delivery`,
-  alamat tujuan wajib diisi. Kupon opsional via `/coupon`.
+  alamat tujuan wajib diisi. Belum ada integrasi kupon di checkout (MVP).
 
 ---
 
@@ -974,7 +1014,9 @@ class FcmService {
 
   Future<void> _register(String token) async {
     try {
-      await _api.registerFcmToken(token, 'android_${token.hashCode}');
+      // device_id persisten (SharedPreferences) — bukan hash token:
+      // identitas perangkat stabil antar-startup (fcm_service.dart).
+      await _api.registerFcmToken(token, _deviceId);
     } catch (_) {}
   }
 
@@ -997,18 +1039,21 @@ class FcmService {
 }
 ```
 
-**Izin notifikasi:** Android 13+ meminta lewat dialog sistem (dideklarasikan
-di manifest); iOS lewat `requestPermission` — pastikan dipanggil sebelum
-`getToken()`. `FcmService.init()` di `main()` dibungkus
-`.catchError((_) {})` agar kegagalan Firebase tidak memblokir startup.
+**Izin notifikasi:** Android 13+ meminta lewat dialog sistem — dipicu
+`requestNotificationsPermission()` (flutter_local_notifications,
+`fcm_service.dart`). Tidak ada izin iOS terpisah di implementasi saat ini.
+`FcmService.init()` dipanggil dari `main()` via `unawaited(...)` dan inisialisasi
+Firebase dibungkus `try/catch` agar kegagalan tidak memblokir startup.
 
-**Navigasi dari notifikasi:** `_onTap` saat ini hanya stub — payload notifikasi
-belum memetakan ke rute tertentu. Saat fitur ini ditambahkan, tangani **tiga
-jalur** sekaligus: `onMessage` (foreground → notifikasi lokal → payload saat
-tap), `onMessageOpenedApp` (latar belakang), dan `getInitialMessage()` (mati
-total).
+**Navigasi dari notifikasi:** `_onTap` (fcm_service.dart:93-100) **sudah
+berfungsi** — membaca `msg.data['route']` dari payload dan memanggil
+`appRouter.go(route)` dengan fallback `/home`. Tiga jalur masuk ditangani
+sekaligus: `onMessage` (foreground → notifikasi lokal → payload saat tap),
+`onMessageOpenedApp` (latar belakang), dan `getInitialMessage()` (mati total).
 
-**Handler background** harus fungsi top-level, bukan method:
+**Handler background** sebaiknya fungsi top-level, bukan method — saat ini
+**belum didaftarkan** (`FirebaseMessaging.onBackgroundMessage` tidak dipanggil
+di `main()`); notifikasi latar belakang bergantung pada sistem Android/iOS:
 
 ```dart
 @pragma('vm:entry-point')
@@ -1043,8 +1088,10 @@ launchUrl(Uri.parse('https://wa.me/$phone?text=${Uri.encodeComponent(text)}'),
 ```
 
 > ⚠️ Sejak Android 11, `canLaunchUrl` mengembalikan `false` untuk skema yang
-> tidak dideklarasikan, meski aplikasinya terpasang. Tambahkan di
-> `AndroidManifest.xml`:
+> tidak dideklarasikan, meski aplikasinya terpasang. Manifest saat ini hanya
+> memuat query `ACTION_PROCESS_TEXT` (`AndroidManifest.xml:46-51`) — blok
+> `<queries>` untuk `https` di bawah **belum ditambahkan**; tambahkan bila
+> memakai `canLaunchUrl` untuk deteksi aplikasi WhatsApp:
 >
 > ```xml
 > <queries>
@@ -1133,10 +1180,10 @@ flutter test
 
 ### 17.1 Kondisi saat ini
 
-Direktori `test/` berisi satu berkas `widget_test.dart` — **masih template
-bawaan** `flutter create` (widget test "counter" yang merujuk `MyApp`, padahal
-aplikasi memakai `SeekitarApp`). Artinya `flutter test` belum memverifikasi
-layar Seekitar; widget test per layar perlu ditulis.
+Direktori `test/` berisi satu berkas `widget_test.dart` — **unit test nyata**
+dari `AppConstants.formatRupiah` dan `typeLabel` (`test/widget_test.dart:5-18`),
+bukan template bawaan `flutter create`. Belum ada widget test per layar;
+berikut pola yang disarankan.
 
 Pola widget test dengan `provider` — bungkus layar dengan
 `ChangeNotifierProvider.value` memakai `AppState` tiruan (atau `AuthService`
@@ -1147,8 +1194,8 @@ yang di-*fake*):
 class _FakeAppState extends AppState {
   @override
   Future<Map<String, dynamic>> requestOtp(String phone) async {
-    // jangan panggil jaringan — kembalikan debug_otp tiruan
-    return {'debug_otp': '123456'};
+    // jangan panggil jaringan — kembalikan hasil tiruan
+    return {'success': true, 'is_registered': false};
   }
 }
 
@@ -1175,7 +1222,7 @@ Daftar widget test yang direkomendasikan:
 
 | Berkas | Yang diuji |
 | :-- | :-- |
-| `login_screen_test.dart` | Validasi nomor, tampilan OTP debug, keadaan memuat |
+| `login_screen_test.dart` | Validasi nomor, mode daftar/masuk, countdown kirim ulang, keadaan memuat |
 | `home_screen_test.dart` | Skeleton → data → keadaan kosong |
 | `listing_detail_test.dart` | Galeri, tombol pesan/chat tanpa login |
 | `checkout_test.dart` | Alamat wajib saat `delivery`, body `POST /orders` |
@@ -1237,9 +1284,11 @@ membaca berkas itu saat ada (lihat template Flutter standar).
 
 ### 18.2 Penandatanganan iOS
 
-Lakukan di Xcode (Signing & Capabilities) dengan Apple Developer account;
-simpan `.p8`/`.p12` di tempat aman. Untuk rilis TestFlight: `flutter build
-ipa --release` lalu unggah lewat Xcode/Transporter.
+**Belum dikerjakan (rencana).** Lingkungan pengembangan saat ini Windows —
+build iOS butuh macOS + Xcode (Signing & Capabilities, Apple Developer
+account) serta `NSLocationWhenInUseUsageDescription` dan izin FCM di
+`Info.plist`. Saat rilis iOS dijadwalkan: `flutter build ipa --release`, unggah
+lewat Xcode/Transporter/TestFlight, dan simpan `.p8`/`.p12` di tempat aman.
 
 ### 18.3 GitHub Actions (template)
 
@@ -1368,7 +1417,8 @@ saat kompilasi sebagai `const` — tidak ada berkas yang ikut terbundel ke APK.
 class AppConstants {
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.201.162:8000/api/v1',   // dev lokal
+    // IP LAN dev hanya untuk debug; di release wajib diisi via --dart-define.
+    defaultValue: kReleaseMode ? '' : 'http://192.168.201.148:8000/api/v1',
   );
 }
 ```
@@ -1389,10 +1439,12 @@ flutter build apk --release --dart-define=API_BASE_URL=https://api.seekitar.id/a
 > biasa membuat nilainya selalu kosong tanpa peringatan apa pun saat kompilasi.
 >
 > ⚠️ **URL dev memakai `http://`, jadi Android butuh izin tambahan** (sudah
-> dipasang di `android/app/src/main/AndroidManifest.xml`): permission
-> `INTERNET` dan `android:usesCleartextTraffic="true"` (Android 9+ memblokir
-> traffic plaintext secara default). Sebelum rilis produksi, ganti ke HTTPS
-> dan hapus `usesCleartextTraffic` agar hanya koneksi terenkripsi yang diizinkan.
+> dipasang): permission `INTERNET` di `AndroidManifest.xml` dan whitelist host
+> cleartext di `android/app/src/main/res/xml/network_security_config.xml`
+> (`192.168.201.148`, `10.0.2.2`, `localhost`, `127.0.0.1`) — bukan
+> `usesCleartextTraffic="true"` global. Tambahkan IP LAN dev di berkas itu bila
+> berubah. Sebelum rilis produksi, ganti ke HTTPS dan bersihkan whitelist agar
+> hanya koneksi terenkripsi yang diizinkan.
 
 ## 21. ERROR HANDLING GLOBAL
 
@@ -1427,7 +1479,8 @@ Menggunakan paket `logger` — satu instance global `appLogger` di
 ```dart
 final appLogger = Logger(
   printer: PrettyPrinter(methodCount: 1, errorMethodCount: 5, lineLength: 80, colors: true, printEmojis: false),
-  level: Level.debug,
+  // level di-gate kDebugMode: semua level saat debug, warning ke atas di produksi
+  level: kDebugMode ? Level.debug : Level.warning,
 );
 
 void logInfo(String msg) => appLogger.i(msg);
@@ -1453,10 +1506,10 @@ satu-satunya "jalur masuk dari luar" adalah **tap notifikasi FCM**:
 - Latar belakang: `onMessageOpenedApp`.
 - Mati total: `getInitialMessage()`.
 
-`FcmService._onTap` saat ini masih stub; saat navigasi dari notifikasi
-diimplementasikan, petakan payload `{screen, entity_id}` ke rute GoRouter
-(`/request/:id`, `/listing/:id`, `/order-detail/:id`) — dan tangani ketiga
-jalur di atas sekaligus, jangan hanya satu.
+`FcmService._onTap` **sudah diimplementasikan** — membaca `msg.data['route']`
+dan memanggil `appRouter.go(route)` dengan fallback `/home`. Payload
+`{screen, entity_id}` dari server dipetakan ke rute GoRouter
+(`/request/:id`, `/listing/:id`, `/order-detail/:id`) lewat nilai `route`.
 
 ---
 

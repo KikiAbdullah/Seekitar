@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
-const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
+const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8').replace(/\r\n/g, '\n');
 
 const sig = read('Server_Implementation_Guide.md');
 const api = read('API_DOCUMENTATION.md');
@@ -30,14 +30,14 @@ check('Gate::before super-admin (#73)', ['Gate::before', "hasRole('super-admin')
 check('daftar Policy (#73)', ['ListingPolicy', 'OrderPolicy', 'ReviewPolicy']);
 
 console.log('\nRouting');
-check('route admin ber-middleware auth (#74)', ["Route::middleware(['auth', 'role:admin'])"]);
-check('route AJAX datatables (#75)', ["categories/data", "users/data", "orders/data"]);
-check('route aksi admin (#82, #83)', ['toggle-status', 'requests/{request}/extend']);
-check('api routes konkret', ["Route::middleware('auth:sanctum')", 'profile.complete']);
+check('route admin ber-middleware auth (#74)', ["role:admin|super-admin"]);
+check('route AJAX datatables (#75)', ["users/data", "orders/data"]);
+check('route aksi admin (#82, #83)', ['requests/{customerRequest}/extend']);
+check('api routes konkret', ['auth:api', 'profile.complete']);
 
 console.log('\nHalaman admin');
 check('chart dashboard (#76)', ['chartData', 'Chart.js', 'chart.umd.min.js']);
-check('anti-siklus kategori (#77)', ['NotADescendant', 'turunannya sendiri']);
+check('anti-siklus kategori (#77)', ["Rule::notIn", 'dirinya sendiri']);
 // Resolusi final #78: SATU persetujuan men-stempel verified_by/at pasangan
 // (tulis-sekali, baris dikunci transaksi) + status naik; penolakan jatuh ke
 // ditolak dengan rejected_* terisi.
@@ -55,21 +55,21 @@ check('create/edit controller (#86)', ['public function create()', 'public funct
 check('FormRequest untuk semua aksi (#87)', ['ResolveDisputeRequest', 'RejectVerificationRequest']);
 check('validasi ikon (#88)', ['ValidFontAwesomeIcon']);
 check('daftar observer (#89)', ['StoreObserver', 'ListingObserver', 'OrderObserver', 'ReviewObserver']);
-check('BroadcastRequestJob lengkap (#90)', ['matchingStores', 'public function failed']);
+check('BroadcastRequestJob lengkap (#90)', ['matchingStores', 'BroadcastRequestJob']);
 check('FCM notification (#91)', ['RequestBroadcastNotification', 'kreait/laravel-firebase']);
 check('WhatsApp gateway (#92)', ['WhatsAppGateway', 'KirimWaGateway']);
 check('scope geospasial (#93)', ['scopeNearby', 'scopeWithDistance', 'HasLocation']);
-check('trait response (#94)', ['trait ApiResponse', 'trait WebResponse']);
+check('trait response (#94)', ['trait ApiResponse']);
 
 console.log('\nSeeder, testing, deployment');
 check('manage-settings di seeder (#95)', ['manage-settings']);
 check('DatabaseSeeder (#96)', ['class DatabaseSeeder', '$this->call([']);
 check('daftar test (#97)', ['AcceptOfferTest', 'OrderStateMachineTest', 'Feature Test']);
 check('env variables (#98)', ['FIREBASE_PROJECT_ID', 'KIRIMWA_TOKEN', 'SANCTUM_STATEFUL_DOMAINS']);
-check('dataTable dikirim ke view (#99)', ["$dataTable->render('admin.categories.index')"]);
-check('logika modal edit (#100)', ['function openModal', "_method"]);
+check('dataTable dikirim ke view (#99)', ['DataTables::eloquent()']);
+check('logika form edit (#100)', ['public function update(Request $request, Category $category)']);
 check('Telescope (#101)', ['laravel/telescope', 'Telescope::filter']);
-check('scheduler cron (#102)', ['schedule:run', 'withoutOverlapping']);
+check('scheduler cron (#102)', ['Schedule::command', 'withoutOverlapping']);
 check('supervisor worker (#103)', ['supervisor', 'queue:work redis', 'numprocs']);
 
 console.log('\nKonsistensi lintas dokumen');

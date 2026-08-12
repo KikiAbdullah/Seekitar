@@ -66,18 +66,6 @@ const RULES = [
     allow: ['~~', 'mentok', 'hanya mendukung sampai', 'gagal resolusi'],
   },
   {
-    id: 'riverpod-2',
-    re: /Riverpod\s+2\.x|flutter_riverpod.*\^2\./i,
-    msg: 'Proyek memakai Riverpod 3.x.',
-    allow: ['tidak dites', 'lama', 'Catatan asal', '❌', 'sebelum'],
-  },
-  {
-    id: 'riverpod-ref-subclass',
-    re: /\b(?!Widget|Auto)[A-Z][A-Za-z]*Ref\s+ref\b/,
-    msg: 'Subclass Ref hasil codegen dihapus di Riverpod 3; pakai "Ref ref".',
-    allow: ['❌', 'lama', 'tidak lagi berlaku', 'Riverpod 2'],
-  },
-  {
     id: 'flutter-version',
     re: /Flutter\s+3\.(19|[0-3]?[0-9])\+/i,
     msg: 'Flutter minimum proyek adalah 3.44+.',
@@ -89,8 +77,8 @@ const RULES = [
   },
   {
     id: 'go-router-old',
-    re: /go_router.*\^1[0-6]\./i,
-    msg: 'go_router harus ^17.3.0.',
+    re: /go_router.*\^1[5-9]\.|go_router.*\^2\d\./i,
+    msg: 'go_router harus ^14.8.0 (selaras pubspec.yaml).',
     allow: ['keliru', 'Catatan asal'],
   },
 ];

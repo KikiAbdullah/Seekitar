@@ -126,7 +126,7 @@ aturan. Pengujian pun berjalan di MySQL sungguhan — lihat `CONTRIBUTING.md`.
 | Indeks Biasa    | `{tabel}_{kolom}_idx`                    | `stores_user_id_idx`         |
 | Indeks Unik     | `{tabel}_{kolom}_unique`                 | `users_phone_unique`         |
 | Indeks Spasial  | `{tabel}_{kolom}_spatial`                | `cr_location_spatial`        |
-| Indeks Fulltext | `{tabel}_ft_{kolom}`                     | `listings_ft_title_desc`     |
+| Indeks Fulltext | `{tabel}_ft_{kolom}`                     | `listings_fulltext`          |
 | Timestamp       | `created_at`, `updated_at`, `deleted_at` | –                            |
 | Kolom JSON      | Nama deskriptif, isi array/objek         | `operating_hours`, `images`  |
 
@@ -212,6 +212,8 @@ Setiap tabel dilengkapi penjelasan tiap kolom, alasan pemilihan tipe, dan constr
 | `avatar_url`         | VARCHAR(500) NULL    | URL foto profil, disimpan di cloud storage. Panjang 500 cukup untuk URL pre‑signed.  |
 | `location`           | POINT SRID 4326 NULL | Lokasi default pengguna (misal rumah). NULL hanya saat onboarding belum selesai.     |
 | `address`            | VARCHAR(255) NULL    | Alamat teks hasil reverse geocoding. Untuk ditampilkan, bukan untuk query.           |
+| `notification_prefs` | JSON NULL            | Preferensi notifikasi per pengguna. **Khusus backend** — tidak ada di `$fillable`, jadi tidak bisa diisi lewat mass-assignment. |
+| `blocked_user_ids`   | JSON NULL            | Daftar ID pengguna yang diblokir pengguna. **Khusus backend** — tidak ada di `$fillable`, jadi tidak bisa diisi lewat mass-assignment. |
 | `status`             | ENUM('menunggu','terverifikasi','ditolak','diblokir') DEFAULT 'menunggu' | **Kedudukan akun, SATU kata.** `menunggu` = nomor sudah OTP tapi identitas belum disetujui admin (nilai awal setiap akun); `terverifikasi` = admin menyetujui wajah+KTP+alamat+titik; `ditolak` = berkas belum sesuai, boleh kirim ulang; `diblokir` = akun bermasalah — token dicabut & tokonya ikut nonaktif. INDEX. |
 | `ktp_image`          | VARCHAR(500) NULL    | Path foto KTP di disk PRIVAT (UU PDP), bukan URL publik. Diisi saat mengajukan berkas. |
 | `selfie_image`       | VARCHAR(500) NULL    | Path foto wajah di disk privat. Wajib bersama `ktp_image`.                          |
@@ -668,7 +670,7 @@ SELECT * FROM stores WHERE JSON_CONTAINS(category_ids, '7');
 - FOREIGN KEY (`store_id`) REFERENCES `stores`(`id`) ON DELETE CASCADE
 - INDEX `listings_store_id_idx` (`store_id`)
 - INDEX `listings_deleted_at_idx` (`deleted_at`)
-- FULLTEXT INDEX `listings_ft_title_desc` (`title`, `description`)
+- FULLTEXT INDEX `listings_fulltext` (`title`, `description`)
 - INDEX `listings_status_idx` (`status`) — untuk filter aktif/tidak.
 - CHECK `listings_price_required_chk` — harga wajib untuk product & rental.
 - CHECK `listings_qty_slot_chk` — stok/slot sesuai tipe listing.
@@ -750,13 +752,7 @@ Batas maks 5 foto berasal dari `PRD.md` §4 ("foto maks 5").
 - INDEX `cr_status_expires_idx` (`status`, `expires_at`) — untuk scheduler menutup permintaan kadaluarsa.
 - INDEX `cr_accepted_offer_id_idx` (`accepted_offer_id`)
 - SPATIAL INDEX `cr_location_spatial` (`location`)
-- CHECK `cr_budget_range_chk` — `budget_max` tidak boleh lebih kecil dari `budget_min`:
-
-```sql
-ALTER TABLE customer_requests
-  ADD CONSTRAINT cr_budget_range_chk
-  CHECK (budget_min IS NULL OR budget_max IS NULL OR budget_max >= budget_min);
-```
+- **Tidak ada CHECK budget di database** — `budget_max` tidak boleh lebih kecil dari `budget_min` ditegakkan di FormRequest, bukan CHECK di DB.
 
 **Perpanjangan masa aktif:** saat pembeli memperpanjang, `expires_at` didorong
 maju, `extended_at` diisi waktu sekarang, dan `extension_count` bertambah.
@@ -832,7 +828,7 @@ bersamaan bisa menghasilkan dua order dari satu permintaan.
 - PRIMARY KEY (`id`)
 - FOREIGN KEY (`request_id`) REFERENCES `customer_requests`(`id`) ON DELETE CASCADE
 - FOREIGN KEY (`store_id`) REFERENCES `stores`(`id`) ON DELETE CASCADE
-- UNIQUE KEY `offers_req_store_unique` (`request_id`, `store_id`) — **satu toko hanya boleh satu penawaran per permintaan**.
+- UNIQUE KEY `offers_req_store_status_unique` (`request_id`, `store_id`, `status`) — satu penawaran AKTIF (`pending`/`accepted`) per toko per permintaan; beberapa penawaran `rejected` diperbolehkan. Aturan bisnisnya dijaga di lapisan aplikasi/state, bukan UNIQUE penuh.
 - INDEX `offers_status_idx` (`status`)
 
 **Mengapa CASCADE pada store_id?** Jika toko dihapus (soft delete), penawaran menjadi tidak valid. Daripada memperumit, kita hapus cascade; data penawaran sudah tidak relevan. Order yang sudah terjadi tetap utuh karena `offer_id` di orders menggunakan `SET NULL`.
@@ -857,7 +853,7 @@ ORDER BY (price + additional_cost) ASC
 > bukan hanya total. Pembeli yang merasa ada biaya tersembunyi adalah salah
 > satu pemicu dispute paling umum di marketplace lokal.
 
-- CHECK: `additional_cost >= 0`.
+- `additional_cost >= 0` **tidak punya CHECK di database** — ditegakkan di FormRequest/UI.
 
 **Kenapa `estimation_time` DIPERTAHANKAN dan `estimated_hours` DITAMBAHKAN.**  
 Sempat diusulkan mengganti `estimation_time` menjadi kolom numerik. Mengganti
@@ -1040,7 +1036,7 @@ menghitung tingkat pembatalan per pihak (KPI di PRD §13).
 | `reviewee_id` | CHAR(36)  | FK ke `users`, yang diulas (pemilik toko / pembeli).      |
 | `store_id`    | CHAR(36) NULL | FK ke `stores`. Diisi **hanya** saat pembeli menilai toko. |
 | `direction`   | ENUM('buyer_to_store','store_to_buyer') | Arah penilaian. Menentukan apakah ulasan memengaruhi rating toko. |
-| `rating`      | TINYINT   | 1 – 5. CHECK (rating BETWEEN 1 AND 5)                     |
+| `rating`      | TINYINT UNSIGNED | 1 – 5. Rentang ditegakkan di FormRequest/UI, bukan CHECK di DB. |
 | `comment`     | TEXT NULL |                                                           |
 | `created_at`  | TIMESTAMP |                                                           |
 
@@ -1135,13 +1131,7 @@ $store->update([
 - FOREIGN KEY (`reported_by`) REFERENCES `users`(`id`) ON DELETE CASCADE
 - INDEX `disputes_order_id_idx` (`order_id`)
 - INDEX `disputes_status_idx` (`status`)
-- CHECK `disputes_reason_desc_chk` — alasan `lainnya` wajib disertai penjelasan:
-
-```sql
-ALTER TABLE disputes
-  ADD CONSTRAINT disputes_reason_desc_chk
-  CHECK (reason <> 'lainnya' OR description IS NOT NULL);
-```
+- **Tidak ada CHECK `disputes_reason_desc_chk` di database** — aturan "alasan `lainnya` wajib disertai penjelasan" ditegakkan di FormRequest.
 
 **Pelacakan SLA (PRD §5.5: tanggapan wajib 1×24 jam).** Tanpa kolom tenggat,
 kewajiban itu hanya kalimat di dokumen — tidak ada cara mengetahui mana laporan
@@ -1198,7 +1188,7 @@ CREATE TABLE user_devices (
   user_id      CHAR(36) NOT NULL,
   device_id    VARCHAR(100) NOT NULL,       -- pengenal perangkat dari klien
   fcm_token    VARCHAR(255) NOT NULL,
-  platform     ENUM('android','ios') NOT NULL,
+  platform     VARCHAR(10) NOT NULL,          -- 'android' | 'ios'
   last_used_at TIMESTAMP NULL,
   created_at   TIMESTAMP,
   updated_at   TIMESTAMP,
@@ -1310,7 +1300,7 @@ kecuali `tokenable_id`):
 | `id` | BIGINT UNSIGNED AUTO_INCREMENT | Primary key bawaan Sanctum. |
 | `tokenable_type` | VARCHAR(255) | Kelas model pemilik token (`uuidMorphs`). |
 | `tokenable_id` | CHAR(36) | UUID `users.id` pemilik token. |
-| `name` | VARCHAR(255) | Nama token (mis. `mobile`). |
+| `name` | TEXT | Nama token (mis. `mobile`). |
 | `token` | VARCHAR(64) UNIQUE | SHA-256 dari teks token — teks aslinya tidak pernah disimpan. |
 | `abilities` | TEXT | JSON ability (mis. `["*"]`). |
 | `last_used_at` | TIMESTAMP NULL | Terakhir token dipakai — untuk audit sesi. |
@@ -1468,6 +1458,7 @@ saldo tercatat dengan saldo sebelum/sesudah.
 | Kolom | Tipe | Keterangan |
 |---|---|---|
 | `id` | CHAR(36) | PK, UUID. |
+| `reference` | VARCHAR(64) NULL | Referensi pembayaran unik (mis. `TOPT-{uuid}`) untuk top up & penarikan. UNIQUE agar idempoten — mencegah kredit/penarikan ganda. |
 | `wallet_id` | CHAR(36) FK → `wallets.id` | Dompet. ON DELETE CASCADE. |
 | `type` | VARCHAR(50) | `topup`, `withdraw`, `refund`, `service_fee`, dsb. |
 | `amount` | DECIMAL(12,2) | Nominal mutasi. |
@@ -1479,7 +1470,9 @@ saldo tercatat dengan saldo sebelum/sesudah.
 | `status` | VARCHAR(50) DEFAULT 'completed' | `pending`, `completed`, `failed`. |
 | `created_at` | TIMESTAMP | – |
 
-**Indeks:** `(wallet_id, created_at)`.
+**Indeks:** `(wallet_id, created_at)`, `UNIQUE (reference)`.
+
+> Catatan: model `WalletTransaction` punya kolom `reference` sekaligus relasi morph `reference()` (`reference_type`/`reference_id`) — dua nama yang sama dalam satu model.
 
 ### 4.9m `coupons`
 
@@ -1589,7 +1582,7 @@ Pesan dari formulir kontak halaman web publik, masuk ke antrean admin.
 | `email` | VARCHAR(190) | Email pengirim. |
 | `category` | VARCHAR(50) | Jenis pesan (umum, pengaduan, dsb.). |
 | `message` | TEXT | Isi pesan. |
-| `status` | VARCHAR(20) DEFAULT 'new' | `new`, `read`, `replied`. |
+| `status` | VARCHAR(20) DEFAULT 'new' | `new`, `in_progress`, `resolved`. |
 | `created_at` | TIMESTAMP | – |
 | `updated_at` | TIMESTAMP | – |
 
@@ -1670,18 +1663,20 @@ CREATE TABLE subscriptions (
   id          CHAR(36) PRIMARY KEY,
   user_id     CHAR(36) NOT NULL,
   store_id    CHAR(36) NULL,             -- NULL = paket tingkat akun
-  plan        ENUM('pro_monthly','boost_listing') NOT NULL,
+  plan        ENUM('pro_monthly','boost_listing') NOT NULL DEFAULT 'pro_monthly',
   status      ENUM('pending','active','expired','cancelled') DEFAULT 'pending',
   amount      DECIMAL(12,2) NOT NULL,
   starts_at   TIMESTAMP NOT NULL,
   ends_at     TIMESTAMP NOT NULL,
   payment_ref VARCHAR(100) NULL,         -- referensi dari payment gateway
+  notes       TEXT NULL,
   created_at  TIMESTAMP,
   updated_at  TIMESTAMP,
   FOREIGN KEY (user_id)  REFERENCES users(id)  ON DELETE CASCADE,
   FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE,
   INDEX subscriptions_active_idx (status, ends_at),
   INDEX subscriptions_store_idx (store_id, status),
+  INDEX subscriptions_user_active_idx (user_id, status, ends_at),
   CONSTRAINT subscriptions_period_chk CHECK (ends_at > starts_at)
 );
 ```
@@ -1747,7 +1742,7 @@ Seluruh indeks dirancang berdasarkan pola query nyata.
 | `users`             | `users_phone_unique`                         | Login dengan nomor HP.                                                        |
 | `stores`            | `stores_latlng_idx` (`latitude`, `longitude`) | Pencarian toko dalam radius — `whereBetween` kotak pembatas (§11).            |
 | `stores`            | `stores_is_active_idx`                       | Hanya tampilkan toko aktif.                                                   |
-| `listings`          | `listings_ft_title_desc`                     | Pencarian teks produk/jasa.                                                   |
+| `listings`          | `listings_fulltext`                          | Pencarian teks produk/jasa.                                                   |
 | `customer_requests` | `cr_status_expires_idx`                      | Job menutup permintaan expired: `WHERE status='open' AND expires_at < NOW()`. |
 | `orders`            | `orders_store_id_idx`, `orders_buyer_id_idx` | Riwayat pesanan per toko/pembeli.                                             |
 | `reviews`           | `reviews_store_id_idx`                       | Rata‑rata rating toko: `WHERE store_id = ? AND direction = 'buyer_to_store'`. |
@@ -1845,7 +1840,7 @@ Yang terjadi bila `ngram` dipaksakan (dengan `ngram_token_size=2`):
 Karena itu definisi indeks **dipertahankan apa adanya**:
 
 ```sql
-FULLTEXT INDEX listings_ft_title_desc (title, description)
+FULLTEXT INDEX listings_fulltext (title, description)
 ```
 
 **Yang justru perlu disetel** adalah panjang token minimum. Bawaan InnoDB
@@ -1859,8 +1854,8 @@ innodb_ft_min_token_size=2      # agar "AC", "TV", "HP" bisa dicari
 > ⚠️ Mengubah nilai ini **wajib** diikuti pembangunan ulang indeks, kalau tidak
 > perubahannya tidak berlaku pada data lama:
 > ```sql
-> ALTER TABLE listings DROP INDEX listings_ft_title_desc;
-> ALTER TABLE listings ADD FULLTEXT INDEX listings_ft_title_desc (title, description);
+> ALTER TABLE listings DROP INDEX listings_fulltext;
+> ALTER TABLE listings ADD FULLTEXT INDEX listings_fulltext (title, description);
 > ```
 >
 > **Stopword bawaan MySQL berbahasa Inggris.** Kata seperti "yang", "untuk",
@@ -1908,8 +1903,8 @@ WHERE TABLE_NAME = 'customer_requests';
 
 1. **UUID sebagai ID** – Tidak mungkin ada tabrakan, tidak bisa di‑tebak (IDOR prevention).
 2. **Foreign Key Constraints** – Tidak akan ada order tanpa pembeli/penjual.
-3. **UNIQUE constraint** pada offers (`request_id`, `store_id`) – mencegah toko mengirim dua penawaran pada permintaan yang sama, baik dari aplikasi maupun langsung dari SQL.
-4. **ENUM + CHECK** – Status pesanan, tipe listing, rating, semua memiliki domain terbatas yang terverifikasi di level engine.
+3. **UNIQUE constraint** pada offers (`request_id`, `store_id`, `status`) – mencegah toko mengirim penawaran AKTIF ganda pada permintaan yang sama, baik dari aplikasi maupun langsung dari SQL; beberapa penawaran `rejected` diperbolehkan.
+4. **ENUM + CHECK** – Status pesanan, tipe listing, semua memiliki domain terbatas yang terverifikasi di level engine.
 5. **Default value** – `rating_avg` = 0.00, `total_reviews` = 0, `users.status` = 'menunggu', `is_active` = 1, dll. Jejak verifikasi TIDAK punya kolom ber-default: stempel `verified_*`/`rejected_*`/`blocked_*` memang NULL sejak lahir dan hanya terisi oleh keputusan admin (§4.1).
 6. **Aplikasi wajib gunakan transaksi** – setiap aksi multi‑tabel (contoh: menerima penawaran → update request, update offer, insert order) HARUS dalam `DB::transaction()` **dengan `lockForUpdate()`** pada baris yang jadi rebutan.
 7. **Validasi data JSON** – Di Laravel, gunakan `$casts` dan Form Request untuk memastikan `category_ids` adalah array integer, `images` adalah array URL, dll.
@@ -2179,7 +2174,7 @@ Gunakan transaksi agar tetap konsisten.
 | :-- | :-- | :-- |
 | Toko dalam radius | `stores_latlng_idx` | `whereBetween` kotak pembatas **lalu** haversine di PHP (§11) |
 | Penyedia di sekitar permintaan | `cr_location_spatial` | `MBRContains` **lalu** `ST_Distance_Sphere` |
-| Pencarian katalog | `listings_ft_title_desc` | Sanitasi input sebelum `BOOLEAN MODE` |
+| Pencarian katalog | `listings_fulltext` | Sanitasi input sebelum `BOOLEAN MODE` |
 | Broadcast per kategori | `cr_category_status_idx` | `category_id` (=) sebelum `status` (=) |
 | Penawaran per permintaan | `offers_request_status_idx` | |
 | Riwayat pesanan | `orders_buyer_status_idx` | Kesamaan dulu, `created_at` terakhir |

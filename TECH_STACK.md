@@ -108,9 +108,14 @@ codegen, jadi **tidak ada** `build_runner`/`json_serializable`/`freezed`.
 | `share_plus`             | `^13.3.0`    | Berbagi tautan listing (API SharePlus.instance.share)       |
 | `url_launcher`           | `^6.3.0`     | Buka WhatsApp/nomor telepon                                  |
 | `intl`                   | `^0.19.0`    | Format tanggal/angka                                        |
-| `permission_handler`     | `^11.3.0`    | Izin lokasi/notifikasi                                      |
 | `logger`                 | `^2.5.0`     | Log aplikasi                                                |
 | `package_info_plus`      | `^10.2.1`    | Versi aplikasi (built-in Kotlin)                            |
+| `flutter_osm_plugin`     | `1.4.6`      | Peta OpenStreetMap (OSM)                                    |
+| `cupertino_icons`        | `^1.0.8`     | Ikon iOS (dependency default Flutter)                       |
+| `flutter_native_splash`  | `^2.4.0`     | Dev — splash screen (`color` `#168A4A`)                     |
+
+> `permission_handler` tidak dideklarasikan langsung di `pubspec.yaml` — hanya
+> dependensi **transitif** (resolved `12.0.3`), jadi tidak dicantumkan di sini.
 
 ### ⚠️ Klarifikasi: GoRouter ↔ state management tidak saling bergantung
 
@@ -134,12 +139,16 @@ ada kaitan dengan `provider` maupun Riverpod. Keduanya independen.
 | :-------------- | :------------------------------------ | :------------------------------------------- |
 | **Production**  | `https://api.seekitar.id/api/v1`      | Rilis publik                                 |
 | **Staging**     | `https://staging-api.seekitar.id/api/v1` | UAT & closed beta                         |
-| **Development** | `http://localhost:8000/api/v1`        | `php artisan serve` di mesin lokal           |
+| **Development** | `http://192.168.201.148:8000/api/v1`  | Default debug (`constants.dart`); override via `--dart-define` |
 | **Dev (emulator Android)** | `http://10.0.2.2:8000/api/v1` | `localhost` tidak bisa diakses dari emulator |
 
-Catatan untuk tim mobile: emulator Android memetakan host ke `10.0.2.2`,
-sedangkan simulator iOS bisa langsung pakai `localhost`. Simpan nilai ini di
-`--dart-define` atau file konfigurasi environment, jangan di-hardcode.
+Catatan untuk tim mobile: nilai default `AppConstants.baseUrl` (debug) masih
+`http://192.168.201.148:8000/api/v1` — alamat LAN yang di-hardcode sebagai
+fallback (`constants.dart`), `localhost` hanya tercapai bila diisi eksplisit.
+Gunakan `--dart-define=API_BASE_URL=...` per environment: `http://10.0.2.2:8000/api/v1`
+di emulator Android, `localhost` di simulator iOS. Simpan nilai ini di
+`--dart-define` atau file konfigurasi environment, jangan di-hardcode — di
+release wajib diisi via `--dart-define` (fallback kosong).
 
 ---
 
@@ -249,7 +258,7 @@ merujuk data yang sama (`customer_requests`) dari dua sudut pandang:
 | :-- | :-- | :-- |
 | **Pasang Kebutuhan** | Pembeli | Aksi membuat permintaan |
 | **Kebutuhan Sekitar** | Penyedia | Menu berisi permintaan terdekat |
-| **Permintaan Saya** | Pembeli | Daftar permintaan miliknya sendiri |
+| **Permintaan Saya** | Pembeli | Konsep daftar permintaan miliknya sendiri — label aktual di UI: tab **“Saya”** di layar **Kebutuhan Sekitar** (di samping tab “Terdekat”) |
 
 Definisi lengkap istilah menghadap-pengguna ada di
 [`BRANDING-GUIDELINE.md`](BRANDING-GUIDELINE.md) §2.6.

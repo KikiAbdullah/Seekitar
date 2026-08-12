@@ -125,11 +125,11 @@ Prinsip desain:
 | Database          | MySQL 8.0.34+ (InnoDB, Spatial)        | —                   |
 | Cache & Queue     | Redis 7                                | —                   |
 | Storage           | AWS S3 / MinIO                         | —                   |
-| Push Notification | Firebase Cloud Messaging               | —                   |
-| WhatsApp          | Twilio / Kirim WA API                  | —                   |
+| Push Notification | Firebase Cloud Messaging               | — (rencana, lihat §15.1) |
+| WhatsApp          | Gateway kustom `whatsapp.driver` (Baileys / Kirim WA / email / log) | — |
 | Admin UI          | Bootstrap 5.3.x, Yajra Datatables 13.x | `^13.0`             |
 | Permission        | Spatie Laravel Permission 8.x          | `^8.0`              |
-| API Auth          | Laravel Sanctum 4.x                    | `^4.0`              |
+| API Auth          | JWT — tymon/jwt-auth 2.x (guard `api`) | `^2.2`              |
 | CI/CD             | GitHub Actions                         | —                   |
 
 ### Catatan Kompatibilitas (penting)
@@ -725,12 +725,15 @@ ditandai dengan penjelasan singkat alasan keberadaannya.
 app/
 ├── Console/
 │   └── Commands/
-│       └── CloseExpiredRequests.php   # Scheduler: tutup permintaan kadaluarsa
-├── DataTables/                        # Server-side processing Yajra (admin)
+│       ├── PurgeExpiredRequests.php    # requests:purge-expired — tutup permintaan kadaluarsa
+│       ├── PurgeExpiredOffers.php      # offers:purge-expired — tolak penawaran kadaluarsa
+│       ├── CleanupPendingOrders.php    # orders:cleanup-pending — bersihkan pesanan menggantung
+│       └── DataRetentionCommand.php    # privacy:retention — hapus data pribadi sesuai UU PDP
+├── DataTables/                        # Server-side processing Yajra (admin), pola `DataTables::eloquent()` — lihat app/DataTables/README.md
 │   ├── UsersDataTable.php
 │   ├── StoresDataTable.php
 │   ├── ListingsDataTable.php
-│   ├── RequestsDataTable.php
+│   ├── CustomerRequestsDataTable.php
 │   ├── OffersDataTable.php
 │   ├── OrdersDataTable.php
 │   ├── DisputesDataTable.php
@@ -743,61 +746,107 @@ app/
 │   ├── ListingStatus.php
 │   ├── ListingType.php
 │   ├── StoreType.php
-│   ├── VerificationStatus.php
+│   ├── StoreStatus.php
+│   ├── UserStatus.php
 │   ├── VerificationLevel.php
 │   ├── PaymentMethod.php
-│   └── DisputeStatus.php
+│   ├── DeliveryMethod.php
+│   ├── DisputeStatus.php
+│   ├── DisputeReason.php
+│   ├── ReviewDirection.php
+│   └── Concerns/HasValues.php
 ├── Events/
 │   ├── CustomerRequestCreated.php
 │   ├── OfferAccepted.php
-│   ├── OrderStatusChanged.php
-│   └── ReviewSubmitted.php
+│   └── OrderStatusChanged.php
 ├── Exceptions/
-│   └── InvalidOrderTransitionException.php
+│   ├── BusinessException.php
+│   ├── InvalidOrderTransitionException.php
+│   └── OtpDeliveryException.php
+├── Exports/
+│   └── DataTableExport.php
 ├── Http/
+│   ├── Concerns/
+│   │   ├── ApiResponse.php             # Amplop JSON seragam untuk API (§17.1)
+│   │   └── HasEscapePlan.php           # Pembungkus transaksional + respons degradasi
 │   ├── Controllers/
 │   │   ├── Admin/
 │   │   │   ├── DashboardController.php
-│   │   │   ├── CategoryController.php
+│   │   │   ├── LoginController.php
+│   │   │   ├── ProfileController.php
+│   │   │   ├── PasswordController.php
+│   │   │   ├── VerificationController.php
 │   │   │   ├── UserController.php
 │   │   │   ├── StoreController.php
+│   │   │   ├── StoreMapController.php
+│   │   │   ├── CategoryController.php
 │   │   │   ├── ListingController.php
 │   │   │   ├── CustomerRequestController.php
 │   │   │   ├── OfferController.php
 │   │   │   ├── OrderController.php
 │   │   │   ├── ReviewController.php
 │   │   │   ├── DisputeController.php
-│   │   │   └── SettingController.php
-│   │   └── Api/v1/...
+│   │   │   ├── SettingController.php
+│   │   │   ├── SubscriptionController.php
+│   │   │   ├── AdvertisementController.php
+│   │   │   ├── FeeController.php
+│   │   │   ├── BlogController.php
+│   │   │   ├── WhatsAppController.php
+│   │   │   └── WalletController.php
+│   │   ├── Api/V1/...
+│   │   └── Web/PageController.php
 │   ├── Middleware/
-│   │   └── EnsureStoreOwner.php
+│   │   ├── EnsureHttps.php
+│   │   ├── EnsureUserNotBlocked.php
+│   │   ├── EnsureProfileComplete.php
+│   │   └── EnsureStoreOwner.php        # Terdaftar (alias store.owner), belum dipakai route (§5.2)
 │   ├── Requests/
 │   │   ├── Admin/
-│   │   │   ├── CategoryRequest.php
-│   │   │   ├── UserRequest.php
-│   │   │   ├── StoreRequest.php
-│   │   │   ├── SettingRequest.php
-│   │   │   └── ...
+│   │   │   ├── LoginRequest.php
+│   │   │   ├── UpdateProfileRequest.php
+│   │   │   ├── UpdatePasswordRequest.php
+│   │   │   └── RejectVerificationRequest.php
 │   │   └── Api/
-│   │       ├── CreateStoreRequest.php
-│   │       ├── CreateListingRequest.php
-│   │       ├── CreateCustomerRequestRequest.php
-│   │       └── CreateOfferRequest.php
+│   │       ├── RequestOtpRequest.php
+│   │       ├── VerifyOtpRequest.php
+│   │       ├── StoreStoreRequest.php
+│   │       ├── UpdateStoreRequest.php
+│   │       ├── StoreListingRequest.php
+│   │       ├── UpdateListingRequest.php
+│   │       ├── StoreCustomerRequestRequest.php
+│   │       ├── UpdateCustomerRequestRequest.php
+│   │       ├── StoreOfferRequest.php
+│   │       ├── StoreOrderRequest.php
+│   │       ├── TopUpWalletRequest.php
+│   │       ├── WithdrawWalletRequest.php
+│   │       ├── StoreUserAddressRequest.php
+│   │       └── UpdateProfileRequest.php
 │   └── Resources/                     # API Resource (transformer JSON)
+│       ├── UserResource.php
+│       ├── UserExportResource.php
 │       ├── StoreResource.php
+│       ├── CategoryResource.php
 │       ├── ListingResource.php
+│       ├── CustomerRequestResource.php
+│       ├── OfferResource.php
 │       ├── OrderResource.php
-│       └── OfferResource.php
+│       ├── ReviewResource.php
+│       ├── DisputeResource.php
+│       ├── WalletResource.php
+│       ├── WalletTransactionResource.php
+│       ├── CouponResource.php
+│       ├── UserAddressResource.php
+│       ├── ConversationResource.php
+│       ├── ConversationParticipantResource.php
+│       ├── MessageResource.php
+│       └── NotificationResource.php
 ├── Jobs/                              # Antrian Redis (asinkron)
 │   ├── BroadcastRequestJob.php        # Sebar permintaan ke penyedia dalam radius
-│   ├── SendPushNotificationJob.php
-│   ├── SendWhatsAppOtpJob.php
-│   └── RecalculateStoreRatingJob.php
+│   └── SendOtpJob.php                 # Kirim OTP via gateway WhatsApp di background
 ├── Listeners/
 │   ├── DispatchRequestBroadcast.php   # CustomerRequestCreated -> BroadcastRequestJob
 │   ├── SendOfferAcceptedNotification.php
-│   ├── SendOrderStatusNotification.php
-│   └── UpdateStoreRatingOnReview.php
+│   └── SendOrderStatusNotification.php
 ├── Models/
 │   ├── User.php
 │   ├── Store.php
@@ -807,31 +856,76 @@ app/
 │   ├── Offer.php
 │   ├── Order.php
 │   ├── Review.php
-│   └── Dispute.php
+│   ├── Dispute.php
+│   ├── Wallet.php
+│   ├── WalletTransaction.php
+│   ├── Favorite.php
+│   ├── UserAddress.php
+│   ├── UserDevice.php
+│   ├── Coupon.php
+│   ├── CouponUsage.php
+│   ├── Subscription.php
+│   ├── Advertisement.php
+│   ├── BlogPost.php
+│   ├── Conversation.php
+│   ├── ConversationParticipant.php
+│   ├── Message.php
+│   ├── Notification.php
+│   ├── ActivityLog.php
+│   ├── Report.php
+│   ├── Setting.php
+│   ├── ContactMessage.php
+│   └── Concerns/
+│       ├── HasLocation.php
+│       └── SerializesDatesAsUtc.php
 ├── Observers/                         # Side-effect otomatis pada model
-│   ├── ReviewObserver.php             # Perbarui rating_avg & total_reviews
-│   └── OrderObserver.php              # Catat completed_at saat status selesai
+│   ├── OrderObserver.php              # Nomor pesanan & penjaga transisi status
+│   └── ReviewObserver.php             # Hitung ulang rating toko & pembeli (sinkron)
 ├── Policies/
 │   ├── StorePolicy.php
 │   ├── ListingPolicy.php
+│   ├── CustomerRequestPolicy.php
 │   ├── OrderPolicy.php
 │   └── OfferPolicy.php
 ├── Providers/
-│   ├── AppServiceProvider.php
-│   └── EventServiceProvider.php
-└── Services/                          # Logika bisnis lintas controller
-    ├── BroadcastService.php           # Pencocokan penyedia untuk sebuah permintaan
-    ├── GeolocationService.php         # Query radius ST_Distance_Sphere
-    ├── NotificationService.php        # Abstraksi FCM + WhatsApp
-    ├── OrderStateMachine.php          # Validasi transisi status pesanan
-    ├── OtpService.php                 # Generate, simpan (Redis), verifikasi OTP
-    └── WhatsAppService.php            # Klien Twilio / Kirim WA
+│   └── AppServiceProvider.php         # binding, observer, event, rate limiter, gate
+├── Rules/
+│   └── NotAWeakPassword.php
+├── Services/                          # Logika bisnis lintas controller
+│   ├── Contracts/
+│   │   ├── WhatsAppGateway.php        # Kontrak pengiriman OTP (sendOtp)
+│   │   └── NotificationSender.php     # Kontrak notifikasi ke penyedia
+│   ├── Notifications/
+│   │   └── LogNotificationSender.php  # Satu-satunya implementasi saat ini (log)
+│   ├── WhatsApp/
+│   │   ├── BaileysGateway.php
+│   │   ├── EmailOtpGateway.php
+│   │   ├── KirimWaGateway.php
+│   │   └── LogWhatsAppGateway.php
+│   ├── BroadcastService.php           # Pencocokan penyedia untuk sebuah permintaan
+│   ├── GeolocationService.php         # Query radius ST_Distance_Sphere
+│   ├── OrderStateMachine.php          # Validasi transisi status pesanan
+│   ├── OtpService.php                 # Generate, simpan (Redis), verifikasi OTP
+│   ├── VerifikasiTokoService.php      # Persetujuan/penolakan toko — satu pintu
+│   ├── SettingService.php             # Baca/tulis konfigurasi runtime + cache
+│   ├── TransactionService.php         # Pembungkus transaksi DB (begin/commit/rollback)
+│   ├── PrivacyService.php             # Anonimisasi & ekspor data (UU PDP)
+│   ├── CacheService.php               # Cache terpusat dengan dukungan grup
+│   ├── EscapePlanService.php          # Jaringan pengaman layanan (degradasi)
+│   └── ActivityLogger.php             # Jejak aktivitas pengguna/admin
+└── Support/
+    ├── PhoneNumber.php                # Normalisasi nomor HP Indonesia → 62xxx
+    ├── Angka.php
+    ├── Jarak.php                      # Haversine di PHP
+    ├── PlaceholderImg.php
+    └── SpatialSchema.php
 
 database/
 ├── factories/
 │   ├── UserFactory.php
 │   ├── StoreFactory.php
-│   └── ListingFactory.php
+│   ├── ListingFactory.php
+│   └── ...                            # 13 factory total + Support/Wilayah.php (24 kecamatan, lihat §19.2a)
 ├── migrations/
 │   └── ...                            # Lihat DATABASE.md §10 untuk urutannya
 └── seeders/
@@ -857,7 +951,7 @@ ditaruh di controller:
 | :-------------------- | :------------------------------------------------------ | :---------------------------------------------------------------------- |
 | `BroadcastService`    | API create request, admin re-broadcast, job antrian     | Aturan pencocokan penyedia cukup rumit dan harus konsisten             |
 | `GeolocationService`  | Pencarian toko, pencarian listing, pencocokan broadcast | Raw query spasial terpusat di satu tempat, mudah diuji & dioptimasi    |
-| `NotificationService` | Listener, job, controller admin                         | Satu pintu ke FCM & WhatsApp, memudahkan mock saat testing             |
+| `VerifikasiTokoService` | Panel web (antrian toko), aksi cepat tabel toko, endpoint admin API | Persetujuan/penolakan toko dipakai tiga jalur — disalin tiga kali dulu pernah menyimpang (§9.3) |
 
 Contoh kerangka:
 
@@ -953,8 +1047,12 @@ Nilai enum **wajib** sama persis dengan ENUM di `DATABASE.md`:
 | `ListingType`        | `product`, `service`, `rental`                                               | `listings.listing_type`       |
 | `StoreType`          | `goods`, `services`, `rental`                                                | `stores.store_type` (SET)     |
 | `StoreStatus`        | `pending`, `verified`, `rejected`, `blocked`                                 | `stores.status` (menggantikan `verification_status`) |
+| `UserStatus`         | `menunggu`, `terverifikasi`, `ditolak`, `diblokir`                           | `users.status`                |
 | `PaymentMethod`      | `cod`, `transfer`                                                            | `orders.payment_method`       |
+| `DeliveryMethod`     | `pickup`, `delivery`                                                         | `orders.delivery_method`      |
 | `DisputeStatus`      | `open`, `resolved`                                                           | `disputes.status`             |
+| `DisputeReason`      | `barang_tidak_sesuai`, `jasa_tidak_profesional`, `penyedia_tidak_responsif`, `pembeli_fiktif`, `lainnya` | `disputes.reason` |
+| `ReviewDirection`    | `buyer_to_store`, `store_to_buyer`                                           | `reviews.direction`           |
 | `VerificationLevel`  | `1`, `2`, `3` (int)                                                          | **TURUNAN** — bukan kolom lagi; dihitung `User::verificationLevel` (DATABASE.md §4.1) |
 
 > ℹ️ **Perubahan sesudah panduan ini ditulis:** kolom `users.verification_level`
@@ -1036,7 +1134,7 @@ POST /requests
         └─> listener DispatchRequestBroadcast
               └─> dispatch BroadcastRequestJob   (masuk antrian Redis)
                     └─> BroadcastService cari penyedia dalam radius
-                    └─> dispatch SendPushNotificationJob per penyedia
+                    └─> NotificationSender->notifyStoresOfRequest(stores, request)
 ```
 
 Response ke pembeli langsung kembali setelah data tersimpan; pencarian penyedia
@@ -1049,6 +1147,7 @@ namespace App\Jobs;
 
 use App\Models\CustomerRequest;
 use App\Services\BroadcastService;
+use App\Services\Contracts\NotificationSender;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -1057,20 +1156,26 @@ class BroadcastRequestJob implements ShouldQueue
     use Queueable;
 
     public int $tries = 3;
-    public int $backoff = 30;
+    public array $backoff = [10, 30, 60];
 
-    public function __construct(public string $customerRequestId) {}
+    public function __construct(public readonly string $requestId) {}
 
-    public function handle(BroadcastService $broadcast): void
+    public function handle(BroadcastService $broadcast, NotificationSender $notifier): void
     {
-        $request = CustomerRequest::find($this->customerRequestId);
+        $request = CustomerRequest::withCoordinates()->find($this->requestId);
 
         // Permintaan bisa saja sudah ditutup sebelum job sempat jalan.
-        if (! $request || $request->status !== \App\Enums\RequestStatus::Open) {
+        if ($request === null || ! $request->isOpen()) {
             return;
         }
 
-        $broadcast->notifyMatchingStores($request);
+        $stores = $broadcast->matchingStores($request);
+
+        if ($stores->isEmpty()) {
+            return;
+        }
+
+        $notifier->notifyStoresOfRequest($stores, $request);
     }
 }
 ```
@@ -1116,7 +1221,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_or_permission'=> \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'store.owner'       => \App\Http\Middleware\EnsureStoreOwner::class,
             'profile.complete'  => \App\Http\Middleware\EnsureProfileComplete::class,
+            'user.active'       => \App\Http\Middleware\EnsureUserNotBlocked::class,
+            'https'             => \App\Http\Middleware\EnsureHttps::class,
         ]);
+
+        // Terminasi HTTPS di produksi (redirect + HSTS); aman di dev (no-op).
+        $middleware->append(\App\Http\Middleware\EnsureHttps::class);
 
         // Cookie-based auth hanya untuk domain di SANCTUM_STATEFUL_DOMAINS.
         $middleware->statefulApi();
@@ -1139,10 +1249,12 @@ return Application::configure(basePath: dirname(__DIR__))
 | :-- | :-- | :-- |
 | `auth` | web admin | Sesi login Laravel |
 | `auth:api` | `/api/*` | JWT Bearer token (guard `api`, driver `jwt`) |
-| `role:admin` | web admin | Spatie — batasi ke admin |
+| `role:admin\|super-admin` | web admin | Spatie — batasi ke admin (dua role panel) |
 | `permission:manage-users` | per-route admin | Spatie — izin granular |
-| `store.owner` | API penjual | Memastikan pemanggil pemilik toko terkait |
-| `profile.complete` | API | Menegakkan pengisian `users.location` |
+| `store.owner` | (tidak dipakai) | Terdaftar sebagai alias `store.owner`, tetapi **belum dipasang di route mana pun** — kepemilikan toko dicek lewat Policy |
+| `profile.complete` | API transaksional | Menegakkan pengisian `users.location` |
+| `user.active` | seluruh grup API ber-token | Menolak akun diblokir (alias dari `EnsureUserNotBlocked`) |
+| `https` | global (append) | Terminasi HTTPS: redirect ke https + HSTS di produksi (`EnsureHttps`; no-op di dev) |
 | `throttle:otp` | `/auth/request-otp` | 3 request/menit **per nomor** |
 
 ### 5.3 Rate Limiter Kustom
@@ -1397,11 +1509,15 @@ class ListingPolicy
 
 | Policy | Aturan inti |
 | :-- | :-- |
-| `StorePolicy` | Hanya pemilik yang boleh `update`; admin boleh `deactivate` |
+| `StorePolicy` | Hanya pemilik yang boleh `update`/`delete`; `deactivate` untuk admin |
 | `ListingPolicy` | Pemilik toko; admin boleh `delete` (konten bermasalah) |
 | `OfferPolicy` | Pemilik toko boleh membuat; hanya pemilik request boleh `accept` |
 | `OrderPolicy` | Pembeli **atau** pemilik toko terkait; transisi status dicek `OrderStateMachine` |
-| `ReviewPolicy` | Hanya pihak pada pesanan `selesai` dan dalam jendela 7 hari |
+| `CustomerRequestPolicy` | Pemilik boleh `update`/`delete`/`extend` permintaannya sendiri |
+
+> Ulasan tidak memakai Policy terpisah (`ReviewPolicy` tidak ada) — pembuatan
+> ulasan dijalankan lewat `OrderController::review` yang otorisasinya ditangani
+> `OrderPolicy::review` (pihak pesanan `selesai`, dalam jendela 7 hari).
 
 ---
 
@@ -1417,75 +1533,183 @@ Karena prefix `admin` dan name `admin.` sudah disetel saat pendaftaran grup,
 di dalam berkas ini **tidak perlu** mengulanginya.
 
 ```php
-Route::middleware(['auth', 'role:admin'])->group(function () {
+// Login & logout berada DI LUAR grup 'auth' — kalau di dalam, halaman login
+// sendiri menuntut login dan tidak ada yang bisa masuk sama sekali.
+Route::middleware('guest')->group(function (): void {
+    Route::get('login', [LoginController::class, 'create'])->name('login');
+    Route::post('login', [LoginController::class, 'store'])
+        ->middleware('throttle:admin-login')->name('login.store');
+});
+
+Route::post('logout', [LoginController::class, 'destroy'])
+    ->middleware('auth')->name('logout');
+
+// Grup utama: role 'admin|super-admin' (bukan 'role:admin').
+Route::middleware(['auth', 'role:admin|super-admin'])->group(function (): void {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-
-    // --- Endpoint AJAX Datatables ---------------------------------------
-    // WAJIB didaftarkan SEBELUM Route::resource, kalau tidak 'data' akan
-    // tertangkap sebagai {category} pada route show/edit.
-    Route::get('categories/data', [CategoryController::class, 'data'])->name('categories.data');
-    Route::get('users/data',      [UserController::class, 'data'])->name('users.data');
-    Route::get('stores/data',     [StoreController::class, 'data'])->name('stores.data');
-    Route::get('listings/data',   [ListingController::class, 'data'])->name('listings.data');
-    Route::get('requests/data',   [CustomerRequestController::class, 'data'])->name('requests.data');
-    Route::get('offers/data',     [OfferController::class, 'data'])->name('offers.data');
-    Route::get('orders/data',     [OrderController::class, 'data'])->name('orders.data');
-    Route::get('disputes/data',   [DisputeController::class, 'data'])->name('disputes.data');
-    Route::get('reviews/data',    [ReviewController::class, 'data'])->name('reviews.data');
-
-    // Data untuk grafik dashboard (§9.1)
     Route::get('dashboard/chart', [DashboardController::class, 'chartData'])->name('dashboard.chart');
 
-    // Categories
-    Route::resource('categories', CategoryController::class)->except(['show']);
+    // Akun sendiri — TANPA permission: admin berizin minimum tetap harus
+    // bisa memperbaiki nama & kata sandinya sendiri.
+    Route::get('profil', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('profil', [ProfileController::class, 'update'])->name('profile.update');
+    Route::get('kata-sandi', [PasswordController::class, 'edit'])->name('password.edit');
+    Route::put('kata-sandi', [PasswordController::class, 'update'])->name('password.update');
 
-    // Users
-    Route::get('users', [UserController::class, 'index'])->name('users.index');
-    Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
-    Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
-    Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+    // Endpoint AJAX Datatables — WAJIB didaftarkan SEBELUM route ber-parameter,
+    // dan masing-masing memakai permission yang sama dengan halaman induknya.
+    Route::get('users/data',    [UserController::class, 'data'])->middleware('permission:manage-users')->name('users.data');
+    Route::get('stores/data',   [StoreController::class, 'data'])->middleware('permission:manage-stores')->name('stores.data');
+    Route::get('verifications/users/data', [VerificationController::class, 'userData'])->middleware('permission:verify-users')->name('verifications.users.data');
+    Route::get('verifications/stores/data', [VerificationController::class, 'storesData'])->middleware('permission:verify-stores')->name('verifications.stores.data');
+    Route::get('disputes/data', [DisputeController::class, 'data'])->middleware('permission:manage-disputes')->name('disputes.data');
+    Route::get('listings/data', [ListingController::class, 'data'])->middleware('permission:manage-listings')->name('listings.data');
+    Route::get('orders/data',   [OrderController::class, 'data'])->middleware('permission:manage-orders')->name('orders.data');
+    Route::get('requests/data', [CustomerRequestController::class, 'data'])->middleware('permission:manage-requests')->name('requests.data');
+    Route::get('offers/data',   [OfferController::class, 'data'])->middleware('permission:manage-offers')->name('offers.data');
+    Route::get('reviews/data',  [ReviewController::class, 'data'])->middleware('permission:manage-reviews')->name('reviews.data');
+    Route::get('blog/data',     [BlogController::class, 'data'])->middleware('permission:manage-blog')->name('blog.data');
 
-    // Verifikasi massal
-    Route::post('verifications/users/{user}/approve', [VerificationController::class, 'approveUser'])->name('verify.user.approve');
-    Route::post('verifications/users/{user}/reject', [VerificationController::class, 'rejectUser'])->name('verify.user.reject');
-    Route::post('verifications/stores/{store}/approve', [VerificationController::class, 'approveStore'])->name('verify.store.approve');
-    Route::post('verifications/stores/{store}/reject', [VerificationController::class, 'rejectStore'])->name('verify.store.reject');
+    // --- Pengguna -------------------------------------------------------
+    Route::middleware('permission:manage-users')->group(function (): void {
+        Route::get('users/export', [UserController::class, 'exportCsv'])->name('users.export');
+        Route::get('users', [UserController::class, 'index'])->name('users.index');
+        Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
+        Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
+        Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
+        // Blokir SATU route — field `action` pada body memutuskan blokir/buka
+        // blokir (tidak ada route block & unblock terpisah).
+        Route::post('users/{user}/block', [UserController::class, 'block'])->name('users.block');
+    });
 
-    // Stores
-    Route::resource('stores', StoreController::class)->only(['index', 'show', 'edit', 'update', 'destroy']);
-    Route::patch('stores/{store}/deactivate', [StoreController::class, 'deactivate'])->name('stores.deactivate');
+    // --- Toko -----------------------------------------------------------
+    Route::middleware('permission:manage-stores')->group(function (): void {
+        Route::get('stores/export', [StoreController::class, 'exportCsv'])->name('stores.export');
+        Route::get('stores', [StoreController::class, 'index'])->name('stores.index');
+        Route::get('stores/{store}', [StoreController::class, 'show'])->name('stores.show');
+        Route::get('stores/{store}/edit', [StoreController::class, 'edit'])->name('stores.edit');
+        Route::put('stores/{store}', [StoreController::class, 'update'])->name('stores.update');
+        // Peta sebaran toko — permission sama dengan daftar toko.
+        Route::get('maps/stores', [StoreMapController::class, 'index'])->name('maps.stores');
+        Route::get('maps/stores/data', [StoreMapController::class, 'data'])->name('maps.stores.data');
+    });
 
-    // Blokir pengguna (mencabut semua token, lihat API §10.4)
-    Route::patch('users/{user}/block',   [UserController::class, 'block'])->name('users.block');
-    Route::patch('users/{user}/unblock', [UserController::class, 'unblock'])->name('users.unblock');
+    Route::middleware('permission:verify-stores')->group(function (): void {
+        Route::post('stores/{store}/approve', [StoreController::class, 'approve'])->name('stores.approve');
+        Route::post('stores/{store}/reject', [StoreController::class, 'reject'])->name('stores.reject');
+    });
 
-    // Listings
-    Route::resource('listings', ListingController::class)->only(['index', 'show', 'destroy']);
-    Route::patch('listings/{listing}/toggle-status', [ListingController::class, 'toggleStatus'])
-        ->name('listings.toggle-status');
+    // --- Verifikasi (dua halaman, dua permission) -----------------------
+    Route::middleware('permission:verify-users')->group(function (): void {
+        Route::get('verifications/users', [VerificationController::class, 'users'])->name('verifications.users');
+        Route::post('verifications/users/{user}/verify', [VerificationController::class, 'verifyUser'])->name('verifications.users.verify');
+        Route::post('verifications/users/{user}/reject', [VerificationController::class, 'rejectUser'])->name('verifications.users.reject');
+        // Berkas privat (KTP/selfie) di-stream lewat PHP; `kind` dibatasi.
+        Route::get('verifications/users/{user}/media/{kind}', [VerificationController::class, 'media'])
+            ->name('verifications.users.media')->whereIn('kind', ['ktp', 'selfie']);
+    });
 
-    // Customer Requests
-    Route::resource('requests', CustomerRequestController::class)->only(['index', 'show']);
-    Route::patch('requests/{request}/extend', [CustomerRequestController::class, 'extend'])
-        ->name('requests.extend');
+    Route::middleware('permission:verify-stores')->group(function (): void {
+        Route::get('verifications/stores', [VerificationController::class, 'stores'])->name('verifications.stores');
+        Route::post('verifications/stores/{store}/approve', [VerificationController::class, 'approveStore'])->name('verifications.stores.approve');
+        Route::post('verifications/stores/{store}/reject', [VerificationController::class, 'rejectStore'])->name('verifications.stores.reject');
+    });
 
-    // Offers
-    Route::resource('offers', OfferController::class)->only(['index']);
+    // --- Kategori — resource penuh, TANPA route /data (lihat §9.2) -----
+    Route::middleware('permission:manage-categories')->group(function (): void {
+        Route::resource('categories', CategoryController::class)->except(['show']);
+    });
 
-    // Orders
-    Route::resource('orders', OrderController::class)->only(['index', 'show']);
+    // --- Listing — hanya index/show/destroy, TANPA toggle-status -------
+    Route::middleware('permission:manage-listings')->group(function (): void {
+        Route::resource('listings', ListingController::class)->only(['index', 'show', 'destroy']);
+    });
 
-    // Disputes
-    Route::get('disputes', [DisputeController::class, 'index'])->name('disputes.index');
-    Route::get('disputes/{dispute}', [DisputeController::class, 'show'])->name('disputes.show');
-    Route::patch('disputes/{dispute}/resolve', [DisputeController::class, 'resolve'])->name('disputes.resolve');
+    // --- Permintaan -----------------------------------------------------
+    Route::middleware('permission:manage-requests')->group(function (): void {
+        Route::resource('requests', CustomerRequestController::class)
+            ->only(['index', 'show'])->parameters(['requests' => 'customerRequest']);
+        Route::post('requests/{customerRequest}/extend', [CustomerRequestController::class, 'extend'])
+            ->name('requests.extend');
+    });
 
-    // Reviews
-    Route::resource('reviews', ReviewController::class)->only(['index', 'destroy']);
+    // --- Penawaran (hanya baca) -----------------------------------------
+    Route::middleware('permission:manage-offers')->group(function (): void {
+        Route::get('offers/export', [OfferController::class, 'exportCsv'])->name('offers.export');
+        Route::get('offers', [OfferController::class, 'index'])->name('offers.index');
+        Route::get('offers/{offer}', [OfferController::class, 'show'])->name('offers.show');
+    });
 
-    // Settings
-    Route::get('settings', [SettingController::class, 'index'])->name('settings');
-    Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
+    // --- Pesanan (hanya baca + bukti bayar) -----------------------------
+    Route::middleware('permission:manage-orders')->group(function (): void {
+        Route::get('orders/export', [OrderController::class, 'exportCsv'])->name('orders.export');
+        Route::resource('orders', OrderController::class)->only(['index', 'show']);
+        Route::get('orders/{order}/payment-proof', [OrderController::class, 'paymentProofMedia'])
+            ->name('orders.payment-proof');
+    });
+
+    // --- Ulasan ---------------------------------------------------------
+    Route::middleware('permission:manage-reviews')->group(function (): void {
+        Route::resource('reviews', ReviewController::class)->only(['index', 'destroy']);
+    });
+
+    // --- Blog -----------------------------------------------------------
+    Route::middleware('permission:manage-blog')->group(function (): void {
+        Route::resource('blog', BlogController::class)
+            ->parameters(['blog' => 'post'])->except(['show']);
+    });
+
+    // --- Pengaturan sistem (hanya super-admin lewat permission) ---------
+    Route::middleware('permission:manage-settings')->group(function (): void {
+        Route::get('settings', [SettingController::class, 'index'])->name('settings');
+        Route::put('settings', [SettingController::class, 'update'])->name('settings.update');
+        // Wallet — verifikasi top-up & selesaikan/tolak penarikan.
+        Route::get('wallet', [WalletController::class, 'index'])->name('wallet.index');
+        Route::post('wallet/topups/{transaction}/confirm', [WalletController::class, 'confirmTopup'])->name('wallet.topups.confirm');
+        Route::post('wallet/topups/{transaction}/cancel', [WalletController::class, 'cancelTopup'])->name('wallet.topups.cancel');
+        Route::post('wallet/withdrawals/{transaction}/complete', [WalletController::class, 'completeWithdrawal'])->name('wallet.withdrawals.complete');
+        Route::post('wallet/withdrawals/{transaction}/reject', [WalletController::class, 'rejectWithdrawal'])->name('wallet.withdrawals.reject');
+    });
+
+    // --- Laporan masalah -------------------------------------------------
+    Route::middleware('permission:manage-disputes')->group(function (): void {
+        Route::get('disputes', [DisputeController::class, 'index'])->name('disputes.index');
+        Route::get('disputes/{dispute}', [DisputeController::class, 'show'])->name('disputes.show');
+        Route::get('disputes/{dispute}/info', [DisputeController::class, 'info'])->name('disputes.info');
+        Route::post('disputes/{dispute}/resolve', [DisputeController::class, 'resolve'])->name('disputes.resolve');
+    });
+
+    // --- Langganan & Boost Listing --------------------------------------
+    Route::middleware('permission:manage-subscriptions')->group(function (): void {
+        Route::get('subscriptions/data', [SubscriptionController::class, 'data'])->name('subscriptions.data');
+        Route::get('subscriptions', [SubscriptionController::class, 'index'])->name('subscriptions.index');
+        Route::get('subscriptions/{subscription}', [SubscriptionController::class, 'show'])->name('subscriptions.show');
+        Route::post('subscriptions/{subscription}/cancel', [SubscriptionController::class, 'cancel'])->name('subscriptions.cancel');
+    });
+
+    // --- Iklan Banner ----------------------------------------------------
+    Route::middleware('permission:manage-advertisements')->group(function (): void {
+        Route::get('advertisements/data', [AdvertisementController::class, 'data'])->name('advertisements.data');
+        Route::resource('advertisements', AdvertisementController::class)
+            ->parameters(['advertisements' => 'advertisement']);
+    });
+
+    // --- Biaya Layanan ---------------------------------------------------
+    Route::middleware('permission:manage-fees')->group(function (): void {
+        Route::get('fees/data', [FeeController::class, 'data'])->name('fees.data');
+        Route::get('fees', [FeeController::class, 'index'])->name('fees.index');
+        Route::post('fees/update-settings', [FeeController::class, 'updateSettings'])->name('fees.update-settings');
+    });
+
+    // --- Gateway WhatsApp (Baileys) — scan QR & status koneksi -----------
+    Route::middleware('permission:manage-whatsapp')->group(function (): void {
+        Route::get('whatsapp', [WhatsAppController::class, 'index'])->name('whatsapp.index');
+        Route::get('whatsapp/status', [WhatsAppController::class, 'status'])->name('whatsapp.status');
+        Route::get('whatsapp/qr', [WhatsAppController::class, 'qr'])->name('whatsapp.qr');
+        Route::post('whatsapp/logout', [WhatsAppController::class, 'logout'])->name('whatsapp.logout');
+        Route::post('whatsapp/reset', [WhatsAppController::class, 'reset'])->name('whatsapp.reset');
+        Route::post('whatsapp/send-test', [WhatsAppController::class, 'sendTest'])->name('whatsapp.send-test');
+    });
 });
 ```
 
@@ -1495,63 +1719,179 @@ Kontrak lengkapnya ada di [`API_DOCUMENTATION.md`](API_DOCUMENTATION.md).
 Yang penting diperhatikan di sisi routing adalah **penempatan middleware**:
 
 ```php
-Route::prefix('v1')->group(function () {
+Route::prefix('v1')->group(function (): void {
 
-    // --- Publik --------------------------------------------------------
+    // --- Publik — tanpa token (hanya dua ini) ---------------------------
     Route::post('auth/request-otp', [AuthController::class, 'requestOtp'])
-        ->middleware('throttle:otp');                     // per nomor, bukan IP
+        ->middleware('throttle:otp');                    // per nomor, bukan IP
     Route::post('auth/verify-otp', [AuthController::class, 'verifyOtp'])
-        ->middleware('throttle:6,1');
+        ->middleware('throttle:otp-verify');
 
-    Route::get('stores/nearby',   [StoreController::class, 'nearby']);
-    Route::get('stores/{store}',  [StoreController::class, 'show']);
-    Route::get('listings',        [ListingController::class, 'index']);
-    Route::get('listings/{listing}', [ListingController::class, 'show']);
-    Route::get('categories',      [CategoryController::class, 'index']);
+    Route::get('categories', [CategoryController::class, 'index']);
+    Route::get('config', [SettingController::class, 'publicConfig']);
 
-    // --- Perlu login ---------------------------------------------------
-    Route::middleware('auth:api')->group(function () {
-        Route::post('auth/logout',     [AuthController::class, 'logout']);
-        Route::get('auth/me',          [AuthController::class, 'me']);
-        Route::patch('auth/profile',   [AuthController::class, 'updateProfile']);
-        Route::post('auth/verification/ktp', [VerificationController::class, 'submitKtp']);
-        Route::post('auth/fcm-token',  [DeviceController::class, 'store']);
-        Route::delete('auth/fcm-token',[DeviceController::class, 'destroy']);
+    // --- Perlu login: auth:api + user.active ----------------------------
+    // Middleware `user.active` menjaga seluruh endpoint ber-token — akun
+    // yang diblokir ditolak 423 apa pun yang dimintanya.
+    Route::middleware(['auth:api', 'user.active'])->group(function (): void {
+        Route::get('auth/me', [AuthController::class, 'me']);
+        Route::patch('auth/profile', [AuthController::class, 'updateProfile']);
+        Route::post('auth/refresh', [AuthController::class, 'refresh']);
+        Route::post('auth/phone/request-otp', [AuthController::class, 'requestPhoneChangeOtp'])
+            ->middleware('throttle:otp');
+        Route::post('auth/phone/verify-otp', [AuthController::class, 'verifyPhoneChangeOtp'])
+            ->middleware('throttle:otp-verify');
+        Route::get('auth/export-data', [AuthController::class, 'exportData']);
+        Route::delete('auth/account', [AuthController::class, 'requestDeletion']);
+        Route::post('auth/logout', [AuthController::class, 'logout']);
+        // Registrasi perangkat — token FCM aplikasi disimpan di user_devices.
+        Route::post('auth/fcm-token', [DeviceController::class, 'store']);
+        Route::delete('auth/fcm-token', [DeviceController::class, 'destroy']);
+        Route::post('auth/verification/ktp', [VerificationController::class, 'uploadKtp']);
+        Route::get('auth/verification/photo/{kind}', [VerificationController::class, 'myPhoto'])
+            ->whereIn('kind', ['ktp', 'selfie']);
 
-        // Butuh profil lengkap (nama + lokasi) sebelum bertransaksi.
-        Route::middleware('profile.complete')->group(function () {
-            Route::post('uploads/images', [UploadController::class, 'store']);
+        // Unggah gambar — LANGSUNG di grup authed, bukan di profile.complete.
+        Route::post('uploads/images', [UploadController::class, 'store']);
+        Route::delete('uploads/images', [UploadController::class, 'destroy']);
 
-            Route::post('requests',              [CustomerRequestController::class, 'store']);
-            Route::get('requests',               [CustomerRequestController::class, 'index']);
-            Route::get('requests/mine',          [CustomerRequestController::class, 'mine']);
-            Route::post('requests/{request}/extend', [CustomerRequestController::class, 'extend']);
+        // --- Home / pencarian / penjelajahan (perlu login) --------------
+        Route::get('home', [HomeController::class, 'index']);
+        Route::get('search/suggestions', [SearchController::class, 'suggestions']);
+        Route::get('stores/nearby', [StoreController::class, 'nearby']);
+        Route::get('stores/mine', [StoreController::class, 'mine']);
+        Route::get('stores/{store}', [StoreController::class, 'show']);
+        Route::get('stores/{store}/reviews', [StoreController::class, 'reviews']);
+        Route::get('stores/{store}/dashboard', [StoreDashboardController::class, 'show']);
+        Route::get('listings', [ListingController::class, 'index']);
+        Route::get('listings/{listing}', [ListingController::class, 'show']);
+        Route::get('listings/{listing}/share', [ShareController::class, 'listing']);
 
-            Route::post('orders',                [OrderController::class, 'store']);
-            Route::patch('orders/{order}/status',[OrderController::class, 'updateStatus']);
-            Route::post('orders/{order}/review', [ReviewController::class, 'store']);
-            Route::post('orders/{order}/disputes', [DisputeController::class, 'store']);
+        // --- Wishlist / notifikasi / chat / blokir / laporan -------------
+        Route::get('favorites', [FavoriteController::class, 'index']);
+        Route::post('listings/{listing}/favorite', [FavoriteController::class, 'store']);
+        Route::delete('listings/{listing}/favorite', [FavoriteController::class, 'destroy']);
 
-            Route::post('listings/{listing}/favorite',   [FavoriteController::class, 'store']);
-            Route::delete('listings/{listing}/favorite', [FavoriteController::class, 'destroy']);
-            Route::get('favorites',                      [FavoriteController::class, 'index']);
+        Route::get('notifications', [NotificationController::class, 'index']);
+        Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::patch('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+        Route::patch('notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+        Route::get('notifications/preferences', [NotificationPreferenceController::class, 'show']);
+        Route::patch('notifications/preferences', [NotificationPreferenceController::class, 'update']);
 
-            // --- Khusus pemilik toko (ability token) --------------------
-            Route::middleware('ability:store-owner')->group(function () {
-                Route::post('stores',   [StoreController::class, 'store']);
-                Route::apiResource('listings', ListingController::class)
-                    ->only(['store', 'update', 'destroy']);
-                Route::post('requests/{request}/offers', [OfferController::class, 'store'])
-                    ->middleware('throttle:offers');
-            });
+        Route::get('conversations', [ConversationController::class, 'index']);
+        Route::post('conversations', [ConversationController::class, 'store']);
+        Route::get('conversations/{conversation}', [ConversationController::class, 'show']);
+        Route::get('conversations/{conversation}/messages', [ConversationController::class, 'messages']);
+        Route::post('conversations/{conversation}/messages', [ConversationController::class, 'send']);
+
+        Route::get('users/blocked', [BlockController::class, 'index']);
+        Route::post('users/{user}/block', [BlockController::class, 'block']);
+        Route::delete('users/{user}/block', [BlockController::class, 'unblock']);
+
+        Route::post('reports', [ReportController::class, 'store']);
+
+        // --- Transaksional (wajib profil lengkap: nama + lokasi) ---------
+        Route::middleware('profile.complete')->group(function (): void {
+            Route::post('stores', [StoreController::class, 'store']);
+            Route::patch('stores/{store}', [StoreController::class, 'update']);
+
+            Route::post('listings', [ListingController::class, 'store']);
+            Route::match(['put', 'patch'], 'listings/{listing}', [ListingController::class, 'update']);
+            Route::delete('listings/{listing}', [ListingController::class, 'destroy']);
+
+            Route::get('requests', [CustomerRequestController::class, 'index']);
+            Route::get('requests/mine', [CustomerRequestController::class, 'mine']);
+            Route::post('requests', [CustomerRequestController::class, 'store']);
+            Route::get('requests/{customerRequest}', [CustomerRequestController::class, 'show']);
+            Route::patch('requests/{customerRequest}', [CustomerRequestController::class, 'update']);
+            Route::delete('requests/{customerRequest}', [CustomerRequestController::class, 'destroy']);
+            Route::post('requests/{customerRequest}/extend', [CustomerRequestController::class, 'extend']);
+            Route::get('requests/{customerRequest}/offers', [CustomerRequestController::class, 'offers']);
+
+            // Penawaran & pesanan — review/dispute lewat OrderController,
+            // BUKAN controller terpisah.
+            Route::post('requests/{customerRequest}/offers', [OfferController::class, 'store'])
+                ->middleware('throttle:offers');
+            Route::get('offers/{offer}', [OfferController::class, 'show']);
+            Route::patch('offers/{offer}/accept', [OfferController::class, 'accept']);
+
+            Route::get('orders', [OrderController::class, 'index']);
+            Route::post('orders', [OrderController::class, 'store']);
+            Route::get('orders/{order}', [OrderController::class, 'show']);
+            Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus']);
+            Route::post('orders/{order}/payment-proof', [OrderController::class, 'uploadPaymentProof']);
+            Route::get('orders/{order}/payment-proof', [OrderController::class, 'paymentProof']);
+            Route::post('orders/{order}/review', [OrderController::class, 'review']);
+            Route::post('orders/{order}/disputes', [OrderController::class, 'dispute']);
+
+            // Wallet & alamat & kupon
+            Route::get('wallet', [WalletController::class, 'show']);
+            Route::get('wallet/transactions', [WalletController::class, 'transactions']);
+            Route::post('wallet/topup', [WalletController::class, 'topup']);
+            Route::post('wallet/withdraw', [WalletController::class, 'withdraw']);
+
+            Route::get('addresses', [UserAddressController::class, 'index']);
+            Route::post('addresses', [UserAddressController::class, 'store']);
+            Route::patch('addresses/{address}', [UserAddressController::class, 'update']);
+            Route::delete('addresses/{address}', [UserAddressController::class, 'destroy']);
+            Route::patch('addresses/{address}/default', [UserAddressController::class, 'setDefault']);
+
+            Route::post('coupons/validate', [CouponController::class, 'validate']);
+            Route::post('coupons/apply', [CouponController::class, 'apply']);
+        });
+
+        // --- Endpoint admin API — permission granular Spatie ------------
+        Route::prefix('admin')->group(function (): void {
+            Route::get('verifications/pending', [AdminVerificationController::class, 'pending'])
+                ->middleware('permission:verify-users');
+            Route::post('verifications/users/{user}/approve', [AdminVerificationController::class, 'approveUser'])
+                ->middleware('permission:verify-users');
+            Route::post('verifications/users/{user}/reject', [AdminVerificationController::class, 'rejectUser'])
+                ->middleware('permission:verify-users');
+            Route::post('verifications/stores/{store}/approve', [AdminVerificationController::class, 'approveStore'])
+                ->middleware('permission:verify-stores');
+            Route::post('verifications/stores/{store}/reject', [AdminVerificationController::class, 'rejectStore'])
+                ->middleware('permission:verify-stores');
+
+            Route::get('users', [AdminUserController::class, 'index'])
+                ->middleware('permission:manage-users');
+            Route::patch('users/{user}/block', [AdminUserController::class, 'block'])
+                ->middleware('permission:manage-users');
+
+            Route::get('categories', [AdminCategoryController::class, 'index'])
+                ->middleware('permission:manage-categories');
+            Route::post('categories', [AdminCategoryController::class, 'store'])
+                ->middleware('permission:manage-categories');
+            Route::put('categories/{category}', [AdminCategoryController::class, 'update'])
+                ->middleware('permission:manage-categories');
+            Route::delete('categories/{category}', [AdminCategoryController::class, 'destroy'])
+                ->middleware('permission:manage-categories');
+
+            Route::get('disputes', [AdminDisputeController::class, 'index'])
+                ->middleware('permission:manage-disputes');
+            Route::patch('disputes/{dispute}/resolve', [AdminDisputeController::class, 'resolve'])
+                ->middleware('permission:manage-disputes');
+
+            Route::get('settings', [AdminSettingController::class, 'index'])
+                ->middleware('permission:manage-settings');
+            Route::post('settings', [AdminSettingController::class, 'update'])
+                ->middleware('permission:manage-settings');
         });
     });
 });
 ```
 
-> ⚠️ **Urutan `requests/mine` sebelum `requests/{request}`.** Jika terbalik,
-> kata `mine` akan ditangkap sebagai `{request}` dan menghasilkan 404. Masalah
-> yang sama berlaku untuk seluruh route `*/data` di admin.
+> ⚠️ **Penempatan middleware.** Hanya `auth/request-otp`, `auth/verify-otp`,
+> `categories`, dan `config` yang publik. `stores/nearby`, `listings*`, dan
+> seluruh endpoint lain menuntut token (`auth:api` + `user.active`) — tidak
+> ada endpoint publik pembaca toko/listing. `uploads/images` berada langsung
+> di grup authed, **bukan** di bawah `profile.complete`.
+>
+> ⚠️ **Urutan `requests/mine` sebelum `requests/{customerRequest}`.** Jika
+> terbalik, kata `mine` akan ditangkap sebagai `{customerRequest}` dan
+> menghasilkan 404. Masalah yang sama berlaku untuk seluruh route `*/data`
+> di admin.
 
 ---
 
@@ -1775,73 +2115,42 @@ fetch("{{ route('admin.dashboard.chart') }}")
 
 **Index (`/admin/categories`):**
 
-- Tabel Yajra Datatables: kolom: Nama, Slug, Induk, Ikon, Aksi.
-- Tombol “Tambah Kategori” (modal atau halaman create).
-- Aksi: Edit (modal), Hapus (konfirmasi delete, hanya jika tidak ada anak/request terkait).
+- **Bukan Datatables** — daftar induk (list-group) dengan subkategori di
+  bawahnya (`Category::with('children')->whereNull('parent_id')->orderBy('sort_order')`).
+  Taksonomi kategori kecil dan selalu dimuat penuh, jadi server-side
+  processing justru menambah kerumitan tanpa manfaat.
+- Tombol "Tambah Kategori" (halaman form terpisah).
+- Aksi: Edit (halaman), Hapus (konfirmasi delete — ditolak bila masih punya
+  subkategori, masih dipakai permintaan, atau masih dipakai toko; lihat §10).
 
-**Create/Edit Modal:**
+**Create/Edit (halaman form `admin.categories.form`):**
 
 - Nama (text)
-- Slug (text, auto-generated dari nama)
-- Induk (select dari kategori existing, nullable)
-- Ikon (text, nama icon FontAwesome)
+- Slug (text, auto-generated dari nama bila kosong)
+- Induk (select dari kategori **teratas** existing, nullable)
+- Ikon (text, nama icon — divalidasi bebas, tanpa daftar putih)
 - Urutan (number, default 0)
 
 #### ⚠️ Mencegah loop hierarki
 
-`not_in:{id}` saja **tidak cukup**. Aturan itu hanya mencegah kategori menjadi
-induk dirinya sendiri (A → A), tapi tidak mencegah siklus tak langsung:
-
-```
-A (induk B)  →  jadikan induknya D
-B (induk C)
-C (induk D)
-D            →  A jadi keturunan D, sekaligus D jadi keturunan A
-```
-
-Hasilnya cabang A–B–C–D terlepas dari pohon dan **menghilang** dari semua
-query rekursif — tanpa error apa pun. Karena itu perlu validasi keturunan:
+Hierarki dibatasi **2 level** (`DATABASE.md` §3): hanya kategori teratas yang
+boleh menjadi induk, sehingga subkategori tidak punya anak. Satu-satunya siklus
+yang mungkin adalah kategori menjadi induk **dirinya sendiri** (A → A) — dan
+itu dicegah `Rule::notIn` pada validasi server (controller, bukan FormRequest
+terpisah):
 
 ```php
-// app/Rules/NotADescendant.php
-class NotADescendant implements ValidationRule
-{
-    public function __construct(private ?int $categoryId) {}
-
-    public function validate(string $attribute, mixed $value, Closure $fail): void
-    {
-        if (! $this->categoryId || ! $value) {
-            return;                       // kategori baru tidak mungkin punya anak
-        }
-
-        if ((int) $value === $this->categoryId) {
-            $fail('Kategori tidak boleh menjadi induk dirinya sendiri.');
-            return;
-        }
-
-        // Telusuri ke atas dari calon induk; jika bertemu diri sendiri, itu siklus.
-        $ancestorId = $value;
-        $guard = 0;
-
-        while ($ancestorId && $guard++ < 10) {
-            if ((int) $ancestorId === $this->categoryId) {
-                $fail('Kategori tidak boleh dipindahkan ke dalam turunannya sendiri.');
-                return;
-            }
-            $ancestorId = Category::whereKey($ancestorId)->value('parent_id');
-        }
-    }
-}
+// CategoryController::validated() — validasi inline, bukan Rule kustom:
+'parent_id' => [
+    'nullable', 'integer', 'exists:categories,id',
+    Rule::notIn([$category?->id]),
+],
 ```
 
-`$guard` membatasi penelusuran agar tidak berputar selamanya seandainya sudah
-terlanjur ada siklus di data lama.
-
-> Hierarki kategori dibatasi **2 level** (`DATABASE.md` §3). Tambahkan juga
-> validasi bahwa calon induk adalah kategori teratas:
-> ```php
-> 'parent_id' => [... , Rule::exists('categories', 'id')->whereNull('parent_id')],
-> ```
+Batas 2 level juga dijaga dari sisi UI: dropdown induk di form hanya memuat
+kategori teratas (`Category::whereNull('parent_id')`), sehingga admin tidak
+bisa memilih subkategori sebagai induk. Tidak ada aturan `NotADescendant` di
+repo ini — `app/Rules/` hanya memuat `NotAWeakPassword` (§11).
 
 ### 9.3 Verifikasi Pengguna & Toko
 
@@ -2114,7 +2423,9 @@ DataTable di server) dipakai seluruh tabel lain yang punya filter
 **Index (`/admin/stores`):**
 
 - Datatables: Nama, Pemilik, Tipe, Rating, Status Verifikasi, Aksi.
-- Aksi: Lihat Detail, Edit, Nonaktifkan (soft delete).
+- Aksi: Lihat Detail, Edit, dan (permission `verify-stores`) **Setujui/Tolak**
+  lewat `POST stores/{store}/approve` / `reject` — keduanya memakai
+  `VerifikasiTokoService` (§9.3). Tidak ada tombol "deactivate" terpisah.
 
 **Show Toko (`/admin/stores/{store}`):**
 
@@ -2180,30 +2491,15 @@ wajib ada, dan jam tutup harus setelah jam buka:
 
 - Datatables: Judul, Toko, Tipe, Harga, Status, Aksi.
 - Filter: status (active/sold/hidden), tipe, toko.
-- Aksi: Lihat, **Aktifkan/Sembunyikan**, Hapus (soft delete).
+- Aksi: Lihat, Hapus (soft delete). Route-nya `resource` **hanya**
+  `index/show/destroy` — **tidak ada** `toggle-status` di admin: admin tidak
+  menyembunyikan/menampilkan listing, ia hanya menghapus konten bermasalah.
+  (Sembunyikan/tampilkan oleh admin sempat direncanakan tetapi tidak
+  diimplementasikan.)
 
-Menyembunyikan listing lebih proporsional daripada menghapusnya — konten yang
-melanggar bisa ditinjau ulang, dan penjual tidak kehilangan datanya:
-
-```php
-public function toggleStatus(Listing $listing): RedirectResponse
-{
-    $this->authorize('manage-listings');
-
-    // 'sold' diatur penjual, bukan admin — admin hanya menyembunyikan/menampilkan.
-    if ($listing->status === ListingStatus::Sold) {
-        return back()->withErrors('Listing berstatus terjual tidak dapat diubah admin.');
-    }
-
-    $listing->update([
-        'status' => $listing->status === ListingStatus::Active
-            ? ListingStatus::Hidden
-            : ListingStatus::Active,
-    ]);
-
-    return back()->with('success', 'Status listing diperbarui.');
-}
-```
+> Penyembunyian oleh admin dihilangkan demi kesederhanaan: perubahan status
+> `active` ↔ `hidden` dibiarkan menjadi keputusan penjual di aplikasi, dan
+> admin cukup menghapus konten yang melanggar.
 
 ### 9.7 Manajemen Permintaan
 
@@ -2273,7 +2569,7 @@ public function extend(CustomerRequest $request): RedirectResponse
 **Show Dispute (`/admin/disputes/{dispute}`):**
 
 - Detail dispute + form resolution_note.
-- Tombol “Selesaikan” → isi catatan, pilih keputusan, kirim notifikasi ke **kedua** pihak.
+- Tombol "Selesaikan" → isi catatan, pilih keputusan akhir pesanan.
 
 #### Menyelesaikan dispute juga membuka kunci pesanan
 
@@ -2290,38 +2586,42 @@ Karena itu form resolusi wajib memuat keputusan akhir pesanan:
 | Batalkan transaksi | `dibatalkan` | Laporan terbukti; transaksi dibatalkan |
 
 ```php
-public function resolve(ResolveDisputeRequest $request, Dispute $dispute): RedirectResponse
+public function resolve(Request $request, Dispute $dispute): RedirectResponse
 {
-    $this->authorize('manage-disputes');
+    $data = $request->validate([
+        'resolution'      => ['required', Rule::in(['selesai', 'dibatalkan'])],
+        'resolution_note' => ['required', 'string', 'max:2000'],
+    ]);
 
-    DB::transaction(function () use ($request, $dispute) {
-        $order    = $dispute->order()->lockForUpdate()->first();
-        $decision = $request->validated('decision');   // 'selesai' | 'dibatalkan'
+    if ($dispute->status === DisputeStatus::Resolved) {
+        return back()->with('error', 'Laporan sudah diselesaikan.');
+    }
 
-        $dispute->update([
-            'status'          => DisputeStatus::Resolved,
-            'resolution_note' => $request->validated('resolution_note'),
-            'resolved_at'     => now(),
-        ]);
+    DB::transaction(function () use ($dispute, $data, $request): void {
+        $dispute->status             = DisputeStatus::Resolved;
+        $dispute->resolution_note    = $data['resolution_note'];
+        $dispute->resolved_at        = now();
+        $dispute->assigned_to        = $request->user()->id;
+        $dispute->first_responded_at ??= now();
+        $dispute->save();
 
-        $order->update(array_filter([
-            'status'        => OrderStatus::from($decision),
-            'completed_at'  => $decision === 'selesai'    ? now() : null,
-            'cancelled_at'  => $decision === 'dibatalkan' ? now() : null,
-            'cancelled_by'  => $decision === 'dibatalkan' ? auth()->id() : null,
-            'cancel_reason' => $decision === 'dibatalkan' ? 'Dibatalkan admin melalui dispute' : null,
-        ], fn ($v) => $v !== null));
-
-        // Kedua pihak diberi tahu, bukan hanya pelapor.
-        Notification::send(
-            [$order->buyer, $order->store->owner],
-            new DisputeResolved($dispute, $decision)
-        );
+        $order = $dispute->order()->firstOrFail();
+        // Transisi lewat OrderStateMachine (isAdmin = true) — bukan update()
+        // mentah, agar kolom completed_at/cancelled_at ikut diatur.
+        $this->states->transition($order, OrderStatus::from($data['resolution']),
+            $data['resolution'] === 'dibatalkan' ? $data['resolution_note'] : null,
+            $request->user()->id, true);
+        $order->save();
     });
 
-    return back()->with('success', 'Dispute diselesaikan.');
+    return redirect()->route('admin.disputes.index')
+        ->with('success', 'Laporan diselesaikan.');
 }
 ```
+
+> Tidak ada FormRequest `ResolveDisputeRequest` di repo ini — validasi
+> inline. (Pemberitahuan ke kedua pihak ikut menjadi tanggung jawab alur
+> notifikasi pesanan, bukan objek `DisputeResolved`.)
 
 > ⚠️ Menyelesaikan dispute ke `selesai` **membuka jendela ulasan 7 hari**
 > terhitung dari `completed_at` yang baru diisi. Ini disengaja: pihak yang
@@ -2419,26 +2719,26 @@ class SettingService
 
 ## 10. CONTROLLERS & ACTIONS (ADMIN)
 
-Struktur lengkap `CategoryController` — perhatikan bahwa **setiap** aksi
-tulis memakai FormRequest, dan `index()` mengirim `$dataTable` ke view:
+Struktur lengkap `CategoryController` — **Eloquent polos**, tanpa `CategoryService`
+dan tanpa `CategoriesDataTable` (keduanya tidak ada di repo ini). Otorisasi
+datang dari middleware `permission:manage-categories` di route (§7), dan
+validasi dilakukan inline di dalam controller:
 
 ```php
 class CategoryController extends Controller
 {
-    public function __construct(private CategoryService $categories)
+    public function index(): View
     {
-        // Satu baris ini menggantikan authorize() berulang di tiap method.
-        $this->middleware('permission:manage-categories');
+        // Bukan Datatables — daftar induk + subkategori dimuat penuh (§9.2).
+        return view('admin.categories.index', [
+            'categories' => Category::with('children')
+                ->whereNull('parent_id')
+                ->orderBy('sort_order')
+                ->get(),
+        ]);
     }
 
-    public function index(CategoriesDataTable $dataTable)
-    {
-        // Blade memanggil $dataTable->table() & ->scripts(), jadi objeknya
-        // WAJIB dikirim — tanpa ini view melempar "Undefined variable".
-        return $dataTable->render('admin.categories.index');
-    }
-
-    public function create()
+    public function create(): View
     {
         return view('admin.categories.form', [
             'category' => new Category(),
@@ -2446,7 +2746,15 @@ class CategoryController extends Controller
         ]);
     }
 
-    public function edit(Category $category)
+    public function store(Request $request): RedirectResponse
+    {
+        Category::create($this->validated($request));
+
+        return redirect()->route('admin.categories.index')
+            ->with('success', 'Kategori dibuat.');
+    }
+
+    public function edit(Category $category): View
     {
         return view('admin.categories.form', [
             'category' => $category,
@@ -2458,112 +2766,131 @@ class CategoryController extends Controller
         ]);
     }
 
-    public function store(CategoryRequest $request): RedirectResponse
+    public function update(Request $request, Category $category): RedirectResponse
     {
-        $this->categories->create($request->validated());
+        $category->update($this->validated($request, $category));
 
-        return to_route('admin.categories.index')
-            ->with('success', 'Kategori ditambahkan.');
-    }
-
-    public function update(CategoryRequest $request, Category $category): RedirectResponse
-    {
-        $this->categories->update($category, $request->validated());
-
-        return to_route('admin.categories.index')
+        return redirect()->route('admin.categories.index')
             ->with('success', 'Kategori diperbarui.');
     }
 
     public function destroy(Category $category): RedirectResponse
     {
-        // Penghapusan punya banyak prasyarat (anak, request, JSON store) —
-        // logikanya di service, bukan di controller.
-        $this->categories->delete($category);
+        // Penghapusan punya banyak prasyarat (anak, permintaan, JSON store) —
+        // dicek di controller, bukan service.
+        if ($category->children()->exists()) {
+            return back()->with('error', 'Pindahkan atau hapus subkategori terlebih dahulu.');
+        }
 
-        return back()->with('success', 'Kategori dihapus.');
+        if ($category->customerRequests()->exists()) {
+            return back()->with('error', 'Kategori masih dipakai permintaan.');
+        }
+
+        if (Store::whereRaw('JSON_CONTAINS(category_ids, ?)', [(string) $category->id])->exists()) {
+            return back()->with('error', 'Kategori masih dipakai toko.');
+        }
+
+        $category->delete();
+
+        return redirect()->route('admin.categories.index')
+            ->with('success', 'Kategori dihapus.');
+    }
+
+    private function validated(Request $request, ?Category $category = null): array
+    {
+        return $request->validate([
+            'name'       => ['required', 'string', 'max:50'],
+            'slug'       => ['required', 'string', 'max:50', 'regex:/^[a-z0-9-]+$/',
+                             Rule::unique('categories', 'slug')->ignore($category?->id)],
+            'parent_id'  => ['nullable', 'integer', 'exists:categories,id',
+                             Rule::notIn([$category?->id])],
+            'icon'       => ['nullable', 'string', 'max:50'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+        ]);
     }
 }
 ```
 
-#### `create()`/`edit()` — kapan diperlukan?
+#### Pola Datatables admin — facade `DataTables::eloquent()`, bukan turunan `DataTable`
 
-Keduanya **hanya** dibutuhkan jika memakai halaman terpisah. Bila form berupa
-modal (seperti §22.2), keduanya tidak perlu dan route-nya dipangkas:
+Tabel admin yang besar (pengguna, toko, permintaan, dsb.) memakai kelas di
+`app/DataTables/` yang **membungkus facade**, karena kelas turunan
+`Yajra\DataTables\Services\DataTable` tidak ada di paket inti
+`yajra/laravel-datatables-oracle` (ia berasal dari paket terpisah
+`laravel-datatables-buttons`, yang tidak dipasang — lihat
+`app/DataTables/README.md`):
 
 ```php
-Route::resource('categories', CategoryController::class)
-    ->except(['show', 'create', 'edit']);
+// app/DataTables/UsersDataTable.php
+class UsersDataTable
+{
+    public function json(Request $request): JsonResponse
+    {
+        $query = User::query()->select([...]);
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->string('status'));
+        }
+
+        return DataTables::eloquent($query)
+            ->editColumn('name', fn (User $u) => view('admin.users._nama', ['user' => $u])->render())
+            ->editColumn('status', fn (User $u) => view('admin.users._status', ['user' => $u])->render())
+            ->rawColumns(['name', 'status'])
+            ->toJson();
+    }
+}
 ```
 
-Untuk kategori, halaman terpisah lebih disarankan — form-nya memuat pemilihan
-induk yang butuh validasi hierarki (§9.2), dan menampilkan error validasi di
-dalam modal jauh lebih merepotkan.
+Controller admin untuk tabel memanggil kelas ini dari endpoint `data`
+(`admin/users/data`, `admin/requests/data`, dst. — lihat §7).
 
 #### Aturan FormRequest
 
-**Semua** aksi tulis (`store`, `update`, dan aksi kustom seperti `resolve`,
-`reject`, `extend`) wajib memakai FormRequest — jangan pernah memvalidasi
-dengan `$request->validate()` di dalam controller.
+Aksi tulis admin **tidak semuanya** memakai FormRequest — di repo ini
+FormRequest khusus hanya ada untuk empat hal, selebihnya memvalidasi inline
+dengan `$request->validate()`:
 
-| Controller | FormRequest |
+| Controller | FormRequest / cara validasi |
 | :-- | :-- |
-| `CategoryController@store/update` | `CategoryRequest` |
-| `UserController@update` | `UserRequest` |
-| `UserController@block` | `BlockUserRequest` |
-| `StoreController@update` | `StoreRequest` |
+| `LoginController@store` | `LoginRequest` |
+| `ProfileController@update` | `UpdateProfileRequest` |
+| `PasswordController@update` | `UpdatePasswordRequest` |
 | `VerificationController@rejectUser/rejectStore` | `RejectVerificationRequest` |
-| `DisputeController@resolve` | `ResolveDisputeRequest` |
-| `SettingController@update` | `SettingRequest` |
+| `CategoryController`, `StoreController`, `UserController`, `DisputeController@resolve`, `SettingController@update`, dsb. | `Request` biasa + `$request->validate()` inline |
 
-Alasannya: aturan validasi jadi bisa diuji terpisah, otorisasi tambahan bisa
-ditaruh di `authorize()`, dan pesan error terkumpul di satu tempat.
+Tidak ada `CategoryRequest`, `UserRequest`, `BlockUserRequest`, `StoreRequest`,
+`ResolveDisputeRequest`, maupun `SettingRequest` di repo ini.
 
 ---
 
 ## 11. FORM REQUESTS & VALIDASI (ADMIN)
 
-`CategoryRequest`:
+### FormRequest khusus (empat saja)
+
+Semua FormRequest admin berada di `app/Http/Requests/Admin/`:
+
+| Berkas | Dipakai di | Aturan inti |
+| :-- | :-- | :-- |
+| `LoginRequest` | `LoginController@store` | email wajib + format, password wajib |
+| `UpdateProfileRequest` | `ProfileController@update` | nama, avatar (JPEG/PNG ≤ 2 MB), alamat, titik koordinat berpasangan |
+| `UpdatePasswordRequest` | `PasswordController@update` | password saat ini harus cocok, password baru tidak lemah (`NotAWeakPassword`), konfirmasi sama |
+| `RejectVerificationRequest` | `VerificationController@rejectUser` / `@rejectStore` | `reason` wajib — tanpa alasan pengguna mengirim ulang berkas yang sama |
+
+### Validasi inline untuk aksi admin lain
+
+`CategoryController`, `StoreController`, `UserController`, `DisputeController@resolve`,
+`SettingController@update`, dan aksi tulis admin lain **memvalidasi inline** lewat
+`$request->validate()` — tidak ada FormRequest terpisah untuk mereka. Contoh aturan
+kategori (§10):
 
 ```php
-class CategoryRequest extends FormRequest
-{
-    public function authorize(): bool
-    {
-        return $this->user()->can('manage-categories');
-    }
-
-    public function rules(): array
-    {
-        $categoryId = $this->route('category')?->id;
-
-        return [
-            'name' => ['required', 'string', 'min:3', 'max:50'],
-
-            'slug' => [
-                'required', 'alpha_dash', 'max:50',
-                Rule::unique('categories', 'slug')->ignore($categoryId),
-            ],
-
-            'parent_id' => [
-                'nullable',
-                // Hanya kategori level teratas yang boleh jadi induk (maks 2 level).
-                Rule::exists('categories', 'id')->whereNull('parent_id'),
-                new NotADescendant($categoryId),   // cegah siklus, lihat §9.2
-            ],
-
-            'icon'       => ['nullable', 'string', 'max:50', new ValidFontAwesomeIcon()],
-            'sort_order' => ['integer', 'min:0', 'max:9999'],
-        ];
-    }
-
-    protected function prepareForValidation(): void
-    {
-        // Slug dibuat otomatis jika kosong, supaya admin tidak perlu mengetiknya.
-        $this->merge([
-            'slug' => $this->slug ?: Str::slug($this->name ?? ''),
-        ]);
-    }
-}
+'name'       => ['required', 'string', 'max:50'],
+'slug'       => ['required', 'string', 'max:50', 'regex:/^[a-z0-9-]+$/',
+                 Rule::unique('categories', 'slug')->ignore($category?->id)],
+'parent_id'  => ['nullable', 'integer', 'exists:categories,id',
+                 Rule::notIn([$category?->id])],
+'icon'       => ['nullable', 'string', 'max:50'],
+'sort_order' => ['nullable', 'integer', 'min:0'],
 ```
 
 > `Rule::unique(...)->ignore()` menggantikan penggabungan string
@@ -2571,39 +2898,26 @@ class CategoryRequest extends FormRequest
 > `null` (menghasilkan `unique:categories,slug,`) — yang justru terjadi pada
 > aksi *create*.
 
-#### Validasi ikon FontAwesome
+### Rule kustom: hanya `NotAWeakPassword`
 
-Daftar kelas FontAwesome ada ribuan, jadi `in:` tidak praktis. Yang dibutuhkan
-adalah pembatasan **format** plus daftar putih yang bisa dirawat:
+`app/Rules/` hanya memuat satu kelas:
 
 ```php
-class ValidFontAwesomeIcon implements ValidationRule
+// app/Rules/NotAWeakPassword.php
+class NotAWeakPassword implements ValidationRule
 {
-    /** Ikon yang disediakan untuk kategori Seekitar. */
-    private const ALLOWED = [
-        'fa-utensils', 'fa-store', 'fa-screwdriver-wrench', 'fa-bolt',
-        'fa-truck', 'fa-house', 'fa-shirt', 'fa-mobile-screen',
-        'fa-motorcycle', 'fa-leaf', 'fa-graduation-cap', 'fa-scissors',
-        'fa-paint-roller', 'fa-camera', 'fa-heart-pulse', 'fa-basket-shopping',
-    ];
-
-    public function validate(string $attribute, mixed $value, Closure $fail): void
-    {
-        if (! preg_match('/^fa-[a-z0-9-]+$/', (string) $value)) {
-            $fail('Format ikon tidak valid. Contoh: fa-store');
-            return;
-        }
-
-        if (! in_array($value, self::ALLOWED, true)) {
-            $fail('Ikon tidak tersedia. Pilih dari daftar ikon yang disediakan.');
-        }
-    }
+    // Menolak sandi bawaan seeder & variasi kata umum Indonesia.
+    // Sengaja TIDAK memakai Password::uncompromised(): aturan bawaan itu
+    // memanggil api.pwnedpasswords.com dan GAGAL-TERBUKA (fail open) saat
+    // jaringan diblokir — pemeriksaan yang diam-diam mati lebih buruk
+    // daripada tidak ada.
 }
 ```
 
-Di form admin, tampilkan sebagai **grid ikon yang bisa diklik**, bukan input
-teks bebas — admin tidak perlu menghafal nama kelas, dan validasi di atas
-menjadi jaring pengaman terakhir saja.
+Tidak ada `ValidFontAwesomeIcon` maupun `NotADescendant` di repo ini. Ikon
+kategori divalidasi sebagai string bebas (`nullable|string|max:50`), dan
+kategori tidak memakai daftar putih ikon FontAwesome — template Modernize
+memakai ikon Tabler (`ti ti-*`), bukan FontAwesome.
 
 ---
 
@@ -2616,34 +2930,40 @@ Tambahkan accessor: `getRoleNamesAttribute()` atau langsung gunakan `$user->role
 
 ## 13. OBSERVERS & EVENTS
 
-Pemetaan event → listener didaftarkan di `EventServiceProvider`. Semua listener
-yang memicu notifikasi berjalan lewat antrian.
+Pemetaan event → listener didaftarkan di **`AppServiceProvider::registerEventListeners()`**
+— tidak ada `EventServiceProvider`. Tiga event yang benar-benar ada:
 
 | Event                    | Listener                          | Efek                                                        |
 | :----------------------- | :-------------------------------- | :----------------------------------------------------------- |
 | `CustomerRequestCreated` | `DispatchRequestBroadcast`        | Dispatch `BroadcastRequestJob` ke antrian                   |
 | `OfferAccepted`          | `SendOfferAcceptedNotification`   | Notifikasi penyedia pemenang + tolak offer lain             |
 | `OrderStatusChanged`     | `SendOrderStatusNotification`     | Notifikasi pihak terkait sesuai status baru                 |
-| `ReviewSubmitted`        | `UpdateStoreRatingOnReview`       | Dispatch `RecalculateStoreRatingJob`                        |
+
+Tidak ada event `ReviewSubmitted`: rating **tidak** memakai event/job — ia
+ditangani `ReviewObserver` secara sinkron (lihat catatan di
+`AppServiceProvider::registerEventListeners()`: "jangan tambahkan listener
+rating di sini").
 
 **Observers** dipakai untuk side-effect yang selalu terjadi apa pun jalur
-masuknya (API, admin panel, atau seeder):
+masuknya (API, admin panel, atau seeder). Hanya ada **dua**:
 
 | Observer           | Hook                 | Efek                                                          |
 | :----------------- | :------------------- | :-------------------------------------------------------------- |
-| `ReviewObserver`   | `created`, `deleted` | Hitung ulang `rating_avg` & `total_reviews` (hanya `buyer_to_store`) |
-| `OrderObserver`    | `creating`           | Buat `order_number` (`SKT-YYYYMMDD-NNNN`)                      |
-| `OrderObserver`    | `updating`           | Isi `completed_at` / `cancelled_at`; blokir transisi tidak sah |
-| `StoreObserver`    | `deleted`, `restored`| Soft delete listing terkait; pulihkan saat restore             |
-| `ListingObserver`  | `saving`             | Normalkan `images` (buang duplikat, batasi 5)                  |
-| `CustomerRequestObserver` | `created`     | Set `expires_at` dari `SettingService`                         |
+| `OrderObserver`    | `creating`           | Buat `order_number` (`SKT-YYYYMMDD-NNNN`) lewat `cache->add` + `increment` |
+| `OrderObserver`    | `updating`           | Jaring pengaman transisi; isi `completed_at` / `cancelled_at`  |
+| `ReviewObserver`   | `created`, `deleted` | Hitung ulang rating toko (`stores.rating_avg`) & pembeli (`users.rating_avg`) — **sinkron** via `DB::table` |
+
+Tidak ada `StoreObserver`, `ListingObserver`, maupun `CustomerRequestObserver`.
 
 **`OrderObserver` — nomor pesanan & penjaga transisi:**
 
 ```php
 class OrderObserver
 {
-    public function __construct(private OrderStateMachine $states) {}
+    public function __construct(
+        private readonly OrderStateMachine $states,
+        private readonly CacheRepository $cache,
+    ) {}
 
     public function creating(Order $order): void
     {
@@ -2656,12 +2976,21 @@ class OrderObserver
             return;
         }
 
+        $from = $order->getOriginal('status');
+
         // Jaring pengaman terakhir: transisi tidak sah ditolak walau
-        // datangnya dari seeder, tinker, atau admin panel.
-        $this->states->assertCanTransition(
-            $order->getOriginal('status'),
-            $order->status,
-        );
+        // datangnya dari seeder, tinker, atau admin panel. Observer tidak
+        // punya konteks user, jadi transisi yang SAH untuk penjual ATAU
+        // pembeli sama-sama diloloskan (keputusan final di Policy/controller).
+        $allowedForSeller = $this->states->allowedFrom($from, true);
+        $allowedForBuyer  = $this->states->allowedFrom($from, false);
+        $allAllowed       = array_merge($allowedForSeller, $allowedForBuyer);
+
+        if (! in_array($order->status, $allAllowed, true) && $from !== $order->status) {
+            throw new InvalidOrderTransitionException(
+                sprintf('Transisi dari "%s" ke "%s" tidak diizinkan.', $from->value, $order->status->value)
+            );
+        }
 
         match ($order->status) {
             OrderStatus::Selesai    => $order->completed_at ??= now(),
@@ -2673,41 +3002,71 @@ class OrderObserver
     private function generateNumber(): string
     {
         $date = now()->format('Ymd');
-        $seq  = Redis::incr("order_seq:$date");
-        Redis::expire("order_seq:$date", 172800);
+        $key  = "order_seq:$date";
+
+        // Kontrak cache (bukan facade Redis) supaya bisa diuji tanpa server.
+        // add() hanya berhasil bila kunci belum ada — penyetelan awal aman
+        // dari balapan antar-proses; TTL 48 jam cukup melewati pergantian hari.
+        $this->cache->add($key, 0, now()->addHours(48));
+        $seq = $this->cache->increment($key);
 
         return sprintf('SKT-%s-%04d', $date, $seq);
     }
 }
 ```
 
-**`ReviewObserver` — perhatikan filter arah:**
+> `OrderStateMachine::assertCanTransition()` menerima tiga argumen:
+> `(OrderStatus $from, OrderStatus $to, bool $isSeller)`. Di `Policy` dan
+> controller, `$isSeller` ditentukan dari pemanggil; di observer nilainya
+> "longgar" — sah untuk salah satu peran pun diloloskan.
+
+**`ReviewObserver` — perhatikan filter arah & perhitungan SINKRON:**
 
 ```php
-public function created(Review $review): void
+private function recalculate(Review $review): void
 {
-    // Penilaian penjual->pembeli TIDAK memengaruhi rating toko.
-    if ($review->direction !== ReviewDirection::BuyerToStore) {
-        return;
+    // Rating TOKO — HANYA dari arah buyer_to_store; tanpa filter ini penjual
+    // bisa mengerek ratingnya sendiri lewat penilaian ke pembeli.
+    if ($review->direction === ReviewDirection::BuyerToStore && $review->store_id !== null) {
+        $stats = DB::table('reviews')
+            ->selectRaw('COUNT(*) AS total, COALESCE(AVG(rating), 0) AS average')
+            ->where('store_id', $review->store_id)
+            ->where('direction', ReviewDirection::BuyerToStore->value)
+            ->first();
+
+        Store::whereKey($review->store_id)->update([
+            'rating_avg'    => round((float) $stats->average, 2),
+            'total_reviews' => (int) $stats->total,
+        ]);
     }
 
-    RecalculateStoreRatingJob::dispatch($review->store_id);
-}
+    // Rating PEMBELI — hanya dari arah store_to_buyer, ditujukan ke reviewee.
+    if ($review->direction === ReviewDirection::StoreToBuyer) {
+        $stats = DB::table('reviews')
+            ->selectRaw('COUNT(*) AS total, COALESCE(AVG(rating), 0) AS average')
+            ->where('reviewee_id', $review->reviewee_id)
+            ->where('direction', ReviewDirection::StoreToBuyer->value)
+            ->first();
 
-public function deleted(Review $review): void
-{
-    // Admin menghapus ulasan bermasalah -> rating harus dihitung ulang.
-    if ($review->direction === ReviewDirection::BuyerToStore) {
-        RecalculateStoreRatingJob::dispatch($review->store_id);
+        User::whereKey($review->reviewee_id)->update([
+            'rating_avg'    => round((float) $stats->average, 2),
+            'total_reviews' => (int) $stats->total,
+        ]);
     }
 }
 ```
 
-**Registrasi** (Laravel 11+ memakai atribut, bukan `EventServiceProvider`):
+Dihitung dari COUNT/AVG **penuh**, bukan inkremental — satu ulasan yang
+terhapus atau tertulis dua kali tidak membuat selisih permanen. Tidak ada
+`RecalculateStoreRatingJob`.
+
+**Registrasi** — observer didaftarkan di `AppServiceProvider::boot()` lewat
+`registerObservers()`, bukan atribut `#[ObservedBy]`:
 
 ```php
-#[ObservedBy([OrderObserver::class])]
-class Order extends Model { /* ... */ }
+// AppServiceProvider::registerObservers()
+Order::observe(OrderObserver::class);
+Review::observe(ReviewObserver::class);
 ```
 
 > Observer cocok untuk konsistensi data, bukan untuk pekerjaan berat.
@@ -2731,9 +3090,11 @@ php artisan queue:work redis --queue=high,default --tries=3
 | Job                          | Antrian   | Fungsi                                                  |
 | :--------------------------- | :-------- | :-------------------------------------------------------- |
 | `BroadcastRequestJob`        | `high`    | Cari penyedia dalam radius, kirim notifikasi ke mereka  |
-| `SendPushNotificationJob`    | `high`    | Satu pesan FCM ke satu perangkat                        |
-| `SendWhatsAppOtpJob`         | `high`    | Kirim OTP via Twilio / Kirim WA                         |
-| `RecalculateStoreRatingJob`  | `default` | Hitung ulang `rating_avg` dari seluruh ulasan toko      |
+| `SendOtpJob`                 | `high`    | Kirim OTP via gateway `WhatsAppGateway` di background   |
+
+Hanya dua job — tidak ada `SendPushNotificationJob` (FCM server-side belum
+diimplementasikan, lihat §15.1), `SendWhatsAppOtpJob`, maupun
+`RecalculateStoreRatingJob` (rating dihitung `ReviewObserver` sinkron, §13).
 
 ### 14.1 `BroadcastRequestJob` — implementasi lengkap
 
@@ -2745,63 +3106,41 @@ class BroadcastRequestJob implements ShouldQueue
     use Queueable;
 
     public int $tries = 3;
-    public int $backoff = 30;
-    public int $timeout = 120;
+    public array $backoff = [10, 30, 60];
 
-    public function __construct(public string $customerRequestId) {}
+    public function __construct(public readonly string $requestId) {}
 
-    public function handle(BroadcastService $broadcast): void
+    public function handle(BroadcastService $broadcast, NotificationSender $notifier): void
     {
-        $request = CustomerRequest::with('category')->find($this->customerRequestId);
+        $request = CustomerRequest::withCoordinates()->find($this->requestId);
 
         // Permintaan bisa sudah ditutup/kedaluwarsa sebelum job dieksekusi.
-        if (! $request || $request->status !== RequestStatus::Open) {
-            Log::info('Broadcast dilewati', ['request' => $this->customerRequestId]);
+        if ($request === null || ! $request->isOpen()) {
             return;
         }
 
         $stores = $broadcast->matchingStores($request);
 
         if ($stores->isEmpty()) {
-            Log::warning('Tidak ada penyedia cocok', [
-                'request'   => $request->id,
-                'category'  => $request->category_id,
-                'radius_km' => $request->radius_km,
-            ]);
             return;
         }
 
-        // Satu job kecil per penerima: satu FCM gagal tidak menggagalkan sisanya.
-        $stores->each(fn (Store $store) =>
-            SendPushNotificationJob::dispatch(
-                storeId: $store->id,
-                notification: new RequestBroadcastNotification($request),
-            )
-        );
-
-        Log::info('Permintaan disebar', [
-            'request'    => $request->id,
-            'recipients' => $stores->count(),
-        ]);
-    }
-
-    /** Dipanggil setelah percobaan terakhir gagal. */
-    public function failed(?Throwable $e): void
-    {
-        Log::error('BroadcastRequestJob gagal total', [
-            'request' => $this->customerRequestId,
-            'error'   => $e?->getMessage(),
-        ]);
+        // Notifikasi dikirim lewat kontrak NotificationSender (saat ini
+        // terikat ke LogNotificationSender — FCM belum diimplementasikan).
+        $notifier->notifyStoresOfRequest($stores, $request);
     }
 }
 ```
 
-**`BroadcastService::matchingStores()`** — kriteria pencocokan dari PRD §5.2.2:
+**`BroadcastService::matchingStores()`** — kriteria pencocokan dari PRD §5.2.2.
+Pencocokan bersifat **dua arah**, dan karena lokasi toko adalah kolom DECIMAL
+(bukan POINT), kotak pembatasnya disaring `whereBetween` (scope `withinBox`),
+lalu jarak akuratnya dihitung **di PHP** lewat `Jarak::haversineKm`:
 
 ```php
 public function matchingStores(CustomerRequest $request): Collection
 {
-    [$lng, $lat] = [$request->longitude, $request->latitude];
+    [$lat, $lng] = $this->coordinatesOf($request);   // scope withCoordinates()
 
     return Store::query()
         ->where('is_active', true)
@@ -2809,18 +3148,20 @@ public function matchingStores(CustomerRequest $request): Collection
         // Toko tidak boleh menawar pada permintaannya sendiri.
         ->where('user_id', '!=', $request->user_id)
         // Kategori toko memuat kategori permintaan (JSON, bukan FK).
-        ->whereRaw('JSON_CONTAINS(category_ids, ?)', [(string) $request->category_id])
-        // Dua arah: toko dalam radius pembeli, DAN pembeli dalam radius layanan toko.
-        ->nearby($lat, $lng, $request->radius_km)
-        ->whereRaw(
-            'ST_Distance_Sphere(location, ST_GeomFromText(?, 4326, ?)) <= service_radius_km * 1000',
-            ["POINT($lng $lat)", 'axis-order=long-lat']
-        )
+        ->whereJsonContains('category_ids', $request->category_id)
+        // Kotak kasar SQL-murni untuk KEDUA arah — saring radius terbesar.
+        ->withinBox($lat, $lng, max((float) $request->radius_km, 50.0))
+        ->get()
+        ->map(fn (Store $s) => $s->setAttribute('distance_km',
+            Jarak::haversineKm($lat, $lng, (float) $s->latitude, (float) $s->longitude)))
+        // ARAH 1 — toko dalam radius pembeli.
+        ->filter(fn (Store $s) => $s->distance_km <= (float) $request->radius_km)
+        // ARAH 2 — pembeli dalam radius layanan toko.
+        ->filter(fn (Store $s) => $s->distance_km <= (float) $s->service_radius_km)
         // Prioritas: rating tertinggi, lalu terdekat.
-        ->orderByDesc('rating_avg')
-        ->orderBy('distance_km')
-        ->limit(50)          // batasi ledakan notifikasi
-        ->get();
+        ->sortBy([['rating_avg', 'desc'], ['distance_km', 'asc']])
+        ->values()
+        ->take(BroadcastService::MAX_RECIPIENTS);   // 50
 }
 ```
 
@@ -2828,173 +3169,59 @@ public function matchingStores(CustomerRequest $request): Collection
 > menerima permintaan dari pembeli 12 km jauhnya, meski pembeli menyetel radius
 > 15 km. Tanpa syarat kedua, penyedia dibanjiri permintaan di luar jangkauan.
 
-**Scheduler** (`routes/console.php`):
+**Scheduler** (`routes/console.php`) — hanya empat perintah:
 
 ```php
 use Illuminate\Support\Facades\Schedule;
 
-// Menutup permintaan & penawaran kedaluwarsa.
-Schedule::command('requests:close-expired')
-    ->everyFifteenMinutes()
-    ->withoutOverlapping()          // cegah tumpang tindih jika eksekusi lambat
-    ->onOneServer();                // aman saat multi-server
-
-// Membersihkan berkas unggahan sementara yang tidak jadi dipakai.
-Schedule::command('uploads:prune')->hourly();
-
-// Menghitung ulang rating (jaring pengaman bila ada observer terlewat).
-Schedule::command('stores:recalculate-ratings')->dailyAt('03:00');
+Schedule::command('offers:purge-expired')->hourly();   // tolak penawaran kadaluarsa
+Schedule::command('requests:purge-expired')->hourly(); // tutup permintaan kadaluarsa
+Schedule::command('orders:cleanup-pending')->daily();  // bersihkan pesanan menggantung
+Schedule::command('privacy:retention')->daily()->withoutOverlapping();  // hapus data pribadi (UU PDP)
 ```
 
-Perintah ini memakai indeks `cr_status_expires_idx` seperti dijelaskan di
-`DATABASE.md` §11.
+`privacy:retention` memakai `->withoutOverlapping()` karena menulis ke banyak
+tabel — dua run bersamaan (mis. retensi data dan dedupe) akan saling mendahului.
+
+Perintah penutupan kadaluarsa memakai indeks `cr_status_expires_idx` seperti
+dijelaskan di `DATABASE.md` §11. Tidak ada `requests:close-expired` maupun
+`uploads:prune`/`stores:recalculate-ratings`.
 
 ---
 
 ## 15. NOTIFIKASI (PUSH & WHATSAPP)
 
-### 15.1 Push Notification (FCM)
+### 15.1 Push Notification (FCM) — belum diimplementasikan di sisi server
 
-Firebase menghentikan API legacy, jadi pakai **HTTP v1** yang berbasis service
-account:
+> ⚠️ **Status aktual: rencana / belum diimplementasikan.** Tidak ada
+> `kreait/laravel-firebase` di `composer.json`, tidak ada channel FCM, dan
+> tidak ada job pengiriman push. Yang ada saat ini hanyalah **registrasi
+> token dari aplikasi mobile**: `POST /auth/fcm-token` dan
+> `DELETE /auth/fcm-token` (`DeviceController`) menyimpan/menghapus token di
+> tabel `user_devices`. Token itu **belum** dipakai server untuk mengirim
+> notifikasi apa pun.
 
-```bash
-composer require kreait/laravel-firebase
-```
+- **Kontrak sudah siap** — `App\Services\Contracts\NotificationSender` dengan
+  implementasi tunggal `LogNotificationSender`, di-bind di
+  `AppServiceProvider::register()` (komentarnya eksplisit: *"Implementasi FCM
+  sungguhan belum ada"*). `BroadcastRequestJob` dan listener notifikasi
+  mengirim lewat kontrak ini, sehingga saat FCM nanti diimplementasikan cukup
+  mengganti binding-nya — pemanggil tidak berubah.
+- **Rencana saat diimplementasikan:** pakai FCM **HTTP v1** berbasis service
+  account (bukan legacy API); satu pengguna bisa punya banyak perangkat
+  (`user_devices`), jadi kirim multicast (batas **500 token per panggilan**),
+  dan token yang ditolak (`invalid`/`unknown`) **wajib dihapus** agar antrian
+  tidak terus mengirim ke perangkat yang aplikasinya sudah dihapus.
+- **Yang bisa diukur** hanyalah "diterima server FCM", bukan "dibaca
+  pengguna" — keterbacaan hanya bisa diukur dari sisi aplikasi (event
+  `notification_opened`). Log pengiriman cukup log terstruktur, jangan
+  disimpan di tabel database.
 
-```env
-FIREBASE_CREDENTIALS=storage/app/firebase/service-account.json
-FIREBASE_PROJECT_ID=seekitar-prod
-```
-
-Notification memakai channel kustom agar `toFcm()` bisa dites terpisah:
-
-```php
-class RequestBroadcastNotification extends Notification implements ShouldQueue
-{
-    use Queueable;
-
-    public function __construct(public CustomerRequest $request) {}
-
-    public function via(object $notifiable): array
-    {
-        return ['fcm', 'database'];
-    }
-
-    public function toFcm(object $notifiable): CloudMessage
-    {
-        return CloudMessage::new()
-            ->withNotification([
-                'title' => 'Ada kebutuhan baru di sekitar Anda',
-                'body'  => Str::limit($this->request->title, 80),
-            ])
-            // data payload dipakai app untuk deep-link (Mobile Guide §12)
-            ->withData([
-                'screen'    => 'request_detail',
-                'entity_id' => $this->request->id,
-            ]);
-    }
-
-    public function toArray(object $notifiable): array
-    {
-        return ['request_id' => $this->request->id, 'title' => $this->request->title];
-    }
-}
-```
-
-#### Mengirim ke Semua Perangkat Pengguna
-
-Satu pengguna bisa punya beberapa perangkat (`DATABASE.md` §4.9a). Notifikasi
-harus sampai ke semuanya, karena tidak ada cara mengetahui perangkat mana yang
-sedang dipegang.
-
-```php
-class SendPushNotificationJob implements ShouldQueue
-{
-    use Queueable;
-
-    public int $tries = 3;
-    public array $backoff = [30, 60, 120];
-
-    public function __construct(
-        public string $userId,
-        public array $payload,          // title, body, data
-    ) {}
-
-    public function handle(Messaging $messaging): void
-    {
-        $devices = UserDevice::where('user_id', $this->userId)->get();
-
-        if ($devices->isEmpty()) {
-            Log::info('Tidak ada perangkat terdaftar', ['user' => $this->userId]);
-            return;
-        }
-
-        $message = CloudMessage::new()
-            ->withNotification($this->payload['notification'])
-            ->withData($this->payload['data']);
-
-        // sendMulticast: satu panggilan API untuk semua token, bukan satu per token.
-        $report = $messaging->sendMulticast(
-            $message,
-            $devices->pluck('fcm_token')->all()
-        );
-
-        // Token yang ditolak WAJIB dihapus. Jika diabaikan, antrian terus
-        // mencoba mengirim ke perangkat yang aplikasinya sudah dihapus.
-        foreach ($report->invalidTokens() as $token) {
-            UserDevice::where('fcm_token', $token)->delete();
-        }
-        foreach ($report->unknownTokens() as $token) {
-            UserDevice::where('fcm_token', $token)->delete();
-        }
-
-        $this->logDelivery($report, $devices->count());
-    }
-}
-```
-
-> ⚠️ **Jangan mengulang seluruh job saat sebagian token gagal.** `sendMulticast`
-> mengembalikan laporan per-token; token tidak valid adalah kondisi permanen,
-> bukan galat sementara. Mengulang job hanya akan mengirim ulang ke perangkat
-> yang sudah berhasil menerima.
->
-> Batas `sendMulticast` adalah **500 token per panggilan**. Untuk broadcast ke
-> banyak penyedia, `BroadcastRequestJob` sudah memecahnya menjadi satu job per
-> toko (§14.1), jadi batas ini tidak akan tersentuh.
-
-#### Melacak Keberhasilan Pengiriman
-
-Firebase melaporkan apakah pesan **diterima server FCM**, bukan apakah
-**dibaca pengguna**. Keduanya sering tertukar.
-
-| Yang bisa diukur | Sumbernya |
-| :-- | :-- |
-| Terkirim ke FCM | `$report->successes()->count()` |
-| Token tidak valid | `$report->invalidTokens()` |
-| Notifikasi **dibuka** | Event `notification_opened` dari aplikasi (Mobile Guide §22) |
-
-```php
-private function logDelivery(MulticastSendReport $report, int $total): void
-{
-    Log::channel('notifications')->info('Pengiriman push', [
-        'user'    => $this->userId,
-        'type'    => $this->payload['data']['type'] ?? null,
-        'devices' => $total,
-        'sukses'  => $report->successes()->count(),
-        'gagal'   => $report->failures()->count(),
-    ]);
-}
-```
-
-> ⚠️ **Tingkat keterbacaan sesungguhnya hanya bisa diukur dari sisi aplikasi.**
-> Server tidak akan pernah tahu apakah notifikasi ditampilkan — pengguna bisa
-> mematikan izin notifikasi, atau OS menundanya demi hemat baterai. Karena itu
-> event `notification_opened` dikirim aplikasi ke Firebase Analytics, lalu
-> dibandingkan dengan jumlah `sukses` di log ini.
->
-> Jangan menyimpan log pengiriman di tabel database: volumenya besar dan
-> nilainya rendah. Cukup log terstruktur yang dibersihkan berkala.
+> Tidak ada `SendPushNotificationJob` maupun `RequestBroadcastNotification` di
+> repo ini — keduanya bagian dari rencana FCM di atas. Saat diimplementasikan,
+> pertimbangkan `sendMulticast` (bukan satu job per token) dan jangan mengulang
+> seluruh job bila sebagian token gagal: token tidak valid adalah kondisi
+> permanen, bukan galat sementara.
 
 ### 15.2 WhatsApp OTP
 
@@ -3003,18 +3230,27 @@ sendiri di balik satu interface — supaya provider bisa diganti tanpa menyentuh
 kode pemanggil.
 
 ```php
+// app/Services/Contracts/WhatsAppGateway.php
 interface WhatsAppGateway
 {
     public function sendOtp(string $phone, string $code): void;
 }
 ```
 
-| Provider | Cocok untuk | Catatan |
+| Driver (`WHATSAPP_DRIVER`) | Cocok untuk | Catatan |
 | :-- | :-- | :-- |
-| Twilio (`twilio/sdk`) | Produksi lintas negara | Perlu template WhatsApp Business terdaftar |
-| Kirim WA / Wablas | Pasar Indonesia, biaya lebih murah | REST sederhana, cukup `Http::post()` |
 | **Baileys** (`BaileysGateway`) | Gratis, kendali penuh | WhatsApp Web tak-resmi via Node sidecar; QR di-scan dari panel admin. ⚠️ melanggar ToS WhatsApp — pakai nomor gateway khusus |
-| `LogWhatsAppGateway` | Development | OTP ditulis ke `storage/logs` |
+| **Kirim WA** (`KirimWaGateway`) | Pasar Indonesia, biaya lebih murah | REST sederhana, cukup `Http::post()`; wajib terisi `services.kirimwa` di produksi |
+| **Email** (`EmailOtpGateway`) | Development | OTP dikirim lewat email, bukan WhatsApp |
+| **Log** (`LogWhatsAppGateway`) | Development | OTP ditulis ke `storage/logs` |
+
+> Twilio **tidak dipasang** (`twilio/sdk` tidak ada di `composer.json`).
+> Baris "produksi lintas negara" itu hanya rencana; driver yang tersedia saat
+> ini adalah Baileys / Kirim WA / email / log.
+>
+> **Nomor telepon disensor di log** — semua driver mencatat nomor dalam bentuk
+> tersamarkan (mis. `62812••••890`) dan tidak pernah menulis kode OTP ke log.
+> Ini kewajiban UU PDP, bukan sekadar praktik baik.
 
 **Baileys (gateway WhatsApp Web lokal).** Service Node di
 `seekitar-server/whatsapp-gateway/` (`npm start` → `http://127.0.0.1:3001`)
@@ -3071,12 +3307,35 @@ class KirimWaGateway implements WhatsAppGateway
 }
 ```
 
-Binding di `AppServiceProvider` — di lokal, OTP tidak benar-benar dikirim:
+Binding di `AppServiceProvider::register()` — driver dipilih lewat
+`config('whatsapp.driver')`, bukan `app()->isProduction()` secara buta:
 
 ```php
-$this->app->bind(WhatsAppGateway::class, fn () =>
-    app()->isProduction() ? new KirimWaGateway() : new LogWhatsAppGateway()
-);
+// AppServiceProvider::register()
+$this->app->bind(WhatsAppGateway::class, function () {
+    $driver = strtolower((string) config('whatsapp.driver', 'log'));
+
+    if ($this->app->isProduction()) {
+        // Gagal cepat: tanpa konfigurasi yang benar, tidak ada yang bisa masuk.
+        return match ($driver) {
+            'baileys' => $this->requireBaileysConfig(new BaileysGateway()),
+            'kirimwa' => $this->requireKirimwaConfig(new KirimWaGateway()),
+            default   => throw new RuntimeException(
+                "WHATSAPP_DRIVER='{$driver}' tidak valid untuk produksi; pakai 'baileys' atau 'kirimwa'."
+            ),
+        };
+    }
+
+    return match ($driver) {
+        'baileys' => new BaileysGateway(),
+        'email'   => new EmailOtpGateway(),
+        'kirimwa' => new KirimWaGateway(),
+        default   => new LogWhatsAppGateway(),
+    };
+});
+
+// Pengirim notifikasi — FCM sungguhan belum ada, jadi cukup LogNotificationSender.
+$this->app->bind(NotificationSender::class, LogNotificationSender::class);
 ```
 
 > 🔒 OTP disimpan di Redis dengan TTL 5 menit dan **di-hash**, bukan plaintext:
@@ -3204,76 +3463,26 @@ $permintaan->setLocation($lat, $lng);   // memakai ST_GeomFromText + axis-order
 
 ### 16.1 Reverse Geocoding (Koordinat → Alamat)
 
-Koordinat dipakai untuk query; **alamat teks** dipakai untuk ditampilkan.
-Keduanya disimpan (`stores.address`, `users.address`) — bukan dihitung ulang
-tiap kali, karena panggilan geocoding berbayar dan lambat.
+> ⚠️ **Tidak ada `GeocodingService` maupun `ResolveStoreAddressJob` di repo
+> ini.** Server tidak memanggil Google Maps Geocoding sama sekali; `config/
+> services.google_maps` tidak ada. Alamat teks (`stores.address`,
+> `users.address`) diisi **langsung oleh klien**: aplikasi mobile yang
+> melakukan reverse geocoding (sisi klien, Mobile Guide §12.1) dan mengirim
+> hasilnya sebagai teks saat menyimpan toko/profil. Server hanya menyimpan —
+> koordinat (POINT/DECIMAL) dipakai untuk query, alamat teks untuk tampilan.
 
-Reverse geocoding juga menghasilkan `regency_code` yang dipakai geofencing
-kabupaten (`DATABASE.md` §4.2).
-
-```php
-class GeocodingService
-{
-    public function __construct(private CacheRepository $cache) {}
-
-    /** Koordinat -> alamat + kode wilayah. Null jika layanan gagal. */
-    public function reverse(float $lat, float $lng): ?ResolvedAddress
-    {
-        // Bulatkan ke ~11 meter: dua pin berdekatan berbagi hasil cache,
-        // dan kuota API tidak habis untuk titik yang praktis sama.
-        $key = sprintf('geocode:%.4F,%.4F', $lat, $lng);
-
-        return $this->cache->remember($key, now()->addDays(30), function () use ($lat, $lng) {
-            $res = Http::timeout(5)->retry(2, 300)->get(
-                'https://maps.googleapis.com/maps/api/geocode/json',
-                [
-                    'latlng'      => "$lat,$lng",
-                    'key'         => config('services.google_maps.key'),
-                    'language'    => 'id',
-                    'result_type' => 'street_address|administrative_area_level_2',
-                ]
-            );
-
-            if ($res->failed() || ($res->json('status') !== 'OK')) {
-                Log::warning('Reverse geocoding gagal', ['status' => $res->json('status')]);
-                return null;
-            }
-
-            $first = $res->json('results.0');
-
-            return new ResolvedAddress(
-                address: $first['formatted_address'],
-                regency: $this->component($first, 'administrative_area_level_2'),
-            );
-        });
-    }
-
-    private function component(array $result, string $type): ?string
-    {
-        return collect($result['address_components'] ?? [])
-            ->firstWhere(fn ($c) => in_array($type, $c['types'], true))['long_name'] ?? null;
-    }
-}
-```
-
-> ⚠️ **Kegagalan geocoding tidak boleh menggagalkan pembuatan toko.** Layanan
-> pihak ketiga bisa mati atau kuotanya habis; koordinat sudah cukup untuk
-> seluruh fungsi pencarian. Simpan `address` sebagai `null` dan isi belakangan
-> lewat job, alih-alih menolak permintaan pengguna:
->
-> ```php
-> $store = Store::create([...]);              // koordinat sudah cukup
-> ResolveStoreAddressJob::dispatch($store->id)->afterCommit();
-> ```
->
-> **Cache wajib.** Google Maps Geocoding ditagih per panggilan, dan pemilih
-> lokasi di aplikasi memanggilnya setiap kali peta berhenti digeser (Mobile
-> Guide §12.1 sudah men-*debounce*-nya di sisi klien). Pembulatan 4 desimal
-> membuat pergeseran kecil memakai hasil yang sama.
->
-> Alternatif gratis: **Nominatim (OpenStreetMap)**. Kualitas datanya untuk
-> kabupaten di Indonesia lebih bervariasi, dan kebijakan pemakaiannya membatasi
-> 1 request/detik — cukup untuk pengembangan, berisiko untuk produksi.
+- Keduanya disimpan terpisah, bukan dihitung ulang tiap kali — karena itu
+  alamat yang dikirim klien **tidak dipakai untuk apa pun selain tampilan**;
+  kebenaran spasial tetap di koordinat.
+- Kalau kelak geocoding server-side dibutuhkan (mis. validasi `regency_code`
+  untuk geofencing kabupaten, `DATABASE.md` §4.2), wajib: (1) kegagalan
+  layanan tidak menggagalkan pembuatan toko — koordinat cukup untuk seluruh
+  fungsi pencarian; (2) cache hasilnya (pembulatan 4 desimal ≈ 11 meter,
+  dua pin berdekatan berbagi hasil) karena layanan geocoding ditagih per
+  panggilan.
+- `GeolocationService` (ada di repo) tetap menjadi pusat query radius —
+  `withinRadius()`, `selectDistance()`, `distanceKm()`, `boundingBox()`, dan
+  `isWithinRadius()` — dan tidak berurusan dengan geocoding.
 
 ---
 
@@ -3332,25 +3541,19 @@ trait ApiResponse
 
 ### 17.2 Response Web (Admin)
 
-Admin panel memakai redirect + flash message, bukan JSON. Seragamkan dengan
-helper kecil supaya nama kunci flash tidak berbeda-beda antar controller:
+Admin panel memakai **redirect + flash message**, bukan JSON — tidak ada trait
+`WebResponse` di repo ini. Controller menulisnya langsung secara konsisten:
+`redirect()->route('admin.*')->with('success', …)` untuk sukses dan
+`back()->with('error', …)` untuk galat, persis seperti contoh di §10.
 
-```php
-trait WebResponse
-{
-    protected function redirectSuccess(string $route, string $message, array $params = []): RedirectResponse
-    {
-        return to_route($route, $params)->with('success', $message);
-    }
+Dua trait yang benar-benar ada di `app/Http/Concerns/`:
 
-    protected function backError(string $message): RedirectResponse
-    {
-        return back()->withInput()->with('error', $message);
-    }
-}
-```
+| Trait | Dipakai di | Fungsi |
+| :-- | :-- | :-- |
+| `ApiResponse` | Controller API | Amplop JSON seragam (`ok`, `created`, `fail`, `paginated`, `perPage`) — §17.1 |
+| `HasEscapePlan` | Controller API transaksional | `safely()` membungkus callback dengan `EscapePlanService::transactional()`; `degradedResponse()` menanggapi 503 saat fitur sedang dinonaktifkan |
 
-Layout admin menampilkannya di satu tempat:
+Layout admin menampilkan flash message di satu tempat:
 
 ```blade
 @if (session('success')) <div class="alert alert-success">{{ session('success') }}</div> @endif
@@ -3465,7 +3668,7 @@ penerapannya **berbeda** untuk berkas dan untuk teks pendek.
 
 | Data | Cara | Alasan |
 | :-- | :-- | :-- |
-| Berkas KTP & selfie | **Disk `local` (privat)** — di produksi boleh diganti bucket S3 dengan SSE-KMS | Tidak bisa diakses lewat URL tebakan; enkripsi at-rest mengikuti penyedia penyimpanan |
+| Berkas KTP & selfie | **Disk `local` (privat)** — bucket S3 privat SSE-KMS di produksi masih **rencana** | Tidak bisa diakses lewat URL tebakan; enkripsi at-rest mengikuti penyedia penyimpanan |
 | NIK | **cast `encrypted`** di kolom DB | Teks pendek; hasil 216 byte, muat di `VARCHAR(255)` |
 | Akses berkas | Route berizin yang **mengalirkan berkas lewat PHP** | Tidak ada URL publik/pre-signed yang bocor; otorisasi `verify-users` dicek setiap akses |
 
@@ -3476,18 +3679,11 @@ $user->selfie_image = $request->file('selfie_image')->store("ktp/{$user->id}", '
 $user->ktp_submitted_at = now();
 ```
 
-```php
-// config/filesystems.php
-'s3-private' => [
-    'driver' => 's3',
-    'bucket' => env('AWS_BUCKET_PRIVATE'),
-    'options' => [
-        'ServerSideEncryption' => 'aws:kms',
-        'SSEKMSKeyId'          => env('AWS_KMS_KEY_ID'),
-    ],
-    'visibility' => 'private',
-],
-```
+> **Disk yang ada di `config/filesystems.php` hanya tiga:** `local` (privat),
+> `public` (avatar, visibilitas publik), dan `s3` (media produksi, bucket
+> `AWS_BUCKET`). **Tidak ada disk `s3-private`.** Konfigurasi `s3-private`
+> dengan SSE-KMS (`AWS_BUCKET_PRIVATE` + `AWS_KMS_KEY_ID`) hanyalah rencana
+> untuk produksi — saat ini KTP & selfie selalu di disk `local`.
 
 **Kolom terenkripsi** memakai cast bawaan Laravel — otomatis terenkripsi saat
 simpan, terdekripsi saat baca:
@@ -3571,20 +3767,15 @@ Untuk mengirim data ke atribut, pakai `@json` agar tanda kutip ikut aman:
   dihasilkan Yajra, bukan masukan pengguna.
 - Jangan pernah menaruh input pengguna di dalam `<script>` secara langsung.
   Selalu lewat `@json`.
-- Aktifkan Content-Security-Policy sebagai lapis kedua:
+- Aktifkan Content-Security-Policy sebagai lapis kedua (masih **rencana**):
 
-```php
-// app/Http/Middleware/SecurityHeaders.php
-$response->headers->add([
-    'X-Content-Type-Options' => 'nosniff',
-    'X-Frame-Options'        => 'DENY',
-    'Referrer-Policy'        => 'strict-origin-when-cross-origin',
-    'Content-Security-Policy' => "default-src 'self'; img-src 'self' https://cdn.seekitar.id data:; script-src 'self' https://cdn.jsdelivr.net https://code.jquery.com https://cdn.datatables.net",
-]);
-```
-
-> CSP di atas mengizinkan CDN yang dipakai layout admin (§22.3). Bila kelak
-> aset di-bundel sendiri, persempit menjadi `'self'` saja.
+> ⚠️ **Middleware `SecurityHeaders` tidak ada di repo ini** — proteksi header
+> saat ini hanya `EnsureHttps` (redirect HTTP→HTTPS + HSTS di produksi, di-append
+> global lewat `bootstrap/app.php`). Bila nanti ditambahkan, header yang layak
+> dipasang: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+> `Referrer-Policy: strict-origin-when-cross-origin`, dan CSP yang mengizinkan
+> CDN yang dipakai layout admin (§22.3) — persempit menjadi `'self'` bila aset
+> di-bundel sendiri.
 
 ### 18A.5 Rate Limiting Login Admin
 
@@ -3602,9 +3793,13 @@ RateLimiter::for('admin-login', fn (Request $request) => [
 ```
 
 ```php
-// routes/admin.php
-Route::post('login', [AdminLoginController::class, 'store'])
-    ->middleware(['guest', 'throttle:admin-login']);
+// routes/admin.php — controller-nya `LoginController` (bukan AdminLoginController),
+// dan memakai FormRequest `LoginRequest`.
+Route::middleware('guest')->group(function (): void {
+    Route::get('login', [LoginController::class, 'create'])->name('login');
+    Route::post('login', [LoginController::class, 'store'])
+        ->middleware('throttle:admin-login')->name('login.store');
+});
 ```
 
 > ⚠️ **Dua sumbu itu perlu.** Pembatas per-email saja bisa dilewati dengan
@@ -3644,39 +3839,49 @@ menyimpannya sebagai `VARCHAR(15)` berawalan `62`. Tanpa normalisasi, satu
 orang bisa membuat beberapa akun dengan menulis nomor yang sama dalam format
 berbeda: `08123456789`, `+628123456789`, `628123456789`.
 
-```bash
-composer require propaganistas/laravel-phone:^6.0
-```
-
-Paket ini mendukung `illuminate/support: ^11.0|^12.0|^13.0`, jadi kompatibel
-dengan Laravel 13.
+**Tidak memakai `propanistas/laravel-phone`** (paketnya tidak dipasang).
+Normalisasi ditulis sendiri sekali di `app/Support/PhoneNumber.php` — satu
+kelas statis dengan `normalize()` (bentuk `62xxxxxxxxxx`) dan `forDisplay()`
+(`+62 812-3456-789` untuk UI/WhatsApp):
 
 ```php
-// FormRequest
+// app/Support/PhoneNumber.php
+final class PhoneNumber
+{
+    public const MAX_LENGTH = 15;   // panjang kolom users.phone
+
+    public static function normalize(?string $input): ?string
+    {
+        if ($input === null || trim($input) === '') {
+            return null;
+        }
+
+        $digits = preg_replace('/\D/', '', $input) ?? '';
+
+        return match (true) {
+            str_starts_with($digits, '0')  => '62'.substr($digits, 1),
+            str_starts_with($digits, '62') => $digits,
+            default                        => '62'.$digits,
+        };
+    }
+}
+```
+
+Dipanggil dari `prepareForValidation()` tiap FormRequest API yang menerima
+nomor (mis. `RequestOtpRequest`) — normalisasi **sebelum** validasi:
+
+```php
+// FormRequest — mis. app/Http/Requests/Api/RequestOtpRequest.php
+protected function prepareForValidation(): void
+{
+    $this->merge(['phone' => PhoneNumber::normalize($this->input('phone'))]);
+}
+
 public function rules(): array
 {
     return [
-        'phone' => ['required', 'phone:ID', 'max:15'],
+        'phone' => ['required', 'string', 'regex:/^62[0-9]{8,13}$/', 'max:'.PhoneNumber::MAX_LENGTH],
     ];
-}
-
-// Normalisasi SEBELUM validasi & penyimpanan — ini yang mencegah akun ganda.
-protected function prepareForValidation(): void
-{
-    $this->merge(['phone' => $this->normalizePhone($this->phone)]);
-}
-
-private function normalizePhone(?string $input): ?string
-{
-    if (! $input) return null;
-
-    $digits = preg_replace('/\D/', '', $input);
-
-    return match (true) {
-        str_starts_with($digits, '0')  => '62'.substr($digits, 1),
-        str_starts_with($digits, '62') => $digits,
-        default                        => '62'.$digits,
-    };
 }
 ```
 
@@ -3686,10 +3891,13 @@ private function normalizePhone(?string $input): ?string
 | `+62 812-3456-789` | `628123456789` |
 | `628123456789` | `628123456789` |
 
-> ⚠️ Normalisasi harus dilakukan di **satu tempat** (FormRequest), bukan di
-> tiap controller. Jika satu jalur masuk lupa menormalkan, `UNIQUE` pada
-> `users.phone` tidak akan menangkap duplikatnya — dan OTP terkirim ke nomor
-> yang sama untuk dua akun berbeda.
+> ⚠️ Normalisasi harus dilakukan di **satu tempat** (`PhoneNumber::normalize`),
+> bukan disalin ke tiap controller. Jika satu jalur masuk lupa menormalkan,
+> `UNIQUE` pada `users.phone` tidak akan menangkap duplikatnya — dan OTP
+> terkirim ke nomor yang sama untuk dua akun berbeda. Kelas yang sama juga
+> dipakai **rate limiter OTP** (`AppServiceProvider::configureRateLimiting()`)
+> agar `0812…` dan `62812…` dihitung sebagai nomor yang sama — throttle
+> berjalan sebelum FormRequest sempat menormalkan.
 >
 > Logika normalisasi yang sama diterapkan di sisi klien
 > (`Mobile_Implementation_Guide.md` §7.1) agar pengguna melihat format yang
@@ -3700,11 +3908,11 @@ private function normalizePhone(?string $input): ?string
 
 | Janji di PRD | Implementasi |
 | :-- | :-- |
-| KTP & selfie disimpan privat | §18A.3 — disk `local` privat (S3 SSE-KMS di produksi) + cast `encrypted` untuk NIK |
+| KTP & selfie disimpan privat | §18A.3 — disk `local` privat (S3 privat SSE-KMS di produksi: rencana) + cast `encrypted` untuk NIK |
 | Koordinat tidak ditampilkan mentah | Lokasi pembeli dibulatkan (PRD §5.2.3) |
 | Nomor telepon bertahap | Disaring di API Resource, bukan di klien |
-| HTTPS/TLS 1.3 | Konfigurasi server + `SESSION_SECURE_COOKIE=true` |
-| Validasi input ketat | FormRequest di semua aksi tulis (§11) |
+| HTTPS/TLS 1.3 | Konfigurasi server + `SESSION_SECURE_COOKIE=true` + `EnsureHttps` |
+| Validasi input ketat | FormRequest khusus (login/profil/kata sandi/reject verifikasi) + `$request->validate()` inline (§11) |
 | Rate limiting OTP & penawaran | §5.3 |
 | Blokir setelah 5x gagal login | §18A.5 |
 | Cegah XSS & SQL Injection | §18A.4 + Eloquent binding (`DATABASE.md` §9) |
@@ -3776,7 +3984,7 @@ public function run(): void
         $admin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
         $admin->syncPermissions(array_values(array_diff_key(
             $permissions,
-            array_flip(['manage-users', 'manage-settings']),
+            array_flip(['manage-users', 'manage-settings', 'manage-fees']),
         )));
 
         Role::firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
@@ -3856,12 +4064,12 @@ php artisan db:seed --class=CategorySeeder   # satu saja
 
 #### 19.2a Factory & data demo bervolume
 
-Selain seeder produksi, tersedia **12 factory** dan `DemoDataSeeder` yang
+Selain seeder produksi, tersedia **13 factory** dan `DemoDataSeeder` yang
 mengisi SELURUH tabel dengan ratusan baris realistis (local/testing saja).
 
 | Berkas | Isi |
 | :-- | :-- |
-| `database/factories/Support/Wilayah.php` | 19 titik kecamatan nyata di Kabupaten Pasuruan |
+| `database/factories/Support/Wilayah.php` | 24 titik kecamatan nyata di Kabupaten Pasuruan |
 | `UserFactory` | state `basic`, `verified`, `pro`, `menungguKtp`, `diblokir` |
 | `StoreFactory` | `terverifikasi`, `menunggu`, `ditolak`, `nonaktif`, `tipe()`, `diTitik()` |
 | `ListingFactory` | `produk`, `jasa`, `sewa`, `stokHabis` — 36 judul katalog nyata |
@@ -3870,7 +4078,7 @@ mengisi SELURUH tabel dengan ratusan baris realistis (local/testing saja).
 | `OrderFactory` | tiap status ENUM + `diantar`/`diambil`, `cod`/`transfer` |
 | `ReviewFactory` | `keToko()`, `kePembeli()`, `bintang()` |
 | `DisputeFactory` | `terbuka`, `lewatSla`, `direspons`, `selesai` |
-| `UserDeviceFactory`, `FavoriteFactory`, `CategoryFactory` | pelengkap |
+| `UserDeviceFactory`, `FavoriteFactory`, `CategoryFactory`, `NotificationFactory`, `UserAddressFactory` | pelengkap |
 
 Volume default `DemoDataSeeder` menghasilkan ±1.300 baris; bisa diskalakan
 lewat `SEEKITAR_DEMO_SCALE=0.1 php artisan db:seed`.
@@ -4053,24 +4261,28 @@ AWS_SECRET_ACCESS_KEY=
 AWS_DEFAULT_REGION=ap-southeast-1
 AWS_BUCKET=seekitar-media
 AWS_URL=https://cdn.seekitar.id
-AWS_BUCKET_PRIVATE=seekitar-ktp     # KTP & selfie, TIDAK publik
-AWS_KMS_KEY_ID=                     # kunci SSE-KMS untuk bucket privat (§18A.3)
+# AWS_BUCKET_PRIVATE=seekitar-ktp   # RENCANA — KTP & selfie, TIDAK publik (disk s3-private belum ada, §18A.3)
+# AWS_KMS_KEY_ID=                   # RENCANA — kunci SSE-KMS untuk bucket privat (§18A.3)
 
 # --- Keamanan ---------------------------------------------------------------
 CORS_ALLOWED_ORIGINS=https://admin.seekitar.id,https://seekitar.id
 SESSION_EXPIRE_ON_CLOSE=true
+TRUSTED_PROXIES=*                   # disetel EnsureHttps/trustProxies di bootstrap/app.php
 
-# --- Firebase (FCM) -------------------------------------------------------
-FIREBASE_CREDENTIALS=storage/app/firebase/service-account.json
-FIREBASE_PROJECT_ID=seekitar-prod
+# --- Firebase (FCM) — RENCANA, belum diimplementasikan (§15.1) --------------
+# FIREBASE_CREDENTIALS=storage/app/firebase/service-account.json
+# FIREBASE_PROJECT_ID=seekitar-prod
 
 # --- WhatsApp OTP ---------------------------------------------------------
-WHATSAPP_DRIVER=kirimwa        # kirimwa | twilio | log
+WHATSAPP_DRIVER=kirimwa        # baileys | kirimwa | email | log
 KIRIMWA_URL=https://api.kirimwa.id/v1
 KIRIMWA_TOKEN=
-TWILIO_SID=
-TWILIO_TOKEN=
-TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
+BAILEYS_URL=http://127.0.0.1:3001
+BAILEYS_TOKEN=                  # wajib di produksi bila WHATSAPP_DRIVER=baileys
+# BAILEYS_REDIS_URL=redis://127.0.0.1:6379   # jalur cepat socket (opsional)
+# TWILIO_SID=                   # RENCANA — twilio/sdk tidak dipasang (§15.2)
+# TWILIO_TOKEN=                 # RENCANA
+# TWILIO_WHATSAPP_FROM=         # RENCANA
 
 # --- Monitoring -----------------------------------------------------------
 SENTRY_LARAVEL_DSN=
@@ -4166,12 +4378,14 @@ REDIS_QUEUE_DB=2      # antrian job
 
 ### 21.2b Penyimpanan Objek (S3 / MinIO)
 
-Dua bucket dengan sifat berbeda (lihat §18A.3):
+**Bucket untuk media** (`seekitar-media`); bucket privat `seekitar-ktp`
+(SSE-KMS) untuk KTP & selfie adalah **rencana** — saat ini berkas itu di
+disk `local` privat (§18A.3):
 
-| Bucket | Akses | Isi |
-| :-- | :-- | :-- |
-| `seekitar-media` | publik lewat CDN | Foto listing, avatar |
-| `seekitar-ktp` | **privat**, SSE-KMS | KTP & selfie |
+| Bucket | Akses | Isi | Status |
+| :-- | :-- | :-- | :-- |
+| `seekitar-media` | publik lewat CDN | Foto listing, avatar | **Aktif** |
+| `seekitar-ktp` | **privat**, SSE-KMS | KTP & selfie | **Rencana** (kini di disk `local`) |
 
 ```env
 FILESYSTEM_DISK=s3
@@ -4505,215 +4719,154 @@ PULSE_SAMPLE_RATE=0.1        # rekam 10% agar tidak membebani
 
 ## 22. LAMPIRAN: CONTOH KODE BLADE & CONTROLLER
 
-### 22.1 Datatables Controller (Category)
+### 22.1 Datatables Controller — pola facade `DataTables::eloquent()`
 
-Yajra menyediakan dua pendekatan. Yang dipakai di §22.2 adalah **kelas
-DataTable** (`app/DataTables/`), karena Blade-nya memanggil `$dataTable->table()`
-dan `$dataTable->scripts()`.
+> ⚠️ **Kategori TIDAK memakai Datatables** — `CategoriesDataTable` tidak ada
+> di repo ini; halaman kategorinya daftar induk + subkategori dimuat penuh
+> (§9.2, §10). Kelas turunan `Yajra\DataTables\Services\DataTable` juga **tidak
+> ada** di paket inti `yajra/laravel-datatables-oracle` (ia berasal dari paket
+> terpisah `laravel-datatables-buttons`, yang tidak dipasang). Pola yang benar
+> adalah membungkus facade `DataTables::eloquent()` di kelas biasa
+> (`app/DataTables/`), lalu controller memanggilnya dari endpoint `data`:
 
 ```php
-// app/DataTables/CategoriesDataTable.php
-class CategoriesDataTable extends DataTable
+// app/DataTables/CustomerRequestsDataTable.php
+class CustomerRequestsDataTable
 {
-    public function dataTable(QueryBuilder $query): EloquentDataTable
+    public function json(Request $request): JsonResponse
     {
-        return (new EloquentDataTable($query))
-            ->addColumn('parent_name', fn (Category $c) => $c->parent?->name ?? '-')
-            // Kirim data lewat view, bukan rangkaian string HTML — atribut
-            // yang mengandung kutip (mis. nama "Bengkel \"Jaya\"") akan
-            // merusak markup jika digabung manual.
-            ->addColumn('action', fn (Category $c) => view('admin.categories.actions', ['category' => $c]))
-            ->rawColumns(['action'])
-            ->setRowId('id');
-    }
+        $query = CustomerRequest::query()
+            ->with(['user:id,name,phone,verified_at,avatar_url', 'category:id,name'])
+            // select() HARUS mendahului withCount() — kalau terbalik,
+            // subquery offers_count ikut terhapus tanpa error apa pun.
+            ->select([...])
+            ->withCount('offers');
 
-    public function query(Category $model): QueryBuilder
-    {
-        return $model->newQuery()->with('parent')->select('categories.*');
-    }
+        if ($request->filled('status')) {
+            $query->where('status', $request->string('status'));
+        }
 
-    public function html(): HtmlBuilder
-    {
-        return $this->builder()
-            ->setTableId('categoriesTable')
-            ->columns($this->getColumns())
-            ->minifiedAjax()
-            ->orderBy(1)
-            ->parameters(['language' => ['url' => asset('js/datatables-id.json')]]);
-    }
-
-    protected function getColumns(): array
-    {
-        return [
-            Column::make('name')->title('Nama'),
-            Column::make('slug')->title('Slug'),
-            Column::make('parent_name')->title('Induk')->orderable(false),
-            Column::make('icon')->title('Ikon'),
-            Column::computed('action')->title('Aksi')
-                ->exportable(false)->printable(false)->width(120)->addClass('text-center'),
-        ];
+        return DataTables::eloquent($query)
+            // Sel kaya dirender lewat partial — Blade meng-escape otomatis;
+            // hanya kolom di daftar rawColumns yang tidak di-escape ulang.
+            ->editColumn('title', fn (CustomerRequest $r) => view('admin.requests._judul', ['request' => $r])->render())
+            ->editColumn('status', fn (CustomerRequest $r) => view('admin.requests._status', ['request' => $r])->render())
+            ->rawColumns(['title', 'status'])
+            ->toJson();
     }
 }
 ```
 
-**Controller wajib mengirim objeknya ke view** — Blade di §22.2 memanggil
-`$dataTable->table()`, jadi tanpa ini muncul `Undefined variable $dataTable`:
+**Controller** cukup memanggilnya dari endpoint AJAX (tidak ada objek
+`$dataTable` yang di-render ke view — tabelnya dibangun `table-page.blade.php`,
+lihat §8 "Pola halaman"):
 
 ```php
-public function index(CategoriesDataTable $dataTable)
+// Admin\CustomerRequestController
+public function data(Request $request, CustomerRequestsDataTable $table): JsonResponse
 {
-    // render() sekaligus menyuntikkan $dataTable ke view.
-    return $dataTable->render('admin.categories.index');
+    return $table->json($request);
 }
 ```
 
-> Alternatifnya memakai facade `DataTables::of()` di method `data()` seperti
-> §10 — tapi kalau memilih itu, Blade-nya **tidak boleh** memanggil
-> `$dataTable->table()`; tabel `<table>` ditulis manual dan inisialisasi
-> DataTables dilakukan di JavaScript. Jangan mencampur kedua pendekatan.
+> Satu-satunya hal yang **tidak boleh** dicampur: jangan memakai kelas
+> `Services\DataTable` (tidak ada) dengan ekspektasi `$dataTable->table()` —
+> tabel admin ditulis sebagai `<table>` + inisialisasi DataTables oleh
+> `admin.partials.table-page`, bukan oleh kelas turunan Yajra.
 
-### 22.2 Blade Partial (categories/index.blade.php)
+### 22.2 Blade Partial (categories/index.blade.php) — daftar polos
+
+Kategori memakai **daftar induk + subkategori** (list-group), bukan Datatables
+dan bukan modal. Tombol aksi berupa tautan Edit dan form Hapus di setiap baris;
+tombol "Tambah Kategori" menuju halaman form terpisah:
 
 ```blade
-@extends('layouts.admin')
+@extends('admin.layouts.admin')
+@section('title', 'Manajemen Kategori — Seekitar')
+
 @section('content')
-<div class="card">
-  <div class="card-header">
-    <h5>Daftar Kategori</h5>
-    <button class="btn btn-primary float-end" data-bs-toggle="modal" data-bs-target="#categoryModal">Tambah Kategori</button>
-  </div>
-  <div class="card-body">
-    {!! $dataTable->table() !!}
-  </div>
-</div>
-<!-- Modal -->
-<div class="modal fade" id="categoryModal" tabindex="-1">
-  <div class="modal-dialog">
-    <form id="categoryForm">
-      @csrf
-      <input type="hidden" name="_method" value="POST" id="method">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Tambah/Edit Kategori</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-3">
-            <label>Nama</label>
-            <input type="text" name="name" class="form-control" required>
+  <div class="row">
+    <div class="col-12">
+      <div class="card w-100 shadow-sm">
+        <div class="card-body">
+          <div class="d-md-flex align-items-center justify-content-between mb-4">
+            <h4 class="card-title">Kategori & Subkategori</h4>
+            @can('manage-categories')
+              <a href="{{ route('admin.categories.create') }}" class="btn btn-primary d-flex align-items-center gap-2">
+                <i class="ti ti-plus fs-4"></i> Tambah Kategori
+              </a>
+            @endcan
           </div>
-          <!-- field lainnya -->
-        </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Simpan</button>
+
+          <div class="list-group list-group-flush border rounded-3 overflow-hidden">
+            @forelse ($categories as $parent)
+              <div class="list-group-item bg-light-subtle p-3 border-bottom">
+                <div class="d-flex align-items-center justify-content-between">
+                  <div>
+                    <h6 class="mb-0 fw-bold fs-4 text-dark">{{ $parent->name }}</h6>
+                    <span class="fs-2 text-muted">Slug: <code>{{ $parent->slug }}</code></span>
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                    <a href="{{ route('admin.categories.edit', $parent) }}" class="btn btn-sm btn-light-primary">Edit</a>
+                    <form action="{{ route('admin.categories.destroy', $parent) }}" method="POST"
+                          onsubmit="return confirm('Apakah Anda yakin ingin menghapus kategori ini?');">
+                      @csrf @method('DELETE')
+                      <button class="btn btn-sm btn-light-danger" type="submit">Hapus</button>
+                    </form>
+                  </div>
+                </div>
+
+                @if ($parent->children->isNotEmpty())
+                  <div class="ps-5 mt-3 border-start ms-4">
+                    @foreach ($parent->children as $child)
+                      <div class="d-flex align-items-center justify-content-between py-2">
+                        <span>{{ $child->name }}</span>
+                        <a href="{{ route('admin.categories.edit', $child) }}">Edit</a>
+                      </div>
+                    @endforeach
+                  </div>
+                @endif
+              </div>
+            @empty
+              <p class="text-muted p-4 mb-0">Belum ada kategori.</p>
+            @endforelse
+          </div>
         </div>
       </div>
-    </form>
+    </div>
   </div>
-</div>
 @endsection
-
-@push('scripts')
-{!! $dataTable->scripts() !!}
-<script>
-  // handling modal, AJAX store/update — lihat 22.2a
-</script>
-@endpush
 ```
 
-### 22.2a Logika Modal Create vs Edit
+### 22.2a Halaman Form (create/edit)
 
-Satu form dipakai untuk dua mode. Yang membedakan hanyalah URL tujuan dan
-method — dan **method spoofing** (`_method=PUT`) wajib, karena form HTML hanya
-mengenal GET/POST.
+Create dan edit memakai **satu halaman form terpisah** (`admin.categories.form`),
+bukan modal dan bukan AJAX. Controller mengisi `$parents` (hanya kategori
+teratas), menyimpan/update lewat `Category::create()` / `->update()`, lalu
+redirect + flash:
 
-```js
-const modal   = new bootstrap.Modal('#categoryModal');
-const form    = document.getElementById('categoryForm');
-const titleEl = document.querySelector('#categoryModal .modal-title');
-
-/** Bersihkan sisa state sebelumnya, lalu isi sesuai mode. */
-function openModal(mode, category = null) {
-  form.reset();
-  form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-  form.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
-
-  if (mode === 'edit') {
-    titleEl.textContent = 'Edit Kategori';
-    form.action = `/admin/categories/${category.id}`;
-    form.querySelector('#method').value = 'PUT';   // spoofing
-    form.name.value       = category.name;
-    form.slug.value       = category.slug;
-    form.parent_id.value  = category.parent_id ?? '';
-    form.icon.value       = category.icon ?? '';
-    form.sort_order.value = category.sort_order ?? 0;
-  } else {
-    titleEl.textContent = 'Tambah Kategori';
-    form.action = '/admin/categories';
-    form.querySelector('#method').value = 'POST';
-  }
-
-  modal.show();
+```php
+// Controller (ringkas, lihat §10 untuk versi penuh)
+public function create(): View
+{
+    return view('admin.categories.form', [
+        'category' => new Category(),
+        'parents'  => Category::whereNull('parent_id')->orderBy('name')->get(),
+    ]);
 }
 
-document.getElementById('btnAddCategory')
-  .addEventListener('click', () => openModal('create'));
+public function store(Request $request): RedirectResponse
+{
+    Category::create($this->validated($request));
 
-// Tombol Edit dibuat ulang setiap tabel dimuat, jadi pakai event delegation —
-// listener langsung akan hilang setelah paginasi/pencarian.
-document.querySelector('#categoriesTable').addEventListener('click', (e) => {
-  const btn = e.target.closest('.edit-btn');
-  if (btn) openModal('edit', JSON.parse(btn.dataset.category));
-});
-
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-
-  const res = await fetch(form.action, {
-    method: 'POST',                       // method asli tetap POST
-    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-    body: new FormData(form),
-  });
-
-  if (res.status === 422) {
-    const { errors } = await res.json();
-    Object.entries(errors).forEach(([field, messages]) => {
-      const input = form.querySelector(`[name="${field}"]`);
-      if (!input) return;
-      input.classList.add('is-invalid');
-      input.insertAdjacentHTML('afterend',
-        `<div class="invalid-feedback">${messages[0]}</div>`);
-    });
-    return;                               // modal tetap terbuka
-  }
-
-  if (res.ok) {
-    modal.hide();
-    window.LaravelDataTables.categoriesTable.ajax.reload(null, false); // pertahankan halaman
-  }
-});
+    return redirect()->route('admin.categories.index')->with('success', 'Kategori dibuat.');
+}
 ```
 
-Tombol Edit membawa datanya sebagai satu atribut JSON, sehingga aman terhadap
-tanda kutip di nama kategori:
-
-```blade
-{{-- resources/views/admin/categories/actions.blade.php --}}
-@can('manage-categories')
-  <button class="btn btn-sm btn-warning edit-btn"
-          data-category='@json($category->only(["id","name","slug","parent_id","icon","sort_order"]))'>
-    Edit
-  </button>
-  <form action="{{ route('admin.categories.destroy', $category) }}" method="POST" class="d-inline"
-        onsubmit="return confirm('Hapus kategori {{ $category->name }}?')">
-    @csrf @method('DELETE')
-    <button class="btn btn-sm btn-danger">Hapus</button>
-  </form>
-@endcan
-```
-
-> ⚠️ `ajax.reload(null, false)` — argumen kedua `false` menjaga posisi halaman.
-> Tanpa itu, admin selalu terlempar ke halaman 1 setiap menyimpan.
+> Tidak ada modal create/edit kategori: halaman form dipilih karena memuat
+> pemilihan induk yang butuh validasi hierarki (§9.2), dan menampilkan error
+> validasi di halaman penuh jauh lebih ramah daripada di dalam modal.
+> `_method=PUT` tetap dipakai — form HTML hanya mengenal GET/POST.
 
 ### 22.3 Layout Admin (`layouts/admin.blade.php`)
 

@@ -154,10 +154,10 @@ Setiap edisi lokal menggunakan sistem warna, logo, dan identitas yang sama, deng
 | Reverse marketplace – pembeli | **Pasang Kebutuhan** |
 | Reverse marketplace – penyedia | **Kebutuhan Sekitar** |
 | Buka toko/daftar sebagai penyedia | **Jual/Tawarkan** |
-| Halaman toko | **Lapak** |
+| Halaman toko | **Toko** (*Lapak* hanya materi merek opsional) |
 | Status langganan | **Gratis**, **Aktif**, **Ramai** |
-| Notifikasi | **Kabar Sekitar** |
-| Program loyalitas | **Warga Seekitar** |
+| Notifikasi | **Notifikasi** (*Kabar Sekitar* hanya materi merek opsional) |
+| Program loyalitas | Belum ada di UI (konsep merek opsional: *Warga Seekitar*) |
 
 **Tiga Aksi Utama yang Selalu Muncul di Materi Promosi:**
 
@@ -219,7 +219,7 @@ Persona merek Seekitar berbicara seperti **“tetangga yang selalu tahu solusi�
 | Cari | Searching |
 | Pasang Kebutuhan | Submit request / Lead generation |
 | Penawaran | Bid / Bidding |
-| Lapak | Store / Outlet |
+| Toko | Store / Outlet |
 | Terverifikasi | Verified account |
 | COD (singkatan umum) | Cash on delivery (tulis lengkap) |
 | Ambil di tempat | Self-pickup |
@@ -229,12 +229,12 @@ Persona merek Seekitar berbicara seperti **“tetangga yang selalu tahu solusi�
 
 | Istilah               | Definisi                                                              |
 | :-------------------- | :-------------------------------------------------------------------- |
-| **Warga Seekitar**    | Komunitas pengguna aktif, baik pembeli maupun penjual.                |
-| **Lapak**             | Halaman profil usaha milik penjual/penyedia jasa.                     |
+| **Warga Seekitar**    | Istilah merek opsional untuk komunitas pengguna aktif, baik pembeli maupun penjual — belum dipakai sebagai nama fitur di UI. |
+| **Toko**              | Halaman profil usaha milik penjual/penyedia jasa. (*Lapak* hanya materi merek opsional.) |
 | **Pasang Kebutuhan**  | Fitur bagi pembeli untuk mengajukan permintaan barang/jasa spesifik.  |
 | **Kebutuhan Sekitar** | Menu pada aplikasi penyedia untuk melihat daftar permintaan terdekat. |
 | **Penawaran**         | Respons harga yang dikirim penyedia ke pembeli atas suatu kebutuhan.  |
-| **Kabar Sekitar**     | Pusat notifikasi dan informasi (pesan dari sistem, promo, tips).      |
+| **Notifikasi**        | Pusat notifikasi dan informasi (pesan dari sistem, promo, tips). (*Kabar Sekitar* hanya materi merek opsional.) |
 | **Terverifikasi**     | Status akun yang telah melewati pemeriksaan KTP/usaha.                |
 | **Jelajahi**          | Halaman utama pencarian katalog barang, jasa, dan sewa.               |
 
@@ -336,6 +336,9 @@ Warna merek dikelompokkan menjadi **Warna Primer**, **Warna Sekunder**, **Warna 
 | :------------------------------ | :-------- | :-------------- | :-------------------------------------------------------- |
 | **Hijau Lokal** (Primary Green) | `#168A4A` | (22, 138, 74)   | Logo, tombol aksi utama, header, tautan, indikator aktif. |
 | **Hijau Muda** (Light Green)    | `#D1FAE5` | (209, 250, 229) | Background success, badge “Buka”, highlight ringan.       |
+
+> Token hijau muda yang terpasang di aplikasi (mobile, lihat `theme.dart` /
+> `constants.dart`): `primarySubtle` = `#E7F6EC`, `heroGradientStart` = `#E9FAF1`; web memakai `#e9faf1` / `#c9f2dd`.
 
 #### 3.5.2 Warna Sekunder
 
@@ -761,7 +764,7 @@ karuan, jadi wajib disiapkan berlapis:
 
 **Splash Screen:**
 
-- Latar putih.
+- Latar hijau Lokal `#168A4A` (konfigurasi `flutter_native_splash` di `pubspec.yaml`), logomark putih di tengah.
 - Logomark di tengah, animasi motion logo 1,2 detik.
 - Tagline di bawah: “Yang kamu butuhkan, ada di sekitar.” (Teks Hijau, 16px, Regular).
 
@@ -772,12 +775,16 @@ sehingga pengguna melihat dua layar pembuka berturut-turut.
 ```xml
 <!-- android/app/src/main/res/values/styles.xml -->
 <style name="LaunchTheme" parent="Theme.SplashScreen">
-  <item name="windowSplashScreenBackground">#FFFFFF</item>
+  <item name="windowSplashScreenBackground">#168A4A</item>
   <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
   <item name="windowSplashScreenAnimationDuration">1000</item>
   <item name="postSplashScreenTheme">@style/NormalTheme</item>
 </style>
 ```
+
+> Warna splash dikendalikan `flutter_native_splash` (`color` & `android_12.color`
+> = `#168A4A`) di `pubspec.yaml`; jika ingin latar putih, ubah konfigurasi
+> tersebut (termasuk `windowSplashScreenBackground` di atas).
 
 | Batasan | Nilai |
 | :-- | :-- |
@@ -794,7 +801,7 @@ sehingga pengguna melihat dua layar pembuka berturut-turut.
 
 **UI Global (Flutter):**
 
-- **Bottom Navigation Bar:** Ikon “Jelajahi”, “Kebutuhan”, “Transaksi”, “Profil”.
+- **Bottom Navigation Bar:** 5 tab — “Beranda”, “Cari”, “Kebutuhan”, “Pesanan”, “Profil”.
 - **Warna bar aktif:** Hijau, tidak aktif: abu-abu `#9CA3AF`.
 - **Header:** Warna latar putih, judul halaman Bold 20px, ikon notifikasi di kanan dengan badge angka (merah).
 - **Kartu (Card):** Radius 12px, bayangan ringan `0px 2px 8px rgba(0,0,0,0.04)`.

@@ -14,10 +14,9 @@
    - `FcmService().init()` → `services/fcm_service.dart`
      - FirebaseMessaging.getToken()
      - ApiClient.registerFcmToken() → **POST /auth/fcm-token**
-   - runApp(SeekitarApp) → MaterialApp.router
-     - Theme: AppTheme.light → `core/theme.dart`
-     - Dark Theme: AppTheme.dark → `core/theme.dart`
-     - Router: appRouter → `routing/app_router.dart` → 35 GoRoute
+    - runApp(SeekitarApp) → MaterialApp.router
+      - Theme: AppTheme.light → `core/theme.dart` (mode light saja; tanpa dark theme)
+      - Router: appRouter → `routing/app_router.dart` → 35 GoRoute
 
 ## FLOW 2: SPLASH → ONBOARDING → LOGIN
 
@@ -49,7 +48,7 @@
    - Geolocator.getCurrentPosition()
    - ApiProvider().home(lat,lng) → ApiClient → **GET /home**
      - Parse: Listing.fromJson(), CustomerRequest.fromJson()
-   - _hero(t) → Gradient banner #168A4A
+    - _hero(t) → gambar hero (asset lokal `assets/images/hero.jpg`) + overlay gelap; gradien #168A4A hanya fallback
    - Trending section → Horizontal cards (260px wide)
      - onTap → `ctx.push('/listing/:id', extra: Listing)`
    - Terdekat section → SliverList + Row cards
@@ -98,7 +97,7 @@
 9. `screens/requests_screen.dart` — CreateRequestScreen (same file)
    - Input: Judul Kebutuhan, Deskripsi
    - Geolocator.getCurrentPosition()
-   - ApiProvider.createRequest({title, desc, lat, lng}) → **POST /requests**
+    - ApiProvider.createRequest({title, desc, category_id, lat, lng, radius_km}) → **POST /requests**
 
 10. `screens/request_detail_screen.dart` — RequestDetailScreen
     - IF request passed as extra → langsung render
@@ -114,9 +113,9 @@
     - TabController (2 tabs: Pembelian / Penjualan)
     - ApiProvider.getOrders(role:'buyer') → **GET /orders?role=buyer**
     - ApiProvider.getOrders(role:'seller') → **GET /orders?role=seller**
-    - onTap → `ctx.push('/order-detail', extra: Order)`
+    - onTap → `ctx.push('/order-detail/${o.id}', extra: Order)`
 
-12. `screens/orders_screen.dart` — OrdDetail (same file)
+12. `screens/order_detail_screen.dart` — OrderDetailScreen
     - Status chip (AppConstants.orderStatusColor)
     - Action buttons per status:
       - "menunggu_konfirmasi" → "Proses" → **PATCH /orders/:id/status**
@@ -164,7 +163,7 @@
 
 18. `screens/verification_screen.dart` — VerificationScreen
     - Camera picker: Foto KTP + Selfie (ImagePicker + compress)
-    - NIK input (opsional, 16 digit)
+    - NIK input (wajib, tepat 16 digit)
     - ApiProvider.uploadKtp(ktp, selfie, nik) → **POST /auth/verification/ktp**
 
 ## FLOW 11: DOMPET, ALAMAT, CHAT, PENGATURAN
@@ -225,27 +224,30 @@
 ```
 main.dart
 ├── core/constants.dart          AppConstants + UiStrings
-├── core/theme.dart              AppTheme.light / AppTheme.dark
+├── core/theme.dart              AppTheme.light
 ├── core/logger.dart             appLogger
+├── core/text_utils.dart         helper teks (normalisasi dll.)
 ├── providers/app_state.dart     ChangeNotifier (user state)
 ├── routing/app_router.dart      35 GoRoute + StatefulNavigationShell
 ├── services/dio_client.dart     Dio + JWT interceptor + retry
-├── services/api_client.dart     77 API methods
+├── services/api_client.dart     82 API methods
 ├── services/api_compat.dart     ApiProvider wrapper
 ├── services/auth_service.dart   OTP flow, JWT storage
 ├── services/fcm_service.dart    Push notification
+├── services/location_service.dart  Geolocator + koordinat default
 ├── widgets/offline_banner.dart  Connectivity detection
 ├── widgets/base_screen.dart     Scaffold wrapper
+├── widgets/error_view.dart      Tampilan error/retry
 ├── models/                      (12 model files, fromJson manual, tanpa codegen)
-└── screens/                     (24 screen files)
+└── screens/                     (32 screen files)
 ```
 
 ## TOTALS
-- 49 Dart files
-- 24 screens
+- 60 Dart files
+- 32 screens
 - 35 GoRouter routes
-- 77 ApiClient methods
+- 82 ApiClient methods
 - 12 models
-- 5 services
-- 2 widgets
-- 0 Navigator.push remaining
+- 6 services
+- 3 widgets
+- 2 Navigator.push remaining (`store_screen.dart:77`, `verification_screen.dart:154,319`)
