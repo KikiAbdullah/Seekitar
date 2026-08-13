@@ -569,6 +569,13 @@ function startRedisSubscriber() {
     );
 
     const sub = new Redis(REDIS_URL, { maxRetriesPerRequest: null });
+    const pub = new Redis(REDIS_URL, { maxRetriesPerRequest: null });
+
+    pub.on("error", (err) => {
+        logger.error({ err }, "redis publisher error");
+        // eslint-disable-next-line no-console
+        console.error("[WA] ❌ Redis publisher error:", err.message);
+    });
 
     sub.on("error", (err) => {
         logger.error({ err }, "redis subscriber error");
@@ -618,14 +625,14 @@ function startRedisSubscriber() {
 
         try {
             await sendText(to, text);
-            sub.publish(
+            pub.publish(
                 WA_CHANNEL_RESULT,
                 JSON.stringify({ id, ok: true, to })
             );
             // eslint-disable-next-line no-console
             console.log(`[WA] ✅ Hasil kirim via Redis → ${to} (ok=true).`);
         } catch (err) {
-            sub.publish(
+            pub.publish(
                 WA_CHANNEL_RESULT,
                 JSON.stringify({ id, ok: false, to, error: err.message })
             );
@@ -637,6 +644,7 @@ function startRedisSubscriber() {
     });
 
     state.redisSub = sub; // hindari di-GC
+    state.redisPub = pub; // hindari di-GC
 }
 
 // ───────────────────────── startup ─────────────────────────
