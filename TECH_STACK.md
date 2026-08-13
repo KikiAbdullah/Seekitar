@@ -1,7 +1,10 @@
 # 🧱 TECH STACK & VERSI — SEEKITAR
 
 **Status:** Sumber kebenaran tunggal (_single source of truth_) untuk semua versi.
-**Terakhir diverifikasi:** 27 Juli 2026
+**Terakhir diverifikasi:** 12 Agustus 2026
+
+> Backend Laravel dan aplikasi Flutter Android tersedia. Target iOS serta
+> CI/CD belum dikonfigurasi; lihat [`IMPLEMENTATION_GAPS.md`](IMPLEMENTATION_GAPS.md).
 
 > Dokumen lain (PRD, DATABASE, API_DOCUMENTATION, Server/Mobile Implementation
 > Guide) **tidak boleh** menyebut versi yang berbeda dari tabel di sini. Jika ada

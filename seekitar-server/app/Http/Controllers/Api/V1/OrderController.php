@@ -21,6 +21,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\QueryException;
 use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
@@ -69,7 +70,26 @@ class OrderController extends Controller
      */
     public function store(StoreOrderRequest $request): JsonResponse
     {
-        $order = DB::transaction(function () use ($request): Order {
+        $idempotencyKey = $this->idempotencyKey($request);
+        $buyerId = $request->user()->id;
+
+        $existing = Order::where('buyer_id', $buyerId)
+            ->where('idempotency_key', $idempotencyKey)
+            ->first();
+        if ($existing) {
+            return $this->ok(['order' => new OrderResource($existing->load(['store', 'listing']))]);
+        }
+
+        try {
+            $order = DB::transaction(function () use ($request, $idempotencyKey, $buyerId): Order {
+            $existing = Order::where('buyer_id', $buyerId)
+                ->where('idempotency_key', $idempotencyKey)
+                ->lockForUpdate()
+                ->first();
+            if ($existing) {
+                return $existing;
+            }
+
             $listing = Listing::whereKey($request->validated('listing_id'))
                 ->lockForUpdate()
                 ->firstOrFail();
@@ -86,7 +106,8 @@ class OrderController extends Controller
                 'payment_method', 'delivery_method', 'shipping_address', 'notes',
             ]));
 
-            $order->buyer_id     = $request->user()->id;
+            $order->buyer_id     = $buyerId;
+            $order->idempotency_key = $idempotencyKey;
             $order->store_id     = $listing->store_id;
             $order->listing_id   = $listing->id;
             $order->order_type   = OrderType::fromListingType($listing->listing_type);
@@ -106,8 +127,26 @@ class OrderController extends Controller
 
             return $order;
         });
+        } catch (QueryException $e) {
+            if ($e->getCode() !== '23000') {
+                throw $e;
+            }
+
+            $order = Order::where('buyer_id', $buyerId)
+                ->where('idempotency_key', $idempotencyKey)
+                ->firstOrFail();
+        }
 
         return $this->created(['order' => new OrderResource($order->load(['store', 'listing']))]);
+    }
+
+    private function idempotencyKey(Request $request): string
+    {
+        $key = (string) $request->header('Idempotency-Key');
+        abort_unless(preg_match('/^[A-Za-z0-9._:-]{16,128}$/', $key) === 1, 422,
+            'Header Idempotency-Key wajib diisi (16–128 karakter aman).');
+
+        return $key;
     }
 
     /**

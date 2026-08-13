@@ -32,7 +32,11 @@ class User {
   factory User.fromJson(Map<String, dynamic> json) {
     final loc = json['location'];
     double? lat, lng;
-    if (loc is List && loc.length >= 2) {
+    if (loc is Map && loc['coordinates'] is List && (loc['coordinates'] as List).length >= 2) {
+      final coords = loc['coordinates'] as List;
+      lng = (coords[0] as num?)?.toDouble();
+      lat = (coords[1] as num?)?.toDouble();
+    } else if (loc is List && loc.length >= 2) {
       lng = (loc[0] as num?)?.toDouble();
       lat = (loc[1] as num?)?.toDouble();
     } else {

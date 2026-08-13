@@ -7,6 +7,13 @@ wilayah kabupaten.
 
 Seekitar menggabungkan dua model transaksi dalam satu aplikasi:
 
+## Status dokumentasi
+
+Dokumentasi diaudit terhadap source code pada **12 Agustus 2026**. Rute,
+migrasi, controller, dan klien Flutter adalah sumber fakta perilaku aktif.
+Lihat [IMPLEMENTATION_GAPS.md](IMPLEMENTATION_GAPS.md) untuk batas implementasi
+dan [FUTURE_IDEAS.md](FUTURE_IDEAS.md) untuk gagasan yang belum dikomitmenkan.
+
 | Mesin | Alur |
 | :-- | :-- |
 | **Jelajahi** (marketplace katalog) | Penjual memajang produk/jasa → pembeli mencari & memesan |
@@ -18,7 +25,7 @@ Seekitar menggabungkan dua model transaksi dalam satu aplikasi:
 
 ```
 seekitar-server/    Backend Laravel 13 (REST API + web SEO + panel admin)
-seekitar_mobile/    Aplikasi Flutter (Android & iOS)
+seekitar_mobile/    Aplikasi Flutter (Android; iOS belum dikonfigurasi)
 tools/dev/          Perkakas pengembangan & pemeriksa konsistensi dokumen
 assets/brand/       Aset merek yang dikendalikan versi
 ```

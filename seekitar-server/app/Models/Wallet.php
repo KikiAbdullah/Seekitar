@@ -55,10 +55,18 @@ class Wallet extends Model
      * diverifikasi (admin/gateway). Ini mencegah "money minting": user tidak
      * bisa mengisi saldonya sendiri tanpa pembayaran sungguhan.
      */
-    public function createTopupPending(int|float $amount, string $method = 'transfer'): WalletTransaction
+    public function createTopupPending(int|float $amount, string $method, string $idempotencyKey): WalletTransaction
     {
-        return DB::transaction(function () use ($amount, $method) {
+        return DB::transaction(function () use ($amount, $method, $idempotencyKey) {
             $wallet = static::whereKey($this->getKey())->lockForUpdate()->firstOrFail();
+
+            $existing = $wallet->transactions()
+                ->where('idempotency_key', $idempotencyKey)
+                ->first();
+            if ($existing) {
+                return $existing;
+            }
+
             $balance = (float) $wallet->balance;
 
             return $wallet->transactions()->create([
@@ -68,6 +76,7 @@ class Wallet extends Model
                 'balance_after'  => $balance, // belum dikredit — menunggu konfirmasi
                 'description'    => "Top up saldo ({$method})",
                 'reference'      => 'TOPT-'.Str::uuid(),
+                'idempotency_key' => $idempotencyKey,
                 'status'         => 'pending',
             ]);
         });
@@ -126,9 +135,17 @@ class Wallet extends Model
         int|float $amount,
         string $bankName,
         string $bankAccount,
+        string $idempotencyKey,
     ): WalletTransaction {
-        return DB::transaction(function () use ($amount, $bankName, $bankAccount) {
+        return DB::transaction(function () use ($amount, $bankName, $bankAccount, $idempotencyKey) {
             $wallet = static::whereKey($this->getKey())->lockForUpdate()->firstOrFail();
+
+            $existing = $wallet->transactions()
+                ->where('idempotency_key', $idempotencyKey)
+                ->first();
+            if ($existing) {
+                return $existing;
+            }
 
             if (! $wallet->canWithdraw($amount)) {
                 throw new RuntimeException('Saldo tidak mencukupi.');
@@ -144,6 +161,7 @@ class Wallet extends Model
                 'balance_after'  => $balanceBefore - $amount,
                 'description'    => "Penarikan saldo ke {$bankName} ({$bankAccount})",
                 'reference'      => 'WD-'.Str::uuid(),
+                'idempotency_key' => $idempotencyKey,
                 'status'         => 'pending',
             ]);
         });

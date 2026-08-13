@@ -9,6 +9,8 @@ Kelas pembangun query untuk tabel admin (Yajra Datatables).
 `yajra/laravel-datatables-oracle` — ia berasal dari paket terpisah
 `yajra/laravel-datatables-buttons`, yang fungsinya mengekspor CSV/Excel.
 
-Seekitar tidak membutuhkan ekspor, jadi paket tambahan itu tidak dipasang.
-Sebagai gantinya dipakai `DataTables::eloquent($query)` yang tersedia di
-paket inti, dibungkus kelas biasa agar tetap terpusat dan mudah diuji.
+Seekitar tidak memakai paket Buttons maupun ekspor Excel. Ekspor **CSV** sudah
+tersedia untuk pengguna, toko, pesanan, dan penawaran melalui
+`App\Exports\DataTableExport`, sehingga tidak bergantung pada paket tambahan.
+Untuk tabel interaktif dipakai `DataTables::eloquent($query)` dari paket inti,
+dibungkus kelas biasa agar query tetap terpusat dan mudah diuji.

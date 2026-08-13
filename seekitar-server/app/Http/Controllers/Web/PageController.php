@@ -306,8 +306,8 @@ class PageController extends Controller
         return view('web.security');
     }
 
-    public function status(): View
-    {
+      public function status(): View
+      {
         $checks = [
             'database' => $this->checkDatabase(),
             'cache' => $this->checkCache(),
@@ -315,12 +315,15 @@ class PageController extends Controller
             'notifications' => $this->checkNotifications(),
         ];
         $healthy = !collect($checks)->containsStrict('ok', false);
-        return view('web.status', [
-            'checks' => $checks,
-            'healthy' => $healthy,
-            'checked_at' => now(),
-        ]);
-    }
+          return view('web.status', [
+              'checks' => $checks,
+              'healthy' => $healthy,
+              'checked_at' => now(),
+              // Detail komponen (DB/cache/storage) berguna di lokal, tetapi
+              // memberi peta infrastruktur kepada penyerang bila dipublikasi.
+              'show_details' => ! app()->isProduction(),
+          ]);
+      }
 
     private function checkDatabase(): array
     {

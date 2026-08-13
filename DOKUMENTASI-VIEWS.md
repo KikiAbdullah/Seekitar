@@ -6,6 +6,9 @@ Dokumen ini merangkum isi/konten lengkap dari seluruh view Blade pada:
 
 Disusun per folder/per file: judul halaman, isi, kolom tabel, filter, aksi, partial, dan catatan teknis penting.
 
+> **Status audit 12 Agustus 2026.** Sumber fakta tampilan adalah Blade di
+> `seekitar-server/resources/views/`; perbarui dokumen ini ketika view berubah.
+
 ---
 
 ## A. Panel Admin (`resources/views/admin/`)

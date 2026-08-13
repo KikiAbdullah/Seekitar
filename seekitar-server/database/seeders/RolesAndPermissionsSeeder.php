@@ -115,6 +115,19 @@ class RolesAndPermissionsSeeder extends Seeder
         $email    = (string) config('seekitar.super_admin_email');
         $password = (string) config('seekitar.super_admin_password');
 
+        // Seeder produksi tidak boleh diam-diam membuat akun panel dengan
+        // kredensial contoh. Gagal lebih awal lebih aman daripada memberi
+        // akses super-admin kepada siapa pun yang mengenal README.
+        if (app()->isProduction() && (
+            $phone === '6280000000001'
+            || $email === 'superadmin@seekitar.test'
+            || $password === 'password'
+        )) {
+            throw new \RuntimeException(
+                'SEEKITAR_SUPER_ADMIN_PHONE, SEEKITAR_SUPER_ADMIN_EMAIL, dan SEEKITAR_SUPER_ADMIN_PASSWORD wajib diisi dengan nilai non-default di produksi.'
+            );
+        }
+
         $user = User::withTrashed()->firstOrCreate(
             ['phone' => $phone],
             [

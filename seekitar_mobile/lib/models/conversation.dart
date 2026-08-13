@@ -13,7 +13,7 @@ class Conversation {
     lastMessageAt: json['last_message']?['created_at'] != null ? DateTime.tryParse(json['last_message']['created_at'].toString()) : null,
     otherUserName: ((json['participants'] as List?)?.firstWhere((p) => p['user_id'] != null, orElse: () => null) as Map?)?['user']?['name']?.toString(),
     otherUserAvatar: ((json['participants'] as List?)?.firstWhere((p) => p['user_id'] != null, orElse: () => null) as Map?)?['user']?['avatar_url']?.toString(),
-    hasUnread: json['has_unread'] ?? false,
+    hasUnread: (json['unread_count'] as num?)?.toInt() > 0,
   );
 }
 

@@ -30,7 +30,7 @@ class Order extends Model
     use HasFactory, HasLocation, HasUuids, SerializesDatesAsUtc;
 
     protected $fillable = [
-        'order_number', 'buyer_id', 'store_id', 'offer_id', 'listing_id',
+        'order_number', 'idempotency_key', 'buyer_id', 'store_id', 'offer_id', 'listing_id',
         'order_type', 'quantity', 'total_amount', 'discount_amount',
         'coupon_id', 'status',
         'payment_method', 'delivery_method', 'shipping_address',

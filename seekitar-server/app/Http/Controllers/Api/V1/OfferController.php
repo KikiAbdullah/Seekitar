@@ -104,12 +104,12 @@ class OfferController extends Controller
             $request = CustomerRequest::whereKey($offer->request_id)->lockForUpdate()->firstOrFail();
 
             if ($request->status !== RequestStatus::Open) {
-                abort(422, 'Permintaan sudah ditutup.');
+                abort(409, 'Permintaan sudah ditutup.');
             }
 
             $offer->refresh();
             if ($offer->status !== OfferStatus::Pending) {
-                abort(422, 'Penawaran sudah tidak berlaku.');
+                abort(409, 'Penawaran sudah tidak berlaku.');
             }
 
             $offer->status = OfferStatus::Accepted;

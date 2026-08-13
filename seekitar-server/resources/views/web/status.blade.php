@@ -32,6 +32,7 @@
         </div>
       </div>
 
+      @if ($show_details)
       <div class="row justify-content-center" data-aos="fade-up" data-aos-delay="150" data-aos-duration="900">
         <div class="col-lg-8">
           <div class="card border-0 shadow-sm">
@@ -67,6 +68,7 @@
           </div>
         </div>
       </div>
+      @endif
 
       <div class="row g-4 mt-2">
         <div class="col-md-6" data-aos="fade-up" data-aos-delay="100" data-aos-duration="900">

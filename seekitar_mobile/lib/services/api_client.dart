@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'package:dio/dio.dart';
 import 'dio_client.dart';
 
@@ -22,11 +23,15 @@ class ApiClient {
     return parser != null ? parser(body) : body as T;
   }
 
-  Future<T> _post<T>(String path, {dynamic data, T Function(dynamic json)? parser}) async {
-    final res = await _dio.post(path, data: data);
+  Future<T> _post<T>(String path, {dynamic data, Map<String, dynamic>? headers, T Function(dynamic json)? parser}) async {
+    final res = await _dio.post(path, data: data, options: Options(headers: headers));
     final body = _payload(res.data);
     return parser != null ? parser(body) : body as T;
   }
+
+  /// Kunci per aksi mutasi. Interceptor Dio mempertahankan header ini ketika
+  /// mengulang request, sehingga retry jaringan tidak menggandakan uang/order.
+  String _idempotencyKey() => '${DateTime.now().microsecondsSinceEpoch}-${Random.secure().nextInt(1 << 32)}';
 
   Future<T> _patch<T>(String path, {dynamic data, T Function(dynamic json)? parser}) async {
     final res = await _dio.patch(path, data: data);
@@ -177,7 +182,7 @@ class ApiClient {
 
   // ─── Orders ────────────────────────────────────────
   Future<List<dynamic>> orders({String role = 'buyer', String? status}) => _get('/orders', query: {'role': role, if (status != null) 'status': status});
-  Future<Map<String,dynamic>> createOrder(Map<String,dynamic> body) => _post('/orders', data: body);
+  Future<Map<String,dynamic>> createOrder(Map<String,dynamic> body) => _post('/orders', data: body, headers: {'Idempotency-Key': _idempotencyKey()});
   Future<Map<String,dynamic>> orderDetail(String id) => _get('/orders/$id');
   Future<Map<String,dynamic>> updateOrderStatus(String id, Map<String,dynamic> body) => _patch('/orders/$id/status', data: body);
   Future<Map<String,dynamic>> uploadPaymentProof(String id, File file) => upload('/orders/$id/payment-proof', file, field: 'proof');
@@ -187,8 +192,8 @@ class ApiClient {
   // ─── Wallet ────────────────────────────────────────
   Future<Map<String,dynamic>> wallet() => _get('/wallet');
   Future<List<dynamic>> walletTxs() => _get('/wallet/transactions');
-  Future<Map<String,dynamic>> topup(double amount) => _post('/wallet/topup', data: {'amount': amount});
-  Future<Map<String,dynamic>> withdraw(Map<String,dynamic> body) => _post('/wallet/withdraw', data: body);
+  Future<Map<String,dynamic>> topup(double amount) => _post('/wallet/topup', data: {'amount': amount}, headers: {'Idempotency-Key': _idempotencyKey()});
+  Future<Map<String,dynamic>> withdraw(Map<String,dynamic> body) => _post('/wallet/withdraw', data: body, headers: {'Idempotency-Key': _idempotencyKey()});
 
   // ─── Addresses ─────────────────────────────────────
   Future<dynamic> addresses() => _get('/addresses');

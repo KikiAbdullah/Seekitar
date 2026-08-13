@@ -246,8 +246,14 @@ main.dart
 - 60 Dart files
 - 32 screens
 - 35 GoRouter routes
-- 82 ApiClient methods
+- 87 ApiClient methods
 - 12 models
 - 6 services
 - 3 widgets
 - 2 Navigator.push remaining (`store_screen.dart:77`, `verification_screen.dart:154,319`)
+
+## Batas implementasi
+
+Dokumen ini hanya menjelaskan alur yang ada di `lib/` pada 12 Agustus 2026.
+Target iOS, pengiriman push FCM produksi, dan CI belum dapat diverifikasi;
+lihat [`../IMPLEMENTATION_GAPS.md`](../IMPLEMENTATION_GAPS.md).

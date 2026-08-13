@@ -24,6 +24,7 @@ class WalletTransaction extends Model
         'reference_type',
         'reference_id',
         'reference',
+        'idempotency_key',
         'status',
     ];
 

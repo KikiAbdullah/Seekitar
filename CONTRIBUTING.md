@@ -1,5 +1,9 @@
 # Panduan Berkontribusi
 
+> Sebelum memulai fitur, periksa [`IMPLEMENTATION_GAPS.md`](IMPLEMENTATION_GAPS.md)
+> dan [`FUTURE_IDEAS.md`](FUTURE_IDEAS.md). Yang pertama adalah pekerjaan yang
+> telah diidentifikasi; yang kedua belum merupakan komitmen implementasi.
+
 ## Sebelum Menulis Kode
 
 Baca tiga hal ini lebih dulu — urutannya disengaja:

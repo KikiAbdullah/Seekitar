@@ -1,35 +1,32 @@
 # Seekitar Mobile
 
-Aplikasi Flutter **Seekitar** (Android & iOS) — klien dari
-[`seekitar-server`](../seekitar-server/README.md) (`/api/v1`).
+Klien Flutter Seekitar untuk **Android**, terhubung ke REST API server pada
+prefix `/api/v1`.
 
 ## Menjalankan
 
-Kebutuhan: Flutter 3.44+ (Dart 3.12+).
+Kebutuhan: Flutter 3.44+ dengan Dart 3.12+.
 
 ```bash
 flutter pub get
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1
 ```
 
-> ⚠️ Model JSON ditulis manual (`fromJson`), tanpa codegen — **tidak ada**
-> `build_runner`. Base URL dibaca dari `--dart-define=API_BASE_URL` dengan
-> default di `lib/core/constants.dart`; emulator Android memetakan host ke
-> `10.0.2.2`, bukan `localhost`.
+Model JSON ditulis manual melalui `fromJson`; proyek tidak menggunakan
+`build_runner`. Untuk Android emulator, `10.0.2.2` menunjuk host lokal.
 
-## Kontrak yang perlu diingat
+## Kontrak utama
 
-- Masuk tanpa kata sandi: `POST /auth/request-otp` → `POST /auth/verify-otp`
-  → simpan Bearer JWT di secure storage (`flutter_secure_storage`, kunci
-  `jwt_token`). Token stateless — tidak ada baris token di database.
-- Token kedaluwarsa 30 hari; interceptor Dio otomatis memanggil
-  `POST /auth/refresh` saat `401`, lalu mengulang request (`dio_client.dart`).
-- `verification_level` pada JSON pengguna adalah **turunan baca-saja**
-  (1 = masuk OTP, 2 = KTP disetujui, 3 = punya toko terverifikasi) — tidak
-  ada endpoint untuk mengubahnya.
-- Ganti nomor HP lewat dua langkah OTP (`/auth/phone/request-otp` →
-  `verify-otp`); unggah ulang berkas KTP membuka peninjauan admin ulang.
+- Autentikasi: `POST /auth/request-otp`, lalu `POST /auth/verify-otp`.
+- JWT disimpan pada `flutter_secure_storage` dengan kunci `jwt_token`; Dio
+  mencoba refresh melalui `POST /auth/refresh` pada respons 401.
+- `verification_level` dari API adalah nilai turunan baca-saja.
+- Ganti nomor dan verifikasi KTP memakai alur OTP/unggahan yang disediakan API.
 
-Panduan lengkap arsitektur (provider/ChangeNotifier, GoRouter, FCM, dsb.) ada
-di [`Mobile_Implementation_Guide.md`](../Mobile_Implementation_Guide.md);
-kontrak endpoint di [`API_DOCUMENTATION.md`](../API_DOCUMENTATION.md).
+Lihat [FLOWS.md](FLOWS.md) untuk alur layar,
+[Mobile_Implementation_Guide.md](../Mobile_Implementation_Guide.md) untuk
+arsitektur, dan [API_DOCUMENTATION.md](../API_DOCUMENTATION.md) untuk kontrak.
+
+> Target iOS belum tersedia: source tree ini tidak memiliki direktori `ios/`.
+> Lihat [IMPLEMENTATION_GAPS.md](../IMPLEMENTATION_GAPS.md) sebelum menjanjikan
+> distribusi iOS.

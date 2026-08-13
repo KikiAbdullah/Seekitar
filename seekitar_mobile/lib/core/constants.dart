@@ -7,7 +7,7 @@ class AppConstants {
     'API_BASE_URL',
     // IP dev hanya untuk debug; di release wajib diisi via --dart-define,
     // kalau kosong DioClient melempar error jelas saat di-construct.
-    defaultValue: kReleaseMode ? '' : 'http://192.168.201.148:8000/api/v1',
+    defaultValue: kReleaseMode ? '' : 'http://127.0.0.1:8000/api/v1',
   );
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 15);

@@ -38,6 +38,7 @@ class WalletController extends Controller
 
     public function topup(TopUpWalletRequest $request): JsonResponse
     {
+        $idempotencyKey = $this->idempotencyKey($request);
         $wallet = Wallet::firstOrCreate(
             ['user_id' => $request->user()->id]
         );
@@ -47,6 +48,7 @@ class WalletController extends Controller
         $transaction = $wallet->createTopupPending(
             $request->validated('amount'),
             $request->validated('method', 'transfer'),
+            $idempotencyKey,
         );
 
         return $this->ok(
@@ -57,6 +59,7 @@ class WalletController extends Controller
 
     public function withdraw(WithdrawWalletRequest $request): JsonResponse
     {
+        $idempotencyKey = $this->idempotencyKey($request);
         $wallet = Wallet::where('user_id', $request->user()->id)->firstOrFail();
 
         try {
@@ -64,6 +67,7 @@ class WalletController extends Controller
                 $request->validated('amount'),
                 $request->validated('bank_name'),
                 $request->validated('bank_account'),
+                $idempotencyKey,
             );
         } catch (RuntimeException) {
             return $this->fail('Saldo tidak mencukupi untuk penarikan.', 422);
@@ -73,5 +77,15 @@ class WalletController extends Controller
             ['transaction' => new WalletTransactionResource($transaction)],
             'Permintaan penarikan diajukan. Saldo di-hold sampai payout diproses.',
         );
+    }
+
+    /** Kunci wajib agar retry jaringan tidak membuat mutasi keuangan kedua. */
+    private function idempotencyKey(Request $request): string
+    {
+        $key = (string) $request->header('Idempotency-Key');
+        abort_unless(preg_match('/^[A-Za-z0-9._:-]{16,128}$/', $key) === 1, 422,
+            'Header Idempotency-Key wajib diisi (16–128 karakter aman).');
+
+        return $key;
     }
 }

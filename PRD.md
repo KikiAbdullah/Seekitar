@@ -13,7 +13,11 @@ _“Yang kamu butuhkan, ada di sekitar.”_
 | **Versi Dokumen**     | 2.3 (Production Ready – MySQL)                                            |
 | **Tanggal**           | 29 Juli 2026                                                              |
 | **Penulis**           | Tim Pengembang Seekitar                                                   |
-| **Status**            | Final – Siap Implementasi                                                 |
+| **Status**            | Diperbarui terhadap implementasi (12 Agustus 2026)                        |
+
+> Fungsi yang belum tersedia dicatat di
+> [`IMPLEMENTATION_GAPS.md`](IMPLEMENTATION_GAPS.md). Gagasan yang belum menjadi
+> kebutuhan produk berada di [`FUTURE_IDEAS.md`](FUTURE_IDEAS.md).
 
 ---
 

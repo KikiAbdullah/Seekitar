@@ -2,7 +2,7 @@
 
 **Versi:** 2.3 (Production‑Ready)  
 **Tanggal:** 29 Juli 2026  
-**Target:** Flutter 3.44+ (Dart 3.12+) · Android & iOS  
+**Target:** Flutter 3.44+ (Dart 3.12+) · Android (iOS belum dikonfigurasi)
 **Arsitektur:** pragmatis per peran — `screens/`, `services/`, `models/`, `providers/`, `routing/`, `widgets/`  
 **State Management:** provider (`ChangeNotifier` + `ChangeNotifierProvider`)  
 **HTTP Client:** Dio 5.x (interceptor JWT + refresh + retry)  
@@ -10,9 +10,14 @@
 **Maps & Geolokasi:** Geolocator + OpenStreetMap (`flutter_osm_plugin`) — tanpa `google_maps_flutter`  
 **Push Notification:** Firebase Cloud Messaging (FCM) + `flutter_local_notifications`  
 **WhatsApp Redirection:** url_launcher  
-**CI/CD:** GitHub Actions (build APK/IPA)
+**CI/CD:** belum dikonfigurasi di repositori
 
 > 📌 Versi lengkap & matriks kompatibilitas paket ada di [`TECH_STACK.md`](TECH_STACK.md) (sumber kebenaran tunggal).
+
+> **Status audit 12 Agustus 2026.** Implementasi mobile yang tersedia adalah
+> Android. Source tree tidak memiliki direktori `ios/` atau workflow GitHub
+> Actions; dukungan iOS dan CI/CD dicatat di
+> [`IMPLEMENTATION_GAPS.md`](IMPLEMENTATION_GAPS.md).
 
 ### Backend yang Dikonsumsi Aplikasi Ini
 
