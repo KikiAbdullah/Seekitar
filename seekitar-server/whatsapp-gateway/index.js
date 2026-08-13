@@ -75,6 +75,9 @@ const BAILEYS_VERSION = [2, 3000, 1043857760];
 const REDIS_URL = process.env.REDIS_URL || "";
 const WA_CHANNEL_SEND = process.env.WA_CHANNEL_SEND || "seekitar:wa:send";
 const WA_CHANNEL_RESULT = process.env.WA_CHANNEL_RESULT || "seekitar:wa:result";
+// List Redis tempat hasil kirim ditulis agar Laravel bisa memverifikasi
+// pengiriman (pub/sub bersifat fire-and-forget; list menyimpan hasil).
+const WA_RESULT_LIST = process.env.WA_RESULT_LIST || "seekitar:wa:result:list";
 
 const WS_OPEN = 1; // WebSocket.OPEN
 
@@ -629,11 +632,19 @@ function startRedisSubscriber() {
                 WA_CHANNEL_RESULT,
                 JSON.stringify({ id, ok: true, to })
             );
+            pub.rpush(
+                WA_RESULT_LIST,
+                JSON.stringify({ id, ok: true, to })
+            );
             // eslint-disable-next-line no-console
             console.log(`[WA] ✅ Hasil kirim via Redis → ${to} (ok=true).`);
         } catch (err) {
             pub.publish(
                 WA_CHANNEL_RESULT,
+                JSON.stringify({ id, ok: false, to, error: err.message })
+            );
+            pub.rpush(
+                WA_RESULT_LIST,
                 JSON.stringify({ id, ok: false, to, error: err.message })
             );
             // eslint-disable-next-line no-console

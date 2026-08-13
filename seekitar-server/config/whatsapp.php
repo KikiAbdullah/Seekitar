@@ -36,6 +36,12 @@ return [
 
         // Nama channel Redis (harus sama dengan WA_CHANNEL_SEND di gateway).
         'channel_send' => env('BAILEYS_CHANNEL_SEND', 'seekitar:wa:send'),
+
+        // List Redis tempat gateway menulis hasil kirim (WA_RESULT_LIST).
+        'result_list' => env('BAILEYS_RESULT_LIST', 'seekitar:wa:result:list'),
+
+        // Detik menunggu konfirmasi kirim dari gateway sebelum fallback HTTP.
+        'ack_timeout' => (int) env('BAILEYS_ACK_TIMEOUT', 5),
     ],
 
 ];

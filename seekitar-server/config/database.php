@@ -119,6 +119,19 @@ return [
             'backoff_cap' => env('REDIS_BACKOFF_CAP', 1000),
         ],
 
+        // Koneksi TANPA prefix untuk komunikasi dengan WhatsApp gateway
+        // (Node). Pub/sub Redis tidak menerapkan prefix antar-aplikasi; channel
+        // harus persis sama dengan WA_CHANNEL_SEND / WA_RESULT_LIST di gateway.
+        'whatsapp' => [
+            'url' => env('REDIS_URL'),
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'username' => env('REDIS_USERNAME'),
+            'password' => env('REDIS_PASSWORD'),
+            'port' => env('REDIS_PORT', '6379'),
+            'database' => '0',
+            'prefix' => '',
+        ],
+
     ],
 
 ];

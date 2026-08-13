@@ -99,34 +99,80 @@ class BaileysGateway implements WhatsAppGateway
      * Kirim OTP — kontrak WhatsAppGateway.
      *
      * Jalur cepat (SOCKET): bila `whatsapp.baileys.redis_url` diisi, pesan
-     * di-publish ke channel Redis yang disubscribe gateway Node. Redis
-     * pub/sub memakai koneksi socket PERSISTEN — tanpa handshake HTTP per
-     * pesan — sehingga OTP terkirim dalam hitungan milidetik dari worker.
-     * Fire-and-forget: gateway yang membalas lewat channel `result`.
-     *
-     * Fallback: HTTP POST /api/send (handshake per panggilan, lebih lambat
-     * sedikit tapi tetap andal — dipakai bila Redis tidak dikonfigurasi).
+     * di-publish ke channel Redis yang disubscribe gateway Node, lalu
+     * konfirmasi hasil ditunggu di list `result_list`. Bila konfirmasi tak
+     * kunjung datang (mis. gateway baru restart dan subscriber belum siap —
+     * pub/sub bersifat fire-and-forget dan bisa kehilangan pesan), fallback
+     * ke HTTP POST /api/send yang sinkron. HTTP gagal → OtpDeliveryException
+     * (job di-retry sampai 3x lalu masuk failed_jobs).
      */
     public function sendOtp(string $phone, string $code): void
     {
-        $redisUrl = (string) config('whatsapp.baileys.redis_url', '');
+        if ((string) config('whatsapp.baileys.redis_url', '') !== '') {
+            $sent = $this->sendOtpViaRedis($phone, $code);
 
-        if ($redisUrl !== '') {
-            \Illuminate\Support\Facades\Redis::publish(
-                (string) config('whatsapp.baileys.channel_send', 'seekitar:wa:send'),
-                json_encode([
-                    'to'   => $phone,
-                    'text' => $this->message($code),
-                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
-            );
+            if ($sent) {
+                return;
+            }
 
-            return;
+            report('WhatsApp: jalur Redis tanpa konfirmasi, fallback HTTP.');
         }
 
         $this->call('POST', '/api/send', [
             'to'   => $phone,
             'text' => $this->message($code),
         ]);
+    }
+
+    /**
+     * Publish OTP ke channel Redis lalu tunggu konfirmasi hasil di list.
+     *
+     * @return bool true bila gateway mengonfirmasi terkirim; false bila tidak
+     *              ada konfirmasi dalam ack_timeout detik (siap fallback).
+     *
+     * @throws OtpDeliveryException bila gateway melaporkan kegagalan kirim.
+     */
+    private function sendOtpViaRedis(string $phone, string $code): bool
+    {
+        $id     = (string) \Illuminate\Support\Str::uuid();
+        $result = (string) config('whatsapp.baileys.result_list', 'seekitar:wa:result:list');
+        $redis  = \Illuminate\Support\Facades\Redis::connection('whatsapp');
+
+        $redis->publish(
+            (string) config('whatsapp.baileys.channel_send', 'seekitar:wa:send'),
+            json_encode([
+                'id'   => $id,
+                'to'   => $phone,
+                'text' => $this->message($code),
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        );
+
+        $deadline = microtime(true) + (int) config('whatsapp.baileys.ack_timeout', 5);
+
+        while (microtime(true) < $deadline) {
+            $ack = $redis->blpop([$result], 1);
+
+            if (is_null($ack)) {
+                continue;
+            }
+
+            $data = json_decode((string) ($ack[1] ?? '[]'), true) ?: [];
+
+            if (($data['id'] ?? null) !== $id) {
+                continue; // hasil untuk kirim lain — lewati
+            }
+
+            if (($data['ok'] ?? false)) {
+                return true;
+            }
+
+            throw OtpDeliveryException::fromProvider(
+                'Baileys',
+                (string) ($data['error'] ?? 'Gateway menolak pengiriman')
+            );
+        }
+
+        return false;
     }
 
     /** Kirim pesan bebas (dipakai menu admin untuk uji kirim). */
