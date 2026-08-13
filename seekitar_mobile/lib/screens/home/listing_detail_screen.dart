@@ -161,12 +161,6 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
             _row(Icons.calendar_today, 'Dipasang', l.createdAt != null ? '${l.createdAt!.day}/${l.createdAt!.month}/${l.createdAt!.year}' : '-'),
           ]))),
         ])),
-        Container(margin: const EdgeInsets.all(16), decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), gradient: LinearGradient(colors: [Colors.white, AppTheme.heroGradientStart, Colors.white])), child: Padding(padding: const EdgeInsets.all(20), child: Column(children: [
-          const Icon(Icons.phone_android, size: 44, color: Color(0xFF168A4A)), const SizedBox(height: 12),
-          Text('Transaksi di Aplikasi', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: t.colorScheme.primary)),
-          const SizedBox(height: 6),
-          Text('Untuk membeli atau chat penjual, gunakan aplikasi Seekitar di ponselmu. Gratis, tanpa komisi.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600, fontSize: 13, height: 1.5)),
-        ]))),
         const SizedBox(height: 40),
       ])),
     );

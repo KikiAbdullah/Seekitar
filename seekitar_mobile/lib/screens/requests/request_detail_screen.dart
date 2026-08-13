@@ -18,8 +18,22 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   Future<void> _load() async {
     if (widget.request != null) _detail = widget.request;
     setState(() { _loading = true; _error = null; });
-    try { final rq = await _api.getRequest(_id); final of = await _api.getRequestOffers(_id); if (mounted) setState(() { _detail = rq; _offers = of; _loading = false; }); }
-    catch (e) { if (mounted) setState(() { _error = DioClient.friendly(e); _loading = false; }); }
+    try {
+      final rq = await _api.getRequest(_id);
+      if (mounted) setState(() => _detail = rq);
+    } catch (e) {
+      if (mounted) setState(() { _error = DioClient.friendly(e); _loading = false; });
+      return;
+    }
+    // Daftar tawaran hanya boleh dilihat pemilik kebutuhan (Policy server).
+    // Kalau tidak berhak, tetap tampilkan detail tanpa penawaran — jangan
+    // sampai browsing kebutuhan orang lain berakhir di layar error.
+    try {
+      final of = await _api.getRequestOffers(_id);
+      if (mounted) setState(() { _offers = of; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() { _offers = []; _loading = false; });
+    }
   }
   Future<void> _extend() async {
     try { final r = await _api.extendRequest(_id); if (mounted) { setState(() => _detail = r); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Permintaan diperpanjang 24 jam!'))); } }

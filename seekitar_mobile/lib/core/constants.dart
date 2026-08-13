@@ -70,6 +70,4 @@ class UiStrings {
   static const noTransactions = 'Belum ada transaksi';
   static const contactSeller = 'Hubungi Penjual';
   static const listingNotFound = 'Listing tidak ditemukan';
-  static const txInApp = 'Transaksi di Aplikasi';
-  static const txInAppDesc = 'Untuk membeli atau chat penjual, gunakan aplikasi Seekitar di ponselmu. Gratis, tanpa komisi.';
 }

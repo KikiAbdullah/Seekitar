@@ -5,7 +5,7 @@ namespace App\Observers;
 use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Services\OrderStateMachine;
-use Illuminate\Contracts\Cache\Repository as CacheRepository;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Nomor pesanan & penjaga transisi.
@@ -17,7 +17,6 @@ class OrderObserver
 {
     public function __construct(
         private readonly OrderStateMachine $states,
-        private readonly CacheRepository $cache,
     ) {}
 
     public function creating(Order $order): void
@@ -62,20 +61,26 @@ class OrderObserver
      * UUID tidak mungkin dibacakan lewat telepon; nomor inilah yang disebut
      * pengguna saat menghubungi dukungan.
      *
-     * Memakai kontrak cache (atomic increment), bukan facade Redis, supaya
-     * kelas ini tetap bisa diuji tanpa server Redis. TTL 48 jam: cukup untuk
-     * melewati pergantian hari, tanpa menumpuk kunci selamanya.
+     * Urutan disimpan di tabel `order_sequences`, bukan cache. Cache bisa
+     * direset/ganti backend sehingga counteernya lepas dari baris yang sudah
+     * tersimpan dan memicu duplicate key (riwayat: Redis cache baru diaktifkan
+     * → nomor mulai dari 1 → 1062 `orders_order_number_unique` → pesanan gagal).
+     *
+     * `INSERT ... ON DUPLICATE KEY UPDATE ... LAST_INSERT_ID(seq + 1)`
+     * melakukan kenaikan secara atomik di tingkat database, jadi aman untuk
+     * proses paralel (worker queue, beberapa request bersamaan).
      */
     private function generateNumber(): string
     {
-        $date = now()->format('Ymd');
-        $key  = "order_seq:$date";
+        $date = now()->format('Y-m-d');
 
-        // add() hanya berhasil bila kunci belum ada — inilah yang membuat
-        // penyetelan awal aman dari balapan antar-proses.
-        $this->cache->add($key, 0, now()->addHours(48));
-        $seq = $this->cache->increment($key);
+        DB::statement(
+            'INSERT INTO order_sequences (`date`, `seq`) VALUES (?, LAST_INSERT_ID(1))
+             ON DUPLICATE KEY UPDATE `seq` = LAST_INSERT_ID(`seq` + 1)',
+            [$date],
+        );
+        $seq = (int) DB::selectOne('SELECT LAST_INSERT_ID() AS `seq`')->seq;
 
-        return sprintf('SKT-%s-%04d', $date, $seq);
+        return sprintf('SKT-%s-%04d', str_replace('-', '', $date), $seq);
     }
 }

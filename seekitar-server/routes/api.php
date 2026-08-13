@@ -127,6 +127,16 @@ Route::delete('uploads/images', [UploadController::class, 'destroy']);
         // --- Pelaporan konten ------------------------------------------
         Route::post('reports', [ReportController::class, 'store']);
 
+        // --- Kebutuhan sekitar: jelajah bebas untuk user yang sudah masuk.
+        // Hanya MENULIS (pasang/ubah/hapus/perpanjang/tawaran) yang butuh
+        // profil lengkap — membaca tidak, supaya akun baru tanpa toko masih
+        // bisa melihat kebutuhan di sekitarnya. Daftar tawaran tetap diotori
+        // Policy (hanya pemilik kebutuhan yang boleh melihatnya).
+        Route::get('requests', [CustomerRequestController::class, 'index']);
+        Route::get('requests/mine', [CustomerRequestController::class, 'mine']);
+        Route::get('requests/{customerRequest}', [CustomerRequestController::class, 'show']);
+        Route::get('requests/{customerRequest}/offers', [CustomerRequestController::class, 'offers']);
+
         // --- Transaksional (wajib profil lengkap) ----------------------
         Route::middleware('profile.complete')->group(function (): void {
 
@@ -137,14 +147,10 @@ Route::delete('uploads/images', [UploadController::class, 'destroy']);
             Route::match(['put', 'patch'], 'listings/{listing}', [ListingController::class, 'update']);
             Route::delete('listings/{listing}', [ListingController::class, 'destroy']);
 
-            Route::get('requests', [CustomerRequestController::class, 'index']);
-            Route::get('requests/mine', [CustomerRequestController::class, 'mine']);
             Route::post('requests', [CustomerRequestController::class, 'store']);
-            Route::get('requests/{customerRequest}', [CustomerRequestController::class, 'show']);
             Route::patch('requests/{customerRequest}', [CustomerRequestController::class, 'update']);
             Route::delete('requests/{customerRequest}', [CustomerRequestController::class, 'destroy']);
             Route::post('requests/{customerRequest}/extend', [CustomerRequestController::class, 'extend']);
-            Route::get('requests/{customerRequest}/offers', [CustomerRequestController::class, 'offers']);
 
             Route::post('requests/{customerRequest}/offers', [OfferController::class, 'store'])
                 ->middleware('throttle:offers');
